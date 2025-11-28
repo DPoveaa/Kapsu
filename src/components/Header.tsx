@@ -1,16 +1,39 @@
 import { Link } from 'react-router-dom'
-import { ShoppingCart, User, Menu, LogOut, Shield } from 'lucide-react'
+import { ShoppingCart, User, Menu, LogOut, Shield, MessageCircle } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
+import { whatsappService } from '../services/whatsapp.service'
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [interventionCount, setInterventionCount] = useState(0)
   const { getItemCount } = useCart()
-  const { user, logout, isAdmin } = useAuth()
+  const { user, logout, isAdmin, isPharmacist } = useAuth()
   const itemCount = getItemCount()
   const userMenuRef = useRef<HTMLDivElement>(null)
+  
+  // Busca contagem de intervenções para admin e farmacêutico
+  useEffect(() => {
+    if ((isAdmin || isPharmacist) && user) {
+      const fetchInterventionCount = async () => {
+        try {
+          const data = await whatsappService.getInterventionCount()
+          if (data.success) {
+            setInterventionCount(data.total)
+          }
+        } catch (error) {
+          console.error('Erro ao buscar contagem de intervenções:', error)
+        }
+      }
+      
+      fetchInterventionCount()
+      // Atualiza a cada 30 segundos
+      const interval = setInterval(fetchInterventionCount, 30000)
+      return () => clearInterval(interval)
+    }
+  }, [isAdmin, isPharmacist, user])
 
   // Fechar menu do usuário ao clicar fora
   useEffect(() => {
@@ -67,6 +90,20 @@ export default function Header() {
                 </span>
               )}
             </Link>
+            {(isAdmin || isPharmacist) && (
+              <Link 
+                to="/admin/whatsapp/support" 
+                className="relative p-2 text-gray-700 hover:text-primary-600 transition-colors"
+                title="Conversas que precisam de intervenção"
+              >
+                <MessageCircle size={24} />
+                {interventionCount > 0 && (
+                  <span className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 animate-pulse">
+                    {interventionCount > 99 ? '99+' : interventionCount}
+                  </span>
+                )}
+              </Link>
+            )}
             {user ? (
               <div className="hidden md:block relative" ref={userMenuRef}>
                 <button
@@ -88,6 +125,16 @@ export default function Header() {
                         </span>
                       )}
                     </div>
+                    {isAdmin && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                      >
+                        <Shield size={16} />
+                        <span>Painel Admin</span>
+                      </Link>
+                    )}
                     <button
                       onClick={() => {
                         logout()
@@ -157,6 +204,31 @@ export default function Header() {
                   <span>{user.name}</span>
                   {isAdmin && <Shield size={14} className="text-yellow-600" />}
                 </div>
+                {(isAdmin || isPharmacist) && (
+                  <>
+                    <Link
+                      to="/admin"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center space-x-2 py-2 text-gray-700 hover:text-primary-600"
+                    >
+                      <Shield size={16} />
+                      <span>Painel Admin</span>
+                    </Link>
+                    <Link
+                      to="/admin/whatsapp/support"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center space-x-2 py-2 text-gray-700 hover:text-primary-600 relative"
+                    >
+                      <MessageCircle size={16} />
+                      <span>Atendimento</span>
+                      {interventionCount > 0 && (
+                        <span className="ml-auto bg-red-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+                          {interventionCount > 99 ? '99+' : interventionCount}
+                        </span>
+                      )}
+                    </Link>
+                  </>
+                )}
                 <button
                   onClick={() => {
                     logout()

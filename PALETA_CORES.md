@@ -84,3 +84,5 @@ medical: {
 - Paleta alinhada com identidade visual de farmácias profissionais
 - Combinação verde/branco/azul amplamente aceita no setor
 
+
+

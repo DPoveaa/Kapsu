@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
+import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
 import Products from './pages/Products'
 import Customize from './pages/Customize'
@@ -7,6 +8,11 @@ import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
 import Login from './pages/Login'
+import Register from './pages/Register'
+import AdminPanel from './pages/AdminPanel'
+import WhatsAppConnection from './pages/WhatsAppConnection'
+import WhatsAppSupport from './pages/WhatsAppSupport'
+import UserManagement from './pages/UserManagement'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 
@@ -24,6 +30,39 @@ function App() {
               <Route path="/carrinho" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/cadastro" element={<Register />} />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <AdminPanel />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/whatsapp"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <WhatsAppConnection />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/whatsapp/support"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <WhatsAppSupport />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/users"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <UserManagement />
+                  </ProtectedRoute>
+                }
+              />
             </Routes>
           </Layout>
         </Router>

@@ -35,8 +35,9 @@ O projeto usa variáveis de ambiente para configuração. Copie o arquivo `.env.
 # Porta do servidor de desenvolvimento
 VITE_PORT=5173
 
-# Email do administrador (para acesso admin)
-VITE_ADMIN_EMAIL=admin@sanare.com.br
+# Emails do administrador (múltiplos separados por vírgula)
+# Deve corresponder ao ADMIN_EMAIL do backend
+VITE_ADMIN_EMAIL=danieldpcaires@gmail.com,admin@gmail.com
 
 # URL da API (quando conectar com backend)
 VITE_API_URL=http://localhost:3000/api
@@ -45,16 +46,17 @@ VITE_API_URL=http://localhost:3000/api
 ### Variáveis de Ambiente
 
 - **VITE_PORT**: Porta em que o servidor de desenvolvimento irá rodar (padrão: 5173)
-- **VITE_ADMIN_EMAIL**: Email que terá acesso de administrador ao fazer login
+- **VITE_ADMIN_EMAIL**: Emails que terão acesso de administrador (separados por vírgula). Deve corresponder ao ADMIN_EMAIL do backend
 - **VITE_API_URL**: URL base da API backend (quando conectar)
 
 **Importante**: Todas as variáveis de ambiente devem começar com `VITE_` para serem expostas no cliente.
 
 ## 🔐 Sistema de Autenticação
 
-O sistema possui autenticação básica que verifica se o email do usuário corresponde ao `VITE_ADMIN_EMAIL` configurado no `.env`.
+O sistema possui autenticação que verifica se o email do usuário corresponde a um dos emails em `VITE_ADMIN_EMAIL` configurado no `.env`.
 
-- Usuários com o email configurado em `VITE_ADMIN_EMAIL` recebem acesso de administrador
+- Usuários com email configurado em `VITE_ADMIN_EMAIL` (separados por vírgula) recebem acesso de administrador
+- O valor deve corresponder ao `ADMIN_EMAIL` configurado no backend
 - O estado de autenticação é salvo no `localStorage`
 - Acesse `/login` para fazer login
 
