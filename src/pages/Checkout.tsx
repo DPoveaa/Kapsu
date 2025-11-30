@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, CreditCard, MapPin, FileText, CheckCircle } from 'lucide-react'
+import { ArrowLeft, CreditCard, MapPin, FileText, CheckCircle, Loader2 } from 'lucide-react'
 import { useCart } from '../context/CartContext'
+import { orderService } from '../services/order.service'
 
 export default function Checkout() {
   const navigate = useNavigate()
   const { items, getTotal, clearCart } = useCart()
   const [step, setStep] = useState(1)
+  const [creatingOrder, setCreatingOrder] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -37,7 +39,7 @@ export default function Checkout() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (step === 1) {
       setStep(2)
@@ -45,10 +47,30 @@ export default function Checkout() {
       setStep(3)
     } else {
       // Finalizar pedido
-      clearCart()
-      // Em produção, aqui faria a chamada à API
-      alert('Pedido realizado com sucesso!')
-      navigate('/')
+      try {
+        setCreatingOrder(true)
+        
+        // Monta endereço completo
+        const shippingAddress = `${formData.address}, ${formData.number}${formData.complement ? ` - ${formData.complement}` : ''}, ${formData.city} - ${formData.state}, CEP: ${formData.cep}`
+        
+        // Cria pedido
+        const order = await orderService.createOrder(
+          formData.paymentMethod,
+          shippingAddress
+        )
+        
+        // Limpa carrinho
+        await clearCart()
+        
+        // Redireciona para página de sucesso ou pedidos
+        alert(`Pedido #${order.id.substring(0, 8)} criado com sucesso!`)
+        navigate('/')
+      } catch (error: any) {
+        console.error('Erro ao criar pedido:', error)
+        alert(error.message || 'Erro ao finalizar pedido. Tente novamente.')
+      } finally {
+        setCreatingOrder(false)
+      }
     }
   }
 
@@ -378,8 +400,19 @@ export default function Checkout() {
                   Voltar
                 </button>
               )}
-              <button type="submit" className="btn-primary ml-auto">
-                {step === 3 ? 'Confirmar Pedido' : 'Continuar'}
+              <button 
+                type="submit" 
+                className="btn-primary ml-auto flex items-center"
+                disabled={creatingOrder}
+              >
+                {creatingOrder ? (
+                  <>
+                    <Loader2 className="animate-spin mr-2" size={20} />
+                    Processando...
+                  </>
+                ) : (
+                  step === 3 ? 'Confirmar Pedido' : 'Continuar'
+                )}
               </button>
             </div>
           </form>
