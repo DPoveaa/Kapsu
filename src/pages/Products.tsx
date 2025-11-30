@@ -1,71 +1,8 @@
-import { useState, useMemo } from 'react'
-import { Search, Filter } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { Search, Filter, Loader2 } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
 import { Product } from '../types'
-
-// Mock data - em produção viria de uma API
-const allProducts: Product[] = [
-  {
-    id: '1',
-    name: 'Vitamina D3 2000UI',
-    description: 'Suplemento de vitamina D3 para fortalecimento ósseo e sistema imunológico',
-    price: 45.90,
-    image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400',
-    category: 'vitamina',
-    inStock: true,
-    isCustomizable: true
-  },
-  {
-    id: '2',
-    name: 'Magnésio Quelato',
-    description: 'Magnésio de alta absorção para relaxamento muscular e saúde cardiovascular',
-    price: 38.50,
-    image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400',
-    category: 'mineral',
-    inStock: true,
-    isCustomizable: true
-  },
-  {
-    id: '3',
-    name: 'Extrato de Ginkgo Biloba',
-    description: 'Fitoterápico para memória, concentração e circulação',
-    price: 52.00,
-    image: 'https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?w=400',
-    category: 'fitoterapico',
-    inStock: true,
-    isCustomizable: false
-  },
-  {
-    id: '4',
-    name: 'Vitamina C 1000mg',
-    description: 'Vitamina C de alta concentração para fortalecimento do sistema imunológico',
-    price: 32.90,
-    image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400',
-    category: 'vitamina',
-    inStock: true,
-    isCustomizable: true
-  },
-  {
-    id: '5',
-    name: 'Zinco Quelato',
-    description: 'Zinco essencial para sistema imunológico e cicatrização',
-    price: 28.50,
-    image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400',
-    category: 'mineral',
-    inStock: true,
-    isCustomizable: true
-  },
-  {
-    id: '6',
-    name: 'Óleo de Prímula',
-    description: 'Fitoterápico rico em ácidos graxos essenciais para saúde hormonal',
-    price: 48.00,
-    image: 'https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?w=400',
-    category: 'fitoterapico',
-    inStock: true,
-    isCustomizable: false
-  }
-]
+import { productsService } from '../services/products.service'
 
 const categories = [
   { value: 'all', label: 'Todos' },
@@ -76,18 +13,41 @@ const categories = [
 ]
 
 export default function Products() {
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [showFilters, setShowFilters] = useState(false)
 
+  // Carrega produtos da API
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await productsService.getAll()
+        setProducts(data)
+      } catch (err: any) {
+        console.error('Erro ao carregar produtos:', err)
+        setError(err.message || 'Erro ao carregar produtos')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProducts()
+  }, [])
+
+  // Filtra produtos localmente (pode ser otimizado para usar a API)
   const filteredProducts = useMemo(() => {
-    return allProducts.filter(product => {
+    return products.filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            product.description.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory
       return matchesSearch && matchesCategory
     })
-  }, [searchTerm, selectedCategory])
+  }, [products, searchTerm, selectedCategory])
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -140,14 +100,38 @@ export default function Products() {
         </div>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="animate-spin text-primary-600" size={48} />
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !loading && (
+        <div className="text-center py-12">
+          <p className="text-red-600 text-lg font-semibold">Erro ao carregar produtos</p>
+          <p className="text-gray-500 mt-2">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
       {/* Products Grid */}
-      {filteredProducts.length > 0 ? (
+      {!loading && !error && filteredProducts.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProducts.map(product => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
-      ) : (
+      )}
+
+      {/* Empty State */}
+      {!loading && !error && filteredProducts.length === 0 && (
         <div className="text-center py-12">
           <p className="text-gray-600 text-lg">Nenhum produto encontrado.</p>
           <p className="text-gray-500 mt-2">Tente ajustar seus filtros de busca.</p>
