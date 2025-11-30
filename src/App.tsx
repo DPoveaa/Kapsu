@@ -13,6 +13,9 @@ import AdminPanel from './pages/AdminPanel'
 import WhatsAppConnection from './pages/WhatsAppConnection'
 import WhatsAppSupport from './pages/WhatsAppSupport'
 import UserManagement from './pages/UserManagement'
+import CreateProduct from './pages/CreateProduct'
+import ManageProducts from './pages/ManageProducts'
+import EditProduct from './pages/EditProduct'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 
@@ -60,6 +63,30 @@ function App() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <UserManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/products"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <ManageProducts />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/products/create"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <CreateProduct />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/products/edit/:id"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <EditProduct />
                   </ProtectedRoute>
                 }
               />

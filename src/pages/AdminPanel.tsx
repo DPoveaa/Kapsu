@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Settings, MessageSquare, Users, Package, ShoppingCart, BarChart3 } from 'lucide-react'
 
@@ -29,7 +28,10 @@ export default function AdminPanel() {
           </Link>
 
           {/* Card Produtos */}
-          <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer">
+          <Link
+            to="/admin/products"
+            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+          >
             <div className="flex items-center space-x-4">
               <div className="bg-blue-100 p-3 rounded-lg">
                 <Package className="w-6 h-6 text-blue-600" />
@@ -39,7 +41,7 @@ export default function AdminPanel() {
                 <p className="text-sm text-gray-600">Gerenciar produtos</p>
               </div>
             </div>
-          </div>
+          </Link>
 
           {/* Card Pedidos */}
           <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer">

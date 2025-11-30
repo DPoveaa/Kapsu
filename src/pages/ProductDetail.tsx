@@ -1,56 +1,66 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { ShoppingCart, Sparkles, ArrowLeft, Plus, Minus } from 'lucide-react'
-import { useState } from 'react'
+import { ShoppingCart, Sparkles, ArrowLeft, Plus, Minus, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { useCart } from '../context/CartContext'
 import { Product } from '../types'
-
-// Mock data - em produção viria de uma API
-const products: Product[] = [
-  {
-    id: '1',
-    name: 'Vitamina D3 2000UI',
-    description: 'Suplemento de vitamina D3 para fortalecimento ósseo e sistema imunológico. Ideal para pessoas com deficiência de vitamina D, promove a absorção de cálcio e fortalece o sistema imunológico.',
-    price: 45.90,
-    image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800',
-    category: 'vitamina',
-    inStock: true,
-    isCustomizable: true
-  },
-  {
-    id: '2',
-    name: 'Magnésio Quelato',
-    description: 'Magnésio de alta absorção para relaxamento muscular e saúde cardiovascular',
-    price: 38.50,
-    image: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800',
-    category: 'mineral',
-    inStock: true,
-    isCustomizable: true
-  },
-  {
-    id: '3',
-    name: 'Extrato de Ginkgo Biloba',
-    description: 'Fitoterápico para memória, concentração e circulação',
-    price: 52.00,
-    image: 'https://images.unsplash.com/photo-1607619056574-7b8d3ee536b2?w=800',
-    category: 'fitoterapico',
-    inStock: true,
-    isCustomizable: false
-  }
-]
+import { productsService } from '../services/products.service'
 
 export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { addProduct } = useCart()
   const [quantity, setQuantity] = useState(1)
+  const [product, setProduct] = useState<Product | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const product = products.find(p => p.id === id)
+  // Carrega produto da API
+  useEffect(() => {
+    const loadProduct = async () => {
+      if (!id) {
+        setError('ID do produto não fornecido')
+        setLoading(false)
+        return
+      }
 
-  if (!product) {
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await productsService.getById(id)
+        setProduct(data)
+      } catch (err: any) {
+        console.error('Erro ao carregar produto:', err)
+        setError(err.message || 'Erro ao carregar produto')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadProduct()
+  }, [id])
+
+  // Loading State
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="animate-spin text-primary-600" size={48} />
+        </div>
+      </div>
+    )
+  }
+
+  // Error State
+  if (error || !product) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
-        <p className="text-gray-600 text-lg">Produto não encontrado.</p>
-        <button onClick={() => navigate('/produtos')} className="btn-primary mt-4">
+        <p className="text-red-600 text-lg font-semibold mb-2">
+          {error || 'Produto não encontrado'}
+        </p>
+        <p className="text-gray-500 mb-4">
+          O produto que você está procurando não existe ou foi removido.
+        </p>
+        <button onClick={() => navigate('/produtos')} className="btn-primary">
           Voltar para Produtos
         </button>
       </div>
