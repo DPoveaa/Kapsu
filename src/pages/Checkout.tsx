@@ -1,19 +1,17 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, CreditCard, MapPin, FileText, CheckCircle, Loader2 } from 'lucide-react'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
 import { orderService } from '../services/order.service'
 
 export default function Checkout() {
   const navigate = useNavigate()
   const { items, getTotal, clearCart } = useCart()
+  const { user, isAuthenticated } = useAuth()
   const [step, setStep] = useState(1)
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    cpf: '',
     cep: '',
     address: '',
     number: '',
@@ -23,6 +21,13 @@ export default function Checkout() {
     paymentMethod: 'credit' as 'credit' | 'debit' | 'pix',
     prescriptionFile: null as File | null
   })
+
+  // Redireciona se não estiver autenticado
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login')
+    }
+  }, [isAuthenticated, navigate])
 
   const hasPrescriptionRequired = items.some(
     item => item.type === 'custom' && item.customMedication?.prescriptionRequired
@@ -59,11 +64,13 @@ export default function Checkout() {
           shippingAddress
         )
         
+        console.log('✅ Pedido criado com sucesso:', order)
+        
         // Limpa carrinho
         await clearCart()
         
         // Redireciona para página de sucesso ou pedidos
-        alert(`Pedido #${order.id.substring(0, 8)} criado com sucesso!`)
+        alert(`Pedido #${order.id.substring(0, 8)} criado com sucesso!\n\nTotal: R$ ${order.total.toFixed(2).replace('.', ',')}\nStatus: ${order.status}`)
         navigate('/')
       } catch (error: any) {
         console.error('Erro ao criar pedido:', error)
@@ -72,6 +79,15 @@ export default function Checkout() {
         setCreatingOrder(false)
       }
     }
+  }
+
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <Loader2 className="animate-spin mx-auto text-primary-600 mb-4" size={48} />
+        <p className="text-gray-600">Carregando...</p>
+      </div>
+    )
   }
 
   if (items.length === 0) {
@@ -95,7 +111,17 @@ export default function Checkout() {
         Voltar
       </button>
 
-      <h1 className="text-4xl font-bold text-gray-900 mb-8">Finalizar Compra</h1>
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">Finalizar Compra</h1>
+
+      {/* Informações do usuário */}
+      <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+        <p className="text-sm text-gray-600 mb-1">
+          <strong>Nome:</strong> {user.name}
+        </p>
+        <p className="text-sm text-gray-600">
+          <strong>E-mail:</strong> {user.email}
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Form */}
@@ -125,65 +151,9 @@ export default function Checkout() {
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                   <MapPin className="mr-2" size={24} />
-                  Dados de Entrega
+                  Endereço de Entrega
                 </h2>
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Nome Completo *
-                      </label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        CPF *
-                      </label>
-                      <input
-                        type="text"
-                        name="cpf"
-                        value={formData.cpf}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        E-mail *
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Telefone *
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       CEP *
@@ -194,6 +164,7 @@ export default function Checkout() {
                       value={formData.cep}
                       onChange={handleInputChange}
                       required
+                      placeholder="00000-000"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                   </div>
@@ -207,6 +178,7 @@ export default function Checkout() {
                       value={formData.address}
                       onChange={handleInputChange}
                       required
+                      placeholder="Rua, Avenida, etc."
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                   </div>
@@ -221,6 +193,7 @@ export default function Checkout() {
                         value={formData.number}
                         onChange={handleInputChange}
                         required
+                        placeholder="123"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
@@ -233,6 +206,7 @@ export default function Checkout() {
                         name="complement"
                         value={formData.complement}
                         onChange={handleInputChange}
+                        placeholder="Apto, Bloco, etc."
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
@@ -248,6 +222,7 @@ export default function Checkout() {
                         value={formData.city}
                         onChange={handleInputChange}
                         required
+                        placeholder="São Paulo"
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
@@ -261,6 +236,8 @@ export default function Checkout() {
                         value={formData.state}
                         onChange={handleInputChange}
                         required
+                        placeholder="SP"
+                        maxLength={2}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
@@ -382,10 +359,22 @@ export default function Checkout() {
                 <p className="text-gray-600 mb-6">
                   Revise seus dados e confirme o pedido
                 </p>
-                <div className="text-left bg-primary-50 p-4 rounded-lg mb-6">
-                  <p className="font-semibold mb-2">Resumo do Pedido:</p>
-                  <p className="text-sm text-gray-600">Total: R$ {getTotal().toFixed(2).replace('.', ',')}</p>
-                  <p className="text-sm text-gray-600">Itens: {items.length}</p>
+                <div className="text-left bg-primary-50 p-4 rounded-lg mb-6 space-y-2">
+                  <p className="font-semibold mb-3">Dados do Pedido:</p>
+                  <p className="text-sm text-gray-700">
+                    <strong>Cliente:</strong> {user.name}
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    <strong>E-mail:</strong> {user.email}
+                  </p>
+                  <p className="text-sm text-gray-700">
+                    <strong>Endereço:</strong> {formData.address}, {formData.number}{formData.complement ? ` - ${formData.complement}` : ''}, {formData.city} - {formData.state}, CEP: {formData.cep}
+                  </p>
+                  <div className="border-t border-primary-200 pt-3 mt-3">
+                    <p className="font-semibold mb-2">Resumo do Pedido:</p>
+                    <p className="text-sm text-gray-600">Total: R$ {getTotal().toFixed(2).replace('.', ',')}</p>
+                    <p className="text-sm text-gray-600">Itens: {items.length}</p>
+                  </div>
                 </div>
               </div>
             )}
