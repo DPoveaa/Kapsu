@@ -461,6 +461,216 @@ class WhatsAppService {
       throw new Error('Erro de conexão ao desmarcar conversa como assumida')
     }
   }
+
+  /**
+   * Testa o processamento de uma mensagem pela IA
+   */
+  async testAI(
+    message: string, 
+    phone?: string,
+    conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string; timestamp?: number }>
+  ): Promise<{
+    success: boolean
+    data: {
+      extractedMessage: any
+      aiResponse: string | null
+      isControlled: boolean
+      controlledSubstance: string | null
+      needsPharmacist: boolean
+      infoMessage: string | null
+      confirmationMessage: string | null
+      wouldNotifyPharmacist: boolean
+      processingDetails?: {
+        extractionTime: number
+        hasExtractedMessage: boolean
+        extractedIntent: string | null
+        extractedEntities: any
+        aiResponseGenerated: boolean
+        aiResponseLength: number
+      }
+    }
+  }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/test-ai`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message, phone, conversationHistory }),
+      })
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao testar IA')
+      }
+      return data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro ao testar IA: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  /**
+   * Lista todos os números de farmacêuticos configurados
+   */
+  async getPharmacistNumbers(): Promise<Array<{
+    id: string
+    phone: string
+    name: string | null
+    userId: string | null
+    userEmail: string | null
+    isActive: boolean
+    createdAt: string
+    updatedAt: string
+  }>> {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${this.baseUrl}/pharmacist-numbers`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }))
+        throw new Error(errorData.message || 'Erro ao buscar números de farmacêuticos')
+      }
+
+      const data = await response.json()
+      return data.pharmacistNumbers || []
+    } catch (error: any) {
+      throw new Error('Erro ao buscar números de farmacêuticos: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  /**
+   * Adiciona um novo número de farmacêutico
+   */
+  async addPharmacistNumber(phone: string, userId?: string, name?: string): Promise<{
+    id: string
+    phone: string
+    name: string | null
+    userId: string | null
+    userEmail: string | null
+    isActive: boolean
+    createdAt: string
+    updatedAt: string
+  }> {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${this.baseUrl}/pharmacist-numbers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ phone, userId, name }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }))
+        throw new Error(errorData.message || 'Erro ao adicionar número de farmacêutico')
+      }
+
+      const data = await response.json()
+      return data.pharmacistNumber
+    } catch (error: any) {
+      throw new Error('Erro ao adicionar número de farmacêutico: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  /**
+   * Remove um número de farmacêutico
+   */
+  async removePharmacistNumber(id: string): Promise<void> {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${this.baseUrl}/pharmacist-numbers/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }))
+        throw new Error(errorData.message || 'Erro ao remover número de farmacêutico')
+      }
+    } catch (error: any) {
+      throw new Error('Erro ao remover número de farmacêutico: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  /**
+   * Lista usuários do sistema que têm telefone cadastrado
+   */
+  async getUsersWithPhone(): Promise<Array<{
+    id: string
+    name: string
+    email: string
+    phone: string
+  }>> {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${this.baseUrl}/users-with-phone`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }))
+        throw new Error(errorData.message || 'Erro ao buscar usuários')
+      }
+
+      const data = await response.json()
+      return data.users || []
+    } catch (error: any) {
+      throw new Error('Erro ao buscar usuários: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  /**
+   * Testa a notificação do farmacêutico (para interface de teste)
+   */
+  async testNotifyPharmacist(phone: string, message: string, controlledSubstance: string, extractedMessage?: any, originalMessage?: string): Promise<{
+    success: boolean
+    message: string
+    notifiedNumbers: Array<{ phone: string; name: string | null }>
+  }> {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${this.baseUrl}/test-notify-pharmacist`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          phone,
+          message,
+          controlledSubstance,
+          extractedMessage,
+          originalMessage, // Mensagem original que iniciou o processo
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }))
+        throw new Error(errorData.message || 'Erro ao notificar farmacêutico')
+      }
+
+      const data = await response.json()
+      return data
+    } catch (error: any) {
+      throw new Error('Erro ao notificar farmacêutico: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
 }
 
 export const whatsappService = new WhatsAppService()

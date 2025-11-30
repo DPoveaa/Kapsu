@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, RefreshCw, CheckCircle2, XCircle, Send, Loader2, QrCode, LogOut, AlertTriangle, MessageSquare, Phone, User, Paperclip, X, Lock, Unlock, ZoomIn } from 'lucide-react'
+import { ArrowLeft, RefreshCw, CheckCircle2, XCircle, Send, Loader2, QrCode, LogOut, AlertTriangle, MessageSquare, Phone, User, Paperclip, X, Lock, Unlock, ZoomIn, Info, ChevronDown, ChevronUp, Trash2, Download, Plus, Settings } from 'lucide-react'
 import { whatsappService, WhatsAppStatus } from '../services/whatsapp.service'
 import { env } from '../config/env'
+import { useAuth } from '../context/AuthContext'
 
 interface WhatsAppMessage {
   id: string
@@ -33,6 +34,7 @@ interface Conversation {
 
 export default function WhatsAppConnection() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [status, setStatus] = useState<WhatsAppStatus | null>(null)
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -52,6 +54,9 @@ export default function WhatsAppConnection() {
   const [showNeedingResponse, setShowNeedingResponse] = useState(false) // Toggle para mostrar fila
   const [messages, setMessages] = useState<WhatsAppMessage[]>([])
   const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const currentConversationRef = useRef<string | null>(null)
+  const loadingMessagesRef = useRef<boolean>(false)
+  const messagesCacheRef = useRef<Map<string, { messages: WhatsAppMessage[], timestamp: number }>>(new Map()) // Cache de mensagens
   const [conversationMessage, setConversationMessage] = useState('')
   const [sendingConversationMessage, setSendingConversationMessage] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -71,6 +76,134 @@ export default function WhatsAppConnection() {
     controlado: false
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Estado para teste de IA - Chat completo
+  const [testAIMessage, setTestAIMessage] = useState('')
+  const [testAIPhone, setTestAIPhone] = useState('') // Número de telefone para teste
+  const [testAIChatHistory, setTestAIChatHistory] = useState<Array<{
+    role: 'user' | 'assistant'
+    content: string
+    timestamp: number
+    metadata?: {
+      isControlled?: boolean
+      controlledSubstance?: string | null
+      needsPharmacist?: boolean
+      infoMessage?: string | null
+      confirmationMessage?: string | null
+      extractedMessage?: any
+      processingDetails?: any
+    }
+  }>>([])
+  const [testingAI, setTestingAI] = useState(false)
+  const [showTestPanel, setShowTestPanel] = useState(false)
+  const [processingStatus, setProcessingStatus] = useState<string>('')
+  const [selectedMessageForDetails, setSelectedMessageForDetails] = useState<number | null>(null)
+  const testChatContainerRef = useRef<HTMLDivElement>(null)
+  
+  // Estado para modal de confirmação de encaminhamento para farmacêutico
+  const [showPharmacistConfirmation, setShowPharmacistConfirmation] = useState(false)
+  const [pendingPharmacistNotification, setPendingPharmacistNotification] = useState<{
+    phone: string
+    message: string
+    originalMessage?: string // Mensagem original que iniciou o processo
+    controlledSubstance: string
+    extractedMessage: any
+    messageIndex: number
+  } | null>(null)
+
+  // Estados para gerenciar números de farmacêuticos
+  const [showPharmacistConfig, setShowPharmacistConfig] = useState(false)
+  const [pharmacistNumbers, setPharmacistNumbers] = useState<Array<{
+    id: string
+    phone: string
+    name: string | null
+    userId: string | null
+    userEmail: string | null
+    isActive: boolean
+    createdAt: string
+    updatedAt: string
+  }>>([])
+  const [loadingPharmacistNumbers, setLoadingPharmacistNumbers] = useState(false)
+  const [showAddPharmacistModal, setShowAddPharmacistModal] = useState(false)
+  const [newPharmacistPhone, setNewPharmacistPhone] = useState('')
+  const [newPharmacistUserId, setNewPharmacistUserId] = useState<string | null>(null)
+  const [newPharmacistName, setNewPharmacistName] = useState('')
+  const [usersWithPhone, setUsersWithPhone] = useState<Array<{
+    id: string
+    name: string
+    email: string
+    phone: string
+  }>>([])
+  const [loadingUsers, setLoadingUsers] = useState(false)
+  const [addingPharmacist, setAddingPharmacist] = useState(false)
+
+  // Chave para armazenamento no localStorage
+  const TEST_CHAT_STORAGE_KEY = 'sanare_ai_test_chat_history'
+  const TEST_PHONE_STORAGE_KEY = 'sanare_ai_test_phone'
+  const isInitialLoadRef = useRef(true) // Flag para evitar salvar no primeiro carregamento
+
+  // Carrega histórico de teste salvo do localStorage ao montar o componente
+  useEffect(() => {
+    try {
+      const savedHistory = localStorage.getItem(TEST_CHAT_STORAGE_KEY)
+      if (savedHistory) {
+        const parsed = JSON.parse(savedHistory)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTestAIChatHistory(parsed)
+        }
+      }
+      
+      const savedPhone = localStorage.getItem(TEST_PHONE_STORAGE_KEY)
+      if (savedPhone) {
+        setTestAIPhone(savedPhone)
+      }
+      
+      // Marca que o carregamento inicial foi concluído
+      setTimeout(() => {
+        isInitialLoadRef.current = false
+      }, 100)
+    } catch (error) {
+      console.error('Erro ao carregar histórico de teste do localStorage:', error)
+      isInitialLoadRef.current = false
+    }
+  }, []) // Executa apenas uma vez ao montar
+
+  // Salva histórico no localStorage sempre que ele mudar (mas não no primeiro carregamento)
+  useEffect(() => {
+    // Evita salvar durante o carregamento inicial
+    if (isInitialLoadRef.current) {
+      return
+    }
+    
+    try {
+      if (testAIChatHistory.length > 0) {
+        localStorage.setItem(TEST_CHAT_STORAGE_KEY, JSON.stringify(testAIChatHistory))
+      } else {
+        // Se o histórico estiver vazio, remove do localStorage
+        localStorage.removeItem(TEST_CHAT_STORAGE_KEY)
+      }
+    } catch (error) {
+      console.error('Erro ao salvar histórico de teste no localStorage:', error)
+    }
+  }, [testAIChatHistory])
+
+  // Salva número de telefone no localStorage quando mudar (mas não no primeiro carregamento)
+  useEffect(() => {
+    // Evita salvar durante o carregamento inicial
+    if (isInitialLoadRef.current) {
+      return
+    }
+    
+    try {
+      if (testAIPhone.trim()) {
+        localStorage.setItem(TEST_PHONE_STORAGE_KEY, testAIPhone.trim())
+      } else {
+        localStorage.removeItem(TEST_PHONE_STORAGE_KEY)
+      }
+    } catch (error) {
+      console.error('Erro ao salvar telefone de teste no localStorage:', error)
+    }
+  }, [testAIPhone])
 
   useEffect(() => {
     // Apenas verifica o status, não inicializa automaticamente
@@ -120,13 +253,41 @@ export default function WhatsAppConnection() {
 
   // Carrega mensagens quando uma conversa é selecionada
   useEffect(() => {
+    // Atualiza a ref com a conversa atual
+    currentConversationRef.current = selectedConversation
+    
     if (selectedConversation) {
-      loadMessages(selectedConversation)
+      // Limpa mensagens anteriores imediatamente ao trocar de conversa
+      setMessages([])
+      loadingMessagesRef.current = false
+      
+      // Carrega mensagens da nova conversa
+      const currentPhone = selectedConversation
+      
+      // Pequeno delay para garantir que o estado foi atualizado
+      setTimeout(() => {
+        if (currentConversationRef.current === currentPhone) {
+          loadMessages(currentPhone)
+        }
+      }, 50)
+      
       const messagesInterval = setInterval(() => {
-        loadMessages(selectedConversation)
+        // Verifica se ainda é a conversa selecionada usando a ref (sempre atualizada)
+        if (currentConversationRef.current === currentPhone && !loadingMessagesRef.current) {
+          loadMessages(currentPhone)
+        }
       }, 1000) // Atualiza mensagens a cada 1 segundo
 
-      return () => clearInterval(messagesInterval)
+      return () => {
+        clearInterval(messagesInterval)
+        // Limpa mensagens ao sair da conversa
+        setMessages([])
+        loadingMessagesRef.current = false
+      }
+    } else {
+      // Se não há conversa selecionada, limpa as mensagens
+      setMessages([])
+      loadingMessagesRef.current = false
     }
   }, [selectedConversation])
 
@@ -146,43 +307,24 @@ export default function WhatsAppConnection() {
   
   useEffect(() => {
     if (messages.length > 0 && selectedConversation && messagesContainerRef.current) {
-      // Só faz scroll se houver novas mensagens (não apenas ao selecionar conversa)
-      if (messages.length > previousMessageCount) {
-        // Usa requestAnimationFrame para garantir que não afeta o scroll da página
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            if (messagesContainerRef.current) {
-              // Scroll apenas dentro do container, não na página toda
-              messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
-            }
-          }, 50)
-        })
-        setPreviousMessageCount(messages.length)
-      } else if (previousMessageCount === 0 && messages.length > 0) {
-        // Primeira vez carregando mensagens desta conversa - scroll sem animação
-        requestAnimationFrame(() => {
-          setTimeout(() => {
-            if (messagesContainerRef.current) {
-              messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
-            }
-          }, 50)
-        })
+      // Scroll instantâneo para o final quando há mensagens
+      // Se for primeira vez carregando (previousMessageCount === 0), scroll instantâneo
+      // Se houver novas mensagens, também scroll instantâneo
+      if (previousMessageCount === 0 || messages.length > previousMessageCount) {
+        // Scroll instantâneo sem delay ou animação
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
         setPreviousMessageCount(messages.length)
       }
     }
   }, [messages.length, selectedConversation, previousMessageCount])
   
-  // Reset contador quando troca de conversa
+  // Reset contador quando troca de conversa e scroll instantâneo para o final
   useEffect(() => {
     setPreviousMessageCount(0)
-    // Scroll para o topo quando troca de conversa (sem animação para evitar scroll da página)
+    // Scroll instantâneo para o final quando troca de conversa (sem animação)
     if (messagesContainerRef.current) {
-      // Usa requestAnimationFrame para garantir que não afeta o scroll da página
-      requestAnimationFrame(() => {
-        if (messagesContainerRef.current) {
-          messagesContainerRef.current.scrollTop = 0
-        }
-      })
+      // Scroll instantâneo sem delay
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
     }
   }, [selectedConversation])
 
@@ -370,22 +512,74 @@ export default function WhatsAppConnection() {
 
   const loadMessages = async (phone: string) => {
     try {
-      const response = await whatsappService.getConversationMessages(phone)
-      if (response.success) {
-        setMessages(response.messages)
-        // Marca como lida
-        await whatsappService.markConversationAsRead(phone)
+      // Previne múltiplas requisições simultâneas
+      if (loadingMessagesRef.current) {
+        return
       }
-    } catch (error) {
-      // Ignora erros silenciosamente
+      
+      // Verifica se ainda é a conversa selecionada antes de atualizar
+      if (currentConversationRef.current !== phone) {
+        return // Ignora se a conversa mudou
+      }
+      
+      loadingMessagesRef.current = true
+      
+      // OTIMIZAÇÃO: Mostra mensagens do cache primeiro (instantâneo) apenas se houver cache válido
+      const cached = messagesCacheRef.current.get(phone)
+      if (cached && cached.messages && cached.messages.length > 0 && (Date.now() - cached.timestamp < 5000)) {
+        // Cache válido por 5 segundos e tem mensagens
+        setMessages(cached.messages)
+      }
+      
+      const response = await whatsappService.getConversationMessages(phone)
+      
+      // Verifica novamente após a requisição (pode ter mudado durante o async)
+      if (currentConversationRef.current !== phone) {
+        loadingMessagesRef.current = false
+        return // Ignora se a conversa mudou durante a requisição
+      }
+      
+      if (response && response.success) {
+        const loadedMessages = response.messages || []
+        setMessages(loadedMessages)
+        
+        // Atualiza cache apenas se houver mensagens
+        if (loadedMessages.length > 0) {
+          messagesCacheRef.current.set(phone, {
+            messages: loadedMessages,
+            timestamp: Date.now()
+          })
+        } else {
+          // Remove do cache se não houver mensagens
+          messagesCacheRef.current.delete(phone)
+        }
+        
+        // Marca como lida
+        await whatsappService.markConversationAsRead(phone).catch(() => {
+          // Ignora erros ao marcar como lida
+        })
+      } else {
+        // Se não teve sucesso, limpa mensagens e cache
+        setMessages([])
+        messagesCacheRef.current.delete(phone)
+      }
+      
+      loadingMessagesRef.current = false
+    } catch (error: any) {
+      loadingMessagesRef.current = false
+      console.error('Erro ao carregar mensagens:', error)
+      // Limpa mensagens em caso de erro
+      setMessages([])
+      messagesCacheRef.current.delete(phone)
     }
   }
 
   const handleBlockConversation = async (phone: string) => {
     try {
+      const userName = user?.name || 'Administrador'
       await whatsappService.markConversationAsAssumed(
         phone,
-        'Administrador',
+        userName,
         'Conversa assumida manualmente'
       )
       alert('Conversa assumida com sucesso! A IA foi bloqueada.')
@@ -454,9 +648,65 @@ export default function WhatsAppConnection() {
   const renderMessageContent = (msg: WhatsAppMessage) => {
     // Se for imagem, sempre tenta mostrar (mesmo sem mediaUrl, busca do endpoint)
     if (msg.type === 'image') {
-      const mediaUrl = msg.mediaUrl || (msg.id ? `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}` : null)
+      let mediaUrl = msg.mediaUrl
+      
+      // Se mediaUrl for relativa (começa com /), converte para URL completa
+      if (mediaUrl && mediaUrl.startsWith('/')) {
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        mediaUrl = `${baseUrl}${mediaUrl}`
+      }
+      
+      // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
+      if (!mediaUrl && msg.id) {
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        mediaUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
+      }
       
       if (mediaUrl) {
+        // Função para baixar imagem
+        const handleDownload = async (e: React.MouseEvent) => {
+          e.stopPropagation()
+          try {
+            // Se for base64, converte para blob
+            if (mediaUrl.startsWith('data:')) {
+              const response = await fetch(mediaUrl)
+              const blob = await response.blob()
+              const url = window.URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `imagem-${msg.id || Date.now()}.${msg.fileExtension || 'jpg'}`
+              document.body.appendChild(a)
+              a.click()
+              document.body.removeChild(a)
+              window.URL.revokeObjectURL(url)
+            } else {
+              // Para URLs remotas, faz fetch e baixa
+              const response = await fetch(mediaUrl)
+              const blob = await response.blob()
+              const url = window.URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `imagem-${msg.id || Date.now()}.${msg.fileExtension || 'jpg'}`
+              document.body.appendChild(a)
+              a.click()
+              document.body.removeChild(a)
+              window.URL.revokeObjectURL(url)
+            }
+          } catch (error) {
+            console.error('Erro ao baixar imagem:', error)
+            // Fallback: abre em nova aba
+            window.open(mediaUrl, '_blank')
+          }
+        }
+
         return (
           <div className="space-y-2">
             <div className="relative">
@@ -482,12 +732,19 @@ export default function WhatsAppConnection() {
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
                   <ZoomIn className="w-8 h-8 text-white" />
                 </div>
+                {/* Botão de download na imagem pequena */}
+                <button
+                  onClick={handleDownload}
+                  className="absolute bottom-2 right-2 bg-black bg-opacity-60 hover:bg-opacity-80 text-white p-2 rounded-full transition-all opacity-0 group-hover:opacity-100 z-10"
+                  title="Baixar imagem"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
               </div>
             </div>
+            {/* Legenda da imagem */}
             {msg.body && (
-              <div className="px-3 sm:px-4 pt-2">
-                <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.body}</p>
-              </div>
+              <p className="text-xs sm:text-sm whitespace-pre-wrap break-words px-2 pt-1">{msg.body}</p>
             )}
           </div>
         )
@@ -501,9 +758,24 @@ export default function WhatsAppConnection() {
       // Tenta usar mediaUrl direto, ou busca do endpoint
       let mediaUrl = msg.mediaUrl
       
+      // Se mediaUrl for relativa (começa com /), converte para URL completa
+      if (mediaUrl && mediaUrl.startsWith('/')) {
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        mediaUrl = `${baseUrl}${mediaUrl}`
+      }
+      
       // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
       if (!mediaUrl && msg.id) {
-        mediaUrl = `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        mediaUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
       }
       
       // Debug: log para verificar se tem mediaUrl
@@ -519,7 +791,7 @@ export default function WhatsAppConnection() {
           <div className="space-y-2">
             <audio 
               controls 
-              className="w-full max-w-sm"
+              className="w-full max-w-md min-w-[280px]"
               preload="metadata"
               onError={(e) => {
                 console.error('Erro ao carregar áudio:', {
@@ -587,9 +859,24 @@ export default function WhatsAppConnection() {
       // Tenta usar mediaUrl direto, ou busca do endpoint
       let mediaUrl = msg.mediaUrl
       
+      // Se mediaUrl for relativa (começa com /), converte para URL completa
+      if (mediaUrl && mediaUrl.startsWith('/')) {
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        mediaUrl = `${baseUrl}${mediaUrl}`
+      }
+      
       // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
       if (!mediaUrl && msg.id) {
-        mediaUrl = `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        mediaUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
       }
       
       // Debug: log para verificar se tem mediaUrl
@@ -670,7 +957,27 @@ export default function WhatsAppConnection() {
 
     // Se for documento ou outro tipo de arquivo, sempre mostra link para download
     if (msg.type === 'document' || msg.type === 'other') {
-      const mediaUrl = msg.mediaUrl || (msg.id ? `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}` : null)
+      let mediaUrl = msg.mediaUrl
+      
+      // Se mediaUrl for relativa (começa com /), converte para URL completa
+      if (mediaUrl && mediaUrl.startsWith('/')) {
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        mediaUrl = `${baseUrl}${mediaUrl}`
+      }
+      
+      // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
+      if (!mediaUrl && msg.id) {
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        mediaUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
+      }
       
       // Determina o nome do arquivo baseado no mimetype
       const getFileIcon = (mimetype?: string) => {
@@ -758,12 +1065,21 @@ export default function WhatsAppConnection() {
   const filterConversations = (conversations: Conversation[], search: string): Conversation[] => {
     return conversations.filter(conversation => {
       // Filtro de busca por texto
-      if (search.trim()) {
+      if (search && search.trim()) {
         const searchLower = search.toLowerCase().trim()
+        const normalizedSearch = searchLower.replace(/\D/g, '') // Remove caracteres não numéricos
+        const normalizedPhone = conversation.phone.replace(/\D/g, '') // Remove caracteres não numéricos do telefone
+        
         const matchesSearch = (
+          // Busca por nome do contato
           (conversation.contactName || '').toLowerCase().includes(searchLower) ||
-          conversation.phone.replace(/\D/g, '').includes(searchLower.replace(/\D/g, '')) ||
+          // Busca por número normalizado (apenas dígitos)
+          normalizedPhone.includes(normalizedSearch) ||
+          // Busca por número formatado
           formatPhone(conversation.phone).toLowerCase().includes(searchLower) ||
+          // Busca por número original (caso tenha @c.us ou outros sufixos)
+          conversation.phone.toLowerCase().includes(searchLower) ||
+          // Busca no conteúdo da última mensagem
           formatMessageBody(conversation.lastMessage).toLowerCase().includes(searchLower)
         )
         if (!matchesSearch) return false
@@ -879,6 +1195,202 @@ export default function WhatsAppConnection() {
     }
   }
 
+  const handleTestAI = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!testAIMessage.trim() || testingAI) return
+
+    const userMessage = testAIMessage.trim()
+    setTestAIMessage('')
+    setTestingAI(true)
+    setMessageStatus({ type: null, message: '' })
+
+    // Adiciona mensagem do usuário ao histórico
+    const userMessageEntry = {
+      role: 'user' as const,
+      content: userMessage,
+      timestamp: Date.now(),
+    }
+    setTestAIChatHistory(prev => [...prev, userMessageEntry])
+
+    try {
+      setProcessingStatus('🔍 Extraindo informações da mensagem...')
+      
+      // Prepara histórico para enviar (apenas role e content)
+      // Envia apenas as últimas 5 mensagens (total, não 5 de cada tipo)
+      const historyForAPI = testAIChatHistory
+        .slice(-5)
+        .map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp,
+        }))
+
+      setProcessingStatus('🤖 Gerando resposta da IA...')
+      // Usa o telefone fornecido ou undefined (para simular sem telefone)
+      const phoneToUse = testAIPhone.trim() || undefined
+      const result = await whatsappService.testAI(userMessage, phoneToUse, historyForAPI)
+      const aiData = result.data
+
+      setProcessingStatus('✅ Processamento concluído!')
+
+      // Determina a resposta da IA
+      let aiResponseContent = aiData.aiResponse || ''
+      
+      // Se for medicamento controlado, usa a mensagem apropriada
+      if (aiData.isControlled) {
+        if (aiData.needsPharmacist && aiData.confirmationMessage) {
+          aiResponseContent = aiData.confirmationMessage
+        } else if (aiData.infoMessage) {
+          aiResponseContent = aiData.infoMessage
+        }
+      }
+
+      // Adiciona resposta da IA ao histórico com todos os dados
+      const aiMessageEntry = {
+        role: 'assistant' as const,
+        content: aiResponseContent || 'Nenhuma resposta gerada',
+        timestamp: Date.now(),
+        metadata: {
+          isControlled: aiData.isControlled,
+          controlledSubstance: aiData.controlledSubstance,
+          needsPharmacist: aiData.needsPharmacist,
+          infoMessage: aiData.infoMessage,
+          confirmationMessage: aiData.confirmationMessage,
+          extractedMessage: aiData.extractedMessage,
+          processingDetails: aiData.processingDetails,
+        },
+      }
+      const messageIndex = testAIChatHistory.length // Índice da mensagem que será adicionada
+      setTestAIChatHistory(prev => [...prev, aiMessageEntry])
+      
+      // Se for medicamento controlado confirmado (needsPharmacist && confirmationMessage), mostra modal de confirmação
+      if (aiData.needsPharmacist && aiData.confirmationMessage && aiData.controlledSubstance) {
+        // Busca a mensagem original que iniciou o processo (não a confirmação)
+        // Procura no histórico a mensagem do usuário que mencionou o medicamento
+        let originalMessage = userMessage;
+        const history = testAIChatHistory;
+        if (history.length > 0) {
+          // Procura a última mensagem do usuário antes da resposta da IA sobre medicamento controlado
+          for (let i = history.length - 1; i >= 0; i--) {
+            const msg = history[i];
+            if (msg.role === 'user' && msg.content && msg.content.length > 10) {
+              // Verifica se não é uma confirmação
+              const confirmationKeywords = ['sim', 'quero', 'prosseguir', 'prossiga', 'chamar', 'chame', 
+                'farmacêutico', 'farmaceutico', 'ok', 'okay', 'pode', 'confirmo', 'confirmar', 
+                'aceito', 'aceitar', 'vamos', 'pode chamar', 'quero sim'];
+              const isConfirmation = confirmationKeywords.some(keyword => 
+                msg.content.toLowerCase().trim() === keyword || 
+                msg.content.toLowerCase().trim().startsWith(keyword + ' ')
+              );
+              if (!isConfirmation) {
+                originalMessage = msg.content;
+                break;
+              }
+            }
+          }
+        }
+        
+        setPendingPharmacistNotification({
+          phone: phoneToUse || 'TEST_PHONE',
+          message: userMessage, // Mensagem de confirmação atual
+          originalMessage: originalMessage, // Mensagem original que iniciou o processo
+          controlledSubstance: aiData.controlledSubstance,
+          extractedMessage: aiData.extractedMessage,
+          messageIndex,
+        })
+        setShowPharmacistConfirmation(true)
+      } else {
+        setMessageStatus({ type: 'success', message: 'Mensagem processada!' })
+        setTimeout(() => {
+          setProcessingStatus('')
+        }, 500)
+      }
+    } catch (error: any) {
+      setMessageStatus({ type: 'error', message: error.message || 'Erro ao testar IA' })
+      setProcessingStatus('')
+      // Adiciona mensagem de erro ao histórico
+      const errorMessageEntry = {
+        role: 'assistant' as const,
+        content: `❌ Erro: ${error.message || 'Erro ao processar mensagem'}`,
+        timestamp: Date.now(),
+      }
+      setTestAIChatHistory(prev => [...prev, errorMessageEntry])
+    } finally {
+      setTestingAI(false)
+      setTimeout(() => {
+        setProcessingStatus('')
+      }, 500)
+    }
+  }
+
+  // Função para confirmar e notificar o farmacêutico
+  const handleConfirmPharmacistNotification = async () => {
+    if (!pendingPharmacistNotification) return
+
+    try {
+      setProcessingStatus('📤 Enviando notificação para farmacêutico...')
+      const result = await whatsappService.testNotifyPharmacist(
+        pendingPharmacistNotification.phone,
+        pendingPharmacistNotification.message,
+        pendingPharmacistNotification.controlledSubstance,
+        pendingPharmacistNotification.extractedMessage
+      )
+
+      if (result.success) {
+        // Atualiza a mensagem no histórico para indicar que foi notificado
+        setTestAIChatHistory(prev => {
+          const updated = [...prev]
+          if (updated[pendingPharmacistNotification.messageIndex]) {
+            updated[pendingPharmacistNotification.messageIndex] = {
+              ...updated[pendingPharmacistNotification.messageIndex],
+              metadata: {
+                ...updated[pendingPharmacistNotification.messageIndex].metadata,
+                pharmacistNotified: true,
+                notifiedNumbers: result.notifiedNumbers,
+              },
+            }
+          }
+          return updated
+        })
+        setMessageStatus({ type: 'success', message: result.message })
+      } else {
+        setMessageStatus({ type: 'error', message: result.message })
+      }
+    } catch (error: any) {
+      setMessageStatus({ type: 'error', message: error.message || 'Erro ao notificar farmacêutico' })
+    } finally {
+      setShowPharmacistConfirmation(false)
+      setPendingPharmacistNotification(null)
+      setProcessingStatus('')
+    }
+  }
+
+  const handleClearTestChat = () => {
+    if (confirm('Deseja limpar o histórico do chat de teste? Todas as mensagens serão removidas permanentemente.')) {
+      setTestAIChatHistory([])
+      setTestAIMessage('')
+      setTestAIPhone('') // Limpa também o telefone
+      setMessageStatus({ type: null, message: '' })
+      setProcessingStatus('')
+      setSelectedMessageForDetails(null)
+      
+      // Remove do localStorage
+      try {
+        localStorage.removeItem(TEST_CHAT_STORAGE_KEY)
+        localStorage.removeItem(TEST_PHONE_STORAGE_KEY)
+      } catch (error) {
+        console.error('Erro ao limpar histórico do localStorage:', error)
+      }
+    }
+  }
+
+  // Scroll automático para última mensagem no chat de teste
+  useEffect(() => {
+    if (testChatContainerRef.current && testAIChatHistory.length > 0) {
+      testChatContainerRef.current.scrollTop = testChatContainerRef.current.scrollHeight
+    }
+  }, [testAIChatHistory])
+
   const handleSendConversationMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedConversation || (!conversationMessage.trim() && !selectedFile)) {
@@ -922,12 +1434,10 @@ export default function WhatsAppConnection() {
             // Recarrega as mensagens e conversas após enviar
             await loadMessages(selectedConversation)
             loadConversations()
-            // Scroll para o final após enviar
-            setTimeout(() => {
-              if (messagesContainerRef.current) {
-                messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
-              }
-            }, 100)
+            // Scroll instantâneo para o final após enviar
+            if (messagesContainerRef.current) {
+              messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+            }
           } catch (error: any) {
             setMessageStatus({ type: 'error', message: error.message || 'Erro ao enviar mídia' })
           } finally {
@@ -944,12 +1454,10 @@ export default function WhatsAppConnection() {
       // Recarrega as mensagens e conversas após enviar
       await loadMessages(selectedConversation)
       loadConversations()
-      // Scroll para o final após enviar
-      setTimeout(() => {
-        if (messagesContainerRef.current) {
-          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
-        }
-      }, 100)
+      // Scroll instantâneo para o final após enviar
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+      }
     } catch (error: any) {
       setMessageStatus({ type: 'error', message: error.message || 'Erro ao enviar mensagem' })
     } finally {
@@ -982,9 +1490,98 @@ export default function WhatsAppConnection() {
     }
   }
 
+  // Funções para gerenciar números de farmacêuticos
+  const loadPharmacistNumbers = async () => {
+    setLoadingPharmacistNumbers(true)
+    try {
+      const numbers = await whatsappService.getPharmacistNumbers()
+      setPharmacistNumbers(numbers)
+    } catch (error: any) {
+      console.error('Erro ao carregar números de farmacêuticos:', error)
+      alert('Erro ao carregar números de farmacêuticos: ' + error.message)
+    } finally {
+      setLoadingPharmacistNumbers(false)
+    }
+  }
+
+  const loadUsersWithPhone = async () => {
+    setLoadingUsers(true)
+    try {
+      const users = await whatsappService.getUsersWithPhone()
+      setUsersWithPhone(users)
+    } catch (error: any) {
+      console.error('Erro ao carregar usuários:', error)
+    } finally {
+      setLoadingUsers(false)
+    }
+  }
+
+  const handleOpenAddPharmacistModal = async () => {
+    setShowAddPharmacistModal(true)
+    setNewPharmacistPhone('')
+    setNewPharmacistUserId(null)
+    setNewPharmacistName('')
+    await loadUsersWithPhone()
+  }
+
+  const handleAddPharmacist = async () => {
+    if (!newPharmacistPhone.trim() && !newPharmacistUserId) {
+      alert('Por favor, selecione um usuário ou digite um número de telefone')
+      return
+    }
+
+    setAddingPharmacist(true)
+    try {
+      await whatsappService.addPharmacistNumber(
+        newPharmacistPhone.trim(),
+        newPharmacistUserId || undefined,
+        newPharmacistName.trim() || undefined
+      )
+      await loadPharmacistNumbers()
+      setShowAddPharmacistModal(false)
+      setNewPharmacistPhone('')
+      setNewPharmacistUserId(null)
+      setNewPharmacistName('')
+    } catch (error: any) {
+      alert('Erro ao adicionar número: ' + error.message)
+    } finally {
+      setAddingPharmacist(false)
+    }
+  }
+
+  const handleRemovePharmacist = async (id: string) => {
+    if (!confirm('Tem certeza que deseja remover este número?')) {
+      return
+    }
+
+    try {
+      await whatsappService.removePharmacistNumber(id)
+      await loadPharmacistNumbers()
+    } catch (error: any) {
+      alert('Erro ao remover número: ' + error.message)
+    }
+  }
+
+  const handleUserSelect = (userId: string) => {
+    const user = usersWithPhone.find(u => u.id === userId)
+    if (user) {
+      setNewPharmacistUserId(userId)
+      setNewPharmacistPhone(user.phone)
+      setNewPharmacistName(user.name)
+    }
+  }
+
+  // Carrega números de farmacêuticos quando o painel é aberto
+  useEffect(() => {
+    if (showPharmacistConfig) {
+      loadPharmacistNumbers()
+    }
+  }, [showPharmacistConfig])
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
+    <>
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         {/* Header */}
         <div className="mb-8">
           <button
@@ -1229,14 +1826,396 @@ export default function WhatsAppConnection() {
 
         {/* Test Message e Conversas */}
         {status?.connected && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-            {/* Painel de Envio de Mensagem */}
-            <div className="lg:col-span-1 order-2 lg:order-1">
-              <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center">
-                  <Send className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                  Enviar Mensagem
+          <div className="space-y-4 sm:space-y-6">
+            {/* Painel de Teste de IA */}
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
+                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-yellow-600" />
+                  Teste de IA
                 </h2>
+                <button
+                  onClick={() => setShowTestPanel(!showTestPanel)}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  {showTestPanel ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </div>
+              
+              {showTestPanel && (
+                <div className="flex flex-col" style={{ height: '600px', maxHeight: '80vh' }}>
+                  {/* Header do Chat */}
+                  <div className="flex items-center justify-between pb-3 border-b">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                        <AlertTriangle className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">Chat de Teste - IA</h3>
+                        <p className="text-xs text-gray-500">Teste como se fosse um cliente</p>
+                      </div>
+                    </div>
+                    {testAIChatHistory.length > 0 && (
+                      <button
+                        onClick={handleClearTestChat}
+                        className="flex items-center space-x-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded transition-colors"
+                        title="Limpar todo o histórico do chat"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span className="hidden sm:inline">Limpar Chat</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Área de Mensagens */}
+                  <div
+                    ref={testChatContainerRef}
+                    className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
+                    style={{ minHeight: 0 }}
+                  >
+                    {testAIChatHistory.length === 0 ? (
+                      <div className="flex items-center justify-center h-full text-center">
+                        <div>
+                          <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                          <p className="text-gray-500 text-sm">Nenhuma mensagem ainda</p>
+                          <p className="text-gray-400 text-xs mt-1">
+                            Digite uma mensagem abaixo para começar o teste
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      testAIChatHistory.map((msg, index) => (
+                        <div
+                          key={index}
+                          className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-[80%] sm:max-w-[70%] rounded-lg px-3 py-2 ${
+                              msg.role === 'user'
+                                ? 'bg-purple-600 text-white'
+                                : 'bg-white text-gray-900 border border-gray-200'
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                            {msg.metadata && (
+                              <div className="mt-2 pt-2 border-t border-gray-200 border-opacity-20">
+                                {msg.metadata.isControlled && (
+                                  <div className="text-xs">
+                                    <span className="font-semibold">⚠️ Medicamento Controlado:</span>{' '}
+                                    {msg.metadata.controlledSubstance}
+                                    {msg.metadata.needsPharmacist && (
+                                      <span className="ml-2 text-green-600">✅ Redirecionado para farmacêutico</span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            <div className="flex items-center justify-between mt-1">
+                              <p className="text-xs opacity-70">
+                                {new Date(msg.timestamp).toLocaleTimeString('pt-BR', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </p>
+                              {msg.role === 'assistant' && msg.metadata && (msg.metadata.extractedMessage || msg.metadata.processingDetails) && (
+                                <button
+                                  onClick={() => setSelectedMessageForDetails(selectedMessageForDetails === index ? null : index)}
+                                  className="text-xs text-blue-600 hover:text-blue-700 flex items-center space-x-1 ml-2"
+                                  title="Ver detalhes do processamento"
+                                >
+                                  <Info className="w-3 h-3" />
+                                  <span>Detalhes</span>
+                                  {selectedMessageForDetails === index ? (
+                                    <ChevronUp className="w-3 h-3" />
+                                  ) : (
+                                    <ChevronDown className="w-3 h-3" />
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                            {selectedMessageForDetails === index && msg.metadata && (
+                              <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
+                                {/* Dados Extraídos */}
+                                {msg.metadata.extractedMessage && (
+                                  <div className="bg-blue-50 rounded p-3 border border-blue-200">
+                                    <h4 className="text-xs font-semibold text-blue-900 mb-2 flex items-center">
+                                      <span className="mr-1">🔍</span>
+                                      Dados Extraídos pela IA
+                                    </h4>
+                                    <div className="text-xs space-y-2">
+                                      <div>
+                                        <span className="font-medium text-blue-800">Intenção:</span>{' '}
+                                        <span className="text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
+                                          {msg.metadata.extractedMessage.intent || 'N/A'}
+                                        </span>
+                                      </div>
+                                      {msg.metadata.extractedMessage.entities && (
+                                        <div>
+                                          <span className="font-medium text-blue-800 block mb-1">Entidades Extraídas:</span>
+                                          <div className="bg-white p-2 rounded border border-blue-100 max-h-48 overflow-auto">
+                                            {Object.keys(msg.metadata.extractedMessage.entities).length > 0 ? (
+                                              <div className="space-y-1">
+                                                {Object.entries(msg.metadata.extractedMessage.entities).map(([key, value]: [string, any]) => {
+                                                  if (!value || (typeof value === 'object' && Object.keys(value).length === 0)) return null
+                                                  return (
+                                                    <div key={key} className="flex items-start">
+                                                      <span className="font-medium text-blue-700 min-w-[100px]">{key}:</span>
+                                                      <span className="text-blue-900 break-words">
+                                                        {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                                                      </span>
+                                                    </div>
+                                                  )
+                                                })}
+                                              </div>
+                                            ) : (
+                                              <span className="text-gray-500 italic">Nenhuma entidade extraída</span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Detalhes do Processamento */}
+                                {msg.metadata.processingDetails && (
+                                  <div className="bg-green-50 rounded p-3 border border-green-200">
+                                    <h4 className="text-xs font-semibold text-green-900 mb-2 flex items-center">
+                                      <span className="mr-1">⚙️</span>
+                                      Detalhes do Processamento
+                                    </h4>
+                                    <div className="text-xs space-y-1.5">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium text-green-800">Extração realizada:</span>
+                                        <span className={`px-2 py-0.5 rounded ${
+                                          msg.metadata.processingDetails.hasExtractedMessage 
+                                            ? 'bg-green-200 text-green-800' 
+                                            : 'bg-gray-200 text-gray-600'
+                                        }`}>
+                                          {msg.metadata.processingDetails.hasExtractedMessage ? '✓ Sim' : '✗ Não'}
+                                        </span>
+                                      </div>
+                                      {msg.metadata.processingDetails.extractedIntent && (
+                                        <div className="flex items-center justify-between">
+                                          <span className="font-medium text-green-800">Intenção detectada:</span>
+                                          <span className="text-green-700 bg-green-100 px-2 py-0.5 rounded">
+                                            {msg.metadata.processingDetails.extractedIntent}
+                                          </span>
+                                        </div>
+                                      )}
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium text-green-800">Resposta gerada:</span>
+                                        <span className={`px-2 py-0.5 rounded ${
+                                          msg.metadata.processingDetails.aiResponseGenerated 
+                                            ? 'bg-green-200 text-green-800' 
+                                            : 'bg-gray-200 text-gray-600'
+                                        }`}>
+                                          {msg.metadata.processingDetails.aiResponseGenerated ? '✓ Sim' : '✗ Não'}
+                                          {msg.metadata.processingDetails.aiResponseLength > 0 && (
+                                            <span className="ml-1 text-xs">
+                                              ({msg.metadata.processingDetails.aiResponseLength} chars)
+                                            </span>
+                                          )}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Prompt Final Enviado para a IA */}
+                                {msg.metadata?.processingDetails?.finalPrompt && (
+                                  <div className="bg-gray-50 rounded p-3 border border-gray-200">
+                                    <h4 className="text-xs font-semibold text-gray-900 mb-2 flex items-center">
+                                      <span className="mr-1">📝</span>
+                                      Prompt Final Enviado para a IA
+                                    </h4>
+                                    <div className="bg-white p-2 rounded border border-gray-100 max-h-96 overflow-auto">
+                                      <pre className="text-xs text-gray-800 whitespace-pre-wrap break-words font-mono">
+                                        {msg.metadata.processingDetails.finalPrompt}
+                                      </pre>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Resposta Completa da IA */}
+                                <div className="bg-purple-50 rounded p-3 border border-purple-200">
+                                  <h4 className="text-xs font-semibold text-purple-900 mb-2 flex items-center">
+                                    <span className="mr-1">🤖</span>
+                                    Resposta Final da IA
+                                  </h4>
+                                  <p className="text-xs text-purple-800 whitespace-pre-wrap break-words bg-white p-2 rounded border border-purple-100">
+                                    {msg.content}
+                                  </p>
+                                </div>
+                                
+                                {/* Informações de Medicamento Controlado */}
+                                {msg.metadata.isControlled && (
+                                  <div className="bg-red-50 rounded p-3 border border-red-200">
+                                    <h4 className="text-xs font-semibold text-red-900 mb-2 flex items-center">
+                                      <span className="mr-1">⚠️</span>
+                                      Medicamento Controlado
+                                    </h4>
+                                    <div className="text-xs space-y-1">
+                                      <div>
+                                        <span className="font-medium text-red-800">Substância:</span>{' '}
+                                        <span className="text-red-700">{msg.metadata.controlledSubstance || 'N/A'}</span>
+                                      </div>
+                                      <div>
+                                        <span className="font-medium text-red-800">Status:</span>{' '}
+                                        <span className={msg.metadata.needsPharmacist ? 'text-green-700' : 'text-orange-700'}>
+                                          {msg.metadata.needsPharmacist ? '✓ Redirecionado para farmacêutico' : '⏳ Aguardando confirmação'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    {testingAI && processingStatus && (
+                      <div className="flex justify-start">
+                        <div className="bg-blue-50 text-gray-900 border border-blue-200 rounded-lg px-4 py-3 max-w-[85%]">
+                          <div className="flex items-start space-x-2">
+                            <Loader2 className="w-4 h-4 animate-spin text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <span className="text-sm font-medium text-blue-900">{processingStatus}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Input de Mensagem */}
+                  <form onSubmit={handleTestAI} className="border-t bg-white p-3">
+                    <div className="flex items-end space-x-2">
+                      <div className="flex-1">
+                        <textarea
+                          id="testAIMessage"
+                          value={testAIMessage}
+                          onChange={(e) => setTestAIMessage(e.target.value)}
+                          placeholder="Digite sua mensagem..."
+                          rows={1}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault()
+                              if (testAIMessage.trim() && !testingAI) {
+                                handleTestAI(e as any)
+                              }
+                            }
+                          }}
+                          disabled={testingAI}
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={testingAI || !testAIMessage.trim()}
+                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        title="Enviar mensagem (Enter)"
+                      >
+                        {testingAI ? (
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <Send className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Pressione Enter para enviar • Shift+Enter para nova linha
+                    </p>
+                  </form>
+                </div>
+              )}
+            </div>
+
+            {/* Painel de Configuração de Números de Farmacêuticos */}
+            <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 flex items-center">
+                  <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-blue-600" />
+                  Números de Farmacêuticos
+                </h2>
+                <button
+                  onClick={() => setShowPharmacistConfig(!showPharmacistConfig)}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  {showPharmacistConfig ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </div>
+              
+              {showPharmacistConfig && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-600">
+                      Configure os números que receberão notificações quando uma conversa precisar de farmacêutico
+                    </p>
+                    <button
+                      onClick={handleOpenAddPharmacistModal}
+                      className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Adicionar</span>
+                    </button>
+                  </div>
+
+                  {loadingPharmacistNumbers ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                      <p className="ml-2 text-gray-600">Carregando...</p>
+                    </div>
+                  ) : pharmacistNumbers.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Phone className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                      <p>Nenhum número configurado</p>
+                      <p className="text-sm mt-1">Adicione um número para receber notificações</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {pharmacistNumbers.map((pharmacist) => (
+                        <div
+                          key={pharmacist.id}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <Phone className="w-4 h-4 text-gray-600" />
+                              <p className="font-medium text-gray-900">{pharmacist.phone}</p>
+                              {pharmacist.name && (
+                                <span className="text-sm text-gray-600">({pharmacist.name})</span>
+                              )}
+                            </div>
+                            {pharmacist.userEmail && (
+                              <p className="text-xs text-gray-500 mt-1">Usuário: {pharmacist.userEmail}</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleRemovePharmacist(pharmacist.id)}
+                            className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Remover"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* Painel de Envio de Mensagem e Conversas */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+              {/* Painel de Envio de Mensagem */}
+              <div className="lg:col-span-1 order-2 lg:order-1">
+                <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 flex items-center">
+                    <Send className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                    Enviar Mensagem
+                  </h2>
                 <form onSubmit={handleSendTest} className="space-y-4">
                   <div>
                     <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
@@ -1607,7 +2586,7 @@ export default function WhatsAppConnection() {
                                       )}
                                       {selectedConv?.isAssumed && (
                                         <span className="bg-yellow-100 text-yellow-700 text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
-                                          {selectedConv?.assumptionReason?.toLowerCase().includes('manualmente') ? 'Manualmente Assumida' : 'Assumida'}
+                                          {selectedConv?.assumedBy ? `Assumido por ${selectedConv.assumedBy}` : 'Assumida'}
                                         </span>
                                       )}
                                       {/* Botão para assumir/desbloquear conversa */}
@@ -1641,7 +2620,7 @@ export default function WhatsAppConnection() {
                           <div 
                             ref={messagesContainerRef}
                             className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50"
-                            style={{ scrollBehavior: 'smooth' }}
+                            style={{ scrollBehavior: 'auto' }}
                           >
                             {messages.length === 0 ? (
                               <div className="flex items-center justify-center h-full">
@@ -1771,48 +2750,237 @@ export default function WhatsAppConnection() {
               </div>
             </div>
           </div>
+          </div>
+        )}
+        </div>
+
+        {/* Modal para Adicionar Número de Farmacêutico */}
+        {showAddPharmacistModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-semibold text-gray-900">Adicionar Número</h3>
+                  <button
+                    onClick={() => setShowAddPharmacistModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Seleção de Usuário */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ou selecione um usuário do sistema:
+                    </label>
+                    <select
+                      value={newPharmacistUserId || ''}
+                      onChange={(e) => handleUserSelect(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={loadingUsers}
+                    >
+                      <option value="">Selecione um usuário (opcional)</option>
+                      {usersWithPhone.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name} ({user.email}) - {user.phone}
+                        </option>
+                      ))}
+                    </select>
+                    {loadingUsers && (
+                      <p className="text-xs text-gray-500 mt-1">Carregando usuários...</p>
+                    )}
+                  </div>
+
+                  <div className="text-center text-gray-500 text-sm">ou</div>
+
+                  {/* Número Manual */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Digite o número manualmente:
+                    </label>
+                    <input
+                      type="text"
+                      value={newPharmacistPhone}
+                      onChange={(e) => {
+                        setNewPharmacistPhone(e.target.value)
+                        setNewPharmacistUserId(null) // Limpa seleção de usuário quando digita
+                      }}
+                      placeholder="5511999999999"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Formato: 55 + DDD + Número</p>
+                  </div>
+
+                  {/* Nome (opcional) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nome (opcional):
+                    </label>
+                    <input
+                      type="text"
+                      value={newPharmacistName}
+                      onChange={(e) => setNewPharmacistName(e.target.value)}
+                      placeholder="Nome do farmacêutico"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
+                  <button
+                    onClick={() => setShowAddPharmacistModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleAddPharmacist}
+                    disabled={addingPharmacist || (!newPharmacistPhone.trim() && !newPharmacistUserId)}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                  >
+                    {addingPharmacist ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Adicionando...
+                      </>
+                    ) : (
+                      'Adicionar'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Preview de Imagem */}
+        {imagePreview && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+            onClick={() => setImagePreview(null)}
+          >
+            <div className="relative max-w-7xl max-h-full w-full h-full flex items-center justify-center">
+              <button
+                onClick={() => setImagePreview(null)}
+                className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10 bg-black bg-opacity-50 rounded-full p-2"
+                title="Fechar (ESC)"
+              >
+                <X size={24} />
+              </button>
+              <img 
+                src={imagePreview} 
+                alt="Preview da imagem"
+                className="max-w-full max-h-full object-contain rounded-lg"
+                onClick={(e) => e.stopPropagation()}
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement
+                  target.src = ''
+                  target.alt = 'Erro ao carregar imagem'
+                }}
+              />
+              {/* Botão de download */}
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation()
+                  try {
+                    // Se for base64, converte para blob
+                    if (imagePreview.startsWith('data:')) {
+                      const response = await fetch(imagePreview)
+                      const blob = await response.blob()
+                      const url = window.URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `imagem-${Date.now()}.jpg`
+                      document.body.appendChild(a)
+                      a.click()
+                      document.body.removeChild(a)
+                      window.URL.revokeObjectURL(url)
+                    } else {
+                      // Para URLs remotas, faz fetch e baixa
+                      const response = await fetch(imagePreview)
+                      const blob = await response.blob()
+                      const url = window.URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      // Tenta extrair nome do arquivo da URL ou usa timestamp
+                      const urlParts = imagePreview.split('/')
+                      const fileName = urlParts[urlParts.length - 1] || `imagem-${Date.now()}.jpg`
+                      a.download = fileName.includes('.') ? fileName : `${fileName}.jpg`
+                      document.body.appendChild(a)
+                      a.click()
+                      document.body.removeChild(a)
+                      window.URL.revokeObjectURL(url)
+                    }
+                  } catch (error) {
+                    console.error('Erro ao baixar imagem:', error)
+                    // Fallback: abre em nova aba
+                    window.open(imagePreview, '_blank')
+                  }
+                }}
+                className="absolute bottom-4 right-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 z-10"
+                title="Baixar imagem"
+              >
+                <Download size={18} />
+                <span className="hidden sm:inline">Baixar</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Confirmação de Encaminhamento para Farmacêutico */}
+        {showPharmacistConfirmation && pendingPharmacistNotification && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              setShowPharmacistConfirmation(false)
+              setPendingPharmacistNotification(null)
+            }}
+          >
+            <div 
+              className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <span className="mr-2">🚨</span>
+                Encaminhar para Farmacêutico?
+              </h3>
+              
+              <div className="mb-4">
+                <p className="text-sm text-gray-700 mb-2">
+                  A IA detectou um medicamento controlado e está pronta para enviar uma notificação aos farmacêuticos configurados.
+                </p>
+                <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-3">
+                  <p className="text-sm font-medium text-yellow-800 mb-1">Medicamento:</p>
+                  <p className="text-sm text-yellow-900">{pendingPharmacistNotification.controlledSubstance}</p>
+                </div>
+                <p className="text-xs text-gray-600">
+                  Ao confirmar, a notificação será enviada normalmente como em produção.
+                </p>
+              </div>
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => {
+                    setShowPharmacistConfirmation(false)
+                    setPendingPharmacistNotification(null)
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmPharmacistNotification}
+                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                >
+                  Sim, Encaminhar
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
-
-      {/* Modal de Preview de Imagem */}
-      {imagePreview && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-          onClick={() => setImagePreview(null)}
-        >
-          <div className="relative max-w-7xl max-h-full w-full h-full flex items-center justify-center">
-            <button
-              onClick={() => setImagePreview(null)}
-              className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10 bg-black bg-opacity-50 rounded-full p-2"
-              title="Fechar (ESC)"
-            >
-              <X size={24} />
-            </button>
-            <img 
-              src={imagePreview} 
-              alt="Preview da imagem"
-              className="max-w-full max-h-full object-contain rounded-lg"
-              onClick={(e) => e.stopPropagation()}
-              onError={(e) => {
-                const target = e.target as HTMLImageElement
-                target.src = ''
-                target.alt = 'Erro ao carregar imagem'
-              }}
-            />
-            {/* Botão de download */}
-            <a
-              href={imagePreview}
-              download
-              onClick={(e) => e.stopPropagation()}
-              className="absolute bottom-4 right-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
-              title="Baixar imagem"
-            >
-              <Paperclip size={18} />
-              <span className="hidden sm:inline">Baixar</span>
-            </a>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   )
 }

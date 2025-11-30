@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Send, Search, MessageSquare, CheckCircle2, Clock, ChevronLeft, ArrowLeft, Paperclip, X, Lock, Unlock, ZoomIn } from 'lucide-react'
+import { Send, Search, MessageSquare, CheckCircle2, Clock, ChevronLeft, ArrowLeft, Paperclip, X, Lock, Unlock, ZoomIn, Download } from 'lucide-react'
 import { whatsappService } from '../services/whatsapp.service'
 import { env } from '../config/env'
+import { useAuth } from '../context/AuthContext'
 
 interface WhatsAppMessage {
   id: string
@@ -15,6 +16,9 @@ interface WhatsAppMessage {
   contactName?: string
   mediaUrl?: string
   mediaMimetype?: string
+  filePath?: string
+  fileSize?: number
+  fileExtension?: string
 }
 
 interface Conversation {
@@ -34,9 +38,13 @@ interface Conversation {
 
 export default function WhatsAppSupport() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
   const [messages, setMessages] = useState<WhatsAppMessage[]>([])
+  const currentConversationRef = useRef<string | null>(null)
+  const loadingMessagesRef = useRef<boolean>(false)
+  const messagesCacheRef = useRef<Map<string, { messages: WhatsAppMessage[], timestamp: number }>>(new Map()) // Cache de mensagens
   const [searchTerm, setSearchTerm] = useState('')
   const [messageText, setMessageText] = useState('')
   const [sending, setSending] = useState(false)
@@ -58,6 +66,9 @@ export default function WhatsAppSupport() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [previousMessageCount, setPreviousMessageCount] = useState(0)
+  const [isUserScrolling, setIsUserScrolling] = useState(false)
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Carrega todas as conversas
   useEffect(() => {
@@ -68,20 +79,103 @@ export default function WhatsAppSupport() {
 
   // Carrega mensagens quando uma conversa é selecionada
   useEffect(() => {
+    // Atualiza a ref com a conversa atual
+    currentConversationRef.current = selectedConversation
+    
     if (selectedConversation) {
-      loadMessages(selectedConversation)
-      markAsRead(selectedConversation)
+      setPreviousMessageCount(0) // Reset contador ao trocar de conversa
+      setIsUserScrolling(false) // Reset flag de scroll manual
+      
+      // Limpa mensagens anteriores imediatamente ao trocar de conversa
+      setMessages([])
+      loadingMessagesRef.current = false
+      
+      // Carrega mensagens da nova conversa
+      const currentPhone = selectedConversation
+      loadMessages(currentPhone)
+      markAsRead(currentPhone)
+      
       const interval = setInterval(() => {
-        loadMessages(selectedConversation)
+        // Verifica se ainda é a conversa selecionada usando a ref (sempre atualizada)
+        if (currentConversationRef.current === currentPhone && !loadingMessagesRef.current) {
+          loadMessages(currentPhone)
+        }
       }, 2000)
-      return () => clearInterval(interval)
+      
+      return () => {
+        clearInterval(interval)
+        // Limpa mensagens ao sair da conversa
+        setMessages([])
+        loadingMessagesRef.current = false
+      }
+    } else {
+      // Se não há conversa selecionada, limpa as mensagens
+      setMessages([])
+      loadingMessagesRef.current = false
     }
   }, [selectedConversation])
 
-  // Scroll automático para última mensagem
+  // Scroll automático para última mensagem (apenas quando há novas mensagens ou ao abrir conversa)
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    if (messages.length > 0 && selectedConversation && messagesContainerRef.current) {
+      // Scroll instantâneo para o final quando há mensagens
+      // Se for primeira vez carregando (previousMessageCount === 0), scroll instantâneo
+      // Se houver novas mensagens e usuário não estiver rolando manualmente, também scroll instantâneo
+      if (previousMessageCount === 0 || (messages.length > previousMessageCount && !isUserScrolling)) {
+        // Scroll instantâneo sem delay ou animação
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+        setPreviousMessageCount(messages.length)
+      }
+    }
+  }, [messages.length, selectedConversation, isUserScrolling]) // Removido previousMessageCount das dependências para evitar loop
+  
+  // Reset contador quando troca de conversa e scroll instantâneo para o final
+  useEffect(() => {
+    setPreviousMessageCount(0)
+    setIsUserScrolling(false)
+    // Scroll instantâneo para o final quando troca de conversa (sem animação)
+    if (messagesContainerRef.current) {
+      // Scroll instantâneo sem delay
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+    }
+  }, [selectedConversation])
+
+  // Detecta quando o usuário está rolando manualmente
+  useEffect(() => {
+    const container = messagesContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      // Verifica se o usuário está próximo do final (dentro de 100px)
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100
+      
+      // Se o usuário está rolando manualmente e não está próximo do final, marca como scroll manual
+      if (!isNearBottom) {
+        setIsUserScrolling(true)
+        
+        // Limpa timeout anterior
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current)
+        }
+        
+        // Após 2 segundos sem scroll, permite scroll automático novamente
+        scrollTimeoutRef.current = setTimeout(() => {
+          setIsUserScrolling(false)
+        }, 2000)
+      } else {
+        // Se está próximo do final, permite scroll automático
+        setIsUserScrolling(false)
+      }
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    return () => {
+      container.removeEventListener('scroll', handleScroll)
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+    }
+  }, [selectedConversation])
 
   // Fecha modal de preview com ESC
   useEffect(() => {
@@ -99,11 +193,19 @@ export default function WhatsAppSupport() {
       // Busca TODAS as conversas (não apenas as que precisam de intervenção)
       const data = await whatsappService.getConversations()
       if (data.success) {
-        // Ordena por timestamp da última mensagem (mais recente primeiro)
+        // O backend já retorna ordenado, mas garante ordenação por timestamp da última mensagem (mais recente primeiro)
+        // Conversas sem mensagens (timestamp 0) vão para o final
         const sorted = (data.conversations || []).sort((a, b) => {
-          const timestampA = a.lastMessage?.timestamp || 0
-          const timestampB = b.lastMessage?.timestamp || 0
-          return timestampB - timestampA // Ordem decrescente (mais recente primeiro)
+          // Garante que os timestamps são números válidos
+          const timestampA = a.lastMessage?.timestamp ? Number(a.lastMessage.timestamp) : 0
+          const timestampB = b.lastMessage?.timestamp ? Number(b.lastMessage.timestamp) : 0
+          // Se ambos têm timestamp 0, mantém ordem original
+          if (timestampA === 0 && timestampB === 0) return 0
+          // Se apenas um tem timestamp 0, coloca no final
+          if (timestampA === 0) return 1
+          if (timestampB === 0) return -1
+          // Ordem decrescente (mais recente primeiro)
+          return timestampB - timestampA
         })
         setConversations(sorted)
       }
@@ -114,11 +216,72 @@ export default function WhatsAppSupport() {
 
   const loadMessages = async (phone: string) => {
     try {
-      const data = await whatsappService.getConversationMessages(phone)
-      if (data.success) {
-        setMessages(data.messages || [])
+      // Previne múltiplas requisições simultâneas
+      if (loadingMessagesRef.current) {
+        return
       }
+      
+      // Verifica se ainda é a conversa selecionada antes de atualizar
+      if (currentConversationRef.current !== phone) {
+        return // Ignora se a conversa mudou
+      }
+      
+      loadingMessagesRef.current = true
+      
+      const data = await whatsappService.getConversationMessages(phone)
+      
+      // Verifica novamente após a requisição (pode ter mudado durante o async)
+      if (currentConversationRef.current !== phone) {
+        loadingMessagesRef.current = false
+        return // Ignora se a conversa mudou durante a requisição
+      }
+      
+      if (data.success) {
+        const loadedMessages = data.messages || []
+        // Log para debug: verifica se há mensagens com imagens
+        const imageMessages = loadedMessages.filter((msg: any) => msg.type === 'image')
+        const audioMessages = loadedMessages.filter((msg: any) => msg.type === 'audio')
+        const videoMessages = loadedMessages.filter((msg: any) => msg.type === 'video')
+        
+        if (imageMessages.length > 0) {
+          console.log('📷 Mensagens com imagem encontradas:', imageMessages.map((msg: any) => ({
+            id: msg.id,
+            type: msg.type,
+            hasMediaUrl: !!msg.mediaUrl,
+            hasFilePath: !!msg.filePath,
+            mediaUrlPreview: msg.mediaUrl ? msg.mediaUrl.substring(0, 80) + '...' : null,
+            isBase64: msg.mediaUrl?.startsWith('data:'),
+            filePath: msg.filePath,
+          })))
+        }
+        
+        if (audioMessages.length > 0) {
+          console.log('🎵 Mensagens com áudio encontradas:', audioMessages.map((msg: any) => ({
+            id: msg.id,
+            type: msg.type,
+            hasMediaUrl: !!msg.mediaUrl,
+            hasFilePath: !!msg.filePath,
+            mediaUrlPreview: msg.mediaUrl ? msg.mediaUrl.substring(0, 80) + '...' : null,
+            filePath: msg.filePath,
+          })))
+        }
+        
+        if (videoMessages.length > 0) {
+          console.log('🎬 Mensagens com vídeo encontradas:', videoMessages.map((msg: any) => ({
+            id: msg.id,
+            type: msg.type,
+            hasMediaUrl: !!msg.mediaUrl,
+            hasFilePath: !!msg.filePath,
+            mediaUrlPreview: msg.mediaUrl ? msg.mediaUrl.substring(0, 80) + '...' : null,
+            filePath: msg.filePath,
+          })))
+        }
+        setMessages(loadedMessages)
+      }
+      
+      loadingMessagesRef.current = false
     } catch (error) {
+      loadingMessagesRef.current = false
       console.error('Erro ao carregar mensagens:', error)
     }
   }
@@ -137,9 +300,10 @@ export default function WhatsAppSupport() {
     if (!selectedConversation) return
     
     try {
+      const userName = user?.name || 'Administrador'
       await whatsappService.markConversationAsAssumed(
         selectedConversation,
-        'Administrador',
+        userName,
         'Conversa assumida manualmente'
       )
       alert('Conversa assumida com sucesso! A IA foi bloqueada.')
@@ -173,7 +337,7 @@ export default function WhatsAppSupport() {
     }
   }
 
-  const sendMessage = async () => {
+  const sendMessage = useCallback(async () => {
     if ((!messageText.trim() && !selectedFile) || !selectedConversation || sending) return
 
     setSending(true)
@@ -197,18 +361,24 @@ export default function WhatsAppSupport() {
           try {
             const base64 = reader.result as string
             await whatsappService.sendMedia(
-              selectedConversation,
+              selectedConversation!,
               base64,
               mediaType,
               messageText.trim() || undefined,
-              selectedFile.name
+              selectedFile!.name
             )
             setMessageText('')
             setSelectedFile(null)
             setFilePreview(null)
             // Recarrega mensagens após enviar
             setTimeout(() => {
-              loadMessages(selectedConversation)
+              if (selectedConversation) {
+                loadMessages(selectedConversation)
+              }
+              // Scroll instantâneo para o final após enviar mensagem
+              if (messagesContainerRef.current) {
+                messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+              }
             }, 500)
           } catch (error: any) {
             console.error('Erro ao enviar mídia:', error)
@@ -226,7 +396,13 @@ export default function WhatsAppSupport() {
       setMessageText('')
       // Recarrega mensagens após enviar
       setTimeout(() => {
-        loadMessages(selectedConversation)
+        if (selectedConversation) {
+          loadMessages(selectedConversation)
+        }
+        // Scroll instantâneo para o final após enviar mensagem
+        if (messagesContainerRef.current) {
+          messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+        }
       }, 500)
     } catch (error: any) {
       console.error('Erro ao enviar mensagem:', error)
@@ -234,9 +410,9 @@ export default function WhatsAppSupport() {
     } finally {
       setSending(false)
     }
-  }
+  }, [messageText, selectedFile, selectedConversation, sending])
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       setSelectedFile(file)
@@ -251,7 +427,18 @@ export default function WhatsAppSupport() {
         setFilePreview(null)
       }
     }
-  }
+  }, [])
+
+  const handleMessageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setMessageText(e.target.value)
+  }, [])
+
+  const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      sendMessage()
+    }
+  }, [sendMessage])
 
   const removeFile = () => {
     setSelectedFile(null)
@@ -262,10 +449,10 @@ export default function WhatsAppSupport() {
   }
 
   const scrollToBottom = () => {
-    messagesContainerRef.current?.scrollTo({
-      top: messagesContainerRef.current.scrollHeight,
-      behavior: 'smooth'
-    })
+    if (messagesContainerRef.current) {
+      // Scroll instantâneo sem animação
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+    }
   }
 
   const formatTime = (timestamp: number) => {
@@ -301,40 +488,182 @@ export default function WhatsAppSupport() {
   const renderMessageContent = (msg: WhatsAppMessage) => {
     // Se for imagem, sempre tenta mostrar (mesmo sem mediaUrl, busca do endpoint)
     if (msg.type === 'image') {
-      const mediaUrl = msg.mediaUrl || (msg.id ? `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}` : null)
+      // Se já tiver mediaUrl (pode ser base64 ou URL), usa diretamente
+      let imageSrc: string | null = null
       
-      if (mediaUrl) {
+      // Se já tem mediaUrl (pode ser base64 ou URL), usa diretamente
+      if (msg.mediaUrl) {
+        // Se for URL relativa (começa com /), converte para URL completa
+        if (msg.mediaUrl.startsWith('/')) {
+          let baseUrl = env.apiUrl
+          if (baseUrl.endsWith('/api')) {
+            baseUrl = baseUrl.slice(0, -4) // Remove '/api'
+          }
+          baseUrl = baseUrl.replace(/\/$/, '')
+          imageSrc = `${baseUrl}${msg.mediaUrl}`
+        } else {
+          imageSrc = msg.mediaUrl
+        }
+        const isBase64 = imageSrc.startsWith('data:')
+        console.log('📷 Imagem encontrada:', { 
+          messageId: msg.id, 
+          isBase64,
+          hasMediaUrl: true,
+          originalMediaUrl: msg.mediaUrl,
+          finalImageSrc: imageSrc.substring(0, 100) + (imageSrc.length > 100 ? '...' : ''),
+          hasFilePath: !!msg.filePath,
+        })
+      } 
+      // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
+      else if (msg.id) {
+        // Remove /api do final da URL base se existir
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4) // Remove '/api'
+        }
+        // Garante que temos uma base URL válida
+        if (!baseUrl || baseUrl === '') {
+          baseUrl = 'http://localhost:3000'
+        }
+        // Remove barra final se existir
+        baseUrl = baseUrl.replace(/\/$/, '')
+        imageSrc = `${baseUrl}/api/whatsapp/media/${msg.id}`
+        console.log('🔗 Construindo URL de mídia do endpoint:', { 
+          envApiUrl: env.apiUrl,
+          baseUrl, 
+          messageId: msg.id, 
+          finalUrl: imageSrc 
+        })
+      }
+      
+      if (imageSrc) {
         return (
           <div className="space-y-2">
             <div className="relative">
               <div className="relative group">
                 <img 
-                  src={mediaUrl} 
+                  src={imageSrc} 
                   alt={msg.isFromMe ? "Imagem enviada por você" : "Imagem recebida"} 
                   className="w-full max-w-[280px] sm:max-w-[320px] h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity block"
                   onClick={() => {
                     // Abre preview da imagem em modal
-                    setImagePreview(mediaUrl)
+                    setImagePreview(imageSrc)
                   }}
                   onError={(e) => {
-                    // Fallback se a imagem não carregar
                     const target = e.target as HTMLImageElement
-                    const parent = target.parentElement
-                    if (parent) {
-                      parent.innerHTML = '<p class="text-xs sm:text-sm p-3 text-gray-500">Erro ao carregar imagem</p>'
+                    console.error('❌ Erro ao carregar imagem:', {
+                      imageSrc: imageSrc?.substring(0, 100) + (imageSrc && imageSrc.length > 100 ? '...' : ''),
+                      messageId: msg.id,
+                      type: msg.type,
+                      hasMediaUrl: !!msg.mediaUrl,
+                      isBase64: imageSrc?.startsWith('data:'),
+                      currentSrc: target.src?.substring(0, 100)
+                    })
+                    
+                    // Se for base64 e falhou, não há o que fazer
+                    if (imageSrc?.startsWith('data:')) {
+                      console.error('⚠️ Imagem base64 falhou ao carregar - dados podem estar corrompidos')
+                      target.style.display = 'none'
+                      const errorDiv = document.createElement('div')
+                      errorDiv.className = 'p-3 bg-red-50 rounded-lg'
+                      errorDiv.innerHTML = '<p class="text-xs sm:text-sm text-red-600">Erro ao carregar imagem</p>'
+                      target.parentElement?.parentElement?.appendChild(errorDiv)
+                      return
                     }
+                    
+                    // Se não for base64 e tiver ID, tenta novamente com a URL do endpoint
+                    if (msg.id && !imageSrc?.includes('/api/whatsapp/media/')) {
+                      let baseUrl = env.apiUrl
+                      if (baseUrl.endsWith('/api')) {
+                        baseUrl = baseUrl.slice(0, -4)
+                      }
+                      baseUrl = baseUrl.replace(/\/$/, '')
+                      if (!baseUrl || baseUrl === '') {
+                        baseUrl = 'http://localhost:3000'
+                      }
+                      const fallbackUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
+                      console.log('🔄 Tentando URL alternativa do endpoint:', fallbackUrl)
+                      target.src = fallbackUrl
+                      return
+                    }
+                    
+                    // Se já tentou tudo e falhou, mostra erro
+                    target.style.display = 'none'
+                    const errorDiv = document.createElement('div')
+                    errorDiv.className = 'p-3 bg-red-50 rounded-lg'
+                    errorDiv.innerHTML = `
+                      <p class="text-xs sm:text-sm text-red-600">Erro ao carregar imagem</p>
+                      ${msg.id ? `
+                        <a 
+                          href="${imageSrc}" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:underline mt-1 inline-block"
+                        >
+                          Tentar abrir em nova aba
+                        </a>
+                      ` : ''}
+                    `
+                    target.parentElement?.parentElement?.appendChild(errorDiv)
+                  }}
+                  onLoad={() => {
+                    console.log('✅ Imagem carregada com sucesso:', {
+                      messageId: msg.id,
+                      type: msg.type,
+                      isBase64: imageSrc?.startsWith('data:')
+                    })
                   }}
                 />
                 {/* Ícone de zoom ao passar o mouse */}
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
                   <ZoomIn className="w-8 h-8 text-white" />
                 </div>
+                {/* Botão de download na imagem pequena */}
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    try {
+                      // Se for base64, converte para blob
+                      if (imageSrc.startsWith('data:')) {
+                        const response = await fetch(imageSrc)
+                        const blob = await response.blob()
+                        const url = window.URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = `imagem-${msg.id || Date.now()}.${msg.fileExtension || 'jpg'}`
+                        document.body.appendChild(a)
+                        a.click()
+                        document.body.removeChild(a)
+                        window.URL.revokeObjectURL(url)
+                      } else {
+                        // Para URLs remotas, faz fetch e baixa
+                        const response = await fetch(imageSrc)
+                        const blob = await response.blob()
+                        const url = window.URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = `imagem-${msg.id || Date.now()}.${msg.fileExtension || 'jpg'}`
+                        document.body.appendChild(a)
+                        a.click()
+                        document.body.removeChild(a)
+                        window.URL.revokeObjectURL(url)
+                      }
+                    } catch (error) {
+                      console.error('Erro ao baixar imagem:', error)
+                      // Fallback: abre em nova aba
+                      window.open(imageSrc, '_blank')
+                    }
+                  }}
+                  className="absolute bottom-2 right-2 bg-black bg-opacity-60 hover:bg-opacity-80 text-white p-2 rounded-full transition-all opacity-0 group-hover:opacity-100 z-10"
+                  title="Baixar imagem"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
               </div>
             </div>
+            {/* Legenda da imagem */}
             {msg.body && (
-              <div className="px-3 sm:px-4 pt-2">
-                <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.body}</p>
-              </div>
+              <p className="text-xs sm:text-sm whitespace-pre-wrap break-words px-2 pt-1">{msg.body}</p>
             )}
           </div>
         )
@@ -348,9 +677,24 @@ export default function WhatsAppSupport() {
       // Tenta usar mediaUrl direto, ou busca do endpoint
       let mediaUrl = msg.mediaUrl
       
+      // Se mediaUrl for relativa (começa com /), converte para URL completa
+      if (mediaUrl && mediaUrl.startsWith('/')) {
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        mediaUrl = `${baseUrl}${mediaUrl}`
+      }
+      
       // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
       if (!mediaUrl && msg.id) {
-        mediaUrl = `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        mediaUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
       }
       
       // Debug: log para verificar se tem mediaUrl
@@ -366,7 +710,7 @@ export default function WhatsAppSupport() {
           <div className="space-y-2">
             <audio 
               controls 
-              className="w-full max-w-sm"
+              className="w-full max-w-md min-w-[280px]"
               preload="metadata"
               onError={(e) => {
                 console.error('Erro ao carregar áudio:', {
@@ -434,9 +778,24 @@ export default function WhatsAppSupport() {
       // Tenta usar mediaUrl direto, ou busca do endpoint
       let mediaUrl = msg.mediaUrl
       
+      // Se mediaUrl for relativa (começa com /), converte para URL completa
+      if (mediaUrl && mediaUrl.startsWith('/')) {
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        mediaUrl = `${baseUrl}${mediaUrl}`
+      }
+      
       // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
       if (!mediaUrl && msg.id) {
-        mediaUrl = `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        mediaUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
       }
       
       // Debug: log para verificar se tem mediaUrl
@@ -517,7 +876,27 @@ export default function WhatsAppSupport() {
 
     // Se for documento ou outro tipo de arquivo, sempre mostra link para download
     if (msg.type === 'document' || msg.type === 'other') {
-      const mediaUrl = msg.mediaUrl || (msg.id ? `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}` : null)
+      let mediaUrl = msg.mediaUrl
+      
+      // Se mediaUrl for relativa (começa com /), converte para URL completa
+      if (mediaUrl && mediaUrl.startsWith('/')) {
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        mediaUrl = `${baseUrl}${mediaUrl}`
+      }
+      
+      // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
+      if (!mediaUrl && msg.id) {
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        mediaUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
+      }
       
       // Determina o nome do arquivo baseado no mimetype
       const getFileIcon = (mimetype?: string) => {
@@ -601,14 +980,42 @@ export default function WhatsAppSupport() {
     return <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.body || '(mensagem sem conteúdo)'}</p>
   }
 
+  // Função auxiliar para normalizar número de telefone (remove caracteres não numéricos)
+  const normalizePhone = (phone: string): string => {
+    return phone.replace(/\D/g, '')
+  }
+
+  // Função auxiliar para formatar telefone para busca
+  const formatPhoneForSearch = (phone: string): string => {
+    // Remove @c.us se presente
+    const clean = phone.replace('@c.us', '').replace('@s.whatsapp.net', '')
+    // Formata para exibição
+    if (clean.length === 13 && clean.startsWith('55')) {
+      const ddd = clean.substring(2, 4)
+      const number = clean.substring(4)
+      return `(${ddd}) ${number.substring(0, 5)}-${number.substring(5)}`
+    }
+    return clean
+  }
+
   const filteredConversations = conversations
     .filter(conv => {
       // Filtro de busca por texto
-      if (searchTerm) {
-        const search = searchTerm.toLowerCase()
+      if (searchTerm && searchTerm.trim()) {
+        const search = searchTerm.toLowerCase().trim()
+        const normalizedSearch = normalizePhone(search)
+        const normalizedPhone = normalizePhone(conv.phone)
+        
         const matchesSearch = (
-          conv.phone.includes(search) ||
-          conv.contactName?.toLowerCase().includes(search) ||
+          // Busca por nome do contato
+          (conv.contactName || '').toLowerCase().includes(search) ||
+          // Busca por número normalizado (apenas dígitos)
+          normalizedPhone.includes(normalizedSearch) ||
+          // Busca por número formatado
+          formatPhoneForSearch(conv.phone).toLowerCase().includes(search) ||
+          // Busca por número original (caso tenha @c.us)
+          conv.phone.toLowerCase().includes(search) ||
+          // Busca no conteúdo da última mensagem
           getMessagePreview(conv.lastMessage).toLowerCase().includes(search)
         )
         if (!matchesSearch) return false
@@ -628,9 +1035,17 @@ export default function WhatsAppSupport() {
       return matchesCliente && matchesFarmaceutico && matchesAssumida && matchesControlado
     })
     // Mantém a ordenação por timestamp (mais recente primeiro)
+    // Conversas sem mensagens (timestamp 0) vão para o final
     .sort((a, b) => {
-      const timestampA = a.lastMessage?.timestamp || 0
-      const timestampB = b.lastMessage?.timestamp || 0
+      // Garante que os timestamps são números válidos
+      const timestampA = a.lastMessage?.timestamp ? Number(a.lastMessage.timestamp) : 0
+      const timestampB = b.lastMessage?.timestamp ? Number(b.lastMessage.timestamp) : 0
+      // Se ambos têm timestamp 0, mantém ordem original
+      if (timestampA === 0 && timestampB === 0) return 0
+      // Se apenas um tem timestamp 0, coloca no final
+      if (timestampA === 0) return 1
+      if (timestampB === 0) return -1
+      // Ordem decrescente (mais recente primeiro)
       return timestampB - timestampA
     })
 
@@ -672,8 +1087,9 @@ export default function WhatsAppSupport() {
       <div className="flex-1 flex overflow-hidden">
         {/* Lista de Conversas - Estilo WhatsApp Web */}
         <div className={`${showConversationList ? 'flex' : 'hidden'} lg:flex w-full lg:w-1/3 bg-white border-r border-gray-300 flex-col`}>
-          {/* Busca */}
-          <div className="p-2 sm:p-3 bg-gray-50 border-b border-gray-200">
+          {/* Busca e Filtros */}
+          <div className="p-2 sm:p-3 bg-gray-50 border-b border-gray-200 space-y-2">
+            {/* Campo de Busca */}
             <div className="relative">
               <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
               <input
@@ -683,6 +1099,80 @@ export default function WhatsAppSupport() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  type="button"
+                >
+                  <X size={16} className="sm:w-5 sm:h-5" />
+                </button>
+              )}
+            </div>
+            
+            {/* Filtros por Tags */}
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
+              <button
+                onClick={() => {
+                  setSelectedFilters({
+                    cliente: false,
+                    farmaceutico: false,
+                    assumida: false,
+                    controlado: false
+                  })
+                }}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors ${
+                  !selectedFilters.cliente && !selectedFilters.farmaceutico && !selectedFilters.assumida && !selectedFilters.controlado
+                    ? 'bg-gray-700 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Todas
+              </button>
+              <button
+                onClick={() => setSelectedFilters({ ...selectedFilters, cliente: !selectedFilters.cliente })}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
+                  selectedFilters.cliente
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                }`}
+              >
+                <span>💬</span>
+                <span>Cliente</span>
+              </button>
+              <button
+                onClick={() => setSelectedFilters({ ...selectedFilters, farmaceutico: !selectedFilters.farmaceutico })}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
+                  selectedFilters.farmaceutico
+                    ? 'bg-red-600 text-white'
+                    : 'bg-red-100 text-red-700 hover:bg-red-200'
+                }`}
+              >
+                <span>👨‍⚕️</span>
+                <span>Farmacêutico</span>
+              </button>
+              <button
+                onClick={() => setSelectedFilters({ ...selectedFilters, assumida: !selectedFilters.assumida })}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
+                  selectedFilters.assumida
+                    ? 'bg-yellow-600 text-white'
+                    : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                }`}
+              >
+                <span>🔒</span>
+                <span>Assumida</span>
+              </button>
+              <button
+                onClick={() => setSelectedFilters({ ...selectedFilters, controlado: !selectedFilters.controlado })}
+                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
+                  selectedFilters.controlado
+                    ? 'bg-orange-600 text-white'
+                    : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                }`}
+              >
+                <span>⚠️</span>
+                <span>Controlado</span>
+              </button>
             </div>
           </div>
 
@@ -728,7 +1218,7 @@ export default function WhatsAppSupport() {
                         )}
                         {conv.isAssumed && (
                           <span className="flex-shrink-0 bg-yellow-100 text-yellow-700 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium">
-                            {conv.assumptionReason?.toLowerCase().includes('manualmente') ? 'Manualmente Assumida' : 'Assumida'}
+                            {conv.assumedBy ? `Assumido por ${conv.assumedBy}` : 'Assumida'}
                           </span>
                         )}
                       </div>
@@ -784,7 +1274,7 @@ export default function WhatsAppSupport() {
                   )}
                   {selectedConv.isAssumed && (
                     <span className="bg-yellow-100 text-yellow-700 text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
-                      {selectedConv.assumptionReason?.toLowerCase().includes('manualmente') ? 'Manualmente Assumida' : 'Assumida'}
+                      {selectedConv.assumedBy ? `Assumido por ${selectedConv.assumedBy}` : 'Assumida'}
                     </span>
                   )}
                   {/* Botão para assumir/desbloquear conversa */}
@@ -814,7 +1304,10 @@ export default function WhatsAppSupport() {
               <div
                 ref={messagesContainerRef}
                 className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 bg-gray-50"
-                style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cdefs%3E%3Cpattern id=\'grid\' width=\'40\' height=\'40\' patternUnits=\'userSpaceOnUse\'%3E%3Cpath d=\'M 40 0 L 0 0 0 40\' fill=\'none\' stroke=\'%23e5e7eb\' stroke-width=\'1\'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=\'100\' height=\'100\' fill=\'url(%23grid)\' /%3E%3C/svg%3E")' }}
+                style={{ 
+                  backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cdefs%3E%3Cpattern id=\'grid\' width=\'40\' height=\'40\' patternUnits=\'userSpaceOnUse\'%3E%3Cpath d=\'M 40 0 L 0 0 0 40\' fill=\'none\' stroke=\'%23e5e7eb\' stroke-width=\'1\'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=\'100\' height=\'100\' fill=\'url(%23grid)\' /%3E%3C/svg%3E")',
+                  scrollBehavior: 'auto'
+                }}
               >
                 {messages.map((msg) => (
                   <div
@@ -826,9 +1319,9 @@ export default function WhatsAppSupport() {
                         msg.isFromMe
                           ? 'bg-green-500 text-white'
                           : 'bg-white text-gray-900 border border-gray-200'
-                      } ${msg.type === 'image' && msg.mediaUrl ? 'p-0' : 'px-3 sm:px-4 py-1.5 sm:py-2'}`}
+                      } ${msg.type === 'image' ? 'p-0' : 'px-3 sm:px-4 py-1.5 sm:py-2'}`}
                     >
-                      {msg.type === 'image' && msg.mediaUrl ? (
+                      {msg.type === 'image' ? (
                         <>
                           {renderMessageContent(msg)}
                           <div className="px-3 sm:px-4 pb-1.5 sm:pb-2">
@@ -914,13 +1407,8 @@ export default function WhatsAppSupport() {
                   <input
                     type="text"
                     value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault()
-                        sendMessage()
-                      }
-                    }}
+                    onChange={handleMessageChange}
+                    onKeyPress={handleKeyPress}
                     placeholder={selectedFile ? "Adicione uma legenda (opcional)..." : "Digite uma mensagem..."}
                     className="flex-1 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
                     disabled={sending}
@@ -977,16 +1465,50 @@ export default function WhatsAppSupport() {
               }}
             />
             {/* Botão de download */}
-            <a
-              href={imagePreview}
-              download
-              onClick={(e) => e.stopPropagation()}
-              className="absolute bottom-4 right-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+            <button
+              onClick={async (e) => {
+                e.stopPropagation()
+                try {
+                  // Se for base64, converte para blob
+                  if (imagePreview.startsWith('data:')) {
+                    const response = await fetch(imagePreview)
+                    const blob = await response.blob()
+                    const url = window.URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `imagem-${Date.now()}.jpg`
+                    document.body.appendChild(a)
+                    a.click()
+                    document.body.removeChild(a)
+                    window.URL.revokeObjectURL(url)
+                  } else {
+                    // Para URLs remotas, faz fetch e baixa
+                    const response = await fetch(imagePreview)
+                    const blob = await response.blob()
+                    const url = window.URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    // Tenta extrair nome do arquivo da URL ou usa timestamp
+                    const urlParts = imagePreview.split('/')
+                    const fileName = urlParts[urlParts.length - 1] || `imagem-${Date.now()}.jpg`
+                    a.download = fileName.includes('.') ? fileName : `${fileName}.jpg`
+                    document.body.appendChild(a)
+                    a.click()
+                    document.body.removeChild(a)
+                    window.URL.revokeObjectURL(url)
+                  }
+                } catch (error) {
+                  console.error('Erro ao baixar imagem:', error)
+                  // Fallback: abre em nova aba
+                  window.open(imagePreview, '_blank')
+                }
+              }}
+              className="absolute bottom-4 right-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 z-10"
               title="Baixar imagem"
             >
-              <Paperclip size={18} />
+              <Download size={18} />
               <span className="hidden sm:inline">Baixar</span>
-            </a>
+            </button>
           </div>
         </div>
       )}
