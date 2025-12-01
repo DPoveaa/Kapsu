@@ -94,6 +94,8 @@ export default function WhatsAppConnection() {
       confirmationMessage?: string | null
       extractedMessage?: any
       processingDetails?: any
+      pharmacistNotified?: boolean
+      notifiedNumbers?: string[]
     }
   }>>([])
   const [testingAI, setTestingAI] = useState(false)
