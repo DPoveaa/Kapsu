@@ -203,6 +203,42 @@ class AdminService {
       throw new Error('Erro de conexão ao obter estatísticas')
     }
   }
+
+  /**
+   * Lista todos os pedidos (apenas admin)
+   */
+  async listOrders(): Promise<{ success: boolean; data: any[] }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const response = await fetch(`${this.baseUrl}/orders`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao listar pedidos')
+      }
+
+      return data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao listar pedidos')
+    }
+  }
 }
 
 export const adminService = new AdminService()

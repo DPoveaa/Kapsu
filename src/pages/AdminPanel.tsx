@@ -44,7 +44,10 @@ export default function AdminPanel() {
           </Link>
 
           {/* Card Pedidos */}
-          <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer">
+          <Link
+            to="/admin/orders"
+            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+          >
             <div className="flex items-center space-x-4">
               <div className="bg-purple-100 p-3 rounded-lg">
                 <ShoppingCart className="w-6 h-6 text-purple-600" />
@@ -54,7 +57,7 @@ export default function AdminPanel() {
                 <p className="text-sm text-gray-600">Visualizar pedidos</p>
               </div>
             </div>
-          </div>
+          </Link>
 
           {/* Card Usuários */}
           <Link

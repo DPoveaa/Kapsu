@@ -1,9 +1,23 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { ShoppingCart, Sparkles, ArrowLeft, Plus, Minus, Loader2 } from 'lucide-react'
+import { ShoppingCart, Sparkles, Loader2, Star, Truck, CheckCircle, Heart, AlertCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useCart } from '../context/CartContext'
 import { Product } from '../types'
 import { productsService } from '../services/products.service'
+import { env } from '../config/env'
+
+interface ProductDetails {
+  id: string
+  name: string
+  description: string | null
+  price: number
+  stock: number
+  image: string | null
+  category: string | null
+  compositions: string | null
+  indication: string | null
+  contraindication: string | null
+}
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -11,8 +25,10 @@ export default function ProductDetail() {
   const { addProduct } = useCart()
   const [quantity, setQuantity] = useState(1)
   const [product, setProduct] = useState<Product | null>(null)
+  const [productDetails, setProductDetails] = useState<ProductDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedImage, setSelectedImage] = useState(0)
 
   // Carrega produto da API
   useEffect(() => {
@@ -28,6 +44,20 @@ export default function ProductDetail() {
         setError(null)
         const data = await productsService.getById(id)
         setProduct(data)
+        
+        // Busca dados completos do produto (incluindo informações médicas)
+        try {
+          const response = await fetch(`${env.apiUrl}/products/${id}`)
+          const text = await response.text()
+          if (text) {
+            const fullData = JSON.parse(text)
+            if (fullData.success && fullData.data) {
+              setProductDetails(fullData.data)
+            }
+          }
+        } catch (err) {
+          console.warn('Não foi possível carregar detalhes completos do produto')
+        }
       } catch (err: any) {
         console.error('Erro ao carregar produto:', err)
         setError(err.message || 'Erro ao carregar produto')
@@ -68,110 +98,244 @@ export default function ProductDetail() {
   }
 
   const handleAddToCart = () => {
-    addProduct(product, quantity)
-    navigate('/carrinho')
+    if (product) {
+      addProduct(product, quantity)
+      navigate('/carrinho')
+    }
   }
 
-  const increaseQuantity = () => setQuantity(q => q + 1)
-  const decreaseQuantity = () => setQuantity(q => Math.max(1, q - 1))
+  const handleBuyNow = () => {
+    if (product) {
+      addProduct(product, quantity)
+      navigate('/checkout')
+    }
+  }
+
+  // Calcula parcelamento
+  const installmentValue = product ? (product.price / 12).toFixed(2) : '0.00'
+  
+  // Cria array de imagens (por enquanto usa a mesma imagem, mas pode ser expandido)
+  const productImages = product ? [product.image, product.image, product.image] : []
+
+  // Breadcrumbs
+  const getCategoryPath = () => {
+    if (!product) return []
+    const categoryMap: Record<string, string> = {
+      vitamina: 'Vitaminas',
+      mineral: 'Minerais',
+      fitoterapico: 'Fitoterápicos',
+      outros: 'Outros'
+    }
+    return [
+      { label: 'Início', path: '/' },
+      { label: 'Produtos', path: '/produtos' },
+      { label: categoryMap[product.category] || 'Produtos', path: `/produtos?category=${product.category}` },
+      { label: product.name, path: '' }
+    ]
+  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
-      >
-        <ArrowLeft size={20} className="mr-2" />
-        Voltar
-      </button>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Image */}
-        <div>
-          <img
-            src={product.image}
-            alt={product.name}
-            className="w-full h-96 object-cover rounded-xl"
-          />
-        </div>
-
-        {/* Details */}
-        <div>
-          <div className="mb-4">
-            {product.isCustomizable && (
-              <span className="inline-flex items-center bg-primary-100 text-primary-700 px-3 py-1 rounded-full text-sm font-medium mb-2">
-                <Sparkles size={14} className="mr-1" />
-                Personalizável
-              </span>
-            )}
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">{product.name}</h1>
-            <p className="text-2xl font-bold text-primary-600 mb-4">
-              R$ {product.price.toFixed(2).replace('.', ',')}
-            </p>
-          </div>
-
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2">Descrição</h2>
-            <p className="text-gray-600">{product.description}</p>
-          </div>
-
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2">Categoria</h2>
-            <span className="inline-block bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
-              {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
-            </span>
-          </div>
-
-          {product.isCustomizable && (
-            <div className="mb-6 p-4 bg-primary-50 rounded-lg">
-              <p className="text-sm text-primary-700">
-                💡 Este produto pode ser personalizado! Você pode ajustar a dosagem e combinar com outros ativos.
-                <button
-                  onClick={() => navigate('/personalizar')}
-                  className="ml-2 text-primary-600 hover:text-primary-700 font-semibold underline"
-                >
-                  Personalizar agora
-                </button>
-              </p>
-            </div>
-          )}
-
-          {/* Quantity and Add to Cart */}
-          <div className="border-t pt-6">
-            <div className="flex items-center space-x-4 mb-6">
-              <span className="font-semibold">Quantidade:</span>
-              <div className="flex items-center border border-gray-300 rounded-lg">
-                <button
-                  onClick={decreaseQuantity}
-                  className="p-2 hover:bg-gray-100 transition-colors"
-                >
-                  <Minus size={20} />
-                </button>
-                <span className="px-4 py-2 font-semibold">{quantity}</span>
-                <button
-                  onClick={increaseQuantity}
-                  className="p-2 hover:bg-gray-100 transition-colors"
-                >
-                  <Plus size={20} />
-                </button>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Breadcrumbs */}
+        <nav className="mb-4 text-sm">
+          <div className="flex items-center space-x-2 text-gray-600">
+            {getCategoryPath().map((item, index) => (
+              <div key={index} className="flex items-center">
+                {index > 0 && <span className="mx-2">/</span>}
+                {item.path ? (
+                  <button
+                    onClick={() => navigate(item.path)}
+                    className="hover:text-primary-600"
+                  >
+                    {item.label}
+                  </button>
+                ) : (
+                  <span className="text-gray-900 font-medium">{item.label}</span>
+                )}
               </div>
+            ))}
+          </div>
+        </nav>
+
+        <div className="bg-white rounded-lg shadow-sm p-4 lg:p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+            {/* Galeria de Imagens - Compacta */}
+            <div>
+              <div className="mb-2">
+                <img
+                  src={productImages[selectedImage] || product?.image || ''}
+                  alt={product?.name}
+                  className="w-full h-64 lg:h-80 object-cover rounded-lg border border-gray-200"
+                />
+              </div>
+              {productImages.length > 1 && (
+                <div className="flex space-x-2 mb-4">
+                  {productImages.map((img, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImage(index)}
+                      className={`w-16 h-16 rounded-lg border-2 overflow-hidden ${
+                        selectedImage === index ? 'border-primary-600' : 'border-gray-200'
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={`${product?.name} ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Informações Detalhadas - Abaixo das Imagens */}
+              {productDetails && (
+                <div className="mt-4 space-y-4">
+                  {productDetails.compositions && (
+                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                      <h3 className="font-semibold text-gray-900 mb-2 text-sm flex items-center">
+                        <CheckCircle size={16} className="text-green-600 mr-2" />
+                        Composição
+                      </h3>
+                      <p className="text-sm text-gray-700 whitespace-pre-line">{productDetails.compositions}</p>
+                    </div>
+                  )}
+                  
+                  {productDetails.indication && (
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <h3 className="font-semibold text-gray-900 mb-2 text-sm flex items-center">
+                        <CheckCircle size={16} className="text-blue-600 mr-2" />
+                        Indicações
+                      </h3>
+                      <p className="text-sm text-gray-700 whitespace-pre-line">{productDetails.indication}</p>
+                    </div>
+                  )}
+                  
+                  {productDetails.contraindication && (
+                    <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                      <h3 className="font-semibold text-gray-900 mb-2 text-sm flex items-center">
+                        <AlertCircle size={16} className="text-orange-600 mr-2" />
+                        Contraindicações
+                      </h3>
+                      <p className="text-sm text-gray-700 whitespace-pre-line">{productDetails.contraindication}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            <button
-              onClick={handleAddToCart}
-              disabled={!product.inStock}
-              className="w-full btn-primary flex items-center justify-center disabled:bg-gray-300 disabled:cursor-not-allowed"
-            >
-              <ShoppingCart size={20} className="mr-2" />
-              Adicionar ao Carrinho
-            </button>
+            {/* Informações do Produto - Compactas */}
+            <div>
+              {/* Status e Badges */}
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-medium">
+                    Novo
+                  </span>
+                  <span className="text-gray-500 text-xs">+100 vendidos</span>
+                </div>
+              </div>
 
-            {!product.inStock && (
-              <p className="text-red-600 text-sm mt-2 text-center">
-                Produto temporariamente fora de estoque
-              </p>
-            )}
+              {/* Título - Menor */}
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">{product?.name}</h1>
+
+              {/* Preço - Compacto */}
+              <div className="mb-4">
+                <p className="text-3xl lg:text-4xl font-bold text-gray-900 mb-1">
+                  R$ {product?.price.toFixed(2).replace('.', ',')}
+                </p>
+                <p className="text-sm lg:text-base text-gray-600">
+                  em 12x de R$ {installmentValue.replace('.', ',')} sem juros
+                </p>
+              </div>
+
+              {/* Frete - Compacto */}
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center mb-1">
+                  <Truck size={16} className="text-blue-600 mr-2" />
+                  <span className="font-semibold text-blue-900 text-sm">FRETE GRÁTIS ACIMA DE R$ 19</span>
+                </div>
+                <p className="text-xs text-blue-700">
+                  Receba grátis em 2-3 dias úteis
+                </p>
+              </div>
+
+              {/* Estoque e Quantidade - Compacto */}
+              <div className="mb-4">
+                <div className="flex items-center space-x-2 mb-2">
+                  <span className="text-xs font-semibold text-gray-700">Quantidade:</span>
+                  <select
+                    value={quantity}
+                    onChange={(e) => setQuantity(Number(e.target.value))}
+                    className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
+                  >
+                    {[...Array(Math.min(10, productDetails?.stock || 1))].map((_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {i + 1}
+                      </option>
+                    ))}
+                  </select>
+                  {productDetails && productDetails.stock > 10 && (
+                    <span className="text-xs text-gray-500">(+{productDetails.stock - 10})</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Botões de Ação - PRINCIPAIS, VISÍVEIS NO TOPO */}
+              <div className="space-y-2 mb-4">
+                <button
+                  onClick={handleBuyNow}
+                  disabled={!product?.inStock}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center text-base"
+                >
+                  Comprar agora
+                </button>
+                <button
+                  onClick={handleAddToCart}
+                  disabled={!product?.inStock}
+                  className="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center text-base"
+                >
+                  <ShoppingCart size={18} className="mr-2" />
+                  Adicionar ao carrinho
+                </button>
+                {!product?.inStock && (
+                  <p className="text-red-600 text-xs text-center">
+                    Produto temporariamente fora de estoque
+                  </p>
+                )}
+              </div>
+
+              {/* Descrição do Produto - Compacta */}
+              {productDetails && productDetails.description && (
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <h3 className="font-semibold text-gray-900 mb-2 text-sm">
+                    O que você precisa saber
+                  </h3>
+                  <p className="text-xs text-gray-700">{productDetails.description}</p>
+                </div>
+              )}
+
+              {/* Personalizável - Compacto */}
+              {product?.isCustomizable && (
+                <div className="p-3 bg-primary-50 rounded-lg border border-primary-200">
+                  <div className="flex items-start">
+                    <Sparkles size={16} className="text-primary-600 mr-2 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold text-primary-900 mb-1 text-sm">Personalizável</p>
+                      <button
+                        onClick={() => navigate('/personalizar')}
+                        className="text-xs text-primary-600 hover:text-primary-700 font-semibold underline"
+                      >
+                        Personalizar agora →
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
+
         </div>
       </div>
     </div>

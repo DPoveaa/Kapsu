@@ -13,6 +13,9 @@ interface BackendProduct {
   image: string | null
   category: string | null
   active: boolean
+  compositions: string | null
+  indication: string | null
+  contraindication: string | null
   created_at: Date
   updated_at: Date
 }
@@ -186,6 +189,9 @@ class ProductsService {
     stock?: number
     image?: string
     category?: string
+    compositions?: string
+    indication?: string
+    contraindication?: string
   }): Promise<Product> {
     try {
       const response = await fetch(`${this.baseUrl}`, {
@@ -323,6 +329,9 @@ class ProductsService {
     image?: string
     category?: string
     active?: boolean
+    compositions?: string
+    indication?: string
+    contraindication?: string
   }): Promise<Product> {
     try {
       const response = await fetch(`${this.baseUrl}/${id}`, {

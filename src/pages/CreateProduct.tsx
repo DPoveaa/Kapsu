@@ -21,6 +21,9 @@ export default function CreateProduct() {
     stock: '',
     image: '',
     category: 'outros',
+    compositions: '',
+    indication: '',
+    contraindication: '',
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -55,6 +58,9 @@ export default function CreateProduct() {
         stock: formData.stock ? Number(formData.stock) : undefined,
         image: formData.image.trim() || undefined,
         category: formData.category || undefined,
+        compositions: formData.compositions.trim() || undefined,
+        indication: formData.indication.trim() || undefined,
+        contraindication: formData.contraindication.trim() || undefined,
       })
 
       // Redireciona para a lista de produtos após criar
@@ -195,6 +201,54 @@ export default function CreateProduct() {
                   placeholder="https://exemplo.com/imagem.jpg"
                 />
               </div>
+            </div>
+
+            {/* Composições */}
+            <div>
+              <label htmlFor="compositions" className="block text-sm font-medium text-gray-700 mb-2">
+                Composições
+              </label>
+              <textarea
+                id="compositions"
+                name="compositions"
+                value={formData.compositions}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Informe as composições do produto..."
+              />
+            </div>
+
+            {/* Indicação */}
+            <div>
+              <label htmlFor="indication" className="block text-sm font-medium text-gray-700 mb-2">
+                Indicação
+              </label>
+              <textarea
+                id="indication"
+                name="indication"
+                value={formData.indication}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Informe as indicações do produto..."
+              />
+            </div>
+
+            {/* Contraindicação */}
+            <div>
+              <label htmlFor="contraindication" className="block text-sm font-medium text-gray-700 mb-2">
+                Contraindicação
+              </label>
+              <textarea
+                id="contraindication"
+                name="contraindication"
+                value={formData.contraindication}
+                onChange={handleChange}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Informe as contraindicações do produto..."
+              />
             </div>
 
             {/* Botões */}

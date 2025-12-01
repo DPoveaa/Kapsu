@@ -16,6 +16,7 @@ import UserManagement from './pages/UserManagement'
 import CreateProduct from './pages/CreateProduct'
 import ManageProducts from './pages/ManageProducts'
 import EditProduct from './pages/EditProduct'
+import ManageOrders from './pages/ManageOrders'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 
@@ -87,6 +88,14 @@ function App() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <EditProduct />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/orders"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <ManageOrders />
                   </ProtectedRoute>
                 }
               />
