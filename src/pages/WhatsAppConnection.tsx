@@ -31,6 +31,7 @@ interface Conversation {
   assumedBy?: string | null
   assumedAt?: Date | null
   assumptionReason?: string | null
+  awaitingControlledConfirmation?: boolean
 }
 
 export default function WhatsAppConnection() {
