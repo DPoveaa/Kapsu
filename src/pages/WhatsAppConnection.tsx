@@ -95,7 +95,7 @@ export default function WhatsAppConnection() {
       extractedMessage?: any
       processingDetails?: any
       pharmacistNotified?: boolean
-      notifiedNumbers?: string[]
+      notifiedNumbers?: Array<{ phone: string; name: string | null }>
     }
   }>>([])
   const [testingAI, setTestingAI] = useState(false)
@@ -1100,7 +1100,7 @@ export default function WhatsAppConnection() {
                   sessionStorage.removeItem(`audio-error-${msg.id}`)
                 }
               }}
-              onLoadedMetadata={(e) => {
+              onLoadedMetadata={() => {
                 // Quando os metadados são carregados, também limpa a marcação de erro
                 if (msg.id) {
                   sessionStorage.removeItem(`audio-error-${msg.id}`)
@@ -1546,7 +1546,7 @@ export default function WhatsAppConnection() {
   const handleDisconnect = async () => {
     try {
       setDisconnecting(true)
-      const response = await whatsappService.disconnect()
+      await whatsappService.disconnect()
       
       setStatus({
         success: true,
