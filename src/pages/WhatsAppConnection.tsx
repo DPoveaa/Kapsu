@@ -580,7 +580,13 @@ export default function WhatsAppConnection() {
       
       if (response && response.success) {
         const loadedMessages = response.messages || []
-        setMessages(loadedMessages)
+        
+        // Remove duplicatas baseado no ID (segurança extra caso o backend retorne duplicatas)
+        const uniqueMessages = Array.from(
+          new Map(loadedMessages.map(msg => [msg.id, msg])).values()
+        ).sort((a, b) => a.timestamp - b.timestamp)
+        
+        setMessages(uniqueMessages)
         
         // Atualiza cache apenas se houver mensagens
         if (loadedMessages.length > 0) {
