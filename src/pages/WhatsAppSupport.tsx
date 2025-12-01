@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Send, Search, MessageSquare, CheckCircle2, Clock, ChevronLeft, ArrowLeft, Paperclip, X, Lock, Unlock, ZoomIn, Download } from 'lucide-react'
+import { Send, Search, MessageSquare, Clock, ChevronLeft, ArrowLeft, Paperclip, X, Lock, Unlock, ZoomIn, Download, User } from 'lucide-react'
 import { whatsappService } from '../services/whatsapp.service'
 import { env } from '../config/env'
 import { useAuth } from '../context/AuthContext'
@@ -44,7 +44,7 @@ export default function WhatsAppSupport() {
   const [messages, setMessages] = useState<WhatsAppMessage[]>([])
   const currentConversationRef = useRef<string | null>(null)
   const loadingMessagesRef = useRef<boolean>(false)
-  const messagesCacheRef = useRef<Map<string, { messages: WhatsAppMessage[], timestamp: number }>>(new Map()) // Cache de mensagens
+  // Cache de mensagens removido - não está sendo usado neste componente
   const [searchTerm, setSearchTerm] = useState('')
   const [messageText, setMessageText] = useState('')
   const [sending, setSending] = useState(false)
@@ -63,12 +63,11 @@ export default function WhatsAppSupport() {
     assumida: false,
     controlado: false
   })
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [previousMessageCount, setPreviousMessageCount] = useState(0)
   const [isUserScrolling, setIsUserScrolling] = useState(false)
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Carrega todas as conversas
   useEffect(() => {
@@ -238,44 +237,6 @@ export default function WhatsAppSupport() {
       
       if (data.success) {
         const loadedMessages = data.messages || []
-        // Log para debug: verifica se há mensagens com imagens
-        const imageMessages = loadedMessages.filter((msg: any) => msg.type === 'image')
-        const audioMessages = loadedMessages.filter((msg: any) => msg.type === 'audio')
-        const videoMessages = loadedMessages.filter((msg: any) => msg.type === 'video')
-        
-        if (imageMessages.length > 0) {
-          console.log('📷 Mensagens com imagem encontradas:', imageMessages.map((msg: any) => ({
-            id: msg.id,
-            type: msg.type,
-            hasMediaUrl: !!msg.mediaUrl,
-            hasFilePath: !!msg.filePath,
-            mediaUrlPreview: msg.mediaUrl ? msg.mediaUrl.substring(0, 80) + '...' : null,
-            isBase64: msg.mediaUrl?.startsWith('data:'),
-            filePath: msg.filePath,
-          })))
-        }
-        
-        if (audioMessages.length > 0) {
-          console.log('🎵 Mensagens com áudio encontradas:', audioMessages.map((msg: any) => ({
-            id: msg.id,
-            type: msg.type,
-            hasMediaUrl: !!msg.mediaUrl,
-            hasFilePath: !!msg.filePath,
-            mediaUrlPreview: msg.mediaUrl ? msg.mediaUrl.substring(0, 80) + '...' : null,
-            filePath: msg.filePath,
-          })))
-        }
-        
-        if (videoMessages.length > 0) {
-          console.log('🎬 Mensagens com vídeo encontradas:', videoMessages.map((msg: any) => ({
-            id: msg.id,
-            type: msg.type,
-            hasMediaUrl: !!msg.mediaUrl,
-            hasFilePath: !!msg.filePath,
-            mediaUrlPreview: msg.mediaUrl ? msg.mediaUrl.substring(0, 80) + '...' : null,
-            filePath: msg.filePath,
-          })))
-        }
         setMessages(loadedMessages)
       }
       
@@ -448,12 +409,6 @@ export default function WhatsAppSupport() {
     }
   }
 
-  const scrollToBottom = () => {
-    if (messagesContainerRef.current) {
-      // Scroll instantâneo sem animação
-      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
-    }
-  }
 
   const formatTime = (timestamp: number) => {
     const date = new Date(timestamp)
@@ -486,8 +441,18 @@ export default function WhatsAppSupport() {
   }
 
   const renderMessageContent = (msg: WhatsAppMessage) => {
-    // Se for imagem, sempre tenta mostrar (mesmo sem mediaUrl, busca do endpoint)
-    if (msg.type === 'image') {
+    // Verifica se o body contém base64 (imagem) - mesmo que não seja tipo 'image'
+    const bodyTrimmed = (msg.body || '').trim()
+    const isBase64Image = bodyTrimmed && (
+      bodyTrimmed.startsWith('/9j/') || // JPEG
+      bodyTrimmed.startsWith('iVBORw0KGgo') || // PNG
+      bodyTrimmed.startsWith('data:image/') || // Data URL
+      bodyTrimmed.startsWith('R0lGODlh') || // GIF
+      (bodyTrimmed.length > 100 && /^[A-Za-z0-9+/=]+$/.test(bodyTrimmed.replace(/\s/g, ''))) // Base64 genérico
+    )
+    
+    // Se for imagem OU se o body contém base64, trata como imagem
+    if (msg.type === 'image' || isBase64Image) {
       // Se já tiver mediaUrl (pode ser base64 ou URL), usa diretamente
       let imageSrc: string | null = null
       
@@ -504,16 +469,22 @@ export default function WhatsAppSupport() {
         } else {
           imageSrc = msg.mediaUrl
         }
-        const isBase64 = imageSrc.startsWith('data:')
-        console.log('📷 Imagem encontrada:', { 
-          messageId: msg.id, 
-          isBase64,
-          hasMediaUrl: true,
-          originalMediaUrl: msg.mediaUrl,
-          finalImageSrc: imageSrc.substring(0, 100) + (imageSrc.length > 100 ? '...' : ''),
-          hasFilePath: !!msg.filePath,
-        })
       } 
+      // Se não tiver mediaUrl mas o body contém base64, usa o body
+      else if (isBase64Image) {
+        // Detecta o tipo de imagem pelo início do base64
+        let mimeType = 'image/jpeg'
+        if (bodyTrimmed.startsWith('iVBORw0KGgo')) {
+          mimeType = 'image/png'
+        } else if (bodyTrimmed.startsWith('/9j/') || bodyTrimmed.startsWith('/9j/4AAQ')) {
+          mimeType = 'image/jpeg'
+        } else if (bodyTrimmed.startsWith('R0lGODlh') || bodyTrimmed.startsWith('R0lGODdh')) {
+          mimeType = 'image/gif'
+        } else if (bodyTrimmed.startsWith('UklGR')) {
+          mimeType = 'image/webp'
+        }
+        imageSrc = `data:${mimeType};base64,${bodyTrimmed}`
+      }
       // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
       else if (msg.id) {
         // Remove /api do final da URL base se existir
@@ -528,41 +499,28 @@ export default function WhatsAppSupport() {
         // Remove barra final se existir
         baseUrl = baseUrl.replace(/\/$/, '')
         imageSrc = `${baseUrl}/api/whatsapp/media/${msg.id}`
-        console.log('🔗 Construindo URL de mídia do endpoint:', { 
-          envApiUrl: env.apiUrl,
-          baseUrl, 
-          messageId: msg.id, 
-          finalUrl: imageSrc 
-        })
       }
       
       if (imageSrc) {
         return (
           <div className="space-y-2">
             <div className="relative">
-              <div className="relative group">
+              <div 
+                className="relative group cursor-pointer"
+                onClick={() => {
+                  // Abre preview da imagem em modal
+                  setImagePreview(imageSrc)
+                }}
+              >
                 <img 
                   src={imageSrc} 
                   alt={msg.isFromMe ? "Imagem enviada por você" : "Imagem recebida"} 
-                  className="w-full max-w-[280px] sm:max-w-[320px] h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity block"
-                  onClick={() => {
-                    // Abre preview da imagem em modal
-                    setImagePreview(imageSrc)
-                  }}
+                  className="w-full max-w-[280px] sm:max-w-[320px] h-auto rounded-lg hover:opacity-90 transition-opacity block pointer-events-none"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement
-                    console.error('❌ Erro ao carregar imagem:', {
-                      imageSrc: imageSrc?.substring(0, 100) + (imageSrc && imageSrc.length > 100 ? '...' : ''),
-                      messageId: msg.id,
-                      type: msg.type,
-                      hasMediaUrl: !!msg.mediaUrl,
-                      isBase64: imageSrc?.startsWith('data:'),
-                      currentSrc: target.src?.substring(0, 100)
-                    })
                     
                     // Se for base64 e falhou, não há o que fazer
                     if (imageSrc?.startsWith('data:')) {
-                      console.error('⚠️ Imagem base64 falhou ao carregar - dados podem estar corrompidos')
                       target.style.display = 'none'
                       const errorDiv = document.createElement('div')
                       errorDiv.className = 'p-3 bg-red-50 rounded-lg'
@@ -582,7 +540,6 @@ export default function WhatsAppSupport() {
                         baseUrl = 'http://localhost:3000'
                       }
                       const fallbackUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
-                      console.log('🔄 Tentando URL alternativa do endpoint:', fallbackUrl)
                       target.src = fallbackUrl
                       return
                     }
@@ -607,15 +564,11 @@ export default function WhatsAppSupport() {
                     target.parentElement?.parentElement?.appendChild(errorDiv)
                   }}
                   onLoad={() => {
-                    console.log('✅ Imagem carregada com sucesso:', {
-                      messageId: msg.id,
-                      type: msg.type,
-                      isBase64: imageSrc?.startsWith('data:')
-                    })
+                    // Imagem carregada com sucesso
                   }}
                 />
                 {/* Ícone de zoom ao passar o mouse */}
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
                   <ZoomIn className="w-8 h-8 text-white" />
                 </div>
                 {/* Botão de download na imagem pequena */}
@@ -688,63 +641,93 @@ export default function WhatsAppSupport() {
       }
       
       // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
-      if (!mediaUrl && msg.id) {
+      // IMPORTANTE: Sempre tenta construir URL do endpoint se tiver ID, mesmo que tenha mediaUrl
+      // Isso garante que mensagens recentes funcionem mesmo se mediaUrl não estiver disponível ainda
+      if (msg.id) {
         let baseUrl = env.apiUrl
         if (baseUrl.endsWith('/api')) {
           baseUrl = baseUrl.slice(0, -4)
         }
         baseUrl = baseUrl.replace(/\/$/, '')
-        mediaUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
-      }
-      
-      // Debug: log para verificar se tem mediaUrl
-      if (!mediaUrl) {
-        console.warn('Áudio sem mediaUrl:', { id: msg.id, type: msg.type, mimetype: msg.mediaMimetype })
+        if (!baseUrl || baseUrl === '') {
+          baseUrl = 'http://localhost:3000'
+        }
+        const endpointUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
+        
+        // Se não tem mediaUrl, usa endpoint. Se tem, mantém mediaUrl mas adiciona endpoint como fallback
+        if (!mediaUrl) {
+          mediaUrl = endpointUrl
+        }
       }
       
       if (mediaUrl) {
         // Determina o tipo MIME correto
-        const mimeType = msg.mediaMimetype || 'audio/ogg'
+        const mimeType = msg.mediaMimetype || 'audio/ogg; codecs=opus'
         
         return (
           <div className="space-y-2">
             <audio 
+              key={`audio-${msg.id}-${Date.now()}`} // Force re-render para mensagens recentes
               controls 
               className="w-full max-w-md min-w-[280px]"
-              preload="metadata"
+              preload="auto" // Muda de "metadata" para "auto" para carregar completamente
+              crossOrigin="anonymous" // Permite CORS se necessário
               onError={(e) => {
-                console.error('Erro ao carregar áudio:', {
-                  error: e,
-                  mediaUrl: mediaUrl?.substring(0, 50) + '...',
-                  mimeType,
-                  messageId: msg.id
-                })
                 const target = e.target as HTMLAudioElement
+                
+                // Se falhar e tiver ID, tenta recarregar após um delay
+                if (msg.id && target.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) {
+                  setTimeout(() => {
+                    if (target && target.parentElement) {
+                      target.load() // Força recarregar o áudio
+                    }
+                  }, 1000)
+                  return
+                }
+                
                 const parent = target.parentElement
                 if (parent) {
-                  // Se falhar, mostra link para baixar
+                  // Se falhar completamente, mostra link para baixar
                   parent.innerHTML = `
                     <div class="space-y-2">
+                      <p class="text-xs sm:text-sm text-red-600 mb-2">Erro ao carregar áudio. Tentando baixar...</p>
                       <a 
                         href="${mediaUrl}" 
                         download
                         class="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                        onclick="this.href='${mediaUrl}'; this.download='audio-${msg.id || Date.now()}.${msg.fileExtension || 'ogg'}';"
                       >
                         <span>🎵</span>
                         <span>Baixar áudio</span>
                       </a>
-                      ${msg.body ? `<p class="text-xs sm:text-sm whitespace-pre-wrap break-words">${msg.body}</p>` : ''}
+                      ${msg.body ? `<p class="text-xs sm:text-sm whitespace-pre-wrap break-words mt-2">${msg.body}</p>` : ''}
                     </div>
                   `
                 }
               }}
               onLoadStart={() => {
-                console.log('Iniciando carregamento de áudio:', { mediaUrl: mediaUrl?.substring(0, 50) + '...', mimeType })
+                // Iniciando carregamento de áudio
+              }}
+              onCanPlay={() => {
+                // Áudio pronto para reprodução
+              }}
+              onLoadedMetadata={() => {
+                // Metadados do áudio carregados
+              }}
+              onStalled={(e) => {
+                const target = e.target as HTMLAudioElement
+                setTimeout(() => {
+                  if (target && target.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+                    target.load()
+                  }
+                }, 1000)
               }}
             >
               <source src={mediaUrl} type={mimeType} />
               <source src={mediaUrl} type="audio/mpeg" />
               <source src={mediaUrl} type="audio/wav" />
+              <source src={mediaUrl} type="audio/ogg; codecs=opus" />
+              <source src={mediaUrl} type="audio/webm; codecs=opus" />
               <source src={mediaUrl} type="audio/ogg" />
               <source src={mediaUrl} type="audio/webm" />
               Seu navegador não suporta o elemento de áudio.
@@ -758,14 +741,17 @@ export default function WhatsAppSupport() {
       // Se não tiver mediaUrl nem ID, mostra link para baixar
       return (
         <div className="space-y-2">
-          <a 
-            href={msg.id ? `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}` : '#'}
-            download
-            className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-          >
-            <span>🎵</span>
-            <span>Baixar áudio</span>
-          </a>
+          <p className="text-xs sm:text-sm text-gray-500 italic mb-2">Áudio não disponível ainda. Aguarde alguns segundos...</p>
+          {msg.id && (
+            <a 
+              href={`${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`}
+              download
+              className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <span>🎵</span>
+              <span>Baixar áudio</span>
+            </a>
+          )}
           {msg.body && (
             <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.body}</p>
           )}
@@ -789,18 +775,22 @@ export default function WhatsAppSupport() {
       }
       
       // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
-      if (!mediaUrl && msg.id) {
+      // IMPORTANTE: Sempre tenta construir URL do endpoint se tiver ID
+      if (msg.id) {
         let baseUrl = env.apiUrl
         if (baseUrl.endsWith('/api')) {
           baseUrl = baseUrl.slice(0, -4)
         }
         baseUrl = baseUrl.replace(/\/$/, '')
-        mediaUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
-      }
-      
-      // Debug: log para verificar se tem mediaUrl
-      if (!mediaUrl) {
-        console.warn('Vídeo sem mediaUrl:', { id: msg.id, type: msg.type, mimetype: msg.mediaMimetype })
+        if (!baseUrl || baseUrl === '') {
+          baseUrl = 'http://localhost:3000'
+        }
+        const endpointUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
+        
+        // Se não tem mediaUrl, usa endpoint. Se tem, mantém mediaUrl mas adiciona endpoint como fallback
+        if (!mediaUrl) {
+          mediaUrl = endpointUrl
+        }
       }
       
       if (mediaUrl) {
@@ -810,37 +800,60 @@ export default function WhatsAppSupport() {
         return (
           <div className="space-y-2">
             <video 
+              key={`video-${msg.id}-${Date.now()}`} // Force re-render para mensagens recentes
               controls 
               className="max-w-full rounded-lg"
-              preload="metadata"
+              preload="auto" // Muda de "metadata" para "auto" para carregar completamente
+              crossOrigin="anonymous" // Permite CORS se necessário
               onError={(e) => {
-                console.error('Erro ao carregar vídeo:', {
-                  error: e,
-                  mediaUrl: mediaUrl?.substring(0, 50) + '...',
-                  mimeType,
-                  messageId: msg.id
-                })
                 const target = e.target as HTMLVideoElement
+                
+                // Se falhar e tiver ID, tenta recarregar após um delay
+                if (msg.id && target.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) {
+                  setTimeout(() => {
+                    if (target && target.parentElement) {
+                      target.load() // Força recarregar o vídeo
+                    }
+                  }, 1000)
+                  return
+                }
+                
                 const parent = target.parentElement
                 if (parent) {
-                  // Se falhar, mostra link para baixar
+                  // Se falhar completamente, mostra link para baixar
                   parent.innerHTML = `
                     <div class="space-y-2">
+                      <p class="text-xs sm:text-sm text-red-600 mb-2">Erro ao carregar vídeo. Tentando baixar...</p>
                       <a 
                         href="${mediaUrl}" 
                         download
                         class="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                        onclick="this.href='${mediaUrl}'; this.download='video-${msg.id || Date.now()}.${msg.fileExtension || 'mp4'}';"
                       >
                         <span>🎬</span>
                         <span>Baixar vídeo</span>
                       </a>
-                      ${msg.body ? `<p class="text-xs sm:text-sm whitespace-pre-wrap break-words">${msg.body}</p>` : ''}
+                      ${msg.body ? `<p class="text-xs sm:text-sm whitespace-pre-wrap break-words mt-2">${msg.body}</p>` : ''}
                     </div>
                   `
                 }
               }}
               onLoadStart={() => {
-                console.log('Iniciando carregamento de vídeo:', { mediaUrl: mediaUrl?.substring(0, 50) + '...', mimeType })
+                // Iniciando carregamento de vídeo
+              }}
+              onCanPlay={() => {
+                // Vídeo pronto para reprodução
+              }}
+              onLoadedMetadata={() => {
+                // Metadados do vídeo carregados
+              }}
+              onStalled={(e) => {
+                const target = e.target as HTMLVideoElement
+                setTimeout(() => {
+                  if (target && target.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+                    target.load()
+                  }
+                }, 1000)
               }}
             >
               <source src={mediaUrl} type={mimeType} />
@@ -951,9 +964,76 @@ export default function WhatsAppSupport() {
       )
     }
 
-    // Para texto, mostra o texto
+    // Para texto, verifica se é base64 (imagem/vídeo sem tipo correto)
     if (msg.type === 'text') {
-      return <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.body || ''}</p>
+      const body = msg.body || ''
+      
+      // Detecta se o body é base64 de imagem
+      // Padrões: /9j/ (JPEG), /9j/4AAQ (JPEG), iVBORw0KGgo (PNG), R0lGODlh (GIF), UklGR (WebP), data:image/
+      const isBase64Image = body.length > 100 && (
+        body.startsWith('/9j/') || 
+        body.startsWith('iVBORw0KGgo') || 
+        body.startsWith('R0lGODlh') || 
+        body.startsWith('R0lGODdh') ||
+        body.startsWith('UklGR') ||
+        body.startsWith('data:image/') ||
+        // Verifica se é base64 válido (caracteres alfanuméricos, +, /, =)
+        /^[A-Za-z0-9+\/=\s]{100,}$/.test(body.trim())
+      )
+      
+      if (isBase64Image) {
+        // É uma imagem em base64, converte para data URL se necessário
+        let imageSrc = body.trim()
+        if (!body.startsWith('data:')) {
+          // Tenta detectar o tipo de imagem pelo início do base64
+          let mimeType = 'image/jpeg' // Padrão
+          if (body.startsWith('iVBORw0KGgo')) {
+            mimeType = 'image/png'
+          } else if (body.startsWith('/9j/') || body.includes('/9j/')) {
+            mimeType = 'image/jpeg'
+          } else if (body.startsWith('R0lGODlh') || body.startsWith('R0lGODdh')) {
+            mimeType = 'image/gif'
+          } else if (body.startsWith('UklGR')) {
+            mimeType = 'image/webp'
+          }
+          // Remove espaços em branco e quebras de linha do base64
+          const cleanBase64 = body.trim().replace(/\s/g, '')
+          imageSrc = `data:${mimeType};base64,${cleanBase64}`
+        }
+        
+        return (
+          <div className="space-y-2">
+            <div className="relative">
+              <div 
+                className="relative group cursor-pointer"
+                onClick={() => {
+                  setImagePreview(imageSrc)
+                }}
+              >
+                <img 
+                  src={imageSrc} 
+                  alt={msg.isFromMe ? "Imagem enviada por você" : "Imagem recebida"} 
+                  className="w-full max-w-[280px] sm:max-w-[320px] h-auto rounded-lg hover:opacity-90 transition-opacity block pointer-events-none"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                    const errorDiv = document.createElement('div')
+                    errorDiv.className = 'p-3 bg-red-50 rounded-lg'
+                    errorDiv.innerHTML = '<p class="text-xs sm:text-sm text-red-600">Erro ao carregar imagem</p>'
+                    target.parentElement?.parentElement?.appendChild(errorDiv)
+                  }}
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
+                  <ZoomIn className="w-8 h-8 text-white" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+      
+      // Se não for base64, mostra o texto normalmente
+      return <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{body}</p>
     }
 
     // Para qualquer outro tipo não identificado, tenta buscar como mídia
@@ -983,6 +1063,18 @@ export default function WhatsAppSupport() {
   // Função auxiliar para normalizar número de telefone (remove caracteres não numéricos)
   const normalizePhone = (phone: string): string => {
     return phone.replace(/\D/g, '')
+  }
+
+  const formatPhone = (phone: string): string => {
+    // Remove @c.us se presente
+    const clean = phone.replace('@c.us', '').replace('@s.whatsapp.net', '')
+    // Formata para exibição
+    if (clean.length === 13 && clean.startsWith('55')) {
+      const ddd = clean.substring(2, 4)
+      const number = clean.substring(4)
+      return `(${ddd}) ${number.substring(0, 5)}-${number.substring(5)}`
+    }
+    return clean
   }
 
   // Função auxiliar para formatar telefone para busca
@@ -1246,120 +1338,116 @@ export default function WhatsAppSupport() {
           {selectedConversation && selectedConv ? (
             <>
               {/* Header da Conversa */}
-              <div className="bg-white border-b border-gray-300 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 flex items-center justify-between shadow-sm">
-                <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4 min-w-0 flex-1">
-                  {/* Botão voltar para lista no mobile */}
-                  <button
-                    onClick={handleBackToConversations}
-                    className="lg:hidden mr-1 p-1.5 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-                    title="Voltar para lista de conversas"
-                  >
-                    <ChevronLeft size={20} className="text-gray-600" />
-                  </button>
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-semibold text-base sm:text-lg flex-shrink-0">
-                    {selectedConv.contactName?.[0]?.toUpperCase() || selectedConv.phone[0]}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h2 className="font-semibold text-sm sm:text-base text-gray-900 truncate">
-                      {selectedConv.contactName || selectedConv.phone}
-                    </h2>
-                    <p className="text-xs sm:text-sm text-gray-500 truncate">{selectedConv.phone}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
-                  {selectedConv.needsPharmacist && (
-                    <span className="bg-red-100 text-red-700 text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
-                      Precisa de Farmacêutico
-                    </span>
-                  )}
-                  {selectedConv.isAssumed && (
-                    <span className="bg-yellow-100 text-yellow-700 text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
-                      {selectedConv.assumedBy ? `Assumido por ${selectedConv.assumedBy}` : 'Assumida'}
-                    </span>
-                  )}
-                  {/* Botão para assumir/desbloquear conversa */}
-                  {selectedConv.isAssumed || selectedConv.needsPharmacist ? (
+              <div className="border-b border-gray-200 p-3 sm:p-4 bg-gray-50">
+                <div className="flex items-center justify-between space-x-3">
+                  <div className="flex items-center space-x-3 min-w-0 flex-1">
+                    {/* Botão voltar (apenas mobile) */}
                     <button
-                      onClick={handleUnblockConversation}
-                      className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
-                      title="Desbloquear conversa (IA voltará a responder)"
+                      onClick={handleBackToConversations}
+                      className="lg:hidden flex-shrink-0 p-1 hover:bg-gray-200 rounded transition-colors"
                     >
-                      <Unlock size={14} className="sm:w-4 sm:h-4" />
-                      <span className="hidden sm:inline">Desbloquear</span>
+                      <ArrowLeft className="w-5 h-5 text-gray-600" />
                     </button>
-                  ) : (
-                    <button
-                      onClick={handleBlockConversation}
-                      className="flex items-center space-x-1 bg-yellow-600 hover:bg-yellow-700 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
-                      title="Assumir conversa (bloquear IA)"
-                    >
-                      <Lock size={14} className="sm:w-4 sm:h-4" />
-                      <span className="hidden sm:inline">Assumir</span>
-                    </button>
-                  )}
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-gray-900 text-sm sm:text-base truncate">
+                        {selectedConv.contactName || formatPhone(selectedConv.phone)}
+                      </p>
+                      <p className="text-xs text-gray-500 truncate">{formatPhone(selectedConv.phone)}</p>
+                    </div>
+                  </div>
+                  {/* Badges e botões de ação */}
+                  <div className="flex items-center space-x-2 flex-shrink-0">
+                    {selectedConv.needsPharmacist && (
+                      <span className="bg-red-100 text-red-700 text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
+                        Farmacêutico
+                      </span>
+                    )}
+                    {selectedConv.isAssumed && (
+                      <span className="bg-yellow-100 text-yellow-700 text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
+                        {selectedConv.assumedBy ? `Assumido por ${selectedConv.assumedBy}` : 'Assumida'}
+                      </span>
+                    )}
+                    {/* Botão para assumir/desbloquear conversa */}
+                    {selectedConv.isAssumed || selectedConv.needsPharmacist ? (
+                      <button
+                        onClick={handleUnblockConversation}
+                        className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
+                        title="Desbloquear conversa (IA voltará a responder)"
+                      >
+                        <Unlock size={14} className="sm:w-4 sm:h-4" />
+                        <span className="hidden sm:inline">Desbloquear</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleBlockConversation}
+                        className="flex items-center space-x-1 bg-yellow-600 hover:bg-yellow-700 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
+                        title="Assumir conversa (bloquear IA)"
+                      >
+                        <Lock size={14} className="sm:w-4 sm:h-4" />
+                        <span className="hidden sm:inline">Assumir</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Mensagens */}
-              <div
+              <div 
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 bg-gray-50"
-                style={{ 
-                  backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cdefs%3E%3Cpattern id=\'grid\' width=\'40\' height=\'40\' patternUnits=\'userSpaceOnUse\'%3E%3Cpath d=\'M 40 0 L 0 0 0 40\' fill=\'none\' stroke=\'%23e5e7eb\' stroke-width=\'1\'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=\'100\' height=\'100\' fill=\'url(%23grid)\' /%3E%3C/svg%3E")',
-                  scrollBehavior: 'auto'
-                }}
+                className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50"
+                style={{ scrollBehavior: 'auto' }}
               >
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.isFromMe ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[85%] sm:max-w-[75%] lg:max-w-[70%] rounded-lg shadow-sm overflow-hidden ${
-                        msg.isFromMe
-                          ? 'bg-green-500 text-white'
-                          : 'bg-white text-gray-900 border border-gray-200'
-                      } ${msg.type === 'image' ? 'p-0' : 'px-3 sm:px-4 py-1.5 sm:py-2'}`}
-                    >
-                      {msg.type === 'image' ? (
-                        <>
-                          {renderMessageContent(msg)}
-                          <div className="px-3 sm:px-4 pb-1.5 sm:pb-2">
-                            <p
-                              className={`text-[10px] sm:text-xs mt-1 ${
-                                msg.isFromMe ? 'text-green-100' : 'text-gray-400'
-                              }`}
-                            >
-                              {formatTime(msg.timestamp)}
-                              {msg.isFromMe && (
-                                <span className="ml-1">
-                                  <CheckCircle2 size={10} className="sm:w-3 sm:h-3 inline" />
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          {renderMessageContent(msg)}
-                          <p
-                            className={`text-[10px] sm:text-xs mt-1 ${
-                              msg.isFromMe ? 'text-green-100' : 'text-gray-400'
-                            }`}
-                          >
-                            {formatTime(msg.timestamp)}
-                            {msg.isFromMe && (
-                              <span className="ml-1">
-                                <CheckCircle2 size={10} className="sm:w-3 sm:h-3 inline" />
-                              </span>
-                            )}
-                          </p>
-                        </>
-                      )}
-                    </div>
+                {messages.length === 0 ? (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-gray-500 text-sm sm:text-base">Nenhuma mensagem ainda</p>
                   </div>
-                ))}
-                <div ref={messagesEndRef} />
+                ) : (
+                  <div className="space-y-3 sm:space-y-4">
+                    {messages.map((message) => (
+                      <div
+                        key={message.id}
+                        className={`flex ${message.isFromMe ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[85%] sm:max-w-xs lg:max-w-md rounded-lg shadow-sm overflow-hidden ${
+                            message.isFromMe
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white text-gray-900 border border-gray-200'
+                          } ${message.type === 'image' && message.mediaUrl ? 'p-0' : 'px-3 sm:px-4 py-2'}`}
+                        >
+                          {message.type === 'image' && message.mediaUrl ? (
+                            <>
+                              {renderMessageContent(message)}
+                              <div className="px-3 sm:px-4 pb-2">
+                                <p
+                                  className={`text-[10px] sm:text-xs mt-1 ${
+                                    message.isFromMe ? 'text-blue-100' : 'text-gray-400'
+                                  }`}
+                                >
+                                  {formatTime(message.timestamp)}
+                                </p>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              {renderMessageContent(message)}
+                              <p
+                                className={`text-[10px] sm:text-xs mt-1 ${
+                                  message.isFromMe ? 'text-blue-100' : 'text-gray-400'
+                                }`}
+                              >
+                                {formatTime(message.timestamp)}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Input de Mensagem */}

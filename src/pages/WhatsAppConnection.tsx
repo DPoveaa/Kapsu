@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, RefreshCw, CheckCircle2, XCircle, Send, Loader2, QrCode, LogOut, AlertTriangle, MessageSquare, Phone, User, Paperclip, X, Lock, Unlock, ZoomIn, Info, ChevronDown, ChevronUp, Trash2, Download, Plus, Settings } from 'lucide-react'
+import { ArrowLeft, RefreshCw, CheckCircle2, XCircle, Send, Loader2, QrCode, LogOut, AlertTriangle, MessageSquare, Phone, User, Paperclip, X, Lock, Unlock, ZoomIn, Info, ChevronDown, ChevronUp, Trash2, Download, Plus, Settings, Bot, Power, Clock } from 'lucide-react'
 import { whatsappService, WhatsAppStatus } from '../services/whatsapp.service'
 import { env } from '../config/env'
 import { useAuth } from '../context/AuthContext'
@@ -16,6 +16,7 @@ interface WhatsAppMessage {
   contactName?: string
   mediaUrl?: string
   mediaMimetype?: string
+  fileExtension?: string
 }
 
 interface Conversation {
@@ -302,8 +303,35 @@ export default function WhatsAppConnection() {
     return () => window.removeEventListener('keydown', handleEscape)
   }, [imagePreview])
 
+  // Listener para recarregar mensagens após re-download de mídia
+  useEffect(() => {
+    const handleReloadMessages = (event: CustomEvent) => {
+      const { messageId } = event.detail
+      if (selectedConversation && messageId) {
+        // Remove a marcação de erro do sessionStorage para o áudio específico
+        sessionStorage.removeItem(`audio-error-${messageId}`)
+        
+        // Remove do cache para forçar recarregar
+        messagesCacheRef.current.delete(selectedConversation)
+        
+        // Recarrega mensagens após um pequeno delay
+        setTimeout(() => {
+          if (currentConversationRef.current === selectedConversation) {
+            loadMessages(selectedConversation)
+          }
+        }, 1000)
+      }
+    }
+
+    window.addEventListener('reloadMessages', handleReloadMessages as EventListener)
+    return () => window.removeEventListener('reloadMessages', handleReloadMessages as EventListener)
+  }, [selectedConversation])
+
   // Scroll automático para última mensagem (apenas quando há novas mensagens)
   const [previousMessageCount, setPreviousMessageCount] = useState(0)
+  const [isNumberAllowed, setIsNumberAllowed] = useState<boolean>(false)
+  const [allowedNumberId, setAllowedNumberId] = useState<string | null>(null)
+  const [loadingAllowedCheck, setLoadingAllowedCheck] = useState(false)
   
   useEffect(() => {
     if (messages.length > 0 && selectedConversation && messagesContainerRef.current) {
@@ -325,6 +353,14 @@ export default function WhatsAppConnection() {
     if (messagesContainerRef.current) {
       // Scroll instantâneo sem delay
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
+    }
+    
+    // Verifica se o número está na lista de permitidos quando seleciona uma conversa
+    if (selectedConversation) {
+      checkIfNumberIsAllowed(selectedConversation)
+    } else {
+      setIsNumberAllowed(false)
+      setAllowedNumberId(null)
     }
   }, [selectedConversation])
 
@@ -574,6 +610,71 @@ export default function WhatsAppConnection() {
     }
   }
 
+  const checkIfNumberIsAllowed = async (phone: string) => {
+    try {
+      setLoadingAllowedCheck(true)
+      const result = await whatsappService.isNumberAllowed(phone)
+      setIsNumberAllowed(result.isAllowed)
+      setAllowedNumberId(result.allowedNumber?.id || null)
+    } catch (error: any) {
+      console.error('Erro ao verificar número permitido:', error)
+      setIsNumberAllowed(false)
+      setAllowedNumberId(null)
+    } finally {
+      setLoadingAllowedCheck(false)
+    }
+  }
+
+  const handleToggleAllowedAINumber = async () => {
+    if (!selectedConversation || loadingAllowedCheck) return
+
+    // Verifica se o token existe antes de fazer a requisição
+    const token = localStorage.getItem('sanare_token')
+    if (!token) {
+      alert('Você precisa estar logado para usar esta funcionalidade. Por favor, faça login novamente.')
+      navigate('/login')
+      return
+    }
+
+    try {
+      const selectedConv = conversations.find(c => c.phone === selectedConversation)
+      if (isNumberAllowed && allowedNumberId) {
+        // Remove da lista
+        await whatsappService.removeAllowedAINumber(allowedNumberId)
+        setIsNumberAllowed(false)
+        setAllowedNumberId(null)
+        alert('Número removido da lista de permitidos. A IA não responderá mais automaticamente (a menos que AI_AUTO_RESPOND=true no .env).')
+      } else {
+        // Adiciona à lista
+        const contactName = selectedConv?.contactName || 'Cliente'
+        const result = await whatsappService.addAllowedAINumber(
+          selectedConversation,
+          `Adicionado via interface - ${contactName}`
+        )
+        setIsNumberAllowed(true)
+        setAllowedNumberId(result.id)
+        alert('Número adicionado à lista de permitidos! A IA responderá automaticamente mesmo com AI_AUTO_RESPOND=false.')
+      }
+    } catch (error: any) {
+      console.error('Erro ao alterar número permitido:', error)
+      const errorMessage = error.message || 'Erro desconhecido'
+      
+      // Se for erro de autenticação (token não encontrado ou sessão expirada)
+      if (errorMessage.includes('Sessão expirada') || errorMessage.includes('Token') || errorMessage.includes('login')) {
+        const currentToken = localStorage.getItem('sanare_token')
+        if (!currentToken) {
+          alert('Sua sessão expirou. Por favor, faça login novamente.')
+          navigate('/login')
+        } else {
+          // Token existe mas pode ter expirado - não remove automaticamente
+          alert('Erro de autenticação. Por favor, tente novamente. Se o problema persistir, faça login novamente.')
+        }
+      } else {
+        alert('Erro ao alterar número permitido: ' + errorMessage)
+      }
+    }
+  }
+
   const handleBlockConversation = async (phone: string) => {
     try {
       const userName = user?.name || 'Administrador'
@@ -646,12 +747,40 @@ export default function WhatsAppConnection() {
   }
 
   const renderMessageContent = (msg: WhatsAppMessage) => {
-    // Se for imagem, sempre tenta mostrar (mesmo sem mediaUrl, busca do endpoint)
-    if (msg.type === 'image') {
+    // Verifica se o body contém base64 (imagem) - mesmo que não seja tipo 'image'
+    const bodyTrimmed = (msg.body || '').trim()
+    const isBase64Image = bodyTrimmed && (
+      bodyTrimmed.startsWith('/9j/') || // JPEG
+      bodyTrimmed.startsWith('iVBORw0KGgo') || // PNG
+      bodyTrimmed.startsWith('data:image/') || // Data URL
+      bodyTrimmed.startsWith('R0lGODlh') || // GIF
+      (bodyTrimmed.length > 100 && /^[A-Za-z0-9+/=]+$/.test(bodyTrimmed.replace(/\s/g, ''))) // Base64 genérico
+    )
+    
+    // Se for imagem OU se o body contém base64, trata como imagem
+    if (msg.type === 'image' || isBase64Image) {
       let mediaUrl = msg.mediaUrl
       
+      // Se o body contém base64, usa ele como imagem
+      if (isBase64Image && !mediaUrl) {
+        // Se já começa com data:, usa direto
+        if (bodyTrimmed.startsWith('data:')) {
+          mediaUrl = bodyTrimmed
+        } else {
+          // Senão, adiciona o prefixo data:image/jpeg;base64,
+          // Tenta detectar o tipo pela assinatura
+          let mimeType = 'image/jpeg'
+          if (bodyTrimmed.startsWith('iVBORw0KGgo')) {
+            mimeType = 'image/png'
+          } else if (bodyTrimmed.startsWith('R0lGODlh')) {
+            mimeType = 'image/gif'
+          }
+          mediaUrl = `data:${mimeType};base64,${bodyTrimmed}`
+        }
+      }
+      
       // Se mediaUrl for relativa (começa com /), converte para URL completa
-      if (mediaUrl && mediaUrl.startsWith('/')) {
+      if (mediaUrl && mediaUrl.startsWith('/') && !mediaUrl.startsWith('data:')) {
         let baseUrl = env.apiUrl
         if (baseUrl.endsWith('/api')) {
           baseUrl = baseUrl.slice(0, -4)
@@ -710,15 +839,17 @@ export default function WhatsAppConnection() {
         return (
           <div className="space-y-2">
             <div className="relative">
-              <div className="relative group">
+              <div 
+                className="relative group cursor-pointer"
+                onClick={() => {
+                  // Abre preview da imagem em modal
+                  setImagePreview(mediaUrl)
+                }}
+              >
                 <img 
                   src={mediaUrl} 
                   alt={msg.isFromMe ? "Imagem enviada por você" : "Imagem recebida"} 
-                  className="w-full max-w-[280px] sm:max-w-[320px] h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity block"
-                  onClick={() => {
-                    // Abre preview da imagem em modal
-                    setImagePreview(mediaUrl)
-                  }}
+                  className="w-full max-w-[280px] sm:max-w-[320px] h-auto rounded-lg hover:opacity-90 transition-opacity block pointer-events-none"
                   onError={(e) => {
                     // Fallback se a imagem não carregar
                     const target = e.target as HTMLImageElement
@@ -729,12 +860,15 @@ export default function WhatsAppConnection() {
                   }}
                 />
                 {/* Ícone de zoom ao passar o mouse */}
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
                   <ZoomIn className="w-8 h-8 text-white" />
                 </div>
                 {/* Botão de download na imagem pequena */}
                 <button
-                  onClick={handleDownload}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleDownload(e)
+                  }}
                   className="absolute bottom-2 right-2 bg-black bg-opacity-60 hover:bg-opacity-80 text-white p-2 rounded-full transition-all opacity-0 group-hover:opacity-100 z-10"
                   title="Baixar imagem"
                 >
@@ -742,8 +876,8 @@ export default function WhatsAppConnection() {
                 </button>
               </div>
             </div>
-            {/* Legenda da imagem */}
-            {msg.body && (
+            {/* Legenda da imagem - só mostra se não for base64 */}
+            {msg.body && !isBase64Image && (
               <p className="text-xs sm:text-sm whitespace-pre-wrap break-words px-2 pt-1">{msg.body}</p>
             )}
           </div>
@@ -755,6 +889,13 @@ export default function WhatsAppConnection() {
 
     // Se for áudio, sempre tenta mostrar player
     if (msg.type === 'audio') {
+      // Normaliza o ID removendo prefixos true_/false_ antes de fazer requisição
+      // Os IDs no banco não têm esses prefixos, mas podem vir do frontend com eles
+      let normalizedMessageId = msg.id || ''
+      if (normalizedMessageId.startsWith('true_') || normalizedMessageId.startsWith('false_')) {
+        normalizedMessageId = normalizedMessageId.replace(/^(true|false)_/, '')
+      }
+      
       // Tenta usar mediaUrl direto, ou busca do endpoint
       let mediaUrl = msg.mediaUrl
       
@@ -769,65 +910,219 @@ export default function WhatsAppConnection() {
       }
       
       // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
-      if (!mediaUrl && msg.id) {
+      // IMPORTANTE: Sempre tenta construir URL do endpoint se tiver ID, mesmo que tenha mediaUrl
+      // Isso garante que mensagens recentes funcionem mesmo se mediaUrl não estiver disponível ainda
+      if (!mediaUrl && normalizedMessageId) {
         let baseUrl = env.apiUrl
         if (baseUrl.endsWith('/api')) {
           baseUrl = baseUrl.slice(0, -4)
         }
         baseUrl = baseUrl.replace(/\/$/, '')
-        mediaUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
+        if (!baseUrl || baseUrl === '') {
+          baseUrl = 'http://localhost:3001'
+        }
+        mediaUrl = `${baseUrl}/api/whatsapp/media/${normalizedMessageId}`
       }
       
-      // Debug: log para verificar se tem mediaUrl
-      if (!mediaUrl) {
-        console.warn('Áudio sem mediaUrl:', { id: msg.id, type: msg.type, mimetype: msg.mediaMimetype })
+      // Se ainda não tem mediaUrl mas tem ID da mensagem, tenta usar o ID original
+      if (!mediaUrl && msg.id) {
+        let messageIdToUse = msg.id
+        if (messageIdToUse.startsWith('true_') || messageIdToUse.startsWith('false_')) {
+          messageIdToUse = messageIdToUse.replace(/^(true|false)_/, '')
+        }
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        if (!baseUrl || baseUrl === '') {
+          baseUrl = 'http://localhost:3001'
+        }
+        mediaUrl = `${baseUrl}/api/whatsapp/media/${messageIdToUse}`
       }
       
       if (mediaUrl) {
         // Determina o tipo MIME correto
-        const mimeType = msg.mediaMimetype || 'audio/ogg'
+        const mimeType = msg.mediaMimetype || 'audio/ogg; codecs=opus'
+        
+        // Usa um hash estável baseado no ID da mensagem para cache-busting (não muda a cada renderização)
+        // Isso evita requisições infinitas
+        const messageIdHash = normalizedMessageId.split('').reduce((acc, char) => {
+          return ((acc << 5) - acc) + char.charCodeAt(0) | 0;
+        }, 0);
+        const cacheBuster = `?v=${Math.abs(messageIdHash)}`
+        const mediaUrlWithCache = mediaUrl.includes('?') ? `${mediaUrl.split('?')[0]}${cacheBuster}` : `${mediaUrl}${cacheBuster}`
         
         return (
           <div className="space-y-2">
             <audio 
+              key={`audio-${normalizedMessageId}`}
               controls 
               className="w-full max-w-md min-w-[280px]"
               preload="metadata"
+              crossOrigin="anonymous"
+              src={mediaUrlWithCache}
               onError={(e) => {
-                console.error('Erro ao carregar áudio:', {
-                  error: e,
-                  mediaUrl: mediaUrl?.substring(0, 50) + '...',
-                  mimeType,
-                  messageId: msg.id
-                })
                 const target = e.target as HTMLAudioElement
-                const parent = target.parentElement
-                if (parent) {
-                  // Se falhar, mostra link para baixar
-                  parent.innerHTML = `
-                    <div class="space-y-2">
-                      <a 
-                        href="${mediaUrl}" 
-                        download
-                        class="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                      >
-                        <span>🎵</span>
-                        <span>Baixar áudio</span>
-                      </a>
-                      ${msg.body ? `<p class="text-xs sm:text-sm whitespace-pre-wrap break-words">${msg.body}</p>` : ''}
-                    </div>
-                  `
+                
+                // Verifica se já tentou carregar múltiplas vezes
+                const errorKey = `audio-error-${normalizedMessageId}`
+                const errorCount = parseInt(sessionStorage.getItem(`${errorKey}-count`) || '0', 10)
+                
+                // Se já tentou mais de 2 vezes, para de tentar
+                if (errorCount >= 2) {
+                  target.style.display = 'none'
+                  if (!target.dataset.errorShown) {
+                    target.dataset.errorShown = 'true'
+                    const parent = target.parentElement
+                    if (parent) {
+                      const errorDiv = document.createElement('div')
+                      errorDiv.className = 'space-y-2'
+                      errorDiv.innerHTML = `
+                        <p class="text-xs sm:text-sm text-red-600 mb-2">Áudio não disponível. A mídia pode não ter sido baixada quando a mensagem foi recebida.</p>
+                      `
+                      const button = document.createElement('button')
+                      button.className = 'text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer'
+                      button.innerHTML = '<span>🎵</span><span>Tentar baixar áudio</span>'
+                      button.onclick = async () => {
+                        try {
+                          const baseUrl = env.apiUrl.replace('/api', '')
+                          const response = await fetch(`${baseUrl}/api/whatsapp/media/${normalizedMessageId}/force-redownload`, {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${localStorage.getItem('sanare_token')}`,
+                            },
+                          })
+                          
+                          if (response.ok) {
+                            sessionStorage.removeItem(errorKey)
+                            sessionStorage.removeItem(`${errorKey}-count`)
+                            window.dispatchEvent(new CustomEvent('reloadMessages', { detail: { messageId: normalizedMessageId } }))
+                          } else {
+                            const error = await response.json()
+                            alert(`Erro ao baixar áudio: ${error.message || 'Mídia não disponível'}`)
+                          }
+                        } catch (error: any) {
+                          console.error('Erro ao forçar re-download:', error)
+                          alert('Erro ao baixar áudio. Tente novamente.')
+                        }
+                      }
+                      errorDiv.appendChild(button)
+                      parent.appendChild(errorDiv)
+                    }
+                  }
+                  return
+                }
+                
+                // Incrementa contador de erros
+                sessionStorage.setItem(`${errorKey}-count`, String(errorCount + 1))
+                sessionStorage.setItem(errorKey, 'true')
+                
+                console.error('❌ Erro ao carregar áudio:', {
+                  error: e,
+                  mediaUrl: mediaUrl?.substring(0, 80) + '...',
+                  mimeType,
+                  messageId: normalizedMessageId,
+                  errorCount: errorCount + 1,
+                  networkState: target.networkState,
+                  readyState: target.readyState,
+                  errorCode: target.error?.code,
+                  errorMessage: target.error?.message
+                })
+                
+                // Se falhar completamente, mostra mensagem de erro (apenas uma vez)
+                if (!target.dataset.errorShown) {
+                  target.dataset.errorShown = 'true'
+                  const parent = target.parentElement
+                  if (parent) {
+                    // Esconde o player de áudio e mostra mensagem de erro
+                    target.style.display = 'none'
+                    const errorDiv = document.createElement('div')
+                    errorDiv.className = 'space-y-2'
+                    const baseUrl = env.apiUrl.replace('/api', '')
+                    const button = document.createElement('button')
+                    button.className = 'text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer'
+                    button.innerHTML = '<span>🎵</span><span>Tentar baixar áudio</span>'
+                    button.onclick = async () => {
+                      try {
+                        const response = await fetch(`${baseUrl}/api/whatsapp/media/${msg.id}/force-redownload`, {
+                          method: 'POST',
+                          headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                          },
+                        })
+                        
+                        if (response.ok) {
+                          const blob = await response.blob()
+                          const url = window.URL.createObjectURL(blob)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = `audio-${msg.id}.${blob.type.includes('ogg') ? 'ogg' : 'mp3'}`
+                          document.body.appendChild(a)
+                          a.click()
+                          document.body.removeChild(a)
+                          window.URL.revokeObjectURL(url)
+                          
+                          // Remove a marcação de erro do sessionStorage
+                          if (msg.id) {
+                            sessionStorage.removeItem(`audio-error-${msg.id}`)
+                          }
+                          
+                          // Dispara evento customizado para recarregar mensagens
+                          window.dispatchEvent(new CustomEvent('reloadMessages', { detail: { messageId: msg.id } }))
+                        } else {
+                          const error = await response.json()
+                          alert(`Erro ao baixar áudio: ${error.message || 'Mídia não disponível'}`)
+                        }
+                      } catch (error: any) {
+                        console.error('Erro ao forçar re-download:', error)
+                        alert('Erro ao baixar áudio. Tente novamente.')
+                      }
+                    }
+                    
+                    errorDiv.innerHTML = `
+                      <p class="text-xs sm:text-sm text-red-600 mb-2">Áudio não disponível. A mídia pode não ter sido baixada quando a mensagem foi recebida.</p>
+                    `
+                    errorDiv.appendChild(button)
+                    parent.insertBefore(errorDiv, target)
+                  }
                 }
               }}
               onLoadStart={() => {
-                console.log('Iniciando carregamento de áudio:', { mediaUrl: mediaUrl?.substring(0, 50) + '...', mimeType })
+                // Log removido para reduzir poluição do console
+              }}
+              onCanPlay={() => {
+                // Quando o áudio carrega com sucesso, limpa a marcação de erro
+                if (msg.id) {
+                  sessionStorage.removeItem(`audio-error-${msg.id}`)
+                }
+              }}
+              onLoadedMetadata={(e) => {
+                // Quando os metadados são carregados, também limpa a marcação de erro
+                if (msg.id) {
+                  sessionStorage.removeItem(`audio-error-${msg.id}`)
+                }
+              }}
+              onStalled={(e) => {
+                // Evita múltiplas tentativas simultâneas
+                const target = e.target as HTMLAudioElement
+                if (target.dataset.retrying === 'true') return
+                target.dataset.retrying = 'true'
+                setTimeout(() => {
+                  if (target && target.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
+                    target.load()
+                  }
+                  target.dataset.retrying = 'false'
+                }, 2000) // Aumenta o delay para evitar "piscamento"
               }}
             >
-              <source src={mediaUrl} type={mimeType} />
-              <source src={mediaUrl} type="audio/mpeg" />
-              <source src={mediaUrl} type="audio/wav" />
-              <source src={mediaUrl} type="audio/ogg" />
-              <source src={mediaUrl} type="audio/webm" />
+              <source src={mediaUrlWithCache} type={mimeType} />
+              <source src={mediaUrlWithCache} type="audio/mpeg" />
+              <source src={mediaUrlWithCache} type="audio/wav" />
+              <source src={mediaUrlWithCache} type="audio/ogg; codecs=opus" />
+              <source src={mediaUrlWithCache} type="audio/webm; codecs=opus" />
+              <source src={mediaUrlWithCache} type="audio/ogg" />
+              <source src={mediaUrlWithCache} type="audio/webm" />
               Seu navegador não suporta o elemento de áudio.
             </audio>
             {msg.body && (
@@ -839,14 +1134,17 @@ export default function WhatsAppConnection() {
       // Se não tiver mediaUrl nem ID, mostra link para baixar
       return (
         <div className="space-y-2">
-          <a 
-            href={msg.id ? `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}` : '#'}
-            download
-            className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-          >
-            <span>🎵</span>
-            <span>Baixar áudio</span>
-          </a>
+          <p className="text-xs sm:text-sm text-gray-500 italic mb-2">Áudio não disponível ainda. Aguarde alguns segundos...</p>
+          {msg.id && (
+            <a 
+              href={`${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`}
+              download
+              className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <span>🎵</span>
+              <span>Baixar áudio</span>
+            </a>
+          )}
           {msg.body && (
             <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.body}</p>
           )}
@@ -856,6 +1154,12 @@ export default function WhatsAppConnection() {
 
     // Se for vídeo, sempre tenta mostrar player
     if (msg.type === 'video') {
+      // Normaliza o ID da mensagem (remove prefixos true_/false_)
+      let normalizedMessageId = msg.id || ''
+      if (normalizedMessageId.startsWith('true_') || normalizedMessageId.startsWith('false_')) {
+        normalizedMessageId = normalizedMessageId.replace(/^(true|false)_/, '')
+      }
+      
       // Tenta usar mediaUrl direto, ou busca do endpoint
       let mediaUrl = msg.mediaUrl
       
@@ -870,65 +1174,128 @@ export default function WhatsAppConnection() {
       }
       
       // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
-      if (!mediaUrl && msg.id) {
+      if (!mediaUrl && normalizedMessageId) {
         let baseUrl = env.apiUrl
         if (baseUrl.endsWith('/api')) {
           baseUrl = baseUrl.slice(0, -4)
         }
         baseUrl = baseUrl.replace(/\/$/, '')
-        mediaUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
+        if (!baseUrl || baseUrl === '') {
+          baseUrl = 'http://localhost:3001'
+        }
+        mediaUrl = `${baseUrl}/api/whatsapp/media/${normalizedMessageId}`
       }
       
-      // Debug: log para verificar se tem mediaUrl
-      if (!mediaUrl) {
-        console.warn('Vídeo sem mediaUrl:', { id: msg.id, type: msg.type, mimetype: msg.mediaMimetype })
+      // Se ainda não tem mediaUrl mas tem ID da mensagem, tenta usar o ID original
+      if (!mediaUrl && msg.id) {
+        let messageIdToUse = msg.id
+        if (messageIdToUse.startsWith('true_') || messageIdToUse.startsWith('false_')) {
+          messageIdToUse = messageIdToUse.replace(/^(true|false)_/, '')
+        }
+        let baseUrl = env.apiUrl
+        if (baseUrl.endsWith('/api')) {
+          baseUrl = baseUrl.slice(0, -4)
+        }
+        baseUrl = baseUrl.replace(/\/$/, '')
+        if (!baseUrl || baseUrl === '') {
+          baseUrl = 'http://localhost:3001'
+        }
+        mediaUrl = `${baseUrl}/api/whatsapp/media/${messageIdToUse}`
       }
       
       if (mediaUrl) {
         // Determina o tipo MIME correto
         const mimeType = msg.mediaMimetype || 'video/mp4'
         
+        // Usa um hash estável baseado no ID da mensagem para cache-busting
+        const messageIdHash = normalizedMessageId.split('').reduce((acc, char) => {
+          return ((acc << 5) - acc) + char.charCodeAt(0) | 0;
+        }, 0);
+        const cacheBuster = `?v=${Math.abs(messageIdHash)}`
+        const mediaUrlWithCache = mediaUrl.includes('?') ? `${mediaUrl.split('?')[0]}${cacheBuster}` : `${mediaUrl}${cacheBuster}`
+        
         return (
           <div className="space-y-2">
             <video 
+              key={`video-${normalizedMessageId}`}
               controls 
               className="max-w-full rounded-lg"
               preload="metadata"
+              crossOrigin="anonymous"
               onError={(e) => {
-                console.error('Erro ao carregar vídeo:', {
-                  error: e,
-                  mediaUrl: mediaUrl?.substring(0, 50) + '...',
-                  mimeType,
-                  messageId: msg.id
-                })
                 const target = e.target as HTMLVideoElement
-                const parent = target.parentElement
-                if (parent) {
-                  // Se falhar, mostra link para baixar
-                  parent.innerHTML = `
-                    <div class="space-y-2">
-                      <a 
-                        href="${mediaUrl}" 
-                        download
-                        class="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                      >
-                        <span>🎬</span>
-                        <span>Baixar vídeo</span>
-                      </a>
-                      ${msg.body ? `<p class="text-xs sm:text-sm whitespace-pre-wrap break-words">${msg.body}</p>` : ''}
-                    </div>
-                  `
+                const errorKey = `video-error-${normalizedMessageId}`
+                const errorCount = parseInt(sessionStorage.getItem(`${errorKey}-count`) || '0', 10)
+                
+                // Se já tentou mais de 2 vezes, para de tentar
+                if (errorCount >= 2) {
+                  target.style.display = 'none'
+                  if (!target.dataset.errorShown) {
+                    target.dataset.errorShown = 'true'
+                    const parent = target.parentElement
+                    if (parent) {
+                      const errorDiv = document.createElement('div')
+                      errorDiv.className = 'space-y-2'
+                      errorDiv.innerHTML = `
+                        <p class="text-xs sm:text-sm text-red-600 mb-2">Vídeo não disponível. A mídia pode não ter sido baixada quando a mensagem foi recebida.</p>
+                      `
+                      const button = document.createElement('button')
+                      button.className = 'text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer'
+                      button.innerHTML = '<span>🎬</span><span>Tentar baixar vídeo</span>'
+                      button.onclick = async () => {
+                        try {
+                          const baseUrl = env.apiUrl.replace('/api', '')
+                          const response = await fetch(`${baseUrl}/api/whatsapp/media/${normalizedMessageId}/force-redownload`, {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${localStorage.getItem('sanare_token')}`,
+                            },
+                          })
+                          
+                          if (response.ok) {
+                            sessionStorage.removeItem(errorKey)
+                            sessionStorage.removeItem(`${errorKey}-count`)
+                            window.dispatchEvent(new CustomEvent('reloadMessages', { detail: { messageId: normalizedMessageId } }))
+                          } else {
+                            const error = await response.json()
+                            alert(`Erro ao baixar vídeo: ${error.message || 'Mídia não disponível'}`)
+                          }
+                        } catch (error: any) {
+                          console.error('Erro ao forçar re-download:', error)
+                          alert('Erro ao baixar vídeo. Tente novamente.')
+                        }
+                      }
+                      errorDiv.appendChild(button)
+                      parent.appendChild(errorDiv)
+                    }
+                  }
+                  return
+                }
+                
+                // Incrementa contador de erros
+                sessionStorage.setItem(`${errorKey}-count`, String(errorCount + 1))
+                sessionStorage.setItem(errorKey, 'true')
+              }}
+              onCanPlay={() => {
+                // Quando o vídeo carrega com sucesso, limpa a marcação de erro
+                if (normalizedMessageId) {
+                  sessionStorage.removeItem(`video-error-${normalizedMessageId}`)
+                  sessionStorage.removeItem(`video-error-${normalizedMessageId}-count`)
                 }
               }}
-              onLoadStart={() => {
-                console.log('Iniciando carregamento de vídeo:', { mediaUrl: mediaUrl?.substring(0, 50) + '...', mimeType })
+              onLoadedMetadata={() => {
+                // Quando os metadados são carregados, também limpa a marcação de erro
+                if (normalizedMessageId) {
+                  sessionStorage.removeItem(`video-error-${normalizedMessageId}`)
+                  sessionStorage.removeItem(`video-error-${normalizedMessageId}-count`)
+                }
               }}
             >
-              <source src={mediaUrl} type={mimeType} />
-              <source src={mediaUrl} type="video/mp4" />
-              <source src={mediaUrl} type="video/webm" />
-              <source src={mediaUrl} type="video/ogg" />
-              <source src={mediaUrl} type="video/quicktime" />
+              <source src={mediaUrlWithCache} type={mimeType} />
+              <source src={mediaUrlWithCache} type="video/mp4" />
+              <source src={mediaUrlWithCache} type="video/webm" />
+              <source src={mediaUrlWithCache} type="video/ogg" />
+              <source src={mediaUrlWithCache} type="video/quicktime" />
               Seu navegador não suporta o elemento de vídeo.
             </video>
             {msg.body && (
@@ -1032,8 +1399,50 @@ export default function WhatsAppConnection() {
       )
     }
 
-    // Para texto, mostra o texto
+    // Para texto, verifica se contém base64 (imagem) antes de mostrar como texto
     if (msg.type === 'text') {
+      const bodyTrimmed = (msg.body || '').trim()
+      const isBase64Image = bodyTrimmed && (
+        bodyTrimmed.startsWith('/9j/') || // JPEG
+        bodyTrimmed.startsWith('iVBORw0KGgo') || // PNG
+        bodyTrimmed.startsWith('data:image/') || // Data URL
+        bodyTrimmed.startsWith('R0lGODlh') || // GIF
+        (bodyTrimmed.length > 100 && /^[A-Za-z0-9+/=]+$/.test(bodyTrimmed.replace(/\s/g, ''))) // Base64 genérico
+      )
+      
+      // Se for base64, renderiza como imagem
+      if (isBase64Image) {
+        let mediaUrl = bodyTrimmed
+        if (!mediaUrl.startsWith('data:')) {
+          let mimeType = 'image/jpeg'
+          if (bodyTrimmed.startsWith('iVBORw0KGgo')) {
+            mimeType = 'image/png'
+          } else if (bodyTrimmed.startsWith('R0lGODlh')) {
+            mimeType = 'image/gif'
+          }
+          mediaUrl = `data:${mimeType};base64,${bodyTrimmed}`
+        }
+        
+        return (
+          <div className="space-y-2">
+            <img 
+              src={mediaUrl} 
+              alt="Imagem" 
+              className="w-full max-w-[280px] sm:max-w-[320px] h-auto rounded-lg"
+              onError={(e) => {
+                // Se falhar, mostra como texto
+                const target = e.target as HTMLImageElement
+                const parent = target.parentElement
+                if (parent) {
+                  parent.innerHTML = '<p class="text-xs sm:text-sm p-3 text-gray-500">Erro ao carregar imagem</p>'
+                }
+              }}
+            />
+          </div>
+        )
+      }
+      
+      // Se não for base64, mostra como texto normal
       return <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.body || ''}</p>
     }
 
@@ -2589,6 +2998,35 @@ export default function WhatsAppConnection() {
                                           {selectedConv?.assumedBy ? `Assumido por ${selectedConv.assumedBy}` : 'Assumida'}
                                         </span>
                                       )}
+                                      {/* Botão para permitir/remover resposta automática da IA */}
+                                      <button
+                                        onClick={handleToggleAllowedAINumber}
+                                        disabled={loadingAllowedCheck}
+                                        className={`flex items-center space-x-1 text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap ${
+                                          isNumberAllowed
+                                            ? 'bg-green-600 hover:bg-green-700 text-white'
+                                            : 'bg-gray-600 hover:bg-gray-700 text-white'
+                                        } ${loadingAllowedCheck ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        title={
+                                          isNumberAllowed
+                                            ? 'Remover da lista de permitidos (IA não responderá mais automaticamente)'
+                                            : 'Adicionar à lista de permitidos (IA responderá mesmo com AI_AUTO_RESPOND=false)'
+                                        }
+                                      >
+                                        {loadingAllowedCheck ? (
+                                          <Clock size={14} className="sm:w-4 sm:h-4 animate-spin" />
+                                        ) : isNumberAllowed ? (
+                                          <>
+                                            <Bot size={14} className="sm:w-4 sm:h-4" />
+                                            <span className="hidden sm:inline">IA Ativa</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Power size={14} className="sm:w-4 sm:h-4" />
+                                            <span className="hidden sm:inline">Ativar IA</span>
+                                          </>
+                                        )}
+                                      </button>
                                       {/* Botão para assumir/desbloquear conversa */}
                                       {selectedConv?.isAssumed || selectedConv?.needsPharmacist ? (
                                         <button

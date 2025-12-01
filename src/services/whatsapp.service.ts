@@ -529,7 +529,7 @@ class WhatsAppService {
     updatedAt: string
   }>> {
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('sanare_token')
       const response = await fetch(`${this.baseUrl}/pharmacist-numbers`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -562,7 +562,7 @@ class WhatsAppService {
     updatedAt: string
   }> {
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('sanare_token')
       const response = await fetch(`${this.baseUrl}/pharmacist-numbers`, {
         method: 'POST',
         headers: {
@@ -589,7 +589,7 @@ class WhatsAppService {
    */
   async removePharmacistNumber(id: string): Promise<void> {
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('sanare_token')
       const response = await fetch(`${this.baseUrl}/pharmacist-numbers/${id}`, {
         method: 'DELETE',
         headers: {
@@ -616,7 +616,7 @@ class WhatsAppService {
     phone: string
   }>> {
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('sanare_token')
       const response = await fetch(`${this.baseUrl}/users-with-phone`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -644,7 +644,7 @@ class WhatsAppService {
     notifiedNumbers: Array<{ phone: string; name: string | null }>
   }> {
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('sanare_token')
       const response = await fetch(`${this.baseUrl}/test-notify-pharmacist`, {
         method: 'POST',
         headers: {
@@ -669,6 +669,167 @@ class WhatsAppService {
       return data
     } catch (error: any) {
       throw new Error('Erro ao notificar farmacêutico: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  /**
+   * Lista números permitidos para receber respostas automáticas da IA
+   */
+  async getAllowedAINumbers(): Promise<Array<{
+    id: string
+    phone: string
+    description: string | null
+    addedBy: string | null
+    isActive: boolean
+    createdAt: string
+    updatedAt: string
+  }>> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token de autenticação não encontrado. Faça login novamente.')
+      }
+
+      const response = await fetch(`${this.baseUrl}/allowed-ai-numbers`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token inválido ou expirado
+          localStorage.removeItem('token')
+          throw new Error('Sessão expirada. Faça login novamente.')
+        }
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }))
+        throw new Error(errorData.message || 'Erro ao buscar números permitidos')
+      }
+
+      const data = await response.json()
+      return data.allowedNumbers || []
+    } catch (error: any) {
+      throw new Error('Erro ao buscar números permitidos: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  /**
+   * Adiciona um número à lista de permitidos para receber respostas automáticas da IA
+   */
+  async addAllowedAINumber(phone: string, description?: string): Promise<{
+    id: string
+    phone: string
+    description: string | null
+    addedBy: string | null
+    isActive: boolean
+    createdAt: string
+    updatedAt: string
+  }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token de autenticação não encontrado. Faça login novamente.')
+      }
+
+      const response = await fetch(`${this.baseUrl}/allowed-ai-numbers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ phone, description }),
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token inválido ou expirado - não remove automaticamente, deixa o componente decidir
+          const errorData = await response.json().catch(() => ({ message: 'Sessão expirada. Faça login novamente.' }))
+          throw new Error(errorData.message || 'Sessão expirada. Faça login novamente.')
+        }
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }))
+        throw new Error(errorData.message || 'Erro ao adicionar número permitido')
+      }
+
+      const data = await response.json()
+      return data.allowedNumber
+    } catch (error: any) {
+      throw new Error('Erro ao adicionar número permitido: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  /**
+   * Remove um número da lista de permitidos
+   */
+  async removeAllowedAINumber(id: string): Promise<void> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token de autenticação não encontrado. Faça login novamente.')
+      }
+
+      const response = await fetch(`${this.baseUrl}/allowed-ai-numbers/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Token inválido ou expirado - não remove automaticamente, deixa o componente decidir
+          const errorData = await response.json().catch(() => ({ message: 'Sessão expirada. Faça login novamente.' }))
+          throw new Error(errorData.message || 'Sessão expirada. Faça login novamente.')
+        }
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }))
+        throw new Error(errorData.message || 'Erro ao remover número permitido')
+      }
+    } catch (error: any) {
+      throw new Error('Erro ao remover número permitido: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  /**
+   * Verifica se um número está na lista de permitidos (busca por telefone)
+   */
+  async isNumberAllowed(phone: string): Promise<{
+    isAllowed: boolean
+    allowedNumber?: {
+      id: string
+      phone: string
+      description: string | null
+      isActive: boolean
+    }
+  }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        // Se não tem token, retorna false silenciosamente (não é erro crítico)
+        return { isAllowed: false }
+      }
+
+      const allowedNumbers = await this.getAllowedAINumbers()
+      // Normaliza o telefone (remove caracteres não numéricos)
+      const normalizedPhone = phone.replace(/\D/g, '')
+      
+      const found = allowedNumbers.find(num => {
+        const normalizedNum = num.phone.replace(/\D/g, '')
+        return normalizedNum === normalizedPhone && num.isActive
+      })
+
+      return {
+        isAllowed: !!found,
+        allowedNumber: found ? {
+          id: found.id,
+          phone: found.phone,
+          description: found.description,
+          isActive: found.isActive,
+        } : undefined,
+      }
+    } catch (error: any) {
+      // Em caso de erro (incluindo 401), retorna false silenciosamente (não é erro crítico)
+      // Não queremos que erros de autenticação quebrem a interface
+      console.warn('Erro ao verificar número permitido:', error.message)
+      return { isAllowed: false }
     }
   }
 }
