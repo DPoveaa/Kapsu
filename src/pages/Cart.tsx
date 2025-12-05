@@ -1,15 +1,67 @@
-import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, FileText, Loader2 } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, FileText, Loader2, CheckCircle } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
 import { productsService } from '../services/products.service'
+import { cartService } from '../services/cart.service'
 import { Product } from '../types'
 
 export default function Cart() {
   const navigate = useNavigate()
-  const { items, updateQuantity, removeItem, getTotal, addProduct } = useCart()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { isAuthenticated, loading: authLoading } = useAuth()
+  const { items, updateQuantity, removeItem, getTotal, addProduct, refreshCart } = useCart()
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([])
   const [loadingRecommendations, setLoadingRecommendations] = useState(false)
+  const [linkingCart, setLinkingCart] = useState(false)
+  const [linkMessage, setLinkMessage] = useState<{ type: 'success' | 'error' | 'info', text: string } | null>(null)
+
+  // Processa o token do WhatsApp na URL
+  useEffect(() => {
+    const processWhatsAppToken = async () => {
+      const token = searchParams.get('token')
+      if (!token || authLoading) return
+
+      // Remove o token da URL para evitar reprocessamento
+      searchParams.delete('token')
+      setSearchParams(searchParams, { replace: true })
+
+      if (isAuthenticated) {
+        // Usuário já está logado, vincula automaticamente
+        setLinkingCart(true)
+        setLinkMessage({ type: 'info', text: 'Vinculando carrinho do WhatsApp...' })
+
+        try {
+          const result = await cartService.validateAndLinkToken(token)
+          if (result.success) {
+            setLinkMessage({ type: 'success', text: '✅ Carrinho do WhatsApp vinculado com sucesso!' })
+            // Recarrega o carrinho para mostrar os novos itens
+            await refreshCart()
+          } else {
+            setLinkMessage({ type: 'error', text: result.message || 'Não foi possível vincular o carrinho' })
+          }
+        } catch (error: any) {
+          setLinkMessage({ type: 'error', text: 'Erro ao vincular carrinho: ' + error.message })
+        } finally {
+          setLinkingCart(false)
+          // Limpa a mensagem após 5 segundos
+          setTimeout(() => setLinkMessage(null), 5000)
+        }
+      } else {
+        // Usuário não está logado, salva o token e redireciona para login
+        cartService.savePendingToken(token)
+        setLinkMessage({ type: 'info', text: 'Faça login ou cadastre-se para ver seu carrinho do WhatsApp' })
+        
+        // Redireciona para login após mostrar mensagem
+        setTimeout(() => {
+          navigate('/login?redirect=/carrinho')
+        }, 1500)
+      }
+    }
+
+    processWhatsAppToken()
+  }, [searchParams, isAuthenticated, authLoading, navigate, refreshCart, setSearchParams])
 
   // Obtém categorias únicas dos produtos no carrinho
   const cartCategories = useMemo(() => {
@@ -93,6 +145,27 @@ export default function Cart() {
     <div className="bg-gray-50 min-h-[60vh] pb-8">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Carrinho de Compras</h1>
+
+        {/* Mensagem de vinculação do carrinho WhatsApp */}
+        {linkMessage && (
+          <div className={`mb-4 p-4 rounded-lg flex items-center gap-3 ${
+            linkMessage.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
+            linkMessage.type === 'error' ? 'bg-red-50 text-red-800 border border-red-200' :
+            'bg-blue-50 text-blue-800 border border-blue-200'
+          }`}>
+            {linkMessage.type === 'success' && <CheckCircle size={20} />}
+            {linkMessage.type === 'info' && <Loader2 className="animate-spin" size={20} />}
+            <span>{linkMessage.text}</span>
+          </div>
+        )}
+
+        {/* Loading enquanto vincula o carrinho */}
+        {linkingCart && (
+          <div className="mb-4 p-4 bg-blue-50 rounded-lg flex items-center gap-3 text-blue-800">
+            <Loader2 className="animate-spin" size={20} />
+            <span>Vinculando carrinho do WhatsApp à sua conta...</span>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Cart Items - Layout mais compacto */}

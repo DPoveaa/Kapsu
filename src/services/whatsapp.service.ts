@@ -488,6 +488,12 @@ class WhatsAppService {
         aiResponseGenerated: boolean
         aiResponseLength: number
       }
+      purchaseLink?: string | null
+      cartInfo?: {
+        itemCount: number
+        total: number
+        items?: Array<{ name: string; quantity: number; price: number }>
+      } | null
     }
   }> {
     try {
@@ -512,6 +518,75 @@ class WhatsAppService {
         throw error
       }
       throw new Error('Erro ao testar IA: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  /**
+   * Chat do site - usa a mesma IA mas para clientes no site
+   */
+  async siteChat(
+    message: string,
+    conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string; timestamp?: number }>,
+    cartInfo?: { itemCount: number; total: number; items?: Array<{ name: string; quantity: number; price: number }> } | null,
+    userId?: string,
+    isAuthenticated?: boolean,
+    userInfo?: { id: string; name: string; email: string; phone?: string } | undefined
+  ): Promise<{
+    success: boolean
+    data: {
+      extractedMessage: any
+      aiResponse: string | null
+      isControlled: boolean
+      controlledSubstance: string | null
+      needsPharmacist: boolean
+      infoMessage: string | null
+      confirmationMessage: string | null
+      wouldNotifyPharmacist: boolean
+      processingDetails?: {
+        extractionTime: number
+        hasExtractedMessage: boolean
+        extractedIntent: string | null
+        extractedEntities: any
+        aiResponseGenerated: boolean
+        aiResponseLength: number
+      }
+      purchaseLink?: string | null
+      cartInfo?: {
+        itemCount: number
+        total: number
+        items?: Array<{ name: string; quantity: number; price: number }>
+      } | null
+    }
+  }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/site-chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          message, 
+          conversationHistory: conversationHistory || [],
+          cartInfo: cartInfo || null,
+          userId: userId || undefined,
+          isAuthenticated: isAuthenticated || false,
+          userInfo: userInfo || undefined
+        }),
+      })
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao processar mensagem')
+      }
+      return data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro ao processar mensagem')
     }
   }
 
@@ -669,6 +744,42 @@ class WhatsAppService {
       return data
     } catch (error: any) {
       throw new Error('Erro ao notificar farmacêutico: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  /**
+   * Reseta a sessão de teste de IA (limpa carrinho, contexto, etc.)
+   * Útil para simular um cliente totalmente novo
+   */
+  async resetTestSession(phone: string): Promise<{
+    success: boolean
+    message: string
+    deleted: {
+      carts: number
+      context: boolean
+      conversation: boolean
+    }
+  }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      const response = await fetch(`${this.baseUrl}/reset-test-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ phone }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }))
+        throw new Error(errorData.message || 'Erro ao resetar sessão de teste')
+      }
+
+      const data = await response.json()
+      return data
+    } catch (error: any) {
+      throw new Error('Erro ao resetar sessão de teste: ' + (error.message || 'Erro desconhecido'))
     }
   }
 

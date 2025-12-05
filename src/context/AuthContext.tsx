@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
 import { isAdminEmail } from '../config/env'
 import { authService } from '../services/auth.service'
+import { cartService } from '../services/cart.service'
 
 interface User {
   id: string
@@ -141,6 +142,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(newUser)
       localStorage.setItem('sanare_user', JSON.stringify(newUser))
       localStorage.setItem('sanare_token', response.token)
+
+      // Tenta vincular o carrinho do WhatsApp pendente (se houver)
+      setTimeout(async () => {
+        try {
+          const linked = await cartService.linkPendingToken()
+          if (linked) {
+            console.log('✅ Carrinho do WhatsApp vinculado automaticamente após login!')
+          }
+        } catch (error) {
+          console.error('Erro ao vincular carrinho pendente:', error)
+        }
+      }, 500) // Pequeno delay para garantir que o token foi salvo
     } else {
       throw new Error(response.message || 'Erro ao fazer login')
     }

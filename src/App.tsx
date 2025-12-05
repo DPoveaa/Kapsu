@@ -19,6 +19,7 @@ import EditProduct from './pages/EditProduct'
 import ManageOrders from './pages/ManageOrders'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
+import FloatingChat from './components/FloatingChat'
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
       <CartProvider>
         <Router>
           <Layout>
+            <FloatingChat />
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/produtos" element={<Products />} />

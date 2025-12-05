@@ -96,6 +96,13 @@ export default function WhatsAppConnection() {
       processingDetails?: any
       pharmacistNotified?: boolean
       notifiedNumbers?: Array<{ phone: string; name: string | null }>
+      // Informações do carrinho
+      purchaseLink?: string | null
+      cartInfo?: {
+        itemCount: number
+        total: number
+        items?: Array<{ name: string; quantity: number; price: number }>
+      } | null
     }
   }>>([])
   const [testingAI, setTestingAI] = useState(false)
@@ -850,10 +857,10 @@ export default function WhatsAppConnection() {
             <div className="relative">
               <div 
                 className="relative group cursor-pointer"
-                onClick={() => {
-                  // Abre preview da imagem em modal
-                  setImagePreview(mediaUrl)
-                }}
+                  onClick={() => {
+                    // Abre preview da imagem em modal
+                    setImagePreview(mediaUrl)
+                  }}
               >
                 <img 
                   src={mediaUrl} 
@@ -1042,8 +1049,8 @@ export default function WhatsAppConnection() {
                 // Se falhar completamente, mostra mensagem de erro (apenas uma vez)
                 if (!target.dataset.errorShown) {
                   target.dataset.errorShown = 'true'
-                  const parent = target.parentElement
-                  if (parent) {
+                const parent = target.parentElement
+                if (parent) {
                     // Esconde o player de áudio e mostra mensagem de erro
                     target.style.display = 'none'
                     const errorDiv = document.createElement('div')
@@ -1091,7 +1098,7 @@ export default function WhatsAppConnection() {
                     
                     errorDiv.innerHTML = `
                       <p class="text-xs sm:text-sm text-red-600 mb-2">Áudio não disponível. A mídia pode não ter sido baixada quando a mensagem foi recebida.</p>
-                    `
+                  `
                     errorDiv.appendChild(button)
                     parent.insertBefore(errorDiv, target)
                   }
@@ -1145,14 +1152,14 @@ export default function WhatsAppConnection() {
         <div className="space-y-2">
           <p className="text-xs sm:text-sm text-gray-500 italic mb-2">Áudio não disponível ainda. Aguarde alguns segundos...</p>
           {msg.id && (
-            <a 
+          <a 
               href={`${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`}
-              download
-              className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-            >
-              <span>🎵</span>
-              <span>Baixar áudio</span>
-            </a>
+            download
+            className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+          >
+            <span>🎵</span>
+            <span>Baixar áudio</span>
+          </a>
           )}
           {msg.body && (
             <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.body}</p>
@@ -1241,8 +1248,8 @@ export default function WhatsAppConnection() {
                   target.style.display = 'none'
                   if (!target.dataset.errorShown) {
                     target.dataset.errorShown = 'true'
-                    const parent = target.parentElement
-                    if (parent) {
+                const parent = target.parentElement
+                if (parent) {
                       const errorDiv = document.createElement('div')
                       errorDiv.className = 'space-y-2'
                       errorDiv.innerHTML = `
@@ -1644,8 +1651,8 @@ export default function WhatsAppConnection() {
         }))
 
       setProcessingStatus('🤖 Gerando resposta da IA...')
-      // Usa o telefone fornecido ou undefined (para simular sem telefone)
-      const phoneToUse = testAIPhone.trim() || undefined
+      // Usa o telefone fornecido ou TEST_PHONE como padrão (para consistência com o backend)
+      const phoneToUse = testAIPhone.trim() || 'TEST_PHONE'
       const result = await whatsappService.testAI(userMessage, phoneToUse, historyForAPI)
       const aiData = result.data
 
@@ -1676,6 +1683,8 @@ export default function WhatsAppConnection() {
           confirmationMessage: aiData.confirmationMessage,
           extractedMessage: aiData.extractedMessage,
           processingDetails: aiData.processingDetails,
+          purchaseLink: (aiData as any).purchaseLink,
+          cartInfo: (aiData as any).cartInfo,
         },
       }
       const messageIndex = testAIChatHistory.length // Índice da mensagem que será adicionada
@@ -1783,22 +1792,67 @@ export default function WhatsAppConnection() {
     }
   }
 
-  const handleClearTestChat = () => {
-    if (confirm('Deseja limpar o histórico do chat de teste? Todas as mensagens serão removidas permanentemente.')) {
+  const handleClearTestChat = async () => {
+    if (confirm('Deseja limpar o histórico do chat de teste? Isso irá limpar o carrinho, contexto e todas as informações - simulando um cliente totalmente novo.')) {
+      // Guarda o telefone ANTES de limpar qualquer coisa
+      const phoneToReset = testAIPhone.trim() || 'TEST_PHONE'
+      console.log('🧹 [CLEAR_CHAT] Iniciando limpeza para telefone:', phoneToReset)
+      
+      // PRIMEIRO: Reseta a sessão no backend ANTES de limpar os estados do frontend
+      // Isso garante que o telefone ainda está disponível quando fazemos o reset
+      try {
+        setProcessingStatus('🧹 Limpando sessão no servidor...')
+        
+        // Reseta o telefone usado (ou TEST_PHONE se não tinha)
+        console.log('🧹 [CLEAR_CHAT] Resetando telefone:', phoneToReset)
+        const result1 = await whatsappService.resetTestSession(phoneToReset)
+        console.log('✅ [CLEAR_CHAT] Sessão resetada para', phoneToReset, ':', result1)
+        
+        // SEMPRE também limpa o TEST_PHONE para garantir (mesmo que seja o mesmo)
+        // Isso garante que se o telefone mudou ou houve alguma inconsistência, tudo será limpo
+        console.log('🧹 [CLEAR_CHAT] Resetando também TEST_PHONE')
+        const result2 = await whatsappService.resetTestSession('TEST_PHONE')
+        console.log('✅ [CLEAR_CHAT] Sessão TEST_PHONE também resetada:', result2)
+        
+        // Aguarda um pouco para garantir que o banco processou tudo
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        console.log('✅ [CLEAR_CHAT] Limpeza do backend concluída')
+      } catch (error) {
+        console.error('❌ [CLEAR_CHAT] Erro ao resetar sessão no servidor:', error)
+        setProcessingStatus('❌ Erro ao limpar. Tente novamente.')
+        setTimeout(() => {
+          setProcessingStatus('')
+        }, 3000)
+        return // Para aqui se deu erro
+      }
+      
+      // SEGUNDO: Limpa estados do frontend APÓS o backend estar limpo
+      console.log('🧹 [CLEAR_CHAT] Limpando estados do frontend')
       setTestAIChatHistory([])
       setTestAIMessage('')
-      setTestAIPhone('') // Limpa também o telefone
       setMessageStatus({ type: null, message: '' })
-      setProcessingStatus('')
       setSelectedMessageForDetails(null)
       
       // Remove do localStorage
       try {
         localStorage.removeItem(TEST_CHAT_STORAGE_KEY)
         localStorage.removeItem(TEST_PHONE_STORAGE_KEY)
+        console.log('✅ [CLEAR_CHAT] LocalStorage limpo')
       } catch (error) {
-        console.error('Erro ao limpar histórico do localStorage:', error)
+        console.error('❌ [CLEAR_CHAT] Erro ao limpar histórico do localStorage:', error)
       }
+      
+      // Limpa o telefone por último
+      setTestAIPhone('')
+      console.log('✅ [CLEAR_CHAT] Telefone limpo do estado')
+      
+      setProcessingStatus('✅ Chat limpo com sucesso!')
+      
+      // Limpa o status após 2 segundos
+      setTimeout(() => {
+        setProcessingStatus('')
+      }, 2000)
     }
   }
 
@@ -2262,6 +2316,30 @@ export default function WhatsAppConnection() {
               
               {showTestPanel && (
                 <div className="flex flex-col" style={{ height: '600px', maxHeight: '80vh' }}>
+                  {/* Configuração do Telefone de Teste */}
+                  <div className="mb-3 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Telefone de Teste (opcional)
+                    </label>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="text"
+                        value={testAIPhone}
+                        onChange={(e) => setTestAIPhone(e.target.value)}
+                        placeholder="TEST_PHONE (padrão)"
+                        className="flex-1 text-sm px-3 py-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      />
+                      {testAIPhone && (
+                        <span className="text-xs text-gray-500">
+                          Usando: {testAIPhone}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Deixe vazio para usar "TEST_PHONE" como padrão. O telefone define qual carrinho será usado.
+                    </p>
+                  </div>
+
                   {/* Header do Chat */}
                   <div className="flex items-center justify-between pb-3 border-b">
                     <div className="flex items-center space-x-2">
@@ -2273,16 +2351,35 @@ export default function WhatsAppConnection() {
                         <p className="text-xs text-gray-500">Teste como se fosse um cliente</p>
                       </div>
                     </div>
-                    {testAIChatHistory.length > 0 && (
-                      <button
-                        onClick={handleClearTestChat}
-                        className="flex items-center space-x-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded transition-colors"
-                        title="Limpar todo o histórico do chat"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        <span className="hidden sm:inline">Limpar Chat</span>
-                      </button>
-                    )}
+                    <div className="flex items-center space-x-2">
+                      {/* Carrinho Atual */}
+                      {(() => {
+                        // Busca o último cartInfo do histórico
+                        const lastCartInfo = [...testAIChatHistory].reverse().find(msg => msg.metadata?.cartInfo)?.metadata?.cartInfo
+                        if (lastCartInfo && lastCartInfo.itemCount > 0) {
+                          return (
+                            <div className="flex items-center space-x-2 bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-200">
+                              <span className="text-orange-600">🛒</span>
+                              <div className="text-xs">
+                                <span className="font-medium text-orange-800">{lastCartInfo.itemCount} item(ns)</span>
+                                <span className="text-orange-600 ml-2">R$ {lastCartInfo.total.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          )
+                        }
+                        return null
+                      })()}
+                      {testAIChatHistory.length > 0 && (
+                        <button
+                          onClick={handleClearTestChat}
+                          className="flex items-center space-x-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded transition-colors"
+                          title="Limpar todo o histórico do chat"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          <span className="hidden sm:inline">Limpar Chat</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Área de Mensagens */}
@@ -2484,6 +2581,60 @@ export default function WhatsAppConnection() {
                                           {msg.metadata.needsPharmacist ? '✓ Redirecionado para farmacêutico' : '⏳ Aguardando confirmação'}
                                         </span>
                                       </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Informações do Carrinho */}
+                                {msg.metadata.cartInfo && (
+                                  <div className="bg-orange-50 rounded p-3 border border-orange-200">
+                                    <h4 className="text-xs font-semibold text-orange-900 mb-2 flex items-center">
+                                      <span className="mr-1">🛒</span>
+                                      Carrinho Após Esta Mensagem
+                                    </h4>
+                                    <div className="text-xs space-y-2">
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium text-orange-800">Itens:</span>
+                                        <span className="text-orange-700 bg-orange-100 px-2 py-0.5 rounded">
+                                          {msg.metadata.cartInfo.itemCount} item(ns)
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="font-medium text-orange-800">Total:</span>
+                                        <span className="text-orange-700 font-bold">
+                                          R$ {msg.metadata.cartInfo.total.toFixed(2)}
+                                        </span>
+                                      </div>
+                                      {msg.metadata.cartInfo.items && msg.metadata.cartInfo.items.length > 0 && (
+                                        <div>
+                                          <span className="font-medium text-orange-800 block mb-1">Produtos:</span>
+                                          <div className="bg-white p-2 rounded border border-orange-100 space-y-1">
+                                            {msg.metadata.cartInfo.items.map((item: { name: string; quantity: number; price: number }, idx: number) => (
+                                              <div key={idx} className="flex justify-between items-center text-xs">
+                                                <span className="text-orange-900">
+                                                  {item.name} ({item.quantity}x)
+                                                </span>
+                                                <span className="text-orange-700 font-medium">
+                                                  R$ {(item.price * item.quantity).toFixed(2)}
+                                                </span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      {msg.metadata.purchaseLink && (
+                                        <div className="mt-2 pt-2 border-t border-orange-200">
+                                          <span className="font-medium text-orange-800 block mb-1">Link de Finalização:</span>
+                                          <a 
+                                            href={msg.metadata.purchaseLink} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-blue-600 hover:text-blue-700 underline break-all text-xs"
+                                          >
+                                            {msg.metadata.purchaseLink}
+                                          </a>
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 )}

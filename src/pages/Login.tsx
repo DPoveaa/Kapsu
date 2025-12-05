@@ -1,16 +1,34 @@
-import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { Mail, Lock, LogIn, ArrowLeft, Loader2 } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { Mail, Lock, LogIn, ArrowLeft, Loader2, CheckCircle, ShoppingCart } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { validateEmail } from '../utils/validators'
+import { cartService } from '../services/cart.service'
 
 export default function Login() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('')
+  const [hasPendingCart, setHasPendingCart] = useState(false)
+
+  // Verifica mensagens e tokens pendentes
+  useEffect(() => {
+    // Verifica se veio do cadastro
+    if (searchParams.get('registered') === 'true') {
+      setSuccessMessage('Conta criada com sucesso! Faça login para continuar.')
+    }
+    
+    // Verifica se tem carrinho pendente do WhatsApp
+    const pendingToken = cartService.getPendingToken()
+    if (pendingToken) {
+      setHasPendingCart(true)
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,8 +49,22 @@ export default function Login() {
 
     try {
       await login(email, password)
-      const returnTo = new URLSearchParams(window.location.search).get('returnTo') || '/'
-      navigate(returnTo)
+      
+      // Prioridade de redirect: redirect > returnTo > /
+      const redirect = searchParams.get('redirect')
+      const returnTo = searchParams.get('returnTo')
+      const pendingToken = cartService.getPendingToken()
+      
+      // Se tem carrinho pendente do WhatsApp, vai para o carrinho
+      if (pendingToken) {
+        navigate('/carrinho')
+      } else if (redirect) {
+        navigate(redirect)
+      } else if (returnTo) {
+        navigate(returnTo)
+      } else {
+        navigate('/')
+      }
     } catch (err: any) {
       setError(err.message || 'Erro ao fazer login. Verifique suas credenciais.')
     } finally {
@@ -58,6 +90,20 @@ export default function Login() {
               Faça login para continuar ou criar uma conta
             </p>
           </div>
+
+          {successMessage && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm flex items-center">
+              <CheckCircle size={16} className="mr-2 flex-shrink-0" />
+              {successMessage}
+            </div>
+          )}
+
+          {hasPendingCart && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm flex items-center">
+              <ShoppingCart size={16} className="mr-2 flex-shrink-0" />
+              Você tem um carrinho do WhatsApp pendente! Faça login para vincular à sua conta.
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -122,7 +168,13 @@ export default function Login() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Não tem uma conta?{' '}
-              <Link to="/cadastro" className="text-primary-600 hover:text-primary-700 font-medium">
+              <Link 
+                to={searchParams.get('redirect') 
+                  ? `/cadastro?redirect=${encodeURIComponent(searchParams.get('redirect')!)}` 
+                  : '/cadastro'
+                }
+                className="text-primary-600 hover:text-primary-700 font-medium"
+              >
                 Cadastre-se
               </Link>
             </p>

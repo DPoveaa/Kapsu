@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { Mail, Lock, User, Phone, FileText, ArrowLeft, Loader2, XCircle } from 'lucide-react'
 import { authService } from '../services/auth.service'
+import { cartService } from '../services/cart.service'
 import { validateCPF, formatCPF, validatePhone, formatPhone, validateEmail, validatePassword } from '../utils/validators'
 
 export default function Register() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -107,8 +109,20 @@ export default function Register() {
         cpf: formData.cpf.replace(/\D/g, ''),
       })
 
+      // Verifica se há redirect na URL (vindo do carrinho do WhatsApp)
+      const redirect = searchParams.get('redirect')
+      // Verifica se há token pendente do WhatsApp
+      const hasPendingToken = !!cartService.getPendingToken()
+      
       // Redireciona para login após cadastro bem-sucedido
-      navigate('/login?registered=true')
+      // Preserva o redirect se veio do carrinho do WhatsApp
+      if (redirect) {
+        navigate(`/login?registered=true&redirect=${encodeURIComponent(redirect)}`)
+      } else if (hasPendingToken) {
+        navigate('/login?registered=true&redirect=/carrinho')
+      } else {
+        navigate('/login?registered=true')
+      }
     } catch (error: any) {
       setErrors({ submit: error.message || 'Erro ao criar conta. Tente novamente.' })
     } finally {
@@ -316,7 +330,13 @@ export default function Register() {
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               Já tem uma conta?{' '}
-              <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
+              <Link 
+                to={searchParams.get('redirect') 
+                  ? `/login?redirect=${encodeURIComponent(searchParams.get('redirect')!)}` 
+                  : '/login'
+                } 
+                className="text-primary-600 hover:text-primary-700 font-medium"
+              >
                 Faça login
               </Link>
             </p>
