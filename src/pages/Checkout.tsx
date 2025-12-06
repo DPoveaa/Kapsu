@@ -1,26 +1,44 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, CreditCard, MapPin, FileText, CheckCircle, Loader2 } from 'lucide-react'
+import { ArrowLeft, MapPin, Loader2 } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
-import { orderService } from '../services/order.service'
+import { paymentService } from '../services/payment.service'
 
 export default function Checkout() {
   const navigate = useNavigate()
-  const { items, getTotal, clearCart } = useCart()
+  const { items, getTotal } = useCart()
   const { user, isAuthenticated } = useAuth()
-  const [step, setStep] = useState(1)
   const [creatingOrder, setCreatingOrder] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'quarterly'>('monthly')
   const [formData, setFormData] = useState({
     cep: '',
     address: '',
     number: '',
     complement: '',
     city: '',
-    state: '',
-    paymentMethod: 'credit' as 'credit' | 'debit' | 'pix',
-    prescriptionFile: null as File | null
+    state: ''
   })
+
+  // Verifica se o carrinho tem assinatura e obtém o plano
+  const isSubscription = items.length > 0 && items.some(item => item.purchaseType === 'subscription')
+  
+  // Obtém o plano de assinatura do localStorage (salvo no carrinho)
+  useEffect(() => {
+    if (isSubscription) {
+      const savedPlan = localStorage.getItem('subscription_plan') as 'monthly' | 'quarterly' | null
+      if (savedPlan) {
+        setSubscriptionPlan(savedPlan)
+      }
+    }
+  }, [isSubscription])
+
+  // Calcula totais com desconto de assinatura
+  const baseTotal = getTotal()
+  const subscriptionDiscount = isSubscription ? (subscriptionPlan === 'quarterly' ? 0.15 : 0.10) : 0
+  const discountedTotal = baseTotal * (1 - subscriptionDiscount)
+  const currentTotal = isSubscription ? discountedTotal : baseTotal
 
   // Redireciona se não estiver autenticado
   useEffect(() => {
@@ -29,55 +47,54 @@ export default function Checkout() {
     }
   }, [isAuthenticated, navigate])
 
-  const hasPrescriptionRequired = items.some(
-    item => item.type === 'custom' && item.customMedication?.prescriptionRequired
-  )
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFormData(prev => ({ ...prev, prescriptionFile: e.target.files![0] }))
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (step === 1) {
-      setStep(2)
-    } else if (step === 2) {
-      setStep(3)
-    } else {
-      // Finalizar pedido
-      try {
-        setCreatingOrder(true)
-        
-        // Monta endereço completo
-        const shippingAddress = `${formData.address}, ${formData.number}${formData.complement ? ` - ${formData.complement}` : ''}, ${formData.city} - ${formData.state}, CEP: ${formData.cep}`
-        
-        // Cria pedido
-        const order = await orderService.createOrder(
-          formData.paymentMethod,
-          shippingAddress
-        )
-        
-        console.log('✅ Pedido criado com sucesso:', order)
-        
-        // Limpa carrinho
-        await clearCart()
-        
-        // Redireciona para página de sucesso ou pedidos
-        alert(`Pedido #${order.id.substring(0, 8)} criado com sucesso!\n\nTotal: R$ ${order.total.toFixed(2).replace('.', ',')}\nStatus: ${order.status}`)
-        navigate('/')
-      } catch (error: any) {
-        console.error('Erro ao criar pedido:', error)
-        alert(error.message || 'Erro ao finalizar pedido. Tente novamente.')
-      } finally {
-        setCreatingOrder(false)
+    
+    // Valida endereço e já cria preferência de pagamento, redirecionando para o checkout do Mercado Pago
+    if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep) {
+      alert('Por favor, preencha todos os campos do endereço')
+      return
+    }
+
+    try {
+      setCreatingOrder(true)
+      setCheckoutError(null)
+
+      // Monta endereço completo
+      const shippingAddress = `${formData.address}, ${formData.number}${formData.complement ? ` - ${formData.complement}` : ''}, ${formData.city} - ${formData.state}, CEP: ${formData.cep}`
+
+      // Cria preferência de pagamento ou assinatura no Mercado Pago
+      const preference = await paymentService.createPreference(
+        shippingAddress,
+        undefined,
+        isSubscription ? subscriptionPlan : undefined
+      )
+
+      console.log('✅ Preferência criada:', preference)
+
+      // Garante que temos a URL do checkout hospedado do Mercado Pago
+      if (!preference.initPoint) {
+        throw new Error('Não foi possível obter a URL do checkout do Mercado Pago.')
       }
+
+      // Valida se a URL é válida
+      if (!preference.initPoint || !preference.initPoint.startsWith('http')) {
+        throw new Error('URL de checkout inválida recebida do Mercado Pago')
+      }
+
+      console.log('🔗 Redirecionando para:', preference.initPoint)
+
+      // Redireciona diretamente para a tela de checkout do Mercado Pago (Checkout Pro)
+      window.location.href = preference.initPoint
+    } catch (error: any) {
+      console.error('Erro ao criar preferência de pagamento:', error)
+      setCheckoutError(error.message || 'Erro ao processar pagamento. Tente novamente.')
+      setCreatingOrder(false)
     }
   }
 
@@ -126,269 +143,110 @@ export default function Checkout() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Form */}
         <div className="lg:col-span-2">
-          <div className="mb-6">
-            <div className="flex items-center space-x-4 mb-4">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                step >= 1 ? 'bg-primary-600 text-white' : 'bg-gray-300 text-gray-600'
-              }`}>
-                1
-              </div>
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                step >= 2 ? 'bg-primary-600 text-white' : 'bg-gray-300 text-gray-600'
-              }`}>
-                2
-              </div>
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                step >= 3 ? 'bg-primary-600 text-white' : 'bg-gray-300 text-gray-600'
-              }`}>
-                3
+          <form onSubmit={handleSubmit} className="card p-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
+                <MapPin className="mr-2" size={24} />
+                Endereço de Entrega
+              </h2>
+              {checkoutError && (
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-600">{checkoutError}</p>
+                </div>
+              )}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    CEP *
+                  </label>
+                  <input
+                    type="text"
+                    name="cep"
+                    value={formData.cep}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="00000-000"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Endereço *
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Rua, Avenida, etc."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Número *
+                    </label>
+                    <input
+                      type="text"
+                      name="number"
+                      value={formData.number}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="123"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Complemento
+                    </label>
+                    <input
+                      type="text"
+                      name="complement"
+                      value={formData.complement}
+                      onChange={handleInputChange}
+                      placeholder="Apto, Bloco, etc."
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Cidade *
+                    </label>
+                    <input
+                      type="text"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="São Paulo"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Estado *
+                    </label>
+                    <input
+                      type="text"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="SP"
+                      maxLength={2}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="card p-6">
-            {step === 1 && (
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                  <MapPin className="mr-2" size={24} />
-                  Endereço de Entrega
-                </h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      CEP *
-                    </label>
-                    <input
-                      type="text"
-                      name="cep"
-                      value={formData.cep}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="00000-000"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Endereço *
-                    </label>
-                    <input
-                      type="text"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Rua, Avenida, etc."
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Número *
-                      </label>
-                      <input
-                        type="text"
-                        name="number"
-                        value={formData.number}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="123"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Complemento
-                      </label>
-                      <input
-                        type="text"
-                        name="complement"
-                        value={formData.complement}
-                        onChange={handleInputChange}
-                        placeholder="Apto, Bloco, etc."
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Cidade *
-                      </label>
-                      <input
-                        type="text"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="São Paulo"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Estado *
-                      </label>
-                      <input
-                        type="text"
-                        name="state"
-                        value={formData.state}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="SP"
-                        maxLength={2}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {step === 2 && (
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                  <CreditCard className="mr-2" size={24} />
-                  Pagamento
-                </h2>
-                {hasPrescriptionRequired && (
-                  <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <div className="flex items-start">
-                      <FileText className="text-yellow-600 mr-3 mt-0.5" size={20} />
-                      <div>
-                        <p className="text-yellow-800 font-semibold mb-2">Receita Médica Necessária</p>
-                        <label className="block text-sm text-yellow-700 mb-2">
-                          Envie uma foto ou PDF da receita médica:
-                        </label>
-                        <input
-                          type="file"
-                          accept="image/*,.pdf"
-                          onChange={handleFileChange}
-                          className="text-sm"
-                        />
-                        {formData.prescriptionFile && (
-                          <p className="text-sm text-yellow-700 mt-2">
-                            Arquivo selecionado: {formData.prescriptionFile.name}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Forma de Pagamento *
-                    </label>
-                    <select
-                      name="paymentMethod"
-                      value={formData.paymentMethod}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    >
-                      <option value="credit">Cartão de Crédito</option>
-                      <option value="debit">Cartão de Débito</option>
-                      <option value="pix">PIX</option>
-                    </select>
-                  </div>
-                  {formData.paymentMethod === 'credit' || formData.paymentMethod === 'debit' ? (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Número do Cartão *
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="0000 0000 0000 0000"
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Validade *
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="MM/AA"
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            CVV *
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="123"
-                            required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          Nome no Cartão *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-primary-50 rounded-lg">
-                      <p className="text-primary-800">
-                        Você receberá o código PIX após confirmar o pedido. O pagamento será processado imediatamente.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {step === 3 && (
-              <div className="text-center">
-                <CheckCircle className="mx-auto text-green-600 mb-4" size={64} />
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Confirmação</h2>
-                <p className="text-gray-600 mb-6">
-                  Revise seus dados e confirme o pedido
-                </p>
-                <div className="text-left bg-primary-50 p-4 rounded-lg mb-6 space-y-2">
-                  <p className="font-semibold mb-3">Dados do Pedido:</p>
-                  <p className="text-sm text-gray-700">
-                    <strong>Cliente:</strong> {user.name}
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    <strong>E-mail:</strong> {user.email}
-                  </p>
-                  <p className="text-sm text-gray-700">
-                    <strong>Endereço:</strong> {formData.address}, {formData.number}{formData.complement ? ` - ${formData.complement}` : ''}, {formData.city} - {formData.state}, CEP: {formData.cep}
-                  </p>
-                  <div className="border-t border-primary-200 pt-3 mt-3">
-                    <p className="font-semibold mb-2">Resumo do Pedido:</p>
-                    <p className="text-sm text-gray-600">Total: R$ {getTotal().toFixed(2).replace('.', ',')}</p>
-                    <p className="text-sm text-gray-600">Itens: {items.length}</p>
-                  </div>
-                </div>
-              </div>
-            )}
 
             <div className="flex justify-between mt-6">
-              {step > 1 && (
-                <button
-                  type="button"
-                  onClick={() => setStep(step - 1)}
-                  className="btn-secondary"
-                >
-                  Voltar
-                </button>
-              )}
               <button 
                 type="submit" 
                 className="btn-primary ml-auto flex items-center"
@@ -397,10 +255,10 @@ export default function Checkout() {
                 {creatingOrder ? (
                   <>
                     <Loader2 className="animate-spin mr-2" size={20} />
-                    Processando...
+                    Processando e redirecionando para o Mercado Pago...
                   </>
                 ) : (
-                  step === 3 ? 'Confirmar Pedido' : 'Continuar'
+                  'Continuar para o Pagamento no Mercado Pago'
                 )}
               </button>
             </div>
@@ -412,24 +270,67 @@ export default function Checkout() {
           <div className="card p-6 sticky top-24">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Resumo do Pedido</h2>
             <div className="space-y-2 mb-4">
-              {items.map(item => (
-                <div key={item.id} className="text-sm">
-                  <p className="font-medium">
-                    {item.product?.name || item.customMedication?.name}
-                  </p>
-                  <p className="text-gray-600">
-                    Qtd: {item.quantity} × R$ {((item.product?.price || item.customMedication?.price || 0)).toFixed(2).replace('.', ',')}
+              {items.map(item => {
+                const price = item.product?.price || item.customMedication?.price || 0
+                const itemTotal = price * item.quantity
+                const itemDiscountedPrice = isSubscription 
+                  ? itemTotal * (1 - subscriptionDiscount)
+                  : itemTotal
+                
+                return (
+                  <div key={item.id} className="text-sm">
+                    <p className="font-medium">
+                      {item.product?.name || item.customMedication?.name}
+                    </p>
+                    <p className="text-gray-600">
+                      Qtd: {item.quantity} × R$ {price.toFixed(2).replace('.', ',')}
+                    </p>
+                    {isSubscription && itemTotal !== itemDiscountedPrice && (
+                      <p className="text-xs text-gray-400 line-through">
+                        R$ {itemTotal.toFixed(2).replace('.', ',')}
+                      </p>
+                    )}
+                    {isSubscription && (
+                      <p className="text-primary-600 font-semibold">
+                        R$ {itemDiscountedPrice.toFixed(2).replace('.', ',')}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            <div className="border-t pt-4 space-y-3">
+              {isSubscription && (
+                <div className="bg-primary-50 rounded-lg p-3 border border-primary-100">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-sm font-semibold text-primary-700">Desconto Assinatura</span>
+                    <span className="text-sm font-bold text-primary-600">
+                      -{subscriptionDiscount * 100}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    {subscriptionPlan === 'quarterly' ? 'Plano Trimestral' : 'Plano Mensal'}
                   </p>
                 </div>
-              ))}
-            </div>
-            <div className="border-t pt-4">
+              )}
               <div className="flex justify-between items-center">
                 <span className="text-lg font-semibold">Total</span>
-                <span className="text-2xl font-bold text-primary-600">
-                  R$ {getTotal().toFixed(2).replace('.', ',')}
-                </span>
+                <div className="text-right">
+                  {isSubscription && baseTotal !== currentTotal && (
+                    <p className="text-xs text-gray-400 line-through mb-1">
+                      R$ {baseTotal.toFixed(2).replace('.', ',')}
+                    </p>
+                  )}
+                  <span className="text-2xl font-bold text-primary-600">
+                    R$ {currentTotal.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
               </div>
+              {isSubscription && (
+                <p className="text-xs text-gray-500 text-right">
+                  {subscriptionPlan === 'quarterly' ? 'A cada 3 meses' : 'Por mês'}
+                </p>
+              )}
             </div>
           </div>
         </div>

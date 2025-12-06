@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Search, Eye, Package } from 'lucide-react'
+import { ArrowLeft, Loader2, Search, Eye, Package, Plus } from 'lucide-react'
 import { adminService } from '../services/admin.service'
+import CreateOrderModal from '../components/CreateOrderModal'
 
 interface Order {
   id: string
@@ -26,6 +27,7 @@ export default function ManageOrders() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   // Carrega pedidos
   useEffect(() => {
@@ -101,9 +103,18 @@ export default function ManageOrders() {
           </button>
         </div>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gerenciar Pedidos</h1>
-          <p className="text-gray-600">Visualize e gerencie todos os pedidos do sistema</p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Gerenciar Pedidos</h1>
+            <p className="text-gray-600">Visualize e gerencie todos os pedidos do sistema</p>
+          </div>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            <Plus size={20} />
+            Criar Pedido Manual
+          </button>
         </div>
 
         {/* Busca */}
@@ -119,6 +130,43 @@ export default function ManageOrders() {
             />
           </div>
         </div>
+
+        {/* Estatísticas */}
+        {!loading && !error && orders.length > 0 && (
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <div className="flex items-center">
+                <Package className="w-8 h-8 text-blue-600 mr-3" />
+                <div>
+                  <p className="text-sm text-gray-600">Total de Pedidos</p>
+                  <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <div className="flex items-center">
+                <Package className="w-8 h-8 text-green-600 mr-3" />
+                <div>
+                  <p className="text-sm text-gray-600">Valor Total</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    R$ {orders.reduce((sum, order) => sum + Number(order.total), 0).toFixed(2).replace('.', ',')}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow-md p-4">
+              <div className="flex items-center">
+                <Package className="w-8 h-8 text-yellow-600 mr-3" />
+                <div>
+                  <p className="text-sm text-gray-600">Pedidos Pendentes</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {orders.filter(o => o.status === 'PENDING').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Loading */}
         {loading && (
@@ -218,10 +266,7 @@ export default function ManageOrders() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <button
-                            onClick={() => {
-                              // Aqui você pode adicionar uma modal ou página de detalhes
-                              alert(`Detalhes do pedido ${order.id}\n\nCliente: ${order.user?.name || 'N/A'}\nTotal: R$ ${Number(order.total).toFixed(2)}\nStatus: ${order.status}\nEndereço: ${order.shipping_address || 'Não informado'}`)
-                            }}
+                            onClick={() => navigate(`/admin/orders/${order.id}`)}
                             className="text-blue-600 hover:text-blue-900 inline-flex items-center"
                             title="Ver detalhes"
                           >
@@ -238,42 +283,15 @@ export default function ManageOrders() {
           </div>
         )}
 
-        {/* Estatísticas */}
-        {!loading && !error && orders.length > 0 && (
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg shadow-md p-4">
-              <div className="flex items-center">
-                <Package className="w-8 h-8 text-blue-600 mr-3" />
-                <div>
-                  <p className="text-sm text-gray-600">Total de Pedidos</p>
-                  <p className="text-2xl font-bold text-gray-900">{orders.length}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-md p-4">
-              <div className="flex items-center">
-                <Package className="w-8 h-8 text-green-600 mr-3" />
-                <div>
-                  <p className="text-sm text-gray-600">Valor Total</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    R$ {orders.reduce((sum, order) => sum + Number(order.total), 0).toFixed(2).replace('.', ',')}
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow-md p-4">
-              <div className="flex items-center">
-                <Package className="w-8 h-8 text-yellow-600 mr-3" />
-                <div>
-                  <p className="text-sm text-gray-600">Pedidos Pendentes</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {orders.filter(o => o.status === 'PENDING').length}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Modal de Criar Pedido */}
+        <CreateOrderModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSuccess={() => {
+            loadOrders()
+            setIsCreateModalOpen(false)
+          }}
+        />
       </div>
     </div>
   )

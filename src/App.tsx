@@ -17,6 +17,9 @@ import CreateProduct from './pages/CreateProduct'
 import ManageProducts from './pages/ManageProducts'
 import EditProduct from './pages/EditProduct'
 import ManageOrders from './pages/ManageOrders'
+import OrderDetail from './pages/OrderDetail'
+import PaymentSuccess from './pages/PaymentSuccess'
+import PaymentFailure from './pages/PaymentFailure'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 
@@ -33,6 +36,8 @@ function App() {
               <Route path="/personalizar" element={<Customize />} />
               <Route path="/carrinho" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="/checkout/success" element={<PaymentSuccess />} />
+              <Route path="/checkout/failure" element={<PaymentFailure />} />
               <Route path="/login" element={<Login />} />
               <Route path="/cadastro" element={<Register />} />
               <Route
@@ -96,6 +101,14 @@ function App() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <ManageOrders />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/orders/:id"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <OrderDetail />
                   </ProtectedRoute>
                 }
               />
