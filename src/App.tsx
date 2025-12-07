@@ -17,6 +17,9 @@ import CreateProduct from './pages/CreateProduct'
 import ManageProducts from './pages/ManageProducts'
 import EditProduct from './pages/EditProduct'
 import ManageOrders from './pages/ManageOrders'
+import Reports from './pages/Reports'
+import SiteSettings from './pages/SiteSettings'
+import ManageCompostos from './pages/ManageCompostos'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import FloatingChat from './components/FloatingChat'
@@ -94,10 +97,34 @@ function App() {
                 }
               />
               <Route
+                path="/admin/compostos"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <ManageCompostos />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/admin/orders"
                 element={
                   <ProtectedRoute requireAdmin>
                     <ManageOrders />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/reports"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <Reports />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/settings"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <SiteSettings />
                   </ProtectedRoute>
                 }
               />

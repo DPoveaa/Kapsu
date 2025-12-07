@@ -24,7 +24,7 @@ export interface ActiveIngredient {
   id: string;
   name: string;
   concentration: string;
-  unit: 'mg' | 'g' | 'ml' | 'UI';
+  unit: string; // Aceita qualquer unidade (mg, g, ml, UI, mcg, etc.)
 }
 
 export interface CartItem {

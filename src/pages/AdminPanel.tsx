@@ -76,7 +76,10 @@ export default function AdminPanel() {
           </Link>
 
           {/* Card Relatórios */}
-          <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer">
+          <Link
+            to="/admin/reports"
+            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+          >
             <div className="flex items-center space-x-4">
               <div className="bg-indigo-100 p-3 rounded-lg">
                 <BarChart3 className="w-6 h-6 text-indigo-600" />
@@ -86,10 +89,13 @@ export default function AdminPanel() {
                 <p className="text-sm text-gray-600">Visualizar relatórios</p>
               </div>
             </div>
-          </div>
+          </Link>
 
           {/* Card Configurações */}
-          <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer">
+          <Link
+            to="/admin/settings"
+            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+          >
             <div className="flex items-center space-x-4">
               <div className="bg-gray-100 p-3 rounded-lg">
                 <Settings className="w-6 h-6 text-gray-600" />
@@ -99,7 +105,7 @@ export default function AdminPanel() {
                 <p className="text-sm text-gray-600">Configurações do sistema</p>
               </div>
             </div>
-          </div>
+          </Link>
         </div>
       </div>
     </div>

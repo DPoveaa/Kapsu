@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Edit, Trash2, Loader2, Search } from 'lucide-react'
+import { ArrowLeft, Plus, Edit, Trash2, Loader2, Search, Package, FlaskConical } from 'lucide-react'
 import { productsService } from '../services/products.service'
 import { Product } from '../types'
 
 export default function ManageProducts() {
   const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState<'products' | 'compostos'>('products')
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -101,8 +102,43 @@ export default function ManageProducts() {
         </div>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gerenciar Produtos</h1>
-          <p className="text-gray-600">Gerencie todos os produtos do sistema</p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gerenciar Produtos e Compostos</h1>
+          <p className="text-gray-600">Gerencie produtos e compostos do sistema</p>
+        </div>
+
+        {/* Abas */}
+        <div className="mb-6 border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => {
+                setActiveTab('products')
+                setSearchTerm('')
+              }}
+              className={`${
+                activeTab === 'products'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+            >
+              <Package size={20} className="mr-2" />
+              Produtos
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('compostos')
+                setSearchTerm('')
+                navigate('/admin/compostos')
+              }}
+              className={`${
+                activeTab === 'compostos'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+            >
+              <FlaskConical size={20} className="mr-2" />
+              Compostos
+            </button>
+          </nav>
         </div>
 
         {/* Busca */}

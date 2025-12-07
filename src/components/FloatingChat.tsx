@@ -766,7 +766,7 @@ const FloatingChat: React.FC = () => {
         <button
           ref={buttonRef}
           onMouseDown={handleButtonMouseDown}
-          className="fixed w-16 h-16 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg flex items-center justify-center z-50 transition-all duration-300 hover:scale-110 cursor-pointer select-none"
+          className="fixed w-16 h-16 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg flex items-center justify-center z-50 transition-all duration-300 hover:scale-110 cursor-pointer select-none"
           style={{
             left: `${buttonPosition.x}px`,
             top: `${buttonPosition.y}px`,
@@ -795,7 +795,7 @@ const FloatingChat: React.FC = () => {
           {/* Cabeçalho (arrastável) */}
           <div
             onMouseDown={handleChatMouseDown}
-            className="bg-purple-600 text-white p-4 rounded-t-lg cursor-move flex items-center justify-between select-none"
+            className="bg-green-600 text-white p-4 rounded-t-lg cursor-move flex items-center justify-between select-none"
           >
             <div className="flex items-center space-x-2">
               <MessageSquare className="w-5 h-5" />
@@ -804,7 +804,7 @@ const FloatingChat: React.FC = () => {
             <div className="flex items-center space-x-2">
               <button
                 onClick={toggleChat}
-                className="p-1 hover:bg-purple-700 rounded transition-colors"
+                className="p-1 hover:bg-green-700 rounded transition-colors"
                 aria-label="Fechar chat"
               >
                 <X className="w-4 h-4" />
@@ -862,7 +862,7 @@ const FloatingChat: React.FC = () => {
                           <div
                             className={`max-w-[80%] rounded-lg px-4 py-2 ${
                               msg.role === 'user'
-                                ? 'bg-purple-600 text-white'
+                                ? 'bg-green-600 text-white'
                                 : 'bg-white text-gray-800 border border-gray-200'
                             }`}
                           >
@@ -876,7 +876,7 @@ const FloatingChat: React.FC = () => {
                 {isLoading && (
                   <div className="flex justify-start">
                     <div className="bg-white border border-gray-200 rounded-lg px-4 py-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-purple-600" />
+                      <Loader2 className="w-4 h-4 animate-spin text-green-600" />
                     </div>
                   </div>
                 )}
@@ -891,13 +891,13 @@ const FloatingChat: React.FC = () => {
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     placeholder="Digite sua mensagem..."
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
                     disabled={isLoading}
                   />
                   <button
                     type="submit"
                     disabled={isLoading || !inputMessage.trim()}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
                   >
                     {isLoading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />

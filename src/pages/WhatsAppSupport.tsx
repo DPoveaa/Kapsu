@@ -546,16 +546,36 @@ export default function WhatsAppSupport() {
       
       // Se já tem mediaUrl (pode ser base64 ou URL), usa diretamente
       if (msg.mediaUrl) {
-        // Se for URL relativa (começa com /), converte para URL completa
-        if (msg.mediaUrl.startsWith('/')) {
+        // Valida que mediaUrl é uma string válida
+        if (typeof msg.mediaUrl !== 'string') {
+          console.error('⚠️ [WHATSAPP_SUPPORT] mediaUrl não é uma string:', {
+            messageId: msg.id,
+            mediaUrl: msg.mediaUrl,
+            type: typeof msg.mediaUrl,
+          });
+          // Ignora mediaUrl inválido e tenta usar body ou ID
+        } else if (msg.mediaUrl.startsWith('/')) {
+          // Se for URL relativa (começa com /), converte para URL completa
           let baseUrl = env.apiUrl
           if (baseUrl.endsWith('/api')) {
             baseUrl = baseUrl.slice(0, -4) // Remove '/api'
           }
           baseUrl = baseUrl.replace(/\/$/, '')
           imageSrc = `${baseUrl}${msg.mediaUrl}`
-        } else {
+        } else if (msg.mediaUrl.startsWith('data:')) {
+          // Se for data URL, usa diretamente
           imageSrc = msg.mediaUrl
+        } else if (msg.mediaUrl.startsWith('http://') || msg.mediaUrl.startsWith('https://')) {
+          // Se for URL completa, usa diretamente
+          imageSrc = msg.mediaUrl
+        } else {
+          // Se não for nenhum formato conhecido, tenta construir URL do endpoint
+          let baseUrl = env.apiUrl
+          if (baseUrl.endsWith('/api')) {
+            baseUrl = baseUrl.slice(0, -4)
+          }
+          baseUrl = baseUrl.replace(/\/$/, '')
+          imageSrc = `${baseUrl}/api/whatsapp/media/${msg.id}`
         }
       } 
       // Se não tiver mediaUrl mas o body contém base64, usa o body
@@ -607,12 +627,20 @@ export default function WhatsAppSupport() {
                   onError={(e) => {
                     const target = e.target as HTMLImageElement
                     
+                    console.error('❌ [WHATSAPP_SUPPORT] Erro ao carregar imagem:', {
+                      messageId: msg.id,
+                      imageSrc: imageSrc?.substring(0, 100),
+                      mediaUrl: msg.mediaUrl?.substring(0, 100),
+                      filePath: msg.filePath,
+                      type: msg.type,
+                    })
+                    
                     // Se for base64 e falhou, não há o que fazer
                     if (imageSrc?.startsWith('data:')) {
                       target.style.display = 'none'
                       const errorDiv = document.createElement('div')
                       errorDiv.className = 'p-3 bg-red-50 rounded-lg'
-                      errorDiv.innerHTML = '<p class="text-xs sm:text-sm text-red-600">Erro ao carregar imagem</p>'
+                      errorDiv.innerHTML = '<p class="text-xs sm:text-sm text-red-600">Erro ao carregar imagem (base64 inválido)</p>'
                       target.parentElement?.parentElement?.appendChild(errorDiv)
                       return
                     }
@@ -628,6 +656,7 @@ export default function WhatsAppSupport() {
                         baseUrl = 'http://localhost:3000'
                       }
                       const fallbackUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
+                      console.log('🔄 [WHATSAPP_SUPPORT] Tentando recarregar imagem com URL do endpoint:', fallbackUrl)
                       target.src = fallbackUrl
                       return
                     }
@@ -640,7 +669,7 @@ export default function WhatsAppSupport() {
                       <p class="text-xs sm:text-sm text-red-600">Erro ao carregar imagem</p>
                       ${msg.id ? `
                         <a 
-                          href="${imageSrc}" 
+                          href="${imageSrc || `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`}" 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="text-xs text-blue-600 hover:underline mt-1 inline-block"
@@ -716,7 +745,18 @@ export default function WhatsAppSupport() {
     // Se for áudio, sempre tenta mostrar player
     if (msg.type === 'audio') {
       // Tenta usar mediaUrl direto, ou busca do endpoint
-      let mediaUrl = msg.mediaUrl
+      let mediaUrl: string | null = null;
+      
+      // Valida que mediaUrl é uma string válida
+      if (msg.mediaUrl && typeof msg.mediaUrl === 'string') {
+        mediaUrl = msg.mediaUrl;
+      } else if (msg.mediaUrl) {
+        console.error('⚠️ [WHATSAPP_SUPPORT] mediaUrl não é uma string (áudio):', {
+          messageId: msg.id,
+          mediaUrl: msg.mediaUrl,
+          type: typeof msg.mediaUrl,
+        });
+      }
       
       // Se mediaUrl for relativa (começa com /), converte para URL completa
       if (mediaUrl && mediaUrl.startsWith('/')) {
@@ -787,7 +827,18 @@ export default function WhatsAppSupport() {
     // Se for vídeo, sempre tenta mostrar player
     if (msg.type === 'video') {
       // Tenta usar mediaUrl direto, ou busca do endpoint
-      let mediaUrl = msg.mediaUrl
+      let mediaUrl: string | null = null;
+      
+      // Valida que mediaUrl é uma string válida
+      if (msg.mediaUrl && typeof msg.mediaUrl === 'string') {
+        mediaUrl = msg.mediaUrl;
+      } else if (msg.mediaUrl) {
+        console.error('⚠️ [WHATSAPP_SUPPORT] mediaUrl não é uma string (vídeo):', {
+          messageId: msg.id,
+          mediaUrl: msg.mediaUrl,
+          type: typeof msg.mediaUrl,
+        });
+      }
       
       // Se mediaUrl for relativa (começa com /), converte para URL completa
       if (mediaUrl && mediaUrl.startsWith('/')) {
@@ -914,7 +965,18 @@ export default function WhatsAppSupport() {
 
     // Se for documento ou outro tipo de arquivo, sempre mostra link para download
     if (msg.type === 'document' || msg.type === 'other') {
-      let mediaUrl = msg.mediaUrl
+      let mediaUrl: string | null = null;
+      
+      // Valida que mediaUrl é uma string válida
+      if (msg.mediaUrl && typeof msg.mediaUrl === 'string') {
+        mediaUrl = msg.mediaUrl;
+      } else if (msg.mediaUrl) {
+        console.error('⚠️ [WHATSAPP_SUPPORT] mediaUrl não é uma string (documento):', {
+          messageId: msg.id,
+          mediaUrl: msg.mediaUrl,
+          type: typeof msg.mediaUrl,
+        });
+      }
       
       // Se mediaUrl for relativa (começa com /), converte para URL completa
       if (mediaUrl && mediaUrl.startsWith('/')) {
@@ -1062,7 +1124,13 @@ export default function WhatsAppSupport() {
     }
 
     // Para qualquer outro tipo não identificado, tenta buscar como mídia
-    const mediaUrl = msg.mediaUrl || (msg.id ? `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}` : null)
+    let mediaUrl: string | null = null;
+    if (msg.mediaUrl && typeof msg.mediaUrl === 'string') {
+      mediaUrl = msg.mediaUrl;
+    } else if (msg.id) {
+      mediaUrl = `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`;
+    }
+    
     if (mediaUrl || msg.id) {
       return (
         <div className="space-y-2">
