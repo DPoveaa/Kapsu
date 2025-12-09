@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Loader2, CreditCard, Lock } from 'lucide-react'
+import { Loader2, Lock } from 'lucide-react'
 import { env } from '../config/env'
 
 interface MercadoPagoCheckoutProps {

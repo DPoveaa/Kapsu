@@ -10,8 +10,6 @@ export default function PaymentSuccess() {
 
   useEffect(() => {
     // Extrai informações da URL do Mercado Pago
-    const paymentId = searchParams.get('payment_id')
-    const status = searchParams.get('status')
     const externalReference = searchParams.get('external_reference')
 
     if (externalReference) {

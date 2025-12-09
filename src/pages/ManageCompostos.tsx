@@ -70,7 +70,7 @@ export default function ManageCompostos() {
         name: editingComposto.name,
         concentration: editingComposto.concentration,
         unit: editingComposto.unit,
-        description: editingComposto.description || null,
+        description: editingComposto.description || undefined,
         min_concentration: editingComposto.min_concentration 
           ? (typeof editingComposto.min_concentration === 'string' 
               ? parseFloat(editingComposto.min_concentration) || null 

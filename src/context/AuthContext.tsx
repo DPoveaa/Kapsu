@@ -36,7 +36,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (savedUser && savedToken) {
         try {
-          const parsedUser = JSON.parse(savedUser)
           // Verificar se o token ainda é válido
           const isValid = await authService.verifyToken(savedToken)
           if (isValid && isValid.user) {
@@ -46,8 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               email: isValid.user.email,
               name: isValid.user.name,
               phone: isValid.user.phone,
-              role: isValid.user.role || 'user',
-              isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || isValid.user.role === 'admin' || false
+              role: 'user',
+              isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || false
             }
             setUser(updatedUser)
             localStorage.setItem('sanare_user', JSON.stringify(updatedUser))
@@ -89,8 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: isValid.user.email,
             name: isValid.user.name,
             phone: isValid.user.phone,
-            role: isValid.user.role || 'user',
-            isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || isValid.user.role === 'admin' || false
+            role: 'user',
+            isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || false
           }
           setUser(updatedUser)
           localStorage.setItem('sanare_user', JSON.stringify(updatedUser))
@@ -135,8 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: response.user.email,
         name: response.user.name,
         phone: response.user.phone,
-        role: response.user.role || 'user',
-        isAdmin: isAdminEmail(response.user.email) || response.user.isAdmin || response.user.role === 'admin' || false
+        role: 'user',
+        isAdmin: isAdminEmail(response.user.email) || response.user.isAdmin || false
       }
       
       setUser(newUser)

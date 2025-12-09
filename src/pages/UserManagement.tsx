@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Search, Mail, Phone, Shield, UserCheck, Clock, Calendar, DollarSign, Package, ChevronDown, ChevronUp, Edit2, Check, X, User as UserIcon } from 'lucide-react'
+import { ArrowLeft, Search, Mail, Phone, Shield, UserCheck, Clock, Calendar, DollarSign, Package, ChevronDown, ChevronUp, Edit2, Check, User as UserIcon } from 'lucide-react'
 import { adminService, User as UserType, UserDetails } from '../services/admin.service'
 
 export default function UserManagement() {
