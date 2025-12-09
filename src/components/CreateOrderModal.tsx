@@ -35,7 +35,6 @@ const orderStatuses = [
 export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModalProps) {
   const [loading, setLoading] = useState(false)
   const [loadingUsers, setLoadingUsers] = useState(false)
-  const [loadingProducts, setLoadingProducts] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [products, setProducts] = useState<Product[]>([])
@@ -90,13 +89,10 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
 
   const loadProducts = async () => {
     try {
-      setLoadingProducts(true)
       const data = await productsService.getAll()
       setProducts(data)
     } catch (err: any) {
       console.error('Erro ao carregar produtos:', err)
-    } finally {
-      setLoadingProducts(false)
     }
   }
 

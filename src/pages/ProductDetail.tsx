@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { ShoppingCart, Sparkles, Loader2, Star, Truck, CheckCircle, Heart, AlertCircle } from 'lucide-react'
+import { ShoppingCart, Sparkles, Loader2, Truck, CheckCircle, AlertCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useCart } from '../context/CartContext'
 import { Product } from '../types'

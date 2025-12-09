@@ -12,7 +12,6 @@ export default function ManageProducts() {
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
 
   // Carrega produtos
   useEffect(() => {
@@ -50,30 +49,6 @@ export default function ManageProducts() {
     }
   }
 
-  const handleEdit = (product: Product) => {
-    setEditingProduct(product)
-  }
-
-  const handleSaveEdit = async () => {
-    if (!editingProduct) return
-
-    try {
-      await productsService.update(editingProduct.id, {
-        name: editingProduct.name,
-        description: editingProduct.description,
-        price: editingProduct.price,
-        stock: editingProduct.inStock ? 1 : 0, // Simplificado - você pode melhorar isso
-        image: editingProduct.image,
-        category: editingProduct.category,
-        active: editingProduct.inStock, // Simplificado
-      })
-      setEditingProduct(null)
-      await loadProducts()
-    } catch (err: any) {
-      console.error('Erro ao atualizar produto:', err)
-      alert(err.message || 'Erro ao atualizar produto')
-    }
-  }
 
   // Filtra produtos
   const filteredProducts = products.filter(product =>
