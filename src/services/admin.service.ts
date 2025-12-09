@@ -354,6 +354,86 @@ class AdminService {
       throw new Error('Erro de conexão ao obter analytics de comportamento')
     }
   }
+
+  /**
+   * Cria um pedido manualmente (apenas admin)
+   */
+  async createOrder(orderData: {
+    userId: string
+    items: Array<{ productId: string; quantity: number }>
+    paymentMethod?: string
+    shippingAddress?: string
+    status?: string
+  }): Promise<{ success: boolean; message: string; data: any }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const response = await fetch(`${this.baseUrl}/orders`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(orderData),
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao criar pedido')
+      }
+
+      return data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao criar pedido')
+    }
+  }
+
+  /**
+   * Busca detalhes de um pedido específico (apenas admin)
+   */
+  async getOrderDetails(orderId: string): Promise<{ success: boolean; data: any }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const response = await fetch(`${this.baseUrl}/orders/${orderId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao buscar detalhes do pedido')
+      }
+
+      return data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao buscar detalhes do pedido')
+    }
+  }
 }
 
 export const adminService = new AdminService()

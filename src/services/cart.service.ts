@@ -8,6 +8,7 @@ interface CartItem {
   cart_id: string
   product_id: string
   quantity: number
+  purchase_type?: 'one-time' | 'subscription' | null
   product?: Product
   created_at: Date
   updated_at: Date
@@ -66,12 +67,12 @@ class CartService {
   /**
    * Adiciona um produto ao carrinho
    */
-  async addItem(productId: string, quantity: number): Promise<void> {
+  async addItem(productId: string, quantity: number, purchaseType?: 'one-time' | 'subscription'): Promise<void> {
     try {
       const response = await fetch(`${this.baseUrl}/items`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify({ productId, quantity }),
+        body: JSON.stringify({ productId, quantity, purchaseType }),
       })
 
       const text = await response.text()
@@ -93,14 +94,18 @@ class CartService {
   }
 
   /**
-   * Atualiza a quantidade de um item
+   * Atualiza a quantidade e/ou tipo de compra de um item
    */
-  async updateItem(itemId: string, quantity: number): Promise<void> {
+  async updateItem(itemId: string, quantity?: number, purchaseType?: 'one-time' | 'subscription'): Promise<void> {
     try {
+      const body: any = {}
+      if (quantity !== undefined) body.quantity = quantity
+      if (purchaseType !== undefined) body.purchaseType = purchaseType
+
       const response = await fetch(`${this.baseUrl}/items/${itemId}`, {
         method: 'PUT',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify({ quantity }),
+        body: JSON.stringify(body),
       })
 
       const text = await response.text()

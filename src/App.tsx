@@ -20,6 +20,9 @@ import ManageOrders from './pages/ManageOrders'
 import Reports from './pages/Reports'
 import SiteSettings from './pages/SiteSettings'
 import ManageCompostos from './pages/ManageCompostos'
+import OrderDetail from './pages/OrderDetail'
+import PaymentSuccess from './pages/PaymentSuccess'
+import PaymentFailure from './pages/PaymentFailure'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import FloatingChat from './components/FloatingChat'
@@ -38,6 +41,8 @@ function App() {
               <Route path="/personalizar" element={<Customize />} />
               <Route path="/carrinho" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="/checkout/success" element={<PaymentSuccess />} />
+              <Route path="/checkout/failure" element={<PaymentFailure />} />
               <Route path="/login" element={<Login />} />
               <Route path="/cadastro" element={<Register />} />
               <Route
@@ -125,6 +130,14 @@ function App() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <SiteSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/orders/:id"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <OrderDetail />
                   </ProtectedRoute>
                 }
               />

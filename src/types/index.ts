@@ -27,12 +27,15 @@ export interface ActiveIngredient {
   unit: string; // Aceita qualquer unidade (mg, g, ml, UI, mcg, etc.)
 }
 
+export type PurchaseType = 'one-time' | 'subscription';
+
 export interface CartItem {
   id: string;
   product?: Product;
   customMedication?: CustomMedication;
   quantity: number;
   type: 'product' | 'custom';
+  purchaseType?: PurchaseType; // 'one-time' ou 'subscription'
 }
 
 export interface Order {

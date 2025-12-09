@@ -10,6 +10,7 @@ interface CartContextType {
   addCustomMedication: (medication: CustomMedication, quantity: number) => void
   removeItem: (id: string) => Promise<void>
   updateQuantity: (id: string, quantity: number) => Promise<void>
+  updateAllPurchaseType: (purchaseType: 'one-time' | 'subscription') => Promise<void>
   clearCart: () => Promise<void>
   getTotal: () => number
   getItemCount: () => number
@@ -47,11 +48,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
           price: Number(item.product.price),
           image: item.product.image || '',
           category: (item.product.category as any) || 'outros',
-          inStock: (item.product.stock || 0) > 0,
+          inStock: ((item.product as any).stock || 0) > 0,
           isCustomizable: true,
         } : undefined,
         quantity: item.quantity,
         type: 'product' as const,
+        purchaseType: (item.purchase_type as 'one-time' | 'subscription' | undefined) || 'one-time',
       }))
 
       setItems(cartItems)
@@ -65,6 +67,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   const addProduct = async (product: Product, quantity: number) => {
+    // SEMPRE adiciona como 'one-time' - assinatura só pode ser definida globalmente no carrinho
+    const purchaseType: 'one-time' = 'one-time'
+    
     if (!isAuthenticated) {
       // Fallback para modo offline/local
       setItems(prev => {
@@ -72,17 +77,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (existing) {
           return prev.map(item =>
             item.id === existing.id
-              ? { ...item, quantity: item.quantity + quantity }
+              ? { ...item, quantity: item.quantity + quantity, purchaseType }
               : item
           )
         }
-        return [...prev, { id: Date.now().toString(), product, quantity, type: 'product' }]
+        return [...prev, { id: Date.now().toString(), product, quantity, type: 'product', purchaseType }]
       })
       return
     }
 
     try {
-      await cartService.addItem(product.id, quantity)
+      await cartService.addItem(product.id, quantity, purchaseType)
       await loadCart() // Recarrega carrinho
     } catch (error) {
       console.error('Erro ao adicionar produto:', error)
@@ -91,12 +96,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   const addCustomMedication = (medication: CustomMedication, quantity: number) => {
+    // SEMPRE adiciona como 'one-time' - assinatura só pode ser definida globalmente no carrinho
+    const purchaseType: 'one-time' = 'one-time'
+    
     // CustomMedication ainda não está no banco, mantém local
     setItems(prev => [...prev, {
       id: medication.id,
       customMedication: medication,
       quantity,
-      type: 'custom'
+      type: 'custom',
+      purchaseType
     }])
   }
 
@@ -155,6 +164,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  // REMOVIDO: updatePurchaseType - não é mais possível alterar purchaseType de produtos individuais
+  // A assinatura só pode ser definida globalmente para todo o carrinho através de updateAllPurchaseType
+
+  const updateAllPurchaseType = async (purchaseType: 'one-time' | 'subscription') => {
+    // Atualiza todos os itens localmente primeiro
+    setItems(prev => prev.map(item => ({ ...item, purchaseType })))
+
+    if (!isAuthenticated) {
+      return
+    }
+
+    // Atualiza todos os itens no backend
+    try {
+      const currentItems = items // Captura os itens atuais antes de atualizar
+      const updatePromises = currentItems
+        .filter(item => item.type === 'product') // Apenas produtos do backend
+        .map(item => cartService.updateItem(item.id, undefined, purchaseType))
+      
+      await Promise.all(updatePromises)
+      // Não recarrega o carrinho para evitar o "piscar" - mantém o estado local atualizado
+      // O carrinho será recarregado naturalmente na próxima vez que for necessário
+    } catch (error) {
+      console.error('Erro ao atualizar tipo de compra de todos os itens:', error)
+      // Em caso de erro, recarrega o carrinho para reverter
+      await loadCart()
+      throw error
+    }
+  }
+
   const clearCart = async () => {
     if (!isAuthenticated) {
       setItems([])
@@ -189,6 +227,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       addCustomMedication,
       removeItem,
       updateQuantity,
+      updateAllPurchaseType,
       clearCart,
       getTotal,
       getItemCount,
