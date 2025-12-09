@@ -117,6 +117,11 @@ export default function ProductDetail() {
   // Cria array de imagens (por enquanto usa a mesma imagem, mas pode ser expandido)
   const productImages = product ? [product.image, product.image, product.image] : []
 
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement
+    target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
+  }
+
   // Breadcrumbs
   const getCategoryPath = () => {
     if (!product) return []
@@ -167,6 +172,7 @@ export default function ProductDetail() {
                   src={productImages[selectedImage] || product?.image || ''}
                   alt={product?.name}
                   className="w-full h-64 lg:h-80 object-cover rounded-lg border border-gray-200"
+                  onError={handleImageError}
                 />
               </div>
               {productImages.length > 1 && (
@@ -183,6 +189,7 @@ export default function ProductDetail() {
                         src={img}
                         alt={`${product?.name} ${index + 1}`}
                         className="w-full h-full object-cover"
+                        onError={handleImageError}
                       />
                     </button>
                   ))}

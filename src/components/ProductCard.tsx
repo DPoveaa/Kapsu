@@ -16,14 +16,32 @@ export default function ProductCard({ product }: ProductCardProps) {
     addProduct(product, 1)
   }
 
+  const defaultImage = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
+  
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement
+    // Evita loop infinito se o placeholder também falhar
+    if (target.src !== defaultImage) {
+      target.src = defaultImage
+    }
+  }
+
+  // Garante que sempre temos uma URL de imagem válida
+  const imageUrl = product.image && product.image.trim() !== '' 
+    ? product.image 
+    : defaultImage
+
   return (
     <Link to={`/produtos/${product.id}`} className="card p-6 block">
       <div className="relative mb-4">
-        <img
-          src={product.image}
-          alt={product.name}
-          className="w-full h-48 object-cover rounded-lg"
-        />
+        <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+          <img
+            src={imageUrl}
+            alt={product.name}
+            className="w-full h-full object-cover"
+            onError={handleImageError}
+          />
+        </div>
         {product.isCustomizable && (
           <div className="absolute top-2 right-2 bg-primary-600 text-white px-2 py-1 rounded-full text-xs flex items-center">
             <Sparkles size={12} className="mr-1" />

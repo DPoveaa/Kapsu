@@ -14,6 +14,11 @@ export default function ManageProducts() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
 
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement
+    target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
+  }
+
   // Carrega produtos
   useEffect(() => {
     loadProducts()
@@ -215,6 +220,7 @@ export default function ManageProducts() {
                               src={product.image}
                               alt={product.name}
                               className="h-10 w-10 rounded-lg object-cover mr-3"
+                              onError={handleImageError}
                             />
                             <div>
                               <div className="text-sm font-medium text-gray-900">{product.name}</div>

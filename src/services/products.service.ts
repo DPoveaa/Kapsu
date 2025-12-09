@@ -36,6 +36,47 @@ class ProductsService {
   private baseUrl = `${API_URL}/products`
 
   /**
+   * Converte URL de imagem relativa para URL completa
+   */
+  private getImageUrl(image: string | null): string {
+    // Imagem padrão placeholder
+    const defaultImage = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
+    
+    if (!image || image.trim() === '') {
+      return defaultImage
+    }
+
+    const trimmedImage = image.trim()
+
+    // Se a imagem parece ser texto (não contém extensão de imagem comum e não é URL), retorna placeholder
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg']
+    const hasImageExtension = imageExtensions.some(ext => 
+      trimmedImage.toLowerCase().includes(ext)
+    )
+    const isUrl = trimmedImage.startsWith('http://') || trimmedImage.startsWith('https://')
+    const isPath = trimmedImage.startsWith('/')
+    
+    // Se não é URL, não é caminho e não tem extensão de imagem, provavelmente é texto inválido
+    if (!isUrl && !isPath && !hasImageExtension && trimmedImage.length > 50) {
+      return defaultImage
+    }
+
+    // Se já é uma URL completa (http:// ou https://), retorna como está
+    if (isUrl) {
+      return trimmedImage
+    }
+
+    // Se é um caminho relativo (começa com /), converte para URL completa
+    if (isPath) {
+      // Remove a barra inicial e adiciona a URL da API
+      return `${API_URL.replace('/api', '')}${trimmedImage}`
+    }
+
+    // Se não começa com /, assume que é um caminho relativo e adiciona /uploads/products/
+    return `${API_URL.replace('/api', '')}/uploads/products/${trimmedImage}`
+  }
+
+  /**
    * Converte produto do backend para o formato do frontend
    */
   private mapProduct(product: BackendProduct): Product {
@@ -44,7 +85,7 @@ class ProductsService {
       name: product.name,
       description: product.description || '',
       price: Number(product.price),
-      image: product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400',
+      image: this.getImageUrl(product.image),
       category: (product.category as Product['category']) || 'outros',
       inStock: product.stock > 0,
       isCustomizable: true, // Por padrão, assumimos que todos são customizáveis

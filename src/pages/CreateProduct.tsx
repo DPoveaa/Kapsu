@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import { productsService } from '../services/products.service'
+import ImageUpload from '../components/ImageUpload'
 
 const categories = [
   { value: 'vitamina', label: 'Vitamina' },
@@ -14,6 +15,7 @@ export default function CreateProduct() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [imageError, setImageError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -93,6 +95,12 @@ export default function CreateProduct() {
             </div>
           )}
 
+          {imageError && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-yellow-600">{imageError}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Nome */}
             <div>
@@ -165,42 +173,37 @@ export default function CreateProduct() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Categoria */}
-              <div>
-                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                  Categoria
-                </label>
-                <select
-                  id="category"
-                  name="category"
-                  value={formData.category}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  {categories.map(cat => (
-                    <option key={cat.value} value={cat.value}>
-                      {cat.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* Categoria */}
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                Categoria
+              </label>
+              <select
+                id="category"
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                {categories.map(cat => (
+                  <option key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-              {/* Imagem */}
-              <div>
-                <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-2">
-                  URL da Imagem
-                </label>
-                <input
-                  type="url"
-                  id="image"
-                  name="image"
-                  value={formData.image}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="https://exemplo.com/imagem.jpg"
-                />
-              </div>
+            {/* Imagem */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Imagem do Produto
+              </label>
+              <ImageUpload
+                value={formData.image}
+                onChange={(url) => setFormData(prev => ({ ...prev, image: url }))}
+                onError={(err) => setImageError(err || null)}
+                disabled={loading}
+              />
             </div>
 
             {/* Composições */}

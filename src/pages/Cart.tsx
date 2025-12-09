@@ -18,6 +18,11 @@ export default function Cart() {
   const [linkMessage, setLinkMessage] = useState<{ type: 'success' | 'error' | 'info', text: string } | null>(null)
   const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'quarterly'>('monthly')
   const [localPurchaseType, setLocalPurchaseType] = useState<'one-time' | 'subscription' | null>(null)
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.target as HTMLImageElement
+    target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
+  }
   
   // Tipo de compra global do carrinho (usa estado local se disponível, senão usa o primeiro item)
   const globalPurchaseType = localPurchaseType || (items.length > 0 
@@ -373,6 +378,7 @@ export default function Cart() {
                             src={item.product.image}
                             alt={item.product.name}
                             className="w-24 h-24 object-cover rounded-lg border-2 border-gray-100 flex-shrink-0"
+                            onError={handleImageError}
                           />
                         ) : (
                           <div className="w-24 h-24 bg-gradient-to-br from-primary-100 via-primary-50 to-accent-100 rounded-lg border-2 border-gray-100 flex items-center justify-center flex-shrink-0">
@@ -468,6 +474,7 @@ export default function Cart() {
                         src={product.image}
                         alt={product.name}
                         className="w-full h-32 object-cover rounded-lg mb-3 group-hover:scale-105 transition-transform"
+                        onError={handleImageError}
                       />
                       <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">
                         {product.name}
