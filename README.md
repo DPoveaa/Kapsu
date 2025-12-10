@@ -1,4 +1,4 @@
-# Sanare - Marketplace de Medicamentos Manipulados
+# Kapsu - Marketplace de Medicamentos Manipulados
 
 Marketplace focado em medicamentos manipulados, permitindo tanto a venda de produtos pré-prontos quanto a personalização de medicamentos sob demanda.
 

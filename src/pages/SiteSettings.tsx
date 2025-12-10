@@ -225,7 +225,7 @@ export default function SiteSettings() {
                   value={settings.site_name || ''}
                   onChange={(e) => handleInputChange('site_name', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Ex: Sanare Farmácia"
+                  placeholder="Ex: Kapsu Farmácia"
                 />
               </div>
 
@@ -262,7 +262,7 @@ export default function SiteSettings() {
                   value={settings.contact_email || ''}
                   onChange={(e) => handleInputChange('contact_email', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="contato@sanare.com"
+                  placeholder="contato@kapsu.com"
                 />
               </div>
 
@@ -313,7 +313,7 @@ export default function SiteSettings() {
                   value={settings.social_media?.facebook || ''}
                   onChange={(e) => handleSocialMediaChange('facebook', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="https://facebook.com/sanare"
+                  placeholder="https://facebook.com/kapsu"
                 />
               </div>
 
@@ -326,7 +326,7 @@ export default function SiteSettings() {
                   value={settings.social_media?.instagram || ''}
                   onChange={(e) => handleSocialMediaChange('instagram', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="https://instagram.com/sanare"
+                  placeholder="https://instagram.com/kapsu"
                 />
               </div>
 
@@ -339,7 +339,7 @@ export default function SiteSettings() {
                   value={settings.social_media?.twitter || ''}
                   onChange={(e) => handleSocialMediaChange('twitter', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="https://twitter.com/sanare"
+                  placeholder="https://twitter.com/kapsu"
                 />
               </div>
 
@@ -352,7 +352,7 @@ export default function SiteSettings() {
                   value={settings.social_media?.linkedin || ''}
                   onChange={(e) => handleSocialMediaChange('linkedin', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="https://linkedin.com/company/sanare"
+                  placeholder="https://linkedin.com/company/kapsu"
                 />
               </div>
             </div>

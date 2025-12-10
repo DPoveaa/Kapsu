@@ -1,4 +1,4 @@
-# 🎨 Paleta de Cores - Sanare
+# 🎨 Paleta de Cores - Kapsu
 
 ## Cores Implementadas
 

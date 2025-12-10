@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { useLocation } from 'react-router-dom'
 import Header from './Header'
 import Footer from './Footer'
 import { useTrackAccess } from '../hooks/useTrackAccess'
@@ -9,6 +10,11 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
+  const location = useLocation()
+  
+  // Rotas que não devem mostrar Header e Footer
+  const hideHeaderFooter = ['/login', '/cadastro'].includes(location.pathname)
+
   // Rastreia acessos automaticamente
   useTrackAccess()
   // Rastreia comportamento detalhado (tempo, scroll, cliques)
@@ -16,11 +22,11 @@ export default function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      {!hideHeaderFooter && <Header />}
       <main className="flex-grow">
         {children}
       </main>
-      <Footer />
+      {!hideHeaderFooter && <Footer />}
     </div>
   )
 }

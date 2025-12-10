@@ -53,52 +53,70 @@ export default function Header() {
   }, [userMenuOpen])
 
   return (
-    <header className="bg-white shadow-md sticky top-0 z-50">
-      <nav className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
+    <header className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
+      {/* Barra superior verde */}
+      <div className="bg-primary-600 h-1"></div>
+      
+      <nav className="container mx-auto px-4 lg:px-6">
+        <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-medical-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">S</span>
+          <Link to="/" className="flex items-center space-x-3 group">
+            <div className="w-11 h-11 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-200">
+              <span className="text-white font-bold text-xl">K</span>
             </div>
-            <span className="text-2xl font-bold text-gray-900">Sanare</span>
+            <span className="text-2xl font-bold text-gray-900 tracking-tight">Kapsu</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <Link to="/produtos" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
+          <div className="hidden md:flex items-center space-x-1">
+            <Link 
+              to="/produtos" 
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
+            >
               Produtos
             </Link>
-            <Link to="/personalizar" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
+            <Link 
+              to="/personalizar" 
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
+            >
               Personalizar
             </Link>
-            <Link to="/sobre" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
+            <Link 
+              to="/sobre" 
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
+            >
               Sobre
             </Link>
-            <Link to="/contato" className="text-gray-700 hover:text-primary-600 font-medium transition-colors">
+            <Link 
+              to="/contato" 
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
+            >
               Contato
             </Link>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center space-x-4">
-            <Link to="/carrinho" className="relative p-2 text-gray-700 hover:text-primary-600 transition-colors">
-              <ShoppingCart size={24} />
+          <div className="flex items-center space-x-2">
+            <Link 
+              to="/carrinho" 
+              className="relative p-2.5 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
+            >
+              <ShoppingCart size={22} />
               {itemCount > 0 && (
-                <span className="absolute top-0 right-0 bg-primary-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {itemCount}
+                <span className="absolute -top-1 -right-1 bg-primary-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 shadow-md">
+                  {itemCount > 99 ? '99+' : itemCount}
                 </span>
               )}
             </Link>
             {(isAdmin || isPharmacist) && (
               <Link 
                 to="/admin/whatsapp/support" 
-                className="relative p-2 text-gray-700 hover:text-primary-600 transition-colors"
+                className="relative p-2.5 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
                 title="Conversas que precisam de intervenção"
               >
-                <MessageCircle size={24} />
+                <MessageCircle size={22} />
                 {interventionCount > 0 && (
-                  <span className="absolute top-0 right-0 bg-red-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 animate-pulse">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 shadow-md animate-pulse">
                     {interventionCount > 99 ? '99+' : interventionCount}
                   </span>
                 )}
@@ -108,19 +126,21 @@ export default function Header() {
               <div className="hidden md:block relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors"
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors duration-200 group"
                 >
-                  <User size={24} />
-                  <span className="font-medium">{user.name}</span>
-                  {isAdmin && <Shield size={16} className="text-yellow-600" />}
+                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="font-medium text-gray-700 text-sm max-w-[120px] truncate">{user.name}</span>
+                  {isAdmin && <Shield size={14} className="text-yellow-500" />}
                 </button>
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                    <div className="px-4 py-2 border-b border-gray-200">
-                      <p className="text-sm font-semibold">{user.name}</p>
-                      <p className="text-xs text-gray-600">{user.email}</p>
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 overflow-hidden">
+                    <div className="px-4 py-3 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+                      <p className="text-xs text-gray-600 mt-0.5">{user.email}</p>
                       {isAdmin && (
-                        <span className="inline-block mt-1 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                        <span className="inline-block mt-2 text-xs bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-full font-medium">
                           Administrador
                         </span>
                       )}
@@ -129,7 +149,7 @@ export default function Header() {
                       <Link
                         to="/admin"
                         onClick={() => setUserMenuOpen(false)}
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 flex items-center space-x-2 transition-colors"
                       >
                         <Shield size={16} />
                         <span>Painel Admin</span>
@@ -140,7 +160,7 @@ export default function Header() {
                         logout()
                         setUserMenuOpen(false)
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center space-x-2 transition-colors"
                     >
                       <LogOut size={16} />
                       <span>Sair</span>
@@ -151,65 +171,70 @@ export default function Header() {
             ) : (
               <Link
                 to="/login"
-                className="hidden md:flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors"
+                className="hidden md:flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
               >
-                <User size={24} />
-                <span className="font-medium">Entrar</span>
+                <User size={20} />
+                <span>Entrar</span>
               </Link>
             )}
             <button
-              className="md:hidden p-2 text-gray-700"
+              className="md:hidden p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              <Menu size={24} />
+              <Menu size={22} />
             </button>
           </div>
         </div>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden mt-4 pb-4 border-t pt-4">
+          <div className="md:hidden border-t border-gray-100 pt-4 pb-4 space-y-1">
             <Link
               to="/produtos"
-              className="block py-2 text-gray-700 hover:text-primary-600"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Produtos
             </Link>
             <Link
               to="/personalizar"
-              className="block py-2 text-gray-700 hover:text-primary-600"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Personalizar
             </Link>
             <Link
               to="/sobre"
-              className="block py-2 text-gray-700 hover:text-primary-600"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Sobre
             </Link>
             <Link
               to="/contato"
-              className="block py-2 text-gray-700 hover:text-primary-600"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Contato
             </Link>
             {user ? (
-              <div className="py-2">
-                <div className="flex items-center space-x-2 mb-2">
-                  <User size={20} />
-                  <span>{user.name}</span>
-                  {isAdmin && <Shield size={14} className="text-yellow-600" />}
+              <div className="pt-2 border-t border-gray-100 mt-2 space-y-1">
+                <div className="flex items-center space-x-2 px-4 py-2.5 mb-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
+                  </div>
+                  {isAdmin && <Shield size={14} className="text-yellow-500" />}
                 </div>
                 {(isAdmin || isPharmacist) && (
                   <>
                     <Link
                       to="/admin"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center space-x-2 py-2 text-gray-700 hover:text-primary-600"
+                      className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                     >
                       <Shield size={16} />
                       <span>Painel Admin</span>
@@ -217,12 +242,12 @@ export default function Header() {
                     <Link
                       to="/admin/whatsapp/support"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center space-x-2 py-2 text-gray-700 hover:text-primary-600 relative"
+                      className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors relative"
                     >
                       <MessageCircle size={16} />
                       <span>Atendimento</span>
                       {interventionCount > 0 && (
-                        <span className="ml-auto bg-red-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
+                        <span className="ml-auto bg-red-500 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5">
                           {interventionCount > 99 ? '99+' : interventionCount}
                         </span>
                       )}
@@ -234,7 +259,7 @@ export default function Header() {
                     logout()
                     setMobileMenuOpen(false)
                   }}
-                  className="flex items-center space-x-2 text-gray-700 hover:text-primary-600"
+                  className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                 >
                   <LogOut size={16} />
                   <span>Sair</span>
@@ -243,7 +268,7 @@ export default function Header() {
             ) : (
               <Link
                 to="/login"
-                className="flex items-center space-x-2 py-2 text-gray-700 hover:text-primary-600"
+                className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <User size={20} />

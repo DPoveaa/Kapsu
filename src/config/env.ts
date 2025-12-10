@@ -9,7 +9,7 @@ export const env = {
   
   // Emails do administrador (múltiplos separados por vírgula)
   // Deve corresponder ao ADMIN_EMAIL do backend
-  adminEmails: (import.meta.env.VITE_ADMIN_EMAIL || 'admin@sanare.com.br')
+  adminEmails: (import.meta.env.VITE_ADMIN_EMAIL || 'admin@kapsu.com.br')
     .split(',')
     .map((email: string) => email.trim().toLowerCase())
     .filter((email: string) => email.length > 0),
