@@ -779,8 +779,8 @@ const FloatingChat: React.FC = () => {
           onMouseLeave={(e) => {
             e.currentTarget.style.backgroundColor = '#67C090'
           }}
-          aria-label="Abrir chat"
-          title="Arraste para mudar de posição ou clique para abrir"
+          aria-label="Pergunte a Kaia"
+          title="Pergunte a Kaia - Arraste para mudar de posição ou clique para abrir"
         >
           <MessageSquare className="w-6 h-6 pointer-events-none" />
         </button>
@@ -806,7 +806,7 @@ const FloatingChat: React.FC = () => {
           >
             <div className="flex items-center space-x-2">
               <MessageSquare className="w-5 h-5" />
-              <h3 className="font-semibold">Assistente Virtual</h3>
+              <h3 className="font-semibold">Kaia</h3>
             </div>
             <div className="flex items-center space-x-2">
               <button
@@ -826,11 +826,16 @@ const FloatingChat: React.FC = () => {
                 {messages.length === 0 ? (
                   <div className="text-center text-gray-500 mt-8">
                     <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>Olá{user ? `, ${user.name}` : ''}! Como posso ajudar você hoje?</p>
-                    <p className="text-sm mt-2">
+                    <p className="font-medium text-gray-700 mb-2">
+                      Olá{user ? `, ${user.name}` : ''}! Eu sou a Kaia 👋
+                    </p>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Como posso ajudar você hoje?
+                    </p>
+                    <p className="text-xs text-gray-500">
                       {isAuthenticated
-                        ? 'Posso ajudar com produtos, adicionar ao carrinho e muito mais!'
-                        : 'Posso ajudar com produtos e informações. Faça login para adicionar produtos ao carrinho!'}
+                        ? 'Posso ajudar você a encontrar produtos, adicionar ao carrinho e finalizar sua compra.'
+                        : 'Posso ajudar você a encontrar produtos e informações. Faça login para adicionar produtos ao carrinho.'}
                     </p>
                   </div>
                 ) : (

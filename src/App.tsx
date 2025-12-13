@@ -19,6 +19,10 @@ import EditProduct from './pages/EditProduct'
 import ManageOrders from './pages/ManageOrders'
 import Reports from './pages/Reports'
 import SiteSettings from './pages/SiteSettings'
+import ShippingSettings from './pages/ShippingSettings'
+import FreeShippingRules from './pages/FreeShippingRules'
+import ManagePromotions from './pages/ManagePromotions'
+import ManagePromoCodes from './pages/ManagePromoCodes'
 import ManageCompostos from './pages/ManageCompostos'
 import OrderDetail from './pages/OrderDetail'
 import PaymentSuccess from './pages/PaymentSuccess'
@@ -130,6 +134,38 @@ function AppContent() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <SiteSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/shipping"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <ShippingSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/shipping/free-rules"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <FreeShippingRules />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/promotions"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <ManagePromotions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/promo-codes"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <ManagePromoCodes />
                   </ProtectedRoute>
                 }
               />

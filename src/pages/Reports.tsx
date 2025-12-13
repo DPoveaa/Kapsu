@@ -1,13 +1,24 @@
 import { useEffect, useState } from 'react'
-import { BarChart3, Users, Eye, Calendar, Clock, TrendingDown, MousePointer, ArrowRight } from 'lucide-react'
+import { BarChart3, Users, Eye, Calendar, Clock, TrendingDown, MousePointer, ArrowRight, Package, DollarSign, TrendingUp, XCircle, CheckCircle, AlertCircle, Truck, ShoppingCart } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { adminService } from '../services/admin.service'
+import OrdersStatsTab from './ReportsOrdersTab'
+import ShippingStatsTab from './ReportsShippingTab'
+import PromoCodesStatsTab from './ReportsPromoCodesTab'
+import PromotionsStatsTab from './ReportsPromotionsTab'
+import UsersStatsTab from './ReportsUsersTab'
+import ProductsStatsTab from './ReportsProductsTab'
+import WhatsAppStatsTab from './ReportsWhatsAppTab'
+import ChatStatsTab from './ReportsChatTab'
+import WhatsAppHumanSupportStatsTab from './ReportsWhatsAppHumanSupportTab'
 
 interface SiteAccessStats {
-  totalAccesses: number
+  totalSessions: number
+  totalPageViews: number
   uniqueVisitors: number
   uniqueIPs: number
   uniqueAuthenticatedUsers: number
+  avgPageViewsPerSession: number
 }
 
 interface ChartDataPoint {
@@ -38,7 +49,25 @@ export default function Reports() {
   const [loading, setLoading] = useState(true)
   const [behaviorLoading, setBehaviorLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'overview' | 'behavior'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'behavior' | 'orders' | 'shipping' | 'promoCodes' | 'promotions' | 'users' | 'products' | 'whatsapp' | 'chat' | 'whatsappHumanSupport'>('overview')
+  const [ordersStats, setOrdersStats] = useState<any>(null)
+  const [ordersLoading, setOrdersLoading] = useState(true)
+  const [shippingStats, setShippingStats] = useState<any>(null)
+  const [shippingLoading, setShippingLoading] = useState(true)
+  const [promoCodesStats, setPromoCodesStats] = useState<any>(null)
+  const [promoCodesLoading, setPromoCodesLoading] = useState(true)
+  const [promotionsStats, setPromotionsStats] = useState<any>(null)
+  const [promotionsLoading, setPromotionsLoading] = useState(true)
+  const [usersStats, setUsersStats] = useState<any>(null)
+  const [usersLoading, setUsersLoading] = useState(true)
+  const [productsStats, setProductsStats] = useState<any>(null)
+  const [productsLoading, setProductsLoading] = useState(true)
+  const [whatsappStats, setWhatsappStats] = useState<any>(null)
+  const [whatsappLoading, setWhatsappLoading] = useState(true)
+  const [chatStats, setChatStats] = useState<any>(null)
+  const [chatLoading, setChatLoading] = useState(true)
+  const [whatsappHumanSupportStats, setWhatsappHumanSupportStats] = useState<any>(null)
+  const [whatsappHumanSupportLoading, setWhatsappHumanSupportLoading] = useState(true)
   const [groupBy, setGroupBy] = useState<'hour' | 'day' | 'week' | 'month'>('day')
   const [startDate, setStartDate] = useState<string>(() => {
     const date = new Date()
@@ -83,10 +112,184 @@ export default function Reports() {
     }
   }
 
+  const fetchOrdersData = async () => {
+    try {
+      setOrdersLoading(true)
+      const data = await adminService.getOrdersStatistics({
+        startDate,
+        endDate,
+      })
+      setOrdersStats(data.data)
+    } catch (err: any) {
+      console.error('Erro ao carregar estatísticas de pedidos:', err)
+    } finally {
+      setOrdersLoading(false)
+    }
+  }
+
+  const fetchShippingData = async () => {
+    try {
+      setShippingLoading(true)
+      const data = await adminService.getShippingStatistics({
+        startDate,
+        endDate,
+      })
+      setShippingStats(data.data)
+    } catch (err: any) {
+      console.error('Erro ao carregar estatísticas de frete:', err)
+    } finally {
+      setShippingLoading(false)
+    }
+  }
+
+  const fetchPromoCodesData = async () => {
+    try {
+      setPromoCodesLoading(true)
+      const data = await adminService.getPromoCodesStatistics({
+        startDate,
+        endDate,
+      })
+      setPromoCodesStats(data.data)
+    } catch (err: any) {
+      console.error('Erro ao carregar estatísticas de cupons:', err)
+    } finally {
+      setPromoCodesLoading(false)
+    }
+  }
+
+  const fetchPromotionsData = async () => {
+    try {
+      setPromotionsLoading(true)
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.tsx:152',message:'fetchPromotionsData called',data:{startDate,endDate},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      const data = await adminService.getPromotionsStatistics({
+        startDate,
+        endDate,
+      })
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.tsx:159',message:'data received from service',data:{hasData:!!data,hasDataData:!!data.data,dataDataType:typeof data.data,dataDataKeys:data.data?Object.keys(data.data):'no data.data'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      setPromotionsStats(data.data)
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.tsx:160',message:'promotionsStats set',data:{dataDataKeys:data.data?Object.keys(data.data):'no data.data'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+    } catch (err: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.tsx:161',message:'fetchPromotionsData error',data:{errorMessage:err.message,error:err.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      console.error('Erro ao carregar estatísticas de promoções:', err)
+    } finally {
+      setPromotionsLoading(false)
+    }
+  }
+
+  const fetchUsersData = async () => {
+    try {
+      setUsersLoading(true)
+      const data = await adminService.getUsersStatistics({
+        startDate,
+        endDate,
+      })
+      setUsersStats(data.data)
+    } catch (err: any) {
+      console.error('Erro ao carregar estatísticas de usuários:', err)
+    } finally {
+      setUsersLoading(false)
+    }
+  }
+
+  const fetchProductsData = async () => {
+    try {
+      setProductsLoading(true)
+      const data = await adminService.getProductsStatistics({
+        startDate,
+        endDate,
+      })
+      setProductsStats(data.data)
+    } catch (err: any) {
+      console.error('Erro ao carregar estatísticas de produtos:', err)
+    } finally {
+      setProductsLoading(false)
+    }
+  }
+
+  const fetchWhatsAppData = async () => {
+    try {
+      setWhatsappLoading(true)
+      const data = await adminService.getWhatsAppStatistics({
+        startDate,
+        endDate,
+      })
+      setWhatsappStats(data.data)
+    } catch (err: any) {
+      console.error('Erro ao carregar estatísticas de WhatsApp:', err)
+    } finally {
+      setWhatsappLoading(false)
+    }
+  }
+
+  const fetchChatData = async () => {
+    try {
+      setChatLoading(true)
+      const data = await adminService.getChatStatistics({
+        startDate,
+        endDate,
+      })
+      setChatStats(data.data)
+    } catch (err: any) {
+      console.error('Erro ao carregar estatísticas de chat:', err)
+    } finally {
+      setChatLoading(false)
+    }
+  }
+
+  const fetchWhatsAppHumanSupportData = async () => {
+    try {
+      setWhatsappHumanSupportLoading(true)
+      const data = await adminService.getWhatsAppHumanSupportStatistics({
+        startDate,
+        endDate,
+      })
+      setWhatsappHumanSupportStats(data.data)
+    } catch (err: any) {
+      console.error('Erro ao carregar estatísticas de atendimento humano:', err)
+    } finally {
+      setWhatsappHumanSupportLoading(false)
+    }
+  }
+
   useEffect(() => {
     fetchData()
     fetchBehaviorData()
-  }, [groupBy, startDate, endDate])
+    if (activeTab === 'orders') {
+      fetchOrdersData()
+    }
+    if (activeTab === 'shipping') {
+      fetchShippingData()
+    }
+    if (activeTab === 'promoCodes') {
+      fetchPromoCodesData()
+    }
+    if (activeTab === 'promotions') {
+      fetchPromotionsData()
+    }
+    if (activeTab === 'users') {
+      fetchUsersData()
+    }
+    if (activeTab === 'products') {
+      fetchProductsData()
+    }
+    if (activeTab === 'whatsapp') {
+      fetchWhatsAppData()
+    }
+    if (activeTab === 'chat') {
+      fetchChatData()
+    }
+    if (activeTab === 'whatsappHumanSupport') {
+      fetchWhatsAppHumanSupportData()
+    }
+  }, [groupBy, startDate, endDate, activeTab])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -197,6 +400,96 @@ export default function Reports() {
               >
                 Comportamento
               </button>
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                  activeTab === 'orders'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Pedidos
+              </button>
+              <button
+                onClick={() => setActiveTab('shipping')}
+                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                  activeTab === 'shipping'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Frete
+              </button>
+              <button
+                onClick={() => setActiveTab('promoCodes')}
+                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                  activeTab === 'promoCodes'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Cupons
+              </button>
+              <button
+                onClick={() => setActiveTab('promotions')}
+                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                  activeTab === 'promotions'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Promoções
+              </button>
+              <button
+                onClick={() => setActiveTab('users')}
+                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                  activeTab === 'users'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Clientes
+              </button>
+              <button
+                onClick={() => setActiveTab('products')}
+                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                  activeTab === 'products'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Produtos
+              </button>
+              <button
+                onClick={() => setActiveTab('whatsapp')}
+                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                  activeTab === 'whatsapp'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                WhatsApp
+              </button>
+              <button
+                onClick={() => setActiveTab('chat')}
+                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                  activeTab === 'chat'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Chat Interno
+              </button>
+              <button
+                onClick={() => setActiveTab('whatsappHumanSupport')}
+                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                  activeTab === 'whatsappHumanSupport'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Atendimento Humano
+              </button>
             </nav>
           </div>
         </div>
@@ -219,9 +512,12 @@ export default function Reports() {
                   <div className="bg-white rounded-lg shadow-md p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Total de Acessos</p>
+                        <p className="text-sm font-medium text-gray-600">Total de Sessões</p>
                         <p className="text-2xl font-bold text-gray-900 mt-1">
-                          {stats?.totalAccesses.toLocaleString('pt-BR') || 0}
+                          {stats?.totalSessions.toLocaleString('pt-BR') || 0}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {stats?.totalPageViews.toLocaleString('pt-BR') || 0} visualizações
                         </p>
                       </div>
                       <div className="bg-blue-100 p-3 rounded-lg">
@@ -276,7 +572,7 @@ export default function Reports() {
                 {/* Gráfico de Acessos */}
                 <div className="bg-white rounded-lg shadow-md p-6 mb-6">
                   <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                    Acessos ao Site
+                    Sessões e Visualizações ao Site
                   </h2>
                   {chartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={400}>
@@ -300,7 +596,7 @@ export default function Reports() {
                           dataKey="total" 
                           stroke="#3b82f6" 
                           strokeWidth={2}
-                          name="Total de Acessos"
+                          name="Total de Sessões"
                           dot={{ r: 4 }}
                         />
                         <Line 
@@ -311,6 +607,16 @@ export default function Reports() {
                           name="Visitantes Únicos"
                           dot={{ r: 4 }}
                         />
+                        {chartData[0]?.pageViews !== undefined && (
+                          <Line 
+                            type="monotone" 
+                            dataKey="pageViews" 
+                            stroke="#8b5cf6" 
+                            strokeWidth={2}
+                            name="Visualizações de Página"
+                            dot={{ r: 4 }}
+                          />
+                        )}
                       </LineChart>
                     </ResponsiveContainer>
                   ) : (
@@ -323,7 +629,7 @@ export default function Reports() {
                 {/* Gráfico de Barras Comparativo */}
                 <div className="bg-white rounded-lg shadow-md p-6">
                   <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                    Comparativo: Total vs. Visitantes Únicos
+                    Comparativo: Sessões vs. Visitantes Únicos
                   </h2>
                   {chartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height={400}>
@@ -342,8 +648,11 @@ export default function Reports() {
                           formatter={(value: number) => value.toLocaleString('pt-BR')}
                         />
                         <Legend />
-                        <Bar dataKey="total" fill="#3b82f6" name="Total de Acessos" />
+                        <Bar dataKey="total" fill="#3b82f6" name="Total de Sessões" />
                         <Bar dataKey="unique" fill="#10b981" name="Visitantes Únicos" />
+                        {chartData[0]?.pageViews !== undefined && (
+                          <Bar dataKey="pageViews" fill="#8b5cf6" name="Visualizações de Página" />
+                        )}
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
@@ -626,6 +935,45 @@ export default function Reports() {
               </div>
             )}
           </>
+        )}
+
+        {activeTab === 'orders' && (
+          <OrdersStatsTab ordersStats={ordersStats} ordersLoading={ordersLoading} />
+        )}
+
+        {activeTab === 'shipping' && (
+          <ShippingStatsTab shippingStats={shippingStats} shippingLoading={shippingLoading} />
+        )}
+
+        {activeTab === 'promoCodes' && (
+          <PromoCodesStatsTab promoCodesStats={promoCodesStats} promoCodesLoading={promoCodesLoading} />
+        )}
+
+        {activeTab === 'promotions' && (
+          <PromotionsStatsTab promotionsStats={promotionsStats} promotionsLoading={promotionsLoading} />
+        )}
+
+        {activeTab === 'users' && (
+          <UsersStatsTab usersStats={usersStats} usersLoading={usersLoading} />
+        )}
+
+        {activeTab === 'products' && (
+          <ProductsStatsTab productsStats={productsStats} productsLoading={productsLoading} />
+        )}
+
+        {activeTab === 'whatsapp' && (
+          <WhatsAppStatsTab whatsappStats={whatsappStats} whatsappLoading={whatsappLoading} />
+        )}
+
+        {activeTab === 'chat' && (
+          <ChatStatsTab chatStats={chatStats} chatLoading={chatLoading} />
+        )}
+
+        {activeTab === 'whatsappHumanSupport' && (
+          <WhatsAppHumanSupportStatsTab 
+            whatsappHumanSupportStats={whatsappHumanSupportStats} 
+            whatsappHumanSupportLoading={whatsappHumanSupportLoading} 
+          />
         )}
       </div>
     </div>

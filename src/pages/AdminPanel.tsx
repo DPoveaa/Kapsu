@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Settings, MessageSquare, Users, Package, ShoppingCart, BarChart3 } from 'lucide-react'
+import { Settings, MessageSquare, Users, Package, ShoppingCart, BarChart3, Truck, Gift, Tag } from 'lucide-react'
 
 export default function AdminPanel() {
   return (
@@ -103,6 +103,54 @@ export default function AdminPanel() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">Configurações</h3>
                 <p className="text-sm text-gray-600">Configurações do sistema</p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Card Frete */}
+          <Link
+            to="/admin/shipping"
+            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+          >
+            <div className="flex items-center space-x-4">
+              <div className="bg-orange-100 p-3 rounded-lg">
+                <Truck className="w-6 h-6 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Frete</h3>
+                <p className="text-sm text-gray-600">Configurar frete e regiões</p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Card Promoções */}
+          <Link
+            to="/admin/promotions"
+            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+          >
+            <div className="flex items-center space-x-4">
+              <div className="bg-pink-100 p-3 rounded-lg">
+                <Gift className="w-6 h-6 text-pink-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Promoções</h3>
+                <p className="text-sm text-gray-600">Criar e gerenciar promoções</p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Card Códigos Promocionais */}
+          <Link
+            to="/admin/promo-codes"
+            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+          >
+            <div className="flex items-center space-x-4">
+              <div className="bg-purple-100 p-3 rounded-lg">
+                <Tag className="w-6 h-6 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Códigos Promocionais</h3>
+                <p className="text-sm text-gray-600">Criar cupons e códigos de desconto</p>
               </div>
             </div>
           </Link>

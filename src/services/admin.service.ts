@@ -241,6 +241,377 @@ class AdminService {
   }
 
   /**
+   * Obtém estatísticas detalhadas de Atendimento Humano no WhatsApp
+   */
+  async getWhatsAppHumanSupportStatistics(params?: {
+    startDate?: string
+    endDate?: string
+  }): Promise<{ success: boolean; data: any }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const queryParams = new URLSearchParams()
+      if (params?.startDate) queryParams.append('startDate', params.startDate)
+      if (params?.endDate) queryParams.append('endDate', params.endDate)
+
+      const url = `${this.baseUrl}/whatsapp/human-support/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Erro ao buscar estatísticas de atendimento humano')
+      }
+
+      return await response.json()
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao obter estatísticas de atendimento humano')
+    }
+  }
+
+  /**
+   * Obtém estatísticas detalhadas de Chat Interno (Frontend)
+   */
+  async getChatStatistics(params?: {
+    startDate?: string
+    endDate?: string
+  }): Promise<{ success: boolean; data: any }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const queryParams = new URLSearchParams()
+      if (params?.startDate) queryParams.append('startDate', params.startDate)
+      if (params?.endDate) queryParams.append('endDate', params.endDate)
+
+      const url = `${this.baseUrl}/chat/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Erro ao buscar estatísticas de chat')
+      }
+
+      return await response.json()
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao obter estatísticas de chat')
+    }
+  }
+
+  /**
+   * Obtém estatísticas detalhadas de WhatsApp
+   */
+  async getWhatsAppStatistics(params?: {
+    startDate?: string
+    endDate?: string
+  }): Promise<{ success: boolean; data: any }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const queryParams = new URLSearchParams()
+      if (params?.startDate) queryParams.append('startDate', params.startDate)
+      if (params?.endDate) queryParams.append('endDate', params.endDate)
+
+      const url = `${this.baseUrl}/whatsapp/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Erro ao buscar estatísticas de WhatsApp')
+      }
+
+      return await response.json()
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao obter estatísticas de WhatsApp')
+    }
+  }
+
+  /**
+   * Obtém estatísticas detalhadas de produtos
+   */
+  async getProductsStatistics(params?: {
+    startDate?: string
+    endDate?: string
+  }): Promise<{ success: boolean; data: any }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const queryParams = new URLSearchParams()
+      if (params?.startDate) queryParams.append('startDate', params.startDate)
+      if (params?.endDate) queryParams.append('endDate', params.endDate)
+
+      const url = `${this.baseUrl}/products/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Erro ao buscar estatísticas de produtos')
+      }
+
+      return await response.json()
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao obter estatísticas de produtos')
+    }
+  }
+
+  /**
+   * Obtém estatísticas detalhadas de usuários/clientes
+   */
+  async getUsersStatistics(params?: {
+    startDate?: string
+    endDate?: string
+  }): Promise<{ success: boolean; data: any }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const queryParams = new URLSearchParams()
+      if (params?.startDate) queryParams.append('startDate', params.startDate)
+      if (params?.endDate) queryParams.append('endDate', params.endDate)
+
+      const url = `${this.baseUrl}/users/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Erro ao buscar estatísticas de usuários')
+      }
+
+      return await response.json()
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao obter estatísticas de usuários')
+    }
+  }
+
+  /**
+   * Obtém estatísticas detalhadas de promoções
+   */
+  async getPromotionsStatistics(params?: {
+    startDate?: string
+    endDate?: string
+  }): Promise<{ success: boolean; data: any }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const queryParams = new URLSearchParams()
+      if (params?.startDate) queryParams.append('startDate', params.startDate)
+      if (params?.endDate) queryParams.append('endDate', params.endDate)
+
+      const url = `${this.baseUrl.replace('/admin', '')}/promotions/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.service.ts:462',message:'API response received',data:{ok:response.ok,status:response.status},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+
+      if (!response.ok) {
+        const error = await response.json()
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.service.ts:470',message:'API error response',data:{errorMessage:error.message,error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        throw new Error(error.message || 'Erro ao buscar estatísticas de promoções')
+      }
+
+      const result = await response.json()
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'admin.service.ts:474',message:'API result parsed',data:{hasSuccess:!!result.success,hasData:!!result.data,dataKeys:result.data?Object.keys(result.data):'no data',dataType:typeof result.data},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      return result
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao obter estatísticas de promoções')
+    }
+  }
+
+  /**
+   * Obtém estatísticas detalhadas de cupons promocionais
+   */
+  async getPromoCodesStatistics(params?: {
+    startDate?: string
+    endDate?: string
+  }): Promise<{ success: boolean; data: any }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const queryParams = new URLSearchParams()
+      if (params?.startDate) queryParams.append('startDate', params.startDate)
+      if (params?.endDate) queryParams.append('endDate', params.endDate)
+
+      const url = `${this.baseUrl.replace('/admin', '')}/promo-codes/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Erro ao buscar estatísticas de cupons')
+      }
+
+      return await response.json()
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao obter estatísticas de cupons')
+    }
+  }
+
+  /**
+   * Obtém estatísticas detalhadas de frete
+   */
+  async getShippingStatistics(params?: {
+    startDate?: string
+    endDate?: string
+  }): Promise<{ success: boolean; data: any }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const queryParams = new URLSearchParams()
+      if (params?.startDate) queryParams.append('startDate', params.startDate)
+      if (params?.endDate) queryParams.append('endDate', params.endDate)
+
+      const url = `${API_URL}/shipping/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Erro ao buscar estatísticas de frete')
+      }
+
+      return await response.json()
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao obter estatísticas de frete')
+    }
+  }
+
+  /**
+   * Obtém estatísticas detalhadas de pedidos
+   */
+  async getOrdersStatistics(params?: {
+    startDate?: string
+    endDate?: string
+  }): Promise<{ success: boolean; data: any }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const queryParams = new URLSearchParams()
+      if (params?.startDate) queryParams.append('startDate', params.startDate)
+      if (params?.endDate) queryParams.append('endDate', params.endDate)
+
+      const url = `${this.baseUrl}/orders/statistics${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Erro ao buscar estatísticas de pedidos')
+      }
+
+      return await response.json()
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao obter estatísticas de pedidos')
+    }
+  }
+
+  /**
    * Obtém estatísticas de acesso ao site
    */
   async getSiteAccessStats(params?: {

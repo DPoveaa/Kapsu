@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, Loader2 } from 'lucide-react'
+import { ArrowLeft, MapPin, Loader2, Truck, Plus, Save, Edit2, Trash2, Check, X, Tag } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { paymentService } from '../services/payment.service'
+import { shippingService } from '../services/shipping.service'
+import { addressService, SavedAddress } from '../services/address.service'
+import { promoCodesService, PromoCodeValidation, MultiplePromoCodesValidation } from '../services/promo-codes.service'
 
 export default function Checkout() {
   const navigate = useNavigate()
@@ -12,6 +15,19 @@ export default function Checkout() {
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'quarterly'>('monthly')
+  
+  // Estados para endereços salvos
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([])
+  const [loadingAddresses, setLoadingAddresses] = useState(true)
+  const [showNewAddressForm, setShowNewAddressForm] = useState(false)
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
+  const [showSaveAddressModal, setShowSaveAddressModal] = useState(false)
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState<string | null>(null)
+  const [showEditAddressModal, setShowEditAddressModal] = useState(false)
+  const [editAddressData, setEditAddressData] = useState<SavedAddress | null>(null)
+  const nicknameInputRef = useRef<HTMLInputElement>(null)
+  
   const [formData, setFormData] = useState({
     cep: '',
     address: '',
@@ -20,6 +36,18 @@ export default function Checkout() {
     city: '',
     state: ''
   })
+  const [shippingFee, setShippingFee] = useState<number | null>(null)
+  const [isFreeShipping, setIsFreeShipping] = useState(false)
+  const [calculatingShipping, setCalculatingShipping] = useState(false)
+  const [shippingMessage, setShippingMessage] = useState<string | null>(null)
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState(0)
+  
+  // Estados para códigos promocionais (múltiplos)
+  const [promoCode, setPromoCode] = useState('')
+  const [appliedPromoCodes, setAppliedPromoCodes] = useState<string[]>([])
+  const [promoCodesValidation, setPromoCodesValidation] = useState<MultiplePromoCodesValidation | null>(null)
+  const [validatingPromoCode, setValidatingPromoCode] = useState(false)
+  const [promoCodeError, setPromoCodeError] = useState<string | null>(null)
 
   // Verifica se o carrinho tem assinatura e obtém o plano
   const isSubscription = items.length > 0 && items.some(item => item.purchaseType === 'subscription')
@@ -38,7 +66,11 @@ export default function Checkout() {
   const baseTotal = getTotal()
   const subscriptionDiscount = isSubscription ? (subscriptionPlan === 'quarterly' ? 0.15 : 0.10) : 0
   const discountedTotal = baseTotal * (1 - subscriptionDiscount)
-  const currentTotal = isSubscription ? discountedTotal : baseTotal
+  const subtotal = isSubscription ? discountedTotal : baseTotal
+  const promoCodeDiscount = promoCodesValidation?.totalDiscount || 0
+  const subtotalAfterPromo = subtotal - promoCodeDiscount
+  const shippingCost = (promoCodesValidation?.freeShipping || isFreeShipping) ? 0 : (shippingFee && !isFreeShipping ? shippingFee : 0)
+  const currentTotal = subtotalAfterPromo + shippingCost
 
   // Redireciona se não estiver autenticado
   useEffect(() => {
@@ -47,18 +79,388 @@ export default function Checkout() {
     }
   }, [isAuthenticated, navigate])
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+  // Carrega endereços salvos
+  const loadAddresses = async () => {
+    if (!isAuthenticated) return
+    
+    try {
+      setLoadingAddresses(true)
+      const addresses = await addressService.getSavedAddresses()
+      setSavedAddresses(addresses)
+      
+      // Se houver endereço padrão e nenhum selecionado, seleciona automaticamente
+      if (!selectedAddressId && !showNewAddressForm) {
+        const defaultAddress = addresses.find(addr => addr.is_default)
+        if (defaultAddress) {
+          selectAddress(defaultAddress)
+        }
+      }
+    } catch (error: any) {
+      console.error('Erro ao carregar endereços:', error)
+      // Se não houver endereços, mostra formulário novo
+      if (savedAddresses.length === 0) {
+        setShowNewAddressForm(true)
+      }
+    } finally {
+      setLoadingAddresses(false)
+    }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  useEffect(() => {
+    loadAddresses()
+  }, [isAuthenticated])
+
+  // Seleciona um endereço salvo
+  const selectAddress = (address: SavedAddress) => {
+    setSelectedAddressId(address.id)
+    setEditingAddressId(null)
+    setFormData({
+      cep: address.cep,
+      address: address.address,
+      number: address.number,
+      complement: address.complement || '',
+      city: address.city,
+      state: address.state
+    })
+    setShowNewAddressForm(false)
+  }
+
+  // Calcula frete quando o CEP é preenchido
+  useEffect(() => {
+    const calculateShipping = async () => {
+      const cleanCep = formData.cep.replace(/\D/g, '')
+      
+      if (cleanCep.length === 8) {
+        try {
+          setCalculatingShipping(true)
+          setShippingMessage(null)
+          
+          // Prepara itens do carrinho para envio
+          const cartItems = items
+            .filter(item => item.product) // Apenas produtos (não customMedication)
+            .map(item => ({
+              product_id: item.product!.id,
+              quantity: item.quantity,
+            }))
+          
+          const result = await shippingService.calculateShipping(
+            formData.cep, 
+            subtotal,
+            cartItems
+          )
+          
+          setShippingFee(result.shippingFee)
+          setIsFreeShipping(result.isFreeShipping)
+          setFreeShippingThreshold(result.freeShippingThreshold || 0)
+          setShippingMessage(result.message)
+        } catch (error: any) {
+          console.error('Erro ao calcular frete:', error)
+          setShippingFee(null)
+          setIsFreeShipping(false)
+          setShippingMessage('Erro ao calcular frete. Tente novamente.')
+        } finally {
+          setCalculatingShipping(false)
+        }
+      } else {
+        // Limpa valores se CEP não estiver completo
+        setShippingFee(null)
+        setIsFreeShipping(false)
+        setShippingMessage(null)
+      }
+    }
+
+    // Debounce para evitar muitas chamadas
+    const timeoutId = setTimeout(calculateShipping, 500)
+    return () => clearTimeout(timeoutId)
+  }, [formData.cep, subtotal, items])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target
     
-    // Valida endereço e já cria preferência de pagamento, redirecionando para o checkout do Mercado Pago
+    // Formata CEP automaticamente
+    if (name === 'cep') {
+      const cleanValue = value.replace(/\D/g, '')
+      if (cleanValue.length <= 8) {
+        const formatted = cleanValue.length > 5 
+          ? `${cleanValue.substring(0, 5)}-${cleanValue.substring(5)}`
+          : cleanValue
+        setFormData(prev => ({ ...prev, [name]: formatted }))
+      }
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }))
+    }
+    
+    // Se estiver editando um endereço salvo, marca como editando
+    if (selectedAddressId && !editingAddressId) {
+      setEditingAddressId(selectedAddressId)
+    }
+  }
+
+  const handleSaveAddress = async (nickname: string) => {
+    try {
+      await addressService.createSavedAddress({
+        nickname,
+        cep: formData.cep,
+        address: formData.address,
+        number: formData.number,
+        complement: formData.complement || undefined,
+        city: formData.city,
+        state: formData.state,
+      })
+      
+      await loadAddresses()
+      setShowSaveAddressModal(false)
+      
+      // Seleciona o endereço recém-criado
+      const addresses = await addressService.getSavedAddresses()
+      const newAddress = addresses.find(addr => addr.nickname === nickname)
+      if (newAddress) {
+        selectAddress(newAddress)
+      }
+    } catch (error: any) {
+      console.error('Erro ao salvar endereço:', error)
+      alert('Erro ao salvar endereço: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  const handleUpdateAddress = async () => {
+    if (!editingAddressId) return
+
+    try {
+      await addressService.updateSavedAddress(editingAddressId, {
+        cep: formData.cep,
+        address: formData.address,
+        number: formData.number,
+        complement: formData.complement || undefined,
+        city: formData.city,
+        state: formData.state,
+      })
+      
+      await loadAddresses()
+      setEditingAddressId(null)
+      
+      // Mantém o endereço selecionado
+      const updatedAddress = savedAddresses.find(addr => addr.id === editingAddressId)
+      if (updatedAddress) {
+        const addresses = await addressService.getSavedAddresses()
+        const refreshed = addresses.find(addr => addr.id === editingAddressId)
+        if (refreshed) {
+          selectAddress(refreshed)
+        }
+      }
+    } catch (error: any) {
+      console.error('Erro ao atualizar endereço:', error)
+      alert('Erro ao atualizar endereço: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  const handleEditAddress = (address: SavedAddress, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditAddressData(address)
+    setShowEditAddressModal(true)
+  }
+
+  const handleSaveEditAddress = async () => {
+    if (!editAddressData) return
+
+    try {
+      await addressService.updateSavedAddress(editAddressData.id, {
+        nickname: editAddressData.nickname,
+        cep: editAddressData.cep,
+        address: editAddressData.address,
+        number: editAddressData.number,
+        complement: editAddressData.complement || undefined,
+        city: editAddressData.city,
+        state: editAddressData.state,
+        isDefault: editAddressData.is_default,
+      })
+      
+      await loadAddresses()
+      setShowEditAddressModal(false)
+      setEditAddressData(null)
+      
+      // Se o endereço editado estava selecionado, atualiza a seleção
+      if (selectedAddressId === editAddressData.id) {
+        const addresses = await addressService.getSavedAddresses()
+        const updated = addresses.find(addr => addr.id === editAddressData.id)
+        if (updated) {
+          selectAddress(updated)
+        }
+      }
+    } catch (error: any) {
+      console.error('Erro ao atualizar endereço:', error)
+      alert('Erro ao atualizar endereço: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  const handleValidatePromoCode = async () => {
+    if (!promoCode.trim()) {
+      setPromoCodeError('Digite um código promocional')
+      return
+    }
+
+    const codeToAdd = promoCode.trim().toUpperCase()
+    
+    // Verifica se o código já foi aplicado
+    if (appliedPromoCodes.includes(codeToAdd)) {
+      setPromoCodeError('Este código já foi aplicado')
+      return
+    }
+
+    try {
+      setValidatingPromoCode(true)
+      setPromoCodeError(null)
+      
+      const cartItems = items
+        .filter(item => item.product)
+        .map(item => ({
+          product_id: item.product!.id,
+          quantity: item.quantity,
+          price: item.product!.price,
+        }))
+      
+      // Valida todos os códigos aplicados + o novo
+      const codesToValidate = [...appliedPromoCodes, codeToAdd]
+      
+      const validation = await promoCodesService.validateMultiplePromoCodes(
+        codesToValidate,
+        subtotal,
+        cartItems,
+        user?.id
+      )
+      
+      setPromoCodesValidation(validation)
+      setAppliedPromoCodes(codesToValidate)
+      setPromoCode('')
+      
+      // Se algum código oferece frete grátis, recalcula o frete
+      if (validation.freeShipping && formData.cep) {
+        setIsFreeShipping(true)
+        setShippingFee(0)
+        setShippingMessage('Frete grátis aplicado pelo(s) código(s) promocional(is)!')
+      }
+      
+      // Mostra erros se houver
+      if (validation.errors && validation.errors.length > 0) {
+        setPromoCodeError(validation.errors.join('; '))
+      }
+    } catch (error: any) {
+      setPromoCodeError(error.message || 'Erro ao validar código promocional')
+    } finally {
+      setValidatingPromoCode(false)
+    }
+  }
+
+  const handleRemovePromoCode = async (codeToRemove: string) => {
+    const newCodes = appliedPromoCodes.filter(code => code !== codeToRemove)
+    setAppliedPromoCodes(newCodes)
+    
+    if (newCodes.length === 0) {
+      setPromoCodesValidation(null)
+      setIsFreeShipping(false)
+      // Recalcula frete se necessário
+      if (formData.cep) {
+        const cleanCep = formData.cep.replace(/\D/g, '')
+        if (cleanCep.length === 8) {
+          handleCalculateShipping()
+        }
+      }
+      return
+    }
+
+    // Revalida os códigos restantes
+    try {
+      setValidatingPromoCode(true)
+      const cartItems = items
+        .filter(item => item.product)
+        .map(item => ({
+          product_id: item.product!.id,
+          quantity: item.quantity,
+          price: item.product!.price,
+        }))
+      
+      const validation = await promoCodesService.validateMultiplePromoCodes(
+        newCodes,
+        subtotal,
+        cartItems,
+        user?.id
+      )
+      
+      setPromoCodesValidation(validation)
+      
+      // Atualiza frete grátis
+      if (validation.freeShipping && formData.cep) {
+        setIsFreeShipping(true)
+        setShippingFee(0)
+        setShippingMessage('Frete grátis aplicado pelo(s) código(s) promocional(is)!')
+      } else {
+        setIsFreeShipping(false)
+        if (formData.cep) {
+          const cleanCep = formData.cep.replace(/\D/g, '')
+          if (cleanCep.length === 8) {
+            handleCalculateShipping()
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('Erro ao revalidar códigos:', error)
+    } finally {
+      setValidatingPromoCode(false)
+    }
+  }
+
+  const handleRemoveAllPromoCodes = () => {
+    setAppliedPromoCodes([])
+    setPromoCodesValidation(null)
+    setPromoCode('')
+    setPromoCodeError(null)
+    setIsFreeShipping(false)
+    // Recalcula frete se necessário
+    if (formData.cep) {
+      const cleanCep = formData.cep.replace(/\D/g, '')
+      if (cleanCep.length === 8) {
+        handleCalculateShipping()
+      }
+    }
+  }
+
+  const handleDeleteAddress = async (id: string) => {
+    try {
+      await addressService.deleteSavedAddress(id)
+      await loadAddresses()
+      setShowDeleteConfirmModal(null)
+      
+      // Se o endereço deletado era o selecionado, limpa o formulário
+      if (selectedAddressId === id) {
+        setSelectedAddressId(null)
+        setEditingAddressId(null)
+        setFormData({
+          cep: '',
+          address: '',
+          number: '',
+          complement: '',
+          city: '',
+          state: ''
+        })
+      }
+    } catch (error: any) {
+      console.error('Erro ao remover endereço:', error)
+      alert('Erro ao remover endereço: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    
+    // Valida endereço
     if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep) {
       alert('Por favor, preencha todos os campos do endereço')
       return
+    }
+
+    // Se estiver editando um endereço salvo, salva as alterações primeiro
+    if (editingAddressId && selectedAddressId) {
+      await handleUpdateAddress()
     }
 
     try {
@@ -72,7 +474,8 @@ export default function Checkout() {
       const preference = await paymentService.createPreference(
         shippingAddress,
         undefined,
-        isSubscription ? subscriptionPlan : undefined
+        isSubscription ? subscriptionPlan : undefined,
+        shippingCost > 0 ? shippingCost : undefined
       )
 
       console.log('✅ Preferência criada:', preference)
@@ -118,6 +521,9 @@ export default function Checkout() {
     )
   }
 
+  const selectedAddress = selectedAddressId ? savedAddresses.find(addr => addr.id === selectedAddressId) : null
+  const isEditingSelected = editingAddressId === selectedAddressId
+
   return (
     <div className="container mx-auto px-4 py-8">
       <button
@@ -143,7 +549,7 @@ export default function Checkout() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Form */}
         <div className="lg:col-span-2">
-          <form onSubmit={handleSubmit} className="card p-6">
+          <div className="card p-6">
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
                 <MapPin className="mr-2" size={24} />
@@ -154,120 +560,454 @@ export default function Checkout() {
                   <p className="text-red-600">{checkoutError}</p>
                 </div>
               )}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    CEP *
-                  </label>
-                  <input
-                    type="text"
-                    name="cep"
-                    value={formData.cep}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="00000-000"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Endereço *
-                  </label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="Rua, Avenida, etc."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Número *
-                    </label>
-                    <input
-                      type="text"
-                      name="number"
-                      value={formData.number}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="123"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Complemento
-                    </label>
-                    <input
-                      type="text"
-                      name="complement"
-                      value={formData.complement}
-                      onChange={handleInputChange}
-                      placeholder="Apto, Bloco, etc."
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Cidade *
-                    </label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="São Paulo"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Estado *
-                    </label>
-                    <input
-                      type="text"
-                      name="state"
-                      value={formData.state}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="SP"
-                      maxLength={2}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            <div className="flex justify-between mt-6">
-              <button 
-                type="submit" 
-                className="btn-primary ml-auto flex items-center"
-                disabled={creatingOrder}
-              >
-                {creatingOrder ? (
-                  <>
-                    <Loader2 className="animate-spin mr-2" size={20} />
-                    Processando e redirecionando para o Mercado Pago...
-                  </>
-                ) : (
-                  'Continuar para o Pagamento no Mercado Pago'
-                )}
-              </button>
+              {/* Lista de Endereços Salvos */}
+              {!showNewAddressForm && loadingAddresses && (
+                <div className="mb-6 text-center py-8">
+                  <Loader2 className="animate-spin mx-auto text-primary-600 mb-2" size={24} />
+                  <p className="text-gray-600">Carregando endereços...</p>
+                </div>
+              )}
+
+              {!showNewAddressForm && !loadingAddresses && savedAddresses.length > 0 && (
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Endereços Salvos</h3>
+                    <button
+                      onClick={() => {
+                        setShowNewAddressForm(true)
+                        setSelectedAddressId(null)
+                        setEditingAddressId(null)
+                        setFormData({
+                          cep: '',
+                          address: '',
+                          number: '',
+                          complement: '',
+                          city: '',
+                          state: ''
+                        })
+                      }}
+                      className="text-sm text-primary-600 hover:text-primary-700 flex items-center"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Novo Endereço
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {savedAddresses.map((address) => (
+                      <div
+                        key={address.id}
+                        onClick={() => selectAddress(address)}
+                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                          selectedAddressId === address.id
+                            ? 'border-primary-500 bg-primary-50'
+                            : 'border-gray-200 hover:border-primary-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center mb-2">
+                              <span className="font-semibold text-gray-900 mr-2">{address.nickname}</span>
+                              {address.is_default && (
+                                <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded">
+                                  Padrão
+                                </span>
+                              )}
+                              {selectedAddressId === address.id && (
+                                <Check className="w-5 h-5 text-primary-600 ml-2" />
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              {address.address}, {address.number}
+                              {address.complement && ` - ${address.complement}`}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              {address.city} - {address.state}, CEP: {address.cep}
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-2 ml-4">
+                            <button
+                              onClick={(e) => handleEditAddress(address, e)}
+                              className="text-blue-600 hover:text-blue-700 p-1"
+                              title="Editar endereço"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setShowDeleteConfirmModal(address.id)
+                              }}
+                              className="text-red-600 hover:text-red-700 p-1"
+                              title="Remover endereço"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Formulário de Endereço (Novo ou Editando) */}
+              {(showNewAddressForm || savedAddresses.length === 0 || (selectedAddressId && isEditingSelected)) && (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {savedAddresses.length > 0 && !isEditingSelected && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowNewAddressForm(false)
+                        setSelectedAddressId(null)
+                        setEditingAddressId(null)
+                        setFormData({
+                          cep: '',
+                          address: '',
+                          number: '',
+                          complement: '',
+                          city: '',
+                          state: ''
+                        })
+                      }}
+                      className="text-sm text-primary-600 hover:text-primary-700 mb-4 flex items-center"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-1" />
+                      Voltar para endereços salvos
+                    </button>
+                  )}
+
+                  {isEditingSelected && selectedAddress && (
+                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        <strong>Editando:</strong> {selectedAddress.nickname}
+                      </p>
+                      <p className="text-xs text-blue-600 mt-1">
+                        As alterações serão salvas automaticamente ao finalizar a compra
+                      </p>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      CEP *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        name="cep"
+                        value={formData.cep}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="00000-000"
+                        maxLength={9}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      />
+                      {calculatingShipping && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <Loader2 className="animate-spin text-primary-600" size={20} />
+                        </div>
+                      )}
+                    </div>
+                    {shippingMessage && (
+                      <div className={`mt-2 text-sm flex items-center ${
+                        isFreeShipping 
+                          ? 'text-green-600' 
+                          : shippingFee === null 
+                          ? 'text-red-600' 
+                          : 'text-gray-600'
+                      }`}>
+                        <Truck className="w-4 h-4 mr-1" />
+                        {shippingMessage}
+                      </div>
+                    )}
+                    {!isFreeShipping && shippingFee !== null && subtotal < freeShippingThreshold && (
+                      <div className="mt-2 text-xs text-gray-500">
+                        Adicione mais R$ {(freeShippingThreshold - subtotal).toFixed(2).replace('.', ',')} para ganhar frete grátis!
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Endereço *
+                    </label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="Rua, Avenida, etc."
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Número *
+                      </label>
+                      <input
+                        type="text"
+                        name="number"
+                        value={formData.number}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="123"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Complemento
+                      </label>
+                      <input
+                        type="text"
+                        name="complement"
+                        value={formData.complement}
+                        onChange={handleInputChange}
+                        placeholder="Apto, Bloco, etc."
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Cidade *
+                      </label>
+                      <input
+                        type="text"
+                        name="city"
+                        value={formData.city}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="São Paulo"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Estado *
+                      </label>
+                      <input
+                        type="text"
+                        name="state"
+                        value={formData.state}
+                        onChange={handleInputChange}
+                        required
+                        placeholder="SP"
+                        maxLength={2}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Botão para salvar endereço (apenas se for novo) */}
+                  {!isEditingSelected && formData.cep && formData.address && formData.number && formData.city && formData.state && (
+                    <div className="pt-4 border-t">
+                      <button
+                        type="button"
+                        onClick={() => setShowSaveAddressModal(true)}
+                        className="text-sm text-primary-600 hover:text-primary-700 flex items-center"
+                      >
+                        <Save className="w-4 h-4 mr-1" />
+                        Salvar este endereço para entregas futuras
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between mt-6">
+                    <button 
+                      type="submit" 
+                      className="btn-primary ml-auto flex items-center"
+                      disabled={creatingOrder}
+                    >
+                      {creatingOrder ? (
+                        <>
+                          <Loader2 className="animate-spin mr-2" size={20} />
+                          Processando e redirecionando para o Mercado Pago...
+                        </>
+                      ) : (
+                        'Continuar para o Pagamento no Mercado Pago'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Botão de continuar quando endereço salvo está selecionado (sem edição) */}
+              {!showNewAddressForm && selectedAddressId && !isEditingSelected && (
+                <div className="mt-6">
+                  <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p className="text-sm text-gray-600 mb-2">
+                      <strong>Endereço selecionado:</strong> {selectedAddress?.nickname}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Clique no endereço acima para editar ou use o botão de editar
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => handleSubmit()}
+                    className="btn-primary w-full flex items-center justify-center"
+                    disabled={creatingOrder}
+                  >
+                    {creatingOrder ? (
+                      <>
+                        <Loader2 className="animate-spin mr-2" size={20} />
+                        Processando e redirecionando para o Mercado Pago...
+                      </>
+                    ) : (
+                      'Continuar para o Pagamento no Mercado Pago'
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
-          </form>
+          </div>
         </div>
 
         {/* Order Summary */}
         <div className="lg:col-span-1">
           <div className="card p-6 sticky top-24">
+            {/* Código Promocional */}
+            <div className="mb-6 pb-6 border-b">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                <Tag className="w-5 h-5 mr-2" />
+                Código Promocional
+              </h3>
+              {appliedPromoCodes.length === 0 ? (
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      placeholder="Digite o código"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleValidatePromoCode()
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={handleValidatePromoCode}
+                      disabled={validatingPromoCode || !promoCode.trim()}
+                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {validatingPromoCode ? (
+                        <Loader2 className="animate-spin" size={16} />
+                      ) : (
+                        'Aplicar'
+                      )}
+                    </button>
+                  </div>
+                  {promoCodeError && (
+                    <p className="text-sm text-red-600">{promoCodeError}</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* Mostra múltiplos cupons aplicados */}
+                  {appliedPromoCodes.length > 0 && promoCodesValidation && (
+                    <div className="space-y-2 mb-3">
+                      {promoCodesValidation.promoCodes.map((promoCode) => {
+                        const appliedDiscount = promoCodesValidation.appliedDiscounts.percentage?.code === promoCode.code
+                          ? promoCodesValidation.appliedDiscounts.percentage
+                          : promoCodesValidation.appliedDiscounts.fixed.find(f => f.code === promoCode.code)
+                        
+                        return (
+                          <div key={promoCode.id} className="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <p className="text-sm font-semibold text-green-900 mb-1">
+                                  {promoCode.name} ({promoCode.code})
+                                </p>
+                                {appliedDiscount && (
+                                  <p className="text-xs text-green-700">
+                                    {promoCode.discount_type === 'percentage' 
+                                      ? `${promoCode.discount_value}% OFF`
+                                      : `R$ ${appliedDiscount.discount.toFixed(2).replace('.', ',')} OFF`}
+                                  </p>
+                                )}
+                                {promoCode.free_shipping && (
+                                  <p className="text-xs text-green-700 mt-1 flex items-center">
+                                    <Truck className="w-3 h-3 mr-1" />
+                                    Frete grátis
+                                  </p>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => handleRemovePromoCode(promoCode.code)}
+                                className="text-red-600 hover:text-red-700 p-1"
+                                title="Remover código"
+                                disabled={validatingPromoCode}
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                      
+                      {promoCodesValidation.totalDiscount > 0 && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mt-2">
+                          <p className="text-sm font-bold text-blue-900">
+                            Desconto Total: R$ {promoCodesValidation.totalDiscount.toFixed(2).replace('.', ',')}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Input para adicionar novo código */}
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                        placeholder="Digite um código"
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleValidatePromoCode()
+                          }
+                        }}
+                        disabled={validatingPromoCode}
+                      />
+                      <button
+                        onClick={handleValidatePromoCode}
+                        disabled={validatingPromoCode || !promoCode.trim()}
+                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {validatingPromoCode ? (
+                          <Loader2 className="animate-spin" size={16} />
+                        ) : (
+                          'Aplicar'
+                        )}
+                      </button>
+                    </div>
+                    {promoCodeError && (
+                      <p className="text-sm text-red-600">{promoCodeError}</p>
+                    )}
+                    {appliedPromoCodes.length > 0 && (
+                      <button
+                        onClick={handleRemoveAllPromoCodes}
+                        className="text-sm text-red-600 hover:text-red-700 underline"
+                        disabled={validatingPromoCode}
+                      >
+                        Remover todos os códigos
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
             <h2 className="text-xl font-bold text-gray-900 mb-4">Resumo do Pedido</h2>
             <div className="space-y-2 mb-4">
               {items.map(item => {
@@ -300,6 +1040,11 @@ export default function Checkout() {
               })}
             </div>
             <div className="border-t pt-4 space-y-3">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-600">Subtotal</span>
+                <span className="font-semibold text-gray-900">R$ {subtotal.toFixed(2).replace('.', ',')}</span>
+              </div>
+
               {isSubscription && (
                 <div className="bg-primary-50 rounded-lg p-3 border border-primary-100">
                   <div className="flex justify-between items-center mb-1">
@@ -313,10 +1058,48 @@ export default function Checkout() {
                   </p>
                 </div>
               )}
+
+              {promoCodesValidation && promoCodesValidation.totalDiscount > 0 && (
+                <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-semibold text-green-700">Desconto Promocional</span>
+                    <span className="text-sm font-bold text-green-600">
+                      - R$ {promoCodesValidation.totalDiscount.toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                  {promoCodesValidation.promoCodes.length > 1 && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      {promoCodesValidation.promoCodes.length} código(s) aplicado(s)
+                    </p>
+                  )}
+                </div>
+              )}
+              
+              {/* Frete */}
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-600 flex items-center">
+                  <Truck className="w-4 h-4 mr-1" />
+                  Frete
+                </span>
+                <div className="text-right">
+                  {calculatingShipping ? (
+                    <Loader2 className="animate-spin text-gray-400" size={16} />
+                  ) : (promoCodesValidation?.freeShipping || isFreeShipping) ? (
+                    <span className="text-green-600 font-semibold">Grátis</span>
+                  ) : shippingFee !== null ? (
+                    <span className="text-gray-900">R$ {shippingFee.toFixed(2).replace('.', ',')}</span>
+                  ) : formData.cep.length === 9 ? (
+                    <span className="text-red-600 text-xs">Não disponível</span>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </div>
+              </div>
+
               <div className="flex justify-between items-center">
                 <span className="text-lg font-semibold">Total</span>
                 <div className="text-right">
-                  {isSubscription && baseTotal !== currentTotal && (
+                  {isSubscription && baseTotal !== subtotal && (
                     <p className="text-xs text-gray-400 line-through mb-1">
                       R$ {baseTotal.toFixed(2).replace('.', ',')}
                     </p>
@@ -335,7 +1118,248 @@ export default function Checkout() {
           </div>
         </div>
       </div>
+
+      {/* Modal para salvar endereço */}
+      {showSaveAddressModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowSaveAddressModal(false)}>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Salvar Endereço</h3>
+              <button onClick={() => setShowSaveAddressModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Dê um apelido para este endereço para facilitar nas próximas compras (ex: Casa, Trabalho, etc.)
+            </p>
+            <input
+              ref={nicknameInputRef}
+              type="text"
+              placeholder="Ex: Casa, Trabalho, Escritório..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-4"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  const input = e.target as HTMLInputElement
+                  if (input.value.trim()) {
+                    handleSaveAddress(input.value.trim())
+                  }
+                }
+              }}
+              autoFocus
+            />
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowSaveAddressModal(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  const input = nicknameInputRef.current
+                  if (input?.value.trim()) {
+                    handleSaveAddress(input.value.trim())
+                  } else {
+                    alert('Por favor, digite um apelido para o endereço')
+                  }
+                }}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de exclusão */}
+      {showDeleteConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowDeleteConfirmModal(null)}>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Confirmar Exclusão</h3>
+              <button onClick={() => setShowDeleteConfirmModal(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Tem certeza que deseja remover este endereço? Esta ação não pode ser desfeita.
+            </p>
+            {showDeleteConfirmModal && (() => {
+              const addressToDelete = savedAddresses.find(addr => addr.id === showDeleteConfirmModal)
+              return addressToDelete && (
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <p className="text-sm font-semibold text-gray-900">{addressToDelete.nickname}</p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    {addressToDelete.address}, {addressToDelete.number}
+                    {addressToDelete.complement && ` - ${addressToDelete.complement}`}
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {addressToDelete.city} - {addressToDelete.state}, CEP: {addressToDelete.cep}
+                  </p>
+                </div>
+              )
+            })()}
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowDeleteConfirmModal(null)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDeleteAddress(showDeleteConfirmModal)}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Remover
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para editar endereço */}
+      {showEditAddressModal && editAddressData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowEditAddressModal(false)}>
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Editar Endereço</h3>
+              <button onClick={() => setShowEditAddressModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Apelido *
+                </label>
+                <input
+                  type="text"
+                  value={editAddressData.nickname}
+                  onChange={(e) => setEditAddressData({ ...editAddressData, nickname: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="Ex: Casa, Trabalho..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  CEP *
+                </label>
+                <input
+                  type="text"
+                  value={editAddressData.cep}
+                  onChange={(e) => {
+                    const cleanValue = e.target.value.replace(/\D/g, '')
+                    if (cleanValue.length <= 8) {
+                      const formatted = cleanValue.length > 5 
+                        ? `${cleanValue.substring(0, 5)}-${cleanValue.substring(5)}`
+                        : cleanValue
+                      setEditAddressData({ ...editAddressData, cep: formatted })
+                    }
+                  }}
+                  maxLength={9}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="00000-000"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Endereço *
+                </label>
+                <input
+                  type="text"
+                  value={editAddressData.address}
+                  onChange={(e) => setEditAddressData({ ...editAddressData, address: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Número *
+                  </label>
+                  <input
+                    type="text"
+                    value={editAddressData.number}
+                    onChange={(e) => setEditAddressData({ ...editAddressData, number: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Complemento
+                  </label>
+                  <input
+                    type="text"
+                    value={editAddressData.complement || ''}
+                    onChange={(e) => setEditAddressData({ ...editAddressData, complement: e.target.value || null })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Cidade *
+                  </label>
+                  <input
+                    type="text"
+                    value={editAddressData.city}
+                    onChange={(e) => setEditAddressData({ ...editAddressData, city: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Estado *
+                  </label>
+                  <input
+                    type="text"
+                    value={editAddressData.state}
+                    onChange={(e) => setEditAddressData({ ...editAddressData, state: e.target.value.toUpperCase().substring(0, 2) })}
+                    maxLength={2}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="isDefault"
+                  checked={editAddressData.is_default}
+                  onChange={(e) => setEditAddressData({ ...editAddressData, is_default: e.target.checked })}
+                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                />
+                <label htmlFor="isDefault" className="ml-2 text-sm text-gray-700">
+                  Definir como endereço padrão
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowEditAddressModal(false)}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveEditAddress}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+              >
+                Salvar Alterações
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-

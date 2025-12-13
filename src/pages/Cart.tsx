@@ -1,16 +1,17 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, FileText, Loader2, CheckCircle, Repeat, Check, Sparkles, Truck } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, FileText, Loader2, CheckCircle, Repeat, Check, Sparkles, Truck, Gift } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { productsService } from '../services/products.service'
 import { cartService } from '../services/cart.service'
+import { promotionsService, Promotion } from '../services/promotions.service'
 import { Product } from '../types'
 
 export default function Cart() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { isAuthenticated, loading: authLoading } = useAuth()
+  const { isAuthenticated, loading: authLoading, user } = useAuth()
   const { items, updateQuantity, removeItem, getTotal, addProduct, refreshCart, updateAllPurchaseType } = useCart()
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([])
   const [loadingRecommendations, setLoadingRecommendations] = useState(false)
@@ -18,6 +19,8 @@ export default function Cart() {
   const [linkMessage, setLinkMessage] = useState<{ type: 'success' | 'error' | 'info', text: string } | null>(null)
   const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'quarterly'>('monthly')
   const [localPurchaseType, setLocalPurchaseType] = useState<'one-time' | 'subscription' | null>(null)
+  const [applicablePromotions, setApplicablePromotions] = useState<Promotion[]>([])
+  const [loadingPromotions, setLoadingPromotions] = useState(false)
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const target = e.target as HTMLImageElement
@@ -37,11 +40,79 @@ export default function Cart() {
   const monthlySubscriptionPrice = baseTotal * 0.9
   const quarterlySubscriptionPrice = baseTotal * 0.85
 
-  // Valor para frete grátis (exemplo: R$ 200)
-  const FREE_SHIPPING_THRESHOLD = 200
-  const currentTotal = isSubscription ? discountedTotal : baseTotal
-  const freeShippingRemaining = Math.max(0, FREE_SHIPPING_THRESHOLD - currentTotal)
-  const freeShippingProgress = Math.min(100, (currentTotal / FREE_SHIPPING_THRESHOLD) * 100)
+  // Calcula descontos de promoções
+  const calculatePromotionDiscount = (total: number): number => {
+    let discount = 0
+    const productItems = items.filter(item => item.product)
+    
+    for (const promo of applicablePromotions) {
+      if (promo.type === 'discount_percentage') {
+        if (promo.applicable_product_ids && promo.applicable_product_ids.length > 0) {
+          // Aplica apenas aos produtos selecionados
+          const applicableTotal = productItems
+            .filter(item => promo.applicable_product_ids?.includes(item.product!.id))
+            .reduce((sum, item) => sum + (item.product!.price * item.quantity), 0)
+          discount += applicableTotal * (Number(promo.discount_value) / 100)
+        } else {
+          // Aplica ao total
+          discount += total * (Number(promo.discount_value) / 100)
+        }
+      } else if (promo.type === 'discount_fixed') {
+        if (promo.applicable_product_ids && promo.applicable_product_ids.length > 0) {
+          // Aplica apenas aos produtos selecionados
+          const applicableTotal = productItems
+            .filter(item => promo.applicable_product_ids?.includes(item.product!.id))
+            .reduce((sum, item) => sum + (item.product!.price * item.quantity), 0)
+          discount += Math.min(Number(promo.discount_value), applicableTotal)
+        } else {
+          // Aplica ao total (limitado ao valor do desconto)
+          discount += Math.min(Number(promo.discount_value), total)
+        }
+      }
+    }
+    
+    return discount
+  }
+
+  const promotionDiscount = calculatePromotionDiscount(isSubscription ? discountedTotal : baseTotal)
+  const totalAfterPromotions = (isSubscription ? discountedTotal : baseTotal) - promotionDiscount
+
+  // Remove a barra de progresso de frete grátis hardcoded
+  // O frete grátis agora é calculado pelo backend baseado nas configurações
+  const currentTotal = totalAfterPromotions
+
+  // Verifica promoções aplicáveis
+  useEffect(() => {
+    const checkPromotions = async () => {
+      if (items.length === 0) {
+        setApplicablePromotions([])
+        return
+      }
+
+      try {
+        setLoadingPromotions(true)
+        const cartItems = items
+          .filter(item => item.product)
+          .map(item => ({
+            product_id: item.product!.id,
+            quantity: item.quantity,
+          }))
+        
+        const promotions = await promotionsService.checkPromotions(
+          baseTotal,
+          cartItems,
+          user?.id
+        )
+        setApplicablePromotions(promotions)
+      } catch (error) {
+        console.error('Erro ao verificar promoções:', error)
+      } finally {
+        setLoadingPromotions(false)
+      }
+    }
+
+    checkPromotions()
+  }, [items, baseTotal, user])
 
   // Processa o token do WhatsApp na URL
   useEffect(() => {
@@ -545,33 +616,53 @@ export default function Cart() {
                   </div>
                 )}
 
-                {/* Barra de progresso para frete grátis */}
-                {freeShippingRemaining > 0 && (
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+                {/* Promoções Aplicadas */}
+                {applicablePromotions.length > 0 && (
+                  <div className="border-t border-gray-200 pt-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <Truck size={16} className="text-green-600" />
-                      <span className="text-sm font-semibold text-gray-900">Frete Grátis</span>
+                      <Gift className="w-4 h-4 text-pink-600" />
+                      <span className="text-sm font-semibold text-gray-900">Promoções Aplicadas</span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2 overflow-hidden">
-                      <div
-                        className="bg-gradient-to-r from-green-500 to-emerald-500 h-2.5 rounded-full transition-all duration-500 ease-out"
-                        style={{ width: `${freeShippingProgress}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-gray-600">
-                      Adicione mais <strong className="text-green-600">R$ {freeShippingRemaining.toFixed(2).replace('.', ',')}</strong> para ganhar frete grátis!
-                    </p>
+                    {loadingPromotions ? (
+                      <div className="text-xs text-gray-500">Verificando promoções...</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {applicablePromotions.map((promo) => {
+                          let discountText = ''
+                          if (promo.type === 'discount_percentage') {
+                            discountText = `${promo.discount_value}% OFF`
+                          } else if (promo.type === 'discount_fixed') {
+                            discountText = `R$ ${Number(promo.discount_value).toFixed(2).replace('.', ',')} OFF`
+                          }
+                          if (promo.free_shipping) {
+                            discountText += discountText ? ' + Frete Grátis' : 'Frete Grátis'
+                          }
+                          return (
+                            <div key={promo.id} className="bg-pink-50 border border-pink-200 rounded-lg p-2">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <p className="text-xs font-semibold text-pink-900">{promo.name}</p>
+                                  {discountText && (
+                                    <p className="text-xs text-pink-700 mt-1">{discountText}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                        {promotionDiscount > 0 && (
+                          <div className="flex justify-between items-center text-pink-600 pt-2 border-t border-pink-200">
+                            <span className="text-sm font-semibold">Desconto Total</span>
+                            <span className="font-bold">
+                              - R$ {promotionDiscount.toFixed(2).replace('.', ',')}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {freeShippingRemaining === 0 && (
-                  <div className="bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl p-4 text-white">
-                    <div className="flex items-center gap-2">
-                      <Check size={20} />
-                      <span className="font-semibold">Frete Grátis Aprovado!</span>
-                    </div>
-                  </div>
-                )}
 
                 {isSubscription && (
                   <div className="bg-gradient-to-r from-primary-50 to-purple-50 rounded-xl p-4 border border-primary-100">
@@ -593,7 +684,7 @@ export default function Cart() {
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold text-gray-900">Total</span>
                     <span className="text-2xl font-bold text-primary-600">
-                      R$ {currentTotal.toFixed(2).replace('.', ',')}
+                      R$ {totalAfterPromotions.toFixed(2).replace('.', ',')}
                     </span>
                   </div>
                   {isSubscription && (

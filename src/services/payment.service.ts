@@ -38,12 +38,12 @@ class PaymentService {
   /**
    * Cria uma preferência de pagamento no Mercado Pago
    */
-  async createPreference(shippingAddress: string, paymentMethod?: string, subscriptionPlan?: 'monthly' | 'quarterly'): Promise<CreatePreferenceResponse['data']> {
+  async createPreference(shippingAddress: string, paymentMethod?: string, subscriptionPlan?: 'monthly' | 'quarterly', shippingFee?: number): Promise<CreatePreferenceResponse['data']> {
     try {
       const response = await fetch(`${this.baseUrl}/create-preference`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify({ shippingAddress, paymentMethod, subscriptionPlan }),
+        body: JSON.stringify({ shippingAddress, paymentMethod, subscriptionPlan, shippingFee }),
       })
 
       const text = await response.text()
