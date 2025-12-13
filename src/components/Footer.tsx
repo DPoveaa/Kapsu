@@ -2,8 +2,8 @@ import { Facebook, Instagram, Twitter, Linkedin, MapPin, Mail, Phone } from 'luc
 
 export default function Footer() {
   return (
-    <footer className="mt-auto" style={{ backgroundColor: 'rgba(0, 0, 0, 0.75)', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-      <div className="container mx-auto px-4 py-4">
+    <footer className="mt-auto" style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+      <div className="container mx-auto px-6 md:px-8 lg:px-12 py-4">
         <div className="flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-white">
           {/* Informações da Empresa */}
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">

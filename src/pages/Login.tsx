@@ -149,7 +149,8 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full btn-primary flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+              style={{ backgroundColor: loading ? '#67C090' : '#67C090' }}
             >
               {loading ? (
                 <>
@@ -173,7 +174,8 @@ export default function Login() {
                   ? `/cadastro?redirect=${encodeURIComponent(searchParams.get('redirect')!)}` 
                   : '/cadastro'
                 }
-                className="text-primary-600 hover:text-primary-700 font-medium"
+                className="font-medium hover:opacity-80 transition-opacity"
+                style={{ color: '#67C090' }}
               >
                 Cadastre-se
               </Link>

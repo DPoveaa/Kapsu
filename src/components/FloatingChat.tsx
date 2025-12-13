@@ -766,11 +766,18 @@ const FloatingChat: React.FC = () => {
         <button
           ref={buttonRef}
           onMouseDown={handleButtonMouseDown}
-          className="fixed w-16 h-16 bg-green-600 hover:bg-green-700 text-white rounded-full shadow-lg flex items-center justify-center z-50 transition-all duration-300 hover:scale-110 cursor-pointer select-none"
+          className="fixed w-16 h-16 text-white rounded-full shadow-lg flex items-center justify-center z-50 transition-all duration-300 hover:scale-110 cursor-pointer select-none"
           style={{
             left: `${buttonPosition.x}px`,
             top: `${buttonPosition.y}px`,
+            backgroundColor: '#67C090',
             transition: isDraggingButton ? 'none' : 'all 0.3s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#5aad7d'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = '#67C090'
           }}
           aria-label="Abrir chat"
           title="Arraste para mudar de posição ou clique para abrir"

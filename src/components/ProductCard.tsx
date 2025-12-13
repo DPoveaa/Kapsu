@@ -43,7 +43,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           />
         </div>
         {product.isCustomizable && (
-          <div className="absolute top-2 right-2 bg-primary-600 text-white px-2 py-1 rounded-full text-xs flex items-center">
+          <div className="absolute top-2 right-2 text-white px-2 py-1 rounded-full text-xs flex items-center" style={{ backgroundColor: '#67C090' }}>
             <Sparkles size={12} className="mr-1" />
             Personalizável
           </div>
@@ -63,7 +63,8 @@ export default function ProductCard({ product }: ProductCardProps) {
         <button
           onClick={handleAddToCart}
           disabled={!product.inStock}
-          className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors"
+          className="disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors hover:opacity-90"
+          style={{ backgroundColor: product.inStock ? '#67C090' : undefined }}
         >
           <ShoppingCart size={20} />
         </button>

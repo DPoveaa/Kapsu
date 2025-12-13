@@ -55,9 +55,9 @@ export default function Header() {
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
       {/* Barra superior verde */}
-      <div className="bg-primary-600 h-1"></div>
+      <div className="h-1" style={{ backgroundColor: '#67C090' }}></div>
       
-      <nav className="container mx-auto px-4 lg:px-6">
+      <nav className="container mx-auto px-6 md:px-8 lg:px-12">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3 group">
@@ -103,7 +103,7 @@ export default function Header() {
             >
               <ShoppingCart size={22} />
               {itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-primary-600 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 shadow-md">
+                <span className="absolute -top-1 -right-1 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 shadow-md" style={{ backgroundColor: '#67C090' }}>
                   {itemCount > 99 ? '99+' : itemCount}
                 </span>
               )}
@@ -128,7 +128,7 @@ export default function Header() {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors duration-200 group"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: '#67C090' }}>
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                   <span className="font-medium text-gray-700 text-sm max-w-[120px] truncate">{user.name}</span>
@@ -220,7 +220,7 @@ export default function Header() {
             {user ? (
               <div className="pt-2 border-t border-gray-100 mt-2 space-y-1">
                 <div className="flex items-center space-x-2 px-4 py-2.5 mb-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: '#67C090' }}>
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1">

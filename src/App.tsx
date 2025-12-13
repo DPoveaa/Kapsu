@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
@@ -27,13 +27,13 @@ import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import FloatingChat from './components/FloatingChat'
 
-function App() {
+function AppContent() {
+  const location = useLocation()
+  const hideChat = ['/login', '/cadastro'].includes(location.pathname)
+
   return (
-    <AuthProvider>
-      <CartProvider>
-        <Router>
-          <Layout>
-            <FloatingChat />
+    <Layout>
+      {!hideChat && <FloatingChat />}
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/produtos" element={<Products />} />
@@ -142,7 +142,16 @@ function App() {
                 }
               />
             </Routes>
-          </Layout>
+    </Layout>
+  )
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <CartProvider>
+        <Router>
+          <AppContent />
         </Router>
       </CartProvider>
     </AuthProvider>

@@ -89,9 +89,10 @@ export default function Products() {
                 onClick={() => setSelectedCategory(category.value)}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   selectedCategory === category.value
-                    ? 'bg-primary-600 text-white'
+                    ? 'text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
                 }`}
+                style={selectedCategory === category.value ? { backgroundColor: '#67C090' } : {}}
               >
                 {category.label}
               </button>

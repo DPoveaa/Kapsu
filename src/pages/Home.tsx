@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Pill, Sparkles, Shield, Star, ChevronLeft, ChevronRight, Truck, CheckCircle, Heart, Award, Users } from 'lucide-react'
-import ProductCard from '../components/ProductCard'
+import { ArrowRight, Sparkles, Star, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Product } from '../types'
 import { productsService } from '../services/products.service'
+import banner1 from '../images/banner_1.webp'
 
 // Reviews de clientes
 const reviews = [
@@ -13,7 +13,8 @@ const reviews = [
     rating: 5,
     comment: 'Excelente qualidade! Os medicamentos manipulados são perfeitos e a entrega foi super rápida. Recomendo muito!',
     product: 'Vitamina D3',
-    date: 'Há 2 semanas'
+    date: 'Há 2 semanas',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face'
   },
   {
     id: 2,
@@ -21,7 +22,8 @@ const reviews = [
     rating: 5,
     comment: 'Atendimento impecável e produtos de alta qualidade. A personalização funcionou perfeitamente para minhas necessidades.',
     product: 'Magnésio Quelato',
-    date: 'Há 1 mês'
+    date: 'Há 1 mês',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'
   },
   {
     id: 3,
@@ -29,7 +31,8 @@ const reviews = [
     rating: 5,
     comment: 'Melhor farmácia de manipulação que já usei! Produtos frescos, bem embalados e com ótimo custo-benefício.',
     product: 'Ginkgo Biloba',
-    date: 'Há 3 semanas'
+    date: 'Há 3 semanas',
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face'
   },
   {
     id: 4,
@@ -37,7 +40,8 @@ const reviews = [
     rating: 5,
     comment: 'Profissionais muito competentes. Me ajudaram a encontrar exatamente o que precisava. Super satisfeito!',
     product: 'Complexo B',
-    date: 'Há 2 meses'
+    date: 'Há 2 meses',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face'
   },
   {
     id: 5,
@@ -45,22 +49,70 @@ const reviews = [
     rating: 5,
     comment: 'Entrega rápida e produtos de qualidade superior. Já fiz várias compras e sempre fico satisfeita.',
     product: 'Ômega 3',
-    date: 'Há 1 semana'
+    date: 'Há 1 semana',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face'
   }
 ]
 
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
-  const [currentReviewIndex, setCurrentReviewIndex] = useState(0)
+  const [vitaminProducts, setVitaminProducts] = useState<Product[]>([])
+  const [mineralProducts, setMineralProducts] = useState<Product[]>([])
+  const [fitoterapicoProducts, setFitoterapicoProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [bannerIndex, setBannerIndex] = useState(0)
+  const [reviewIndex, setReviewIndex] = useState(0)
+  const [isBannerHovered, setIsBannerHovered] = useState(false)
+  
+  // Array de imagens do carrossel - adicione suas imagens aqui
+  // Para imagens locais da pasta src/images, importe no topo e use a variável
+  // Para imagens na pasta public, use: '/nome-da-imagem.jpg'
+  // Para URLs online, use: 'https://exemplo.com/imagem.jpg'
+  const bannerImages = [
+    banner1, // Imagem importada
+    '/banner2.jpg', // Imagem da pasta public (se tiver)
+    'https://images.unsplash.com/photo-1557683316-973673baf926?w=1920&q=80' // URL online
+  ]
 
-  // Carrega produtos em destaque
+  // Carrega produtos por categoria usando rotas da API
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const products = await productsService.getAll()
-        // Pega os primeiros 6 produtos ou todos se houver menos
-        setFeaturedProducts(products.slice(0, 6))
+        setLoading(true)
+        
+        // Busca produtos em paralelo por categoria usando rotas específicas da API
+        const [allProducts, vitamins, minerals, fitoterapicos] = await Promise.allSettled([
+          productsService.getAll(), // Produtos em destaque
+          productsService.getByCategory('vitamina'), // Vitaminas
+          productsService.getByCategory('mineral'), // Minerais
+          productsService.getByCategory('fitoterapico'), // Fitoterápicos
+        ])
+        
+        // Produtos em destaque (primeiros 6)
+        if (allProducts.status === 'fulfilled') {
+          setFeaturedProducts(allProducts.value.slice(0, 6))
+        } else {
+          console.error('Erro ao carregar produtos em destaque:', allProducts.reason)
+        }
+        
+        // Produtos por categoria (limitados a 8)
+        if (vitamins.status === 'fulfilled') {
+          setVitaminProducts(vitamins.value.slice(0, 8))
+        } else {
+          console.error('Erro ao carregar vitaminas:', vitamins.reason)
+        }
+        
+        if (minerals.status === 'fulfilled') {
+          setMineralProducts(minerals.value.slice(0, 8))
+        } else {
+          console.error('Erro ao carregar minerais:', minerals.reason)
+        }
+        
+        if (fitoterapicos.status === 'fulfilled') {
+          setFitoterapicoProducts(fitoterapicos.value.slice(0, 8))
+        } else {
+          console.error('Erro ao carregar fitoterápicos:', fitoterapicos.reason)
+        }
       } catch (error) {
         console.error('Erro ao carregar produtos:', error)
       } finally {
@@ -70,126 +122,125 @@ export default function Home() {
     loadProducts()
   }, [])
 
-  // Auto-rotaciona reviews
+  // Auto-rotaciona banners
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentReviewIndex((prev) => (prev + 1) % reviews.length)
+      setBannerIndex((prev) => (prev + 1) % bannerImages.length)
+    }, 6000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Auto-rotaciona reviews (2 por vez)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Avança de 2 em 2, mas não ultrapassa o limite
+      setReviewIndex((prev) => {
+        const next = prev + 2
+        // Se passar do limite, volta para o início
+        return next >= reviews.length ? 0 : next
+      })
     }, 5000)
     return () => clearInterval(interval)
   }, [])
 
   const nextReview = () => {
-    setCurrentReviewIndex((prev) => (prev + 1) % reviews.length)
+    setReviewIndex((prev) => {
+      const next = prev + 2
+      return next >= reviews.length ? 0 : next
+    })
   }
 
   const prevReview = () => {
-    setCurrentReviewIndex((prev) => (prev - 1 + reviews.length) % reviews.length)
+    setReviewIndex((prev) => {
+      const next = prev - 2
+      return next < 0 ? Math.max(0, reviews.length - 2) : next
+    })
   }
 
   return (
-    <div>
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary-50 via-white to-accent-50 py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              Medicamentos Manipulados de{' '}
-              <span className="text-primary-600">Qualidade Premium</span>
-            </h1>
-            <p className="text-xl text-gray-600 mb-8">
-              Kapsu oferece medicamentos manipulados personalizados, desenvolvidos com os melhores 
-              ativos farmacêuticos para sua saúde e bem-estar.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/produtos" className="btn-primary inline-flex items-center justify-center">
-                Explorar Produtos
-                <ArrowRight className="ml-2" size={20} />
-              </Link>
-              <Link to="/personalizar" className="btn-secondary inline-flex items-center justify-center">
-                Personalizar Medicamento
-                <Sparkles className="ml-2" size={20} />
-              </Link>
+    <div className="min-h-screen" style={{ backgroundColor: '#DDF4E7' }}>
+      {/* Banner Hero - Carrossel de Imagens */}
+      <section 
+        className="relative overflow-hidden mb-4"
+        onMouseEnter={() => setIsBannerHovered(true)}
+        onMouseLeave={() => setIsBannerHovered(false)}
+        style={{ minHeight: '400px' }}
+      >
+        {/* Container do carrossel com efeito de slide */}
+        <div 
+          className="flex transition-transform duration-500 ease-in-out h-full"
+          style={{ transform: `translateX(-${bannerIndex * 100}%)` }}
+        >
+          {bannerImages.map((image, index) => (
+            <div 
+              key={index} 
+              className="flex-shrink-0 w-full h-full relative"
+              style={{
+                backgroundImage: `url(${image})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                minHeight: '400px'
+              }}
+            >
+              {/* Gradiente indo para #DDF4E7 */}
+              <div 
+                className="absolute inset-0"
+                style={{
+                  background: 'linear-gradient(to bottom, transparent 0%, transparent 70%, rgba(221, 244, 231, 0.3) 85%, #DDF4E7 100%)'
+                }}
+              ></div>
             </div>
-          </div>
+          ))}
         </div>
+        
+        {/* Indicadores (dots) - na parte inferior */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-center space-x-2 z-10">
+          {bannerImages.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setBannerIndex(index)}
+              className={`h-2 w-2 rounded-full transition-all ${
+                index === bannerIndex
+                  ? 'bg-white'
+                  : 'bg-white/50'
+              }`}
+              aria-label={`Ir para imagem ${index + 1}`}
+            />
+          ))}
+        </div>
+        
+        {/* Controles do Carrossel - Setas nas laterais da section */}
+        <button
+          onClick={() => setBannerIndex((prev) => (prev - 1 + bannerImages.length) % bannerImages.length)}
+          className={`absolute left-0 top-1/2 -translate-y-1/2 p-3 bg-white/90 hover:bg-white text-gray-900 shadow-lg transition-all z-10 ${
+            isBannerHovered ? 'opacity-100' : 'opacity-0'
+          }`}
+          aria-label="Imagem anterior"
+          style={{ borderRadius: '0 50% 50% 0', width: '48px', height: '48px' }}
+        >
+          <ChevronLeft size={24} />
+        </button>
+        <button
+          onClick={() => setBannerIndex((prev) => (prev + 1) % bannerImages.length)}
+          className={`absolute right-0 top-1/2 -translate-y-1/2 p-3 bg-white/90 hover:bg-white text-gray-900 shadow-lg transition-all z-10 ${
+            isBannerHovered ? 'opacity-100' : 'opacity-0'
+          }`}
+          aria-label="Próxima imagem"
+          style={{ borderRadius: '50% 0 0 50%', width: '48px', height: '48px' }}
+        >
+          <ChevronRight size={24} />
+        </button>
       </section>
 
-      {/* Estatísticas */}
-      <section className="py-12 bg-white border-y border-gray-100">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-primary-600 mb-2">10K+</div>
-              <div className="text-sm text-gray-600">Clientes Satisfeitos</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-primary-600 mb-2">500+</div>
-              <div className="text-sm text-gray-600">Produtos Disponíveis</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-primary-600 mb-2">4.9</div>
-              <div className="text-sm text-gray-600">Avaliação Média</div>
-            </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-primary-600 mb-2">15+</div>
-              <div className="text-sm text-gray-600">Anos de Experiência</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Por que escolher a Kapsu?</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Oferecemos soluções completas em medicamentos manipulados com qualidade e personalização
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center p-6 rounded-xl hover:bg-primary-50 transition-colors">
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Pill className="text-primary-600" size={32} />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Personalização Total</h3>
-              <p className="text-gray-600">
-                Crie medicamentos sob medida com dosagens e combinações específicas para suas necessidades.
-              </p>
-            </div>
-            <div className="text-center p-6 rounded-xl hover:bg-primary-50 transition-colors">
-              <div className="w-16 h-16 bg-medical-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="text-medical-600" size={32} />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Qualidade Garantida</h3>
-              <p className="text-gray-600">
-                Utilizamos apenas os melhores ativos farmacêuticos, com rigoroso controle de qualidade.
-              </p>
-            </div>
-            <div className="text-center p-6 rounded-xl hover:bg-primary-50 transition-colors">
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Truck className="text-primary-600" size={32} />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Entrega Rápida</h3>
-              <p className="text-gray-600">
-                Receba seus medicamentos com segurança e agilidade em todo o Brasil.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Products Carousel */}
-      <section className="py-16 bg-primary-50/30">
-        <div className="container mx-auto px-4">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">Produtos em Destaque</h2>
-              <p className="text-gray-600">Seleção especial dos nossos melhores produtos</p>
-            </div>
-            <Link to="/produtos" className="text-primary-600 hover:text-primary-700 font-semibold flex items-center">
-              Ver Todos
-              <ArrowRight className="ml-2" size={20} />
+      {/* Produtos em Destaque - Scroll Horizontal */}
+      <section className="bg-white py-6 rounded-lg mb-4 shadow-sm" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
+        <div className="px-2 md:px-3 lg:px-4">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Produtos em Destaque</h2>
+            <Link to="/produtos" className="text-sm text-primary-600 hover:text-primary-700 font-semibold flex items-center">
+              Ver todos
+              <ArrowRight className="ml-1" size={16} />
             </Link>
           </div>
           {loading ? (
@@ -197,217 +248,273 @@ export default function Home() {
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
           ) : featuredProducts.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
               {featuredProducts.map(product => (
-                <ProductCard key={product.id} product={product} />
+                <Link
+                  key={product.id}
+                  to={`/produtos/${product.id}`}
+                  className="flex-shrink-0 w-48 bg-white rounded-lg p-3 hover:shadow-md transition-all"
+                >
+                  <div className="relative mb-2">
+                    <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                      <img
+                        src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
+                        }}
+                      />
+                    </div>
+                    {product.isCustomizable && (
+                      <div className="absolute top-1 right-1 text-white px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: '#67C090' }}>
+                        <Sparkles size={10} className="inline mr-1" />
+                        Personalizável
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">{product.name}</h3>
+                  <p className="text-lg font-bold text-primary-600 mb-1">
+                    R$ {product.price.toFixed(2).replace('.', ',')}
+                  </p>
+                  <p className="text-xs text-green-600">Frete grátis</p>
+                </Link>
               ))}
             </div>
-          ) : (
-            <div className="text-center py-12 text-gray-500">
-              Nenhum produto disponível no momento
-            </div>
-          )}
+          ) : null}
         </div>
       </section>
 
-      {/* Reviews Carousel */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">O que nossos clientes dizem</h2>
-            <p className="text-gray-600">Avaliações reais de clientes satisfeitos</p>
+      {/* Vitaminas - Scroll Horizontal */}
+      {vitaminProducts.length > 0 && (
+        <section className="bg-white py-6 rounded-lg mb-4 shadow-sm" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
+          <div className="px-2 md:px-3 lg:px-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Vitaminas</h2>
+              <Link to="/produtos?categoria=vitamina" className="text-sm text-primary-600 hover:text-primary-700 font-semibold flex items-center">
+                Ver todos
+                <ArrowRight className="ml-1" size={16} />
+              </Link>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              {vitaminProducts.map(product => (
+                <Link
+                  key={product.id}
+                  to={`/produtos/${product.id}`}
+                  className="flex-shrink-0 w-48 bg-white rounded-lg p-3 hover:shadow-md transition-all"
+                >
+                  <div className="relative mb-2">
+                    <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                      <img
+                        src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
+                        }}
+                      />
+                    </div>
+                    {product.isCustomizable && (
+                      <div className="absolute top-1 right-1 text-white px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: '#67C090' }}>
+                        <Sparkles size={10} className="inline mr-1" />
+                        Personalizável
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">{product.name}</h3>
+                  <p className="text-lg font-bold text-primary-600 mb-1">
+                    R$ {product.price.toFixed(2).replace('.', ',')}
+                  </p>
+                  <p className="text-xs text-green-600">Frete grátis</p>
+                </Link>
+              ))}
+            </div>
           </div>
+        </section>
+      )}
+
+      {/* Minerais - Scroll Horizontal */}
+      {mineralProducts.length > 0 && (
+        <section className="bg-white py-6 rounded-lg mb-4 shadow-sm" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
+          <div className="px-2 md:px-3 lg:px-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Minerais</h2>
+              <Link to="/produtos?categoria=mineral" className="text-sm text-primary-600 hover:text-primary-700 font-semibold flex items-center">
+                Ver todos
+                <ArrowRight className="ml-1" size={16} />
+              </Link>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              {mineralProducts.map(product => (
+                <Link
+                  key={product.id}
+                  to={`/produtos/${product.id}`}
+                  className="flex-shrink-0 w-48 bg-white rounded-lg p-3 hover:shadow-md transition-all"
+                >
+                  <div className="relative mb-2">
+                    <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                      <img
+                        src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
+                        }}
+                      />
+                    </div>
+                    {product.isCustomizable && (
+                      <div className="absolute top-1 right-1 text-white px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: '#67C090' }}>
+                        <Sparkles size={10} className="inline mr-1" />
+                        Personalizável
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">{product.name}</h3>
+                  <p className="text-lg font-bold text-primary-600 mb-1">
+                    R$ {product.price.toFixed(2).replace('.', ',')}
+                  </p>
+                  <p className="text-xs text-green-600">Frete grátis</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Fitoterápicos - Scroll Horizontal */}
+      {fitoterapicoProducts.length > 0 && (
+        <section className="bg-white py-6 rounded-lg mb-4 shadow-sm" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
+          <div className="px-2 md:px-3 lg:px-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Fitoterápicos</h2>
+              <Link to="/produtos?categoria=fitoterapico" className="text-sm text-primary-600 hover:text-primary-700 font-semibold flex items-center">
+                Ver todos
+                <ArrowRight className="ml-1" size={16} />
+              </Link>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              {fitoterapicoProducts.map(product => (
+                <Link
+                  key={product.id}
+                  to={`/produtos/${product.id}`}
+                  className="flex-shrink-0 w-48 bg-white rounded-lg p-3 hover:shadow-md transition-all"
+                >
+                  <div className="relative mb-2">
+                    <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                      <img
+                        src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
+                        }}
+                      />
+                    </div>
+                    {product.isCustomizable && (
+                      <div className="absolute top-1 right-1 text-white px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: '#67C090' }}>
+                        <Sparkles size={10} className="inline mr-1" />
+                        Personalizável
+                      </div>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">{product.name}</h3>
+                  <p className="text-lg font-bold text-primary-600 mb-1">
+                    R$ {product.price.toFixed(2).replace('.', ',')}
+                  </p>
+                  <p className="text-xs text-green-600">Frete grátis</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Reviews - Carrossel */}
+      <section className="bg-white py-8 rounded-lg mb-4 shadow-sm" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
+        <div className="px-2 md:px-3 lg:px-4">
+          <h2 className="text-xl font-bold text-gray-900 mb-6 text-center">O que nossos clientes dizem</h2>
           
-          <div className="max-w-4xl mx-auto">
-            <div className="relative bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
-              <div className="flex items-center mb-4">
-                {[...Array(reviews[currentReviewIndex].rating)].map((_, i) => (
-                  <Star key={i} className="text-yellow-400 fill-current" size={24} />
+          <div className="relative">
+            {/* Container do carrossel */}
+            <div className="overflow-hidden">
+              <div 
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{ transform: `translateX(-${reviewIndex * 50}%)` }}
+              >
+                {reviews.map((review) => (
+                  <div key={review.id} className="flex-shrink-0 w-1/2 px-2">
+                    <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow h-full">
+                      <div className="flex items-center mb-3">
+                        {[...Array(review.rating)].map((_, i) => (
+                          <Star key={i} className="text-yellow-400 fill-current" size={18} />
+                        ))}
+                      </div>
+                      <p className="text-gray-700 text-base mb-4">"{review.comment}"</p>
+                      <div className="flex items-center gap-3">
+                        {/* Avatar circular */}
+                        <div className="flex-shrink-0">
+                          <img
+                            src={review.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name)}&size=64&background=67C090&color=fff&bold=true`}
+                            alt={review.name}
+                            className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name)}&size=64&background=67C090&color=fff&bold=true`
+                            }}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900">{review.name}</p>
+                          <p className="text-sm text-gray-500">{review.product} • {review.date}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
-              <p className="text-gray-700 text-lg mb-6 italic">
-                "{reviews[currentReviewIndex].comment}"
-              </p>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-gray-900">{reviews[currentReviewIndex].name}</p>
-                  <p className="text-sm text-gray-500">
-                    {reviews[currentReviewIndex].product} • {reviews[currentReviewIndex].date}
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={prevReview}
-                    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                    aria-label="Review anterior"
-                  >
-                    <ChevronLeft size={20} className="text-gray-600" />
-                  </button>
-                  <div className="flex space-x-1">
-                    {reviews.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => setCurrentReviewIndex(index)}
-                        className={`h-2 rounded-full transition-all ${
-                          index === currentReviewIndex
-                            ? 'w-8 bg-primary-600'
-                            : 'w-2 bg-gray-300'
-                        }`}
-                        aria-label={`Ir para review ${index + 1}`}
-                      />
-                    ))}
-                  </div>
-                  <button
-                    onClick={nextReview}
-                    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                    aria-label="Próximo review"
-                  >
-                    <ChevronRight size={20} className="text-gray-600" />
-                  </button>
-                </div>
-              </div>
             </div>
-          </div>
 
-          {/* Mini reviews grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
-            {reviews.slice(0, 3).map((review) => (
-              <div key={review.id} className="bg-gray-50 rounded-lg p-6 border border-gray-100">
-                <div className="flex items-center mb-3">
-                  {[...Array(review.rating)].map((_, i) => (
-                    <Star key={i} className="text-yellow-400 fill-current" size={16} />
-                  ))}
-                </div>
-                <p className="text-gray-700 text-sm mb-4 line-clamp-3">"{review.comment}"</p>
-                <p className="font-semibold text-gray-900 text-sm">{review.name}</p>
-                <p className="text-xs text-gray-500">{review.date}</p>
+            {/* Controles de navegação */}
+            <div className="flex items-center justify-center mt-6 space-x-4">
+              <button
+                onClick={prevReview}
+                className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                aria-label="Review anterior"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              
+              {/* Indicadores (dots) - mostra um dot para cada par de reviews */}
+              <div className="flex space-x-2">
+                {Array.from({ length: Math.ceil(reviews.length / 2) }).map((_, index) => {
+                  const currentIndex = index * 2
+                  return (
+                    <button
+                      key={index}
+                      onClick={() => setReviewIndex(currentIndex)}
+                      className={`h-2 w-2 rounded-full transition-all ${
+                        currentIndex === reviewIndex
+                          ? ''
+                          : 'bg-gray-300'
+                      }`}
+                      style={currentIndex === reviewIndex ? { backgroundColor: '#67C090' } : {}}
+                      aria-label={`Ir para reviews ${currentIndex + 1}-${currentIndex + 2}`}
+                    />
+                  )
+                })}
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Categorias */}
-      <section className="py-16 bg-gradient-to-br from-primary-50 to-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Nossas Categorias</h2>
-            <p className="text-gray-600">Explore nossa variedade de produtos</p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <Link
-              to="/produtos?categoria=vitamina"
-              className="bg-white rounded-xl p-6 text-center hover:shadow-lg transition-all hover:scale-105 border border-gray-100"
-            >
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Pill className="text-primary-600" size={32} />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Vitaminas</h3>
-              <p className="text-sm text-gray-600">Suplementos vitamínicos</p>
-            </Link>
-            <Link
-              to="/produtos?categoria=mineral"
-              className="bg-white rounded-xl p-6 text-center hover:shadow-lg transition-all hover:scale-105 border border-gray-100"
-            >
-              <div className="w-16 h-16 bg-medical-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Award className="text-medical-600" size={32} />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Minerais</h3>
-              <p className="text-sm text-gray-600">Suplementos minerais</p>
-            </Link>
-            <Link
-              to="/produtos?categoria=fitoterapico"
-              className="bg-white rounded-xl p-6 text-center hover:shadow-lg transition-all hover:scale-105 border border-gray-100"
-            >
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Heart className="text-primary-600" size={32} />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Fitoterápicos</h3>
-              <p className="text-sm text-gray-600">Produtos naturais</p>
-            </Link>
-            <Link
-              to="/personalizar"
-              className="bg-white rounded-xl p-6 text-center hover:shadow-lg transition-all hover:scale-105 border border-gray-100"
-            >
-              <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="text-primary-600" size={32} />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Personalizar</h3>
-              <p className="text-sm text-gray-600">Crie seu medicamento</p>
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Banner Promocional */}
-      <section className="py-16 bg-gradient-to-r from-primary-600 to-primary-700 text-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <div className="inline-block bg-white/20 rounded-full px-4 py-2 mb-6">
-              <span className="text-sm font-semibold">🎉 Promoção Especial</span>
-            </div>
-            <h2 className="text-4xl font-bold mb-4">Frete Grátis em Compras Acima de R$ 99</h2>
-            <p className="text-xl mb-8 text-white/90">
-              Aproveite nossa promoção e receba seus medicamentos sem custo de frete!
-            </p>
-            <Link 
-              to="/produtos" 
-              className="bg-white text-primary-600 hover:bg-primary-50 font-semibold py-3 px-8 rounded-lg inline-flex items-center transition-colors"
-            >
-              Comprar Agora
-              <ArrowRight className="ml-2" size={20} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Benefícios */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                  <Truck className="text-primary-600" size={24} />
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Entrega Rápida</h3>
-                <p className="text-sm text-gray-600">Receba em 2-3 dias úteis</p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                  <Shield className="text-primary-600" size={24} />
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Qualidade Garantida</h3>
-                <p className="text-sm text-gray-600">Produtos certificados</p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="text-primary-600" size={24} />
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Atendimento 24/7</h3>
-                <p className="text-sm text-gray-600">Suporte sempre disponível</p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                  <Users className="text-primary-600" size={24} />
-                </div>
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">10K+ Clientes</h3>
-                <p className="text-sm text-gray-600">Confiança comprovada</p>
-              </div>
+              
+              <button
+                onClick={nextReview}
+                className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                aria-label="Próximo review"
+              >
+                <ChevronRight size={20} />
+              </button>
             </div>
           </div>
         </div>
