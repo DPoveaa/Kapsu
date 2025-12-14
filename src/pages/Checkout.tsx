@@ -1,17 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, Loader2, Truck, Plus, Save, Edit2, Trash2, Check, X, Tag } from 'lucide-react'
+import { ArrowLeft, MapPin, Loader2, Truck, Plus, Save, Edit2, Trash2, Check, Tag, User, Mail } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { paymentService } from '../services/payment.service'
 import { shippingService } from '../services/shipping.service'
 import { addressService, SavedAddress } from '../services/address.service'
 import { promoCodesService, PromoCodeValidation, MultiplePromoCodesValidation } from '../services/promo-codes.service'
+import { adminService } from '../services/admin.service'
 
 export default function Checkout() {
   const navigate = useNavigate()
-  const { items, getTotal } = useCart()
+  const { items, getTotal, clearCart } = useCart()
   const { user, isAuthenticated } = useAuth()
+  const isAdmin = user?.role === 'admin'
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'quarterly'>('monthly')
@@ -19,9 +21,10 @@ export default function Checkout() {
   // Estados para endereços salvos
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([])
   const [loadingAddresses, setLoadingAddresses] = useState(true)
-  const [showNewAddressForm, setShowNewAddressForm] = useState(false)
+  const [deliveryOption, setDeliveryOption] = useState<'saved' | 'new'>('saved')
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
+  const [saveNewAddress, setSaveNewAddress] = useState(false)
   const [showSaveAddressModal, setShowSaveAddressModal] = useState(false)
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState<string | null>(null)
   const [showEditAddressModal, setShowEditAddressModal] = useState(false)
@@ -42,12 +45,27 @@ export default function Checkout() {
   const [shippingMessage, setShippingMessage] = useState<string | null>(null)
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(0)
   
-  // Estados para códigos promocionais (múltiplos)
-  const [promoCode, setPromoCode] = useState('')
+  // Estados para códigos promocionais (carregados do carrinho)
   const [appliedPromoCodes, setAppliedPromoCodes] = useState<string[]>([])
   const [promoCodesValidation, setPromoCodesValidation] = useState<MultiplePromoCodesValidation | null>(null)
-  const [validatingPromoCode, setValidatingPromoCode] = useState(false)
-  const [promoCodeError, setPromoCodeError] = useState<string | null>(null)
+  
+  // Carrega cupons do localStorage (aplicados no carrinho)
+  useEffect(() => {
+    const savedCodes = localStorage.getItem('cart_promo_codes')
+    const savedValidation = localStorage.getItem('cart_promo_codes_validation')
+    if (savedCodes) {
+      try {
+        const codes = JSON.parse(savedCodes)
+        setAppliedPromoCodes(codes)
+        if (savedValidation) {
+          const validation = JSON.parse(savedValidation)
+          setPromoCodesValidation(validation)
+        }
+      } catch (error) {
+        console.error('Erro ao carregar cupons:', error)
+      }
+    }
+  }, [])
 
   // Verifica se o carrinho tem assinatura e obtém o plano
   const isSubscription = items.length > 0 && items.some(item => item.purchaseType === 'subscription')
@@ -62,6 +80,7 @@ export default function Checkout() {
     }
   }, [isSubscription])
 
+
   // Calcula totais com desconto de assinatura
   const baseTotal = getTotal()
   const subscriptionDiscount = isSubscription ? (subscriptionPlan === 'quarterly' ? 0.15 : 0.10) : 0
@@ -69,7 +88,11 @@ export default function Checkout() {
   const subtotal = isSubscription ? discountedTotal : baseTotal
   const promoCodeDiscount = promoCodesValidation?.totalDiscount || 0
   const subtotalAfterPromo = subtotal - promoCodeDiscount
-  const shippingCost = (promoCodesValidation?.freeShipping || isFreeShipping) ? 0 : (shippingFee && !isFreeShipping ? shippingFee : 0)
+  // Verifica se há frete grátis (por cupom ou valor mínimo válido)
+  const hasFreeShippingByCoupon = promoCodesValidation?.freeShipping || false
+  const hasFreeShippingByThreshold = isFreeShipping && freeShippingThreshold > 0 && subtotal >= freeShippingThreshold
+  const hasFreeShipping = hasFreeShippingByCoupon || hasFreeShippingByThreshold
+  const shippingCost = hasFreeShipping ? 0 : (shippingFee && !isFreeShipping ? shippingFee : 0)
   const currentTotal = subtotalAfterPromo + shippingCost
 
   // Redireciona se não estiver autenticado
@@ -89,17 +112,26 @@ export default function Checkout() {
       setSavedAddresses(addresses)
       
       // Se houver endereço padrão e nenhum selecionado, seleciona automaticamente
-      if (!selectedAddressId && !showNewAddressForm) {
+      if (!selectedAddressId && deliveryOption === 'saved') {
         const defaultAddress = addresses.find(addr => addr.is_default)
         if (defaultAddress) {
           selectAddress(defaultAddress)
+          setSelectedAddressId(defaultAddress.id)
+        } else if (addresses.length > 0) {
+          selectAddress(addresses[0])
+          setSelectedAddressId(addresses[0].id)
         }
+      }
+      
+      // Se não houver endereços salvos, mostra formulário novo
+      if (addresses.length === 0) {
+        setDeliveryOption('new')
       }
     } catch (error: any) {
       console.error('Erro ao carregar endereços:', error)
       // Se não houver endereços, mostra formulário novo
       if (savedAddresses.length === 0) {
-        setShowNewAddressForm(true)
+        setDeliveryOption('new')
       }
     } finally {
       setLoadingAddresses(false)
@@ -114,6 +146,7 @@ export default function Checkout() {
   const selectAddress = (address: SavedAddress) => {
     setSelectedAddressId(address.id)
     setEditingAddressId(null)
+    setDeliveryOption('saved')
     setFormData({
       cep: address.cep,
       address: address.address,
@@ -122,7 +155,43 @@ export default function Checkout() {
       city: address.city,
       state: address.state
     })
-    setShowNewAddressForm(false)
+  }
+
+  // Função para calcular frete manualmente
+  const handleCalculateShipping = async () => {
+    const cleanCep = formData.cep.replace(/\D/g, '')
+    
+    if (cleanCep.length === 8) {
+      try {
+        setCalculatingShipping(true)
+        setShippingMessage(null)
+        
+        const cartItems = items
+          .filter(item => item.product)
+          .map(item => ({
+            product_id: item.product!.id,
+            quantity: item.quantity,
+          }))
+        
+        const result = await shippingService.calculateShipping(
+          formData.cep, 
+          subtotal,
+          cartItems
+        )
+        
+        setShippingFee(result.shippingFee)
+        setIsFreeShipping(result.isFreeShipping)
+        setFreeShippingThreshold(result.freeShippingThreshold || 0)
+        setShippingMessage(result.message)
+      } catch (error: any) {
+        console.error('Erro ao calcular frete:', error)
+        setShippingFee(null)
+        setIsFreeShipping(false)
+        setShippingMessage('Erro ao calcular frete. Tente novamente.')
+      } finally {
+        setCalculatingShipping(false)
+      }
+    }
   }
 
   // Calcula frete quando o CEP é preenchido
@@ -169,8 +238,8 @@ export default function Checkout() {
       }
     }
 
-    // Debounce para evitar muitas chamadas
-    const timeoutId = setTimeout(calculateShipping, 500)
+    // Debounce de 2 segundos para evitar CEPs incorretos e registrar apenas tentativas válidas
+    const timeoutId = setTimeout(calculateShipping, 2000)
     return () => clearTimeout(timeoutId)
   }, [formData.cep, subtotal, items])
 
@@ -293,136 +362,20 @@ export default function Checkout() {
     }
   }
 
-  const handleValidatePromoCode = async () => {
-    if (!promoCode.trim()) {
-      setPromoCodeError('Digite um código promocional')
-      return
-    }
-
-    const codeToAdd = promoCode.trim().toUpperCase()
-    
-    // Verifica se o código já foi aplicado
-    if (appliedPromoCodes.includes(codeToAdd)) {
-      setPromoCodeError('Este código já foi aplicado')
-      return
-    }
-
-    try {
-      setValidatingPromoCode(true)
-      setPromoCodeError(null)
-      
-      const cartItems = items
-        .filter(item => item.product)
-        .map(item => ({
-          product_id: item.product!.id,
-          quantity: item.quantity,
-          price: item.product!.price,
-        }))
-      
-      // Valida todos os códigos aplicados + o novo
-      const codesToValidate = [...appliedPromoCodes, codeToAdd]
-      
-      const validation = await promoCodesService.validateMultiplePromoCodes(
-        codesToValidate,
-        subtotal,
-        cartItems,
-        user?.id
-      )
-      
-      setPromoCodesValidation(validation)
-      setAppliedPromoCodes(codesToValidate)
-      setPromoCode('')
-      
-      // Se algum código oferece frete grátis, recalcula o frete
-      if (validation.freeShipping && formData.cep) {
+  // Verifica se há frete grátis dos cupons aplicados no carrinho
+  useEffect(() => {
+    if (promoCodesValidation?.freeShipping && formData.cep) {
         setIsFreeShipping(true)
         setShippingFee(0)
         setShippingMessage('Frete grátis aplicado pelo(s) código(s) promocional(is)!')
-      }
-      
-      // Mostra erros se houver
-      if (validation.errors && validation.errors.length > 0) {
-        setPromoCodeError(validation.errors.join('; '))
-      }
-    } catch (error: any) {
-      setPromoCodeError(error.message || 'Erro ao validar código promocional')
-    } finally {
-      setValidatingPromoCode(false)
-    }
-  }
-
-  const handleRemovePromoCode = async (codeToRemove: string) => {
-    const newCodes = appliedPromoCodes.filter(code => code !== codeToRemove)
-    setAppliedPromoCodes(newCodes)
-    
-    if (newCodes.length === 0) {
-      setPromoCodesValidation(null)
+    } else if (promoCodesValidation && !promoCodesValidation.freeShipping && formData.cep) {
       setIsFreeShipping(false)
-      // Recalcula frete se necessário
-      if (formData.cep) {
         const cleanCep = formData.cep.replace(/\D/g, '')
         if (cleanCep.length === 8) {
           handleCalculateShipping()
         }
       }
-      return
-    }
-
-    // Revalida os códigos restantes
-    try {
-      setValidatingPromoCode(true)
-      const cartItems = items
-        .filter(item => item.product)
-        .map(item => ({
-          product_id: item.product!.id,
-          quantity: item.quantity,
-          price: item.product!.price,
-        }))
-      
-      const validation = await promoCodesService.validateMultiplePromoCodes(
-        newCodes,
-        subtotal,
-        cartItems,
-        user?.id
-      )
-      
-      setPromoCodesValidation(validation)
-      
-      // Atualiza frete grátis
-      if (validation.freeShipping && formData.cep) {
-        setIsFreeShipping(true)
-        setShippingFee(0)
-        setShippingMessage('Frete grátis aplicado pelo(s) código(s) promocional(is)!')
-      } else {
-        setIsFreeShipping(false)
-        if (formData.cep) {
-          const cleanCep = formData.cep.replace(/\D/g, '')
-          if (cleanCep.length === 8) {
-            handleCalculateShipping()
-          }
-        }
-      }
-    } catch (error: any) {
-      console.error('Erro ao revalidar códigos:', error)
-    } finally {
-      setValidatingPromoCode(false)
-    }
-  }
-
-  const handleRemoveAllPromoCodes = () => {
-    setAppliedPromoCodes([])
-    setPromoCodesValidation(null)
-    setPromoCode('')
-    setPromoCodeError(null)
-    setIsFreeShipping(false)
-    // Recalcula frete se necessário
-    if (formData.cep) {
-      const cleanCep = formData.cep.replace(/\D/g, '')
-      if (cleanCep.length === 8) {
-        handleCalculateShipping()
-      }
-    }
-  }
+  }, [promoCodesValidation, formData.cep])
 
   const handleDeleteAddress = async (id: string) => {
     try {
@@ -452,10 +405,64 @@ export default function Checkout() {
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     
-    // Valida endereço
-    if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep) {
-      alert('Por favor, preencha todos os campos do endereço')
-      return
+    // Valida se o frete está disponível para o CEP informado
+    const cleanCep = formData.cep.replace(/\D/g, '')
+    if (cleanCep.length === 8) {
+      // Se o CEP está completo, verifica se o frete está disponível
+      if (shippingFee === null && shippingMessage && shippingMessage.includes('não estamos enviando')) {
+        alert('Infelizmente, no momento não estamos enviando para esse local. Mas logo mais estaremos trazendo mais localidades!')
+        return
+      }
+      // Se ainda está calculando, aguarda
+      if (calculatingShipping) {
+        alert('Aguarde o cálculo do frete ser concluído')
+        return
+      }
+      // Se o CEP está completo mas não há frete calculado e não há mensagem de erro, força recálculo
+      if (shippingFee === null && !shippingMessage && !calculatingShipping) {
+        alert('Por favor, aguarde o cálculo do frete ou verifique se o CEP está correto')
+        return
+      }
+    }
+    
+    // Valida endereço baseado na opção selecionada
+    if (deliveryOption === 'new') {
+      if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep) {
+        alert('Por favor, preencha todos os campos do endereço')
+        return
+      }
+      
+      // Se checkbox estiver marcado, salva o endereço
+      if (saveNewAddress) {
+        try {
+          await addressService.createSavedAddress({
+            nickname: `Endereço ${new Date().toLocaleDateString()}`,
+            cep: formData.cep,
+            address: formData.address,
+            number: formData.number,
+            complement: formData.complement || undefined,
+            city: formData.city,
+            state: formData.state,
+          })
+        } catch (error: any) {
+          console.error('Erro ao salvar endereço:', error)
+          // Continua mesmo se falhar ao salvar
+        }
+      }
+    } else if (deliveryOption === 'saved') {
+      if (!selectedAddressId || !selectedAddress) {
+        alert('Por favor, selecione um endereço')
+        return
+      }
+      // Usa dados do endereço selecionado
+      setFormData({
+        cep: selectedAddress.cep,
+        address: selectedAddress.address,
+        number: selectedAddress.number,
+        complement: selectedAddress.complement || '',
+        city: selectedAddress.city,
+        state: selectedAddress.state
+      })
     }
 
     // Se estiver editando um endereço salvo, salva as alterações primeiro
@@ -501,6 +508,91 @@ export default function Checkout() {
     }
   }
 
+  // Função para pagar como admin (sem passar pelo Mercado Pago)
+  const handlePayAsAdmin = async () => {
+    // Valida se o frete está disponível para o CEP informado
+    const cleanCep = formData.cep.replace(/\D/g, '')
+    if (cleanCep.length === 8) {
+      if (shippingFee === null && shippingMessage && shippingMessage.includes('não estamos enviando')) {
+        alert('Infelizmente, no momento não estamos enviando para esse local. Mas logo mais estaremos trazendo mais localidades!')
+        return
+      }
+      if (calculatingShipping) {
+        alert('Aguarde o cálculo do frete ser concluído')
+        return
+      }
+    }
+    
+    // Valida endereço baseado na opção selecionada
+    if (deliveryOption === 'new') {
+      if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep) {
+        alert('Por favor, preencha todos os campos do endereço')
+        return
+      }
+      
+      // Se checkbox estiver marcado, salva o endereço
+      if (saveNewAddress) {
+        try {
+          await addressService.createSavedAddress({
+            nickname: `Endereço ${new Date().toLocaleDateString()}`,
+            cep: formData.cep,
+            address: formData.address,
+            number: formData.number,
+            complement: formData.complement || undefined,
+            city: formData.city,
+            state: formData.state,
+          })
+        } catch (error: any) {
+          console.error('Erro ao salvar endereço:', error)
+        }
+      }
+    } else if (deliveryOption === 'saved') {
+      if (!selectedAddressId || !selectedAddress) {
+        alert('Por favor, selecione um endereço')
+        return
+      }
+      setFormData({
+        cep: selectedAddress.cep,
+        address: selectedAddress.address,
+        number: selectedAddress.number,
+        complement: selectedAddress.complement || '',
+        city: selectedAddress.city,
+        state: selectedAddress.state
+      })
+    }
+
+    // Se estiver editando um endereço salvo, salva as alterações primeiro
+    if (editingAddressId && selectedAddressId) {
+      await handleUpdateAddress()
+    }
+
+    try {
+      setCreatingOrder(true)
+      setCheckoutError(null)
+
+      // Monta endereço completo
+      const shippingAddress = `${formData.address}, ${formData.number}${formData.complement ? ` - ${formData.complement}` : ''}, ${formData.city} - ${formData.state}, CEP: ${formData.cep}`
+
+      // Cria pedido e marca como pago diretamente
+      const result = await adminService.createOrderAsPaid(
+        shippingAddress,
+        isSubscription ? subscriptionPlan : undefined
+      )
+
+      console.log('✅ Pedido criado e marcado como pago (admin):', result)
+
+      // Limpa o carrinho
+      await clearCart()
+
+      // Redireciona para página de sucesso
+      navigate(`/checkout/success?orderId=${result.orderId}${result.isSubscription ? `&subscriptionId=${result.subscriptionId}` : ''}`)
+    } catch (error: any) {
+      console.error('Erro ao criar pedido como pago:', error)
+      setCheckoutError(error.message || 'Erro ao processar pagamento como admin. Tente novamente.')
+      setCreatingOrder(false)
+    }
+  }
+
   if (!isAuthenticated || !user) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
@@ -534,26 +626,14 @@ export default function Checkout() {
         Voltar
       </button>
 
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Finalizar Compra</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-5">Finalizar Compra</h1>
 
-      {/* Informações do usuário */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-        <p className="text-sm text-gray-600 mb-1">
-          <strong>Nome:</strong> {user.name}
-        </p>
-        <p className="text-sm text-gray-600">
-          <strong>E-mail:</strong> {user.email}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Form */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Form - Escolha de endereço */}
         <div className="lg:col-span-2">
-          <div className="card p-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">
-                <MapPin className="mr-2" size={24} />
-                Endereço de Entrega
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">
+              Escolha a forma de entrega
               </h2>
               {checkoutError && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -561,62 +641,54 @@ export default function Checkout() {
                 </div>
               )}
 
-              {/* Lista de Endereços Salvos */}
-              {!showNewAddressForm && loadingAddresses && (
-                <div className="mb-6 text-center py-8">
+              {/* Opções de Entrega com Radio Buttons (estilo Mercado Livre) */}
+              <div className="space-y-4">
+                {/* Endereços Salvos */}
+                {loadingAddresses ? (
+                  <div className="text-center py-8">
                   <Loader2 className="animate-spin mx-auto text-primary-600 mb-2" size={24} />
                   <p className="text-gray-600">Carregando endereços...</p>
                 </div>
-              )}
-
-              {!showNewAddressForm && !loadingAddresses && savedAddresses.length > 0 && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Endereços Salvos</h3>
-                    <button
-                      onClick={() => {
-                        setShowNewAddressForm(true)
-                        setSelectedAddressId(null)
-                        setEditingAddressId(null)
-                        setFormData({
-                          cep: '',
-                          address: '',
-                          number: '',
-                          complement: '',
-                          city: '',
-                          state: ''
-                        })
-                      }}
-                      className="text-sm text-primary-600 hover:text-primary-700 flex items-center"
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Novo Endereço
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {savedAddresses.map((address) => (
+                ) : (
+                  <>
+                    {savedAddresses.map((address) => {
+                      const isSelected = deliveryOption === 'saved' && selectedAddressId === address.id
+                      return (
                       <div
                         key={address.id}
-                        onClick={() => selectAddress(address)}
-                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                          selectedAddressId === address.id
+                          className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                            isSelected
                             ? 'border-primary-500 bg-primary-50'
-                            : 'border-gray-200 hover:border-primary-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => {
+                            setDeliveryOption('saved')
+                            selectAddress(address)
+                            setSelectedAddressId(address.id)
+                            setEditingAddressId(null)
+                          }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <input
+                              type="radio"
+                              name="deliveryOption"
+                              checked={isSelected}
+                              onChange={() => {
+                                setDeliveryOption('saved')
+                                selectAddress(address)
+                                setSelectedAddressId(address.id)
+                                setEditingAddressId(null)
+                              }}
+                              className="mt-1 w-4 h-4 text-primary-600"
+                            />
                           <div className="flex-1">
-                            <div className="flex items-center mb-2">
-                              <span className="font-semibold text-gray-900 mr-2">{address.nickname}</span>
-                              {address.is_default && (
-                                <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded">
-                                  Padrão
-                                </span>
-                              )}
-                              {selectedAddressId === address.id && (
-                                <Check className="w-5 h-5 text-primary-600 ml-2" />
-                              )}
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-semibold text-gray-900">Enviar no meu endereço</span>
+                                {(promoCodesValidation?.freeShipping || isFreeShipping) ? (
+                                  <span className="text-green-600 font-medium text-sm">Grátis</span>
+                                ) : shippingFee !== null ? (
+                                  <span className="text-gray-900 text-sm">R$ {shippingFee.toFixed(2).replace('.', ',')}</span>
+                                ) : null}
                             </div>
                             <p className="text-sm text-gray-600">
                               {address.address}, {address.number}
@@ -625,43 +697,43 @@ export default function Checkout() {
                             <p className="text-sm text-gray-600">
                               {address.city} - {address.state}, CEP: {address.cep}
                             </p>
-                          </div>
-                          <div className="flex items-center space-x-2 ml-4">
+                              {address.nickname && (
+                                <p className="text-xs text-gray-500 mt-1">{address.nickname}</p>
+                              )}
+                              {isSelected && (
                             <button
-                              onClick={(e) => handleEditAddress(address, e)}
-                              className="text-blue-600 hover:text-blue-700 p-1"
-                              title="Editar endereço"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
+                                  type="button"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setShowDeleteConfirmModal(address.id)
+                                    setShowEditAddressModal(true)
+                                    setEditAddressData(address)
                               }}
-                              className="text-red-600 hover:text-red-700 p-1"
-                              title="Remover endereço"
+                                  className="text-sm text-primary-600 hover:text-primary-700 mt-2"
                             >
-                              <Trash2 className="w-4 h-4" />
+                                  Alterar ou escolher outro endereço
                             </button>
+                              )}
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                      )
+                    })}
 
-              {/* Formulário de Endereço (Novo ou Editando) */}
-              {(showNewAddressForm || savedAddresses.length === 0 || (selectedAddressId && isEditingSelected)) && (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {savedAddresses.length > 0 && !isEditingSelected && (
-                    <button
-                      type="button"
+                    {/* Opção: Novo Endereço */}
+                    <div
+                      className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                        deliveryOption === 'new'
+                          ? 'border-primary-500 bg-primary-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
                       onClick={() => {
-                        setShowNewAddressForm(false)
+                        setDeliveryOption('new')
                         setSelectedAddressId(null)
                         setEditingAddressId(null)
+                        // Limpa o frete quando muda para novo endereço e CEP está vazio
+                        setShippingFee(null)
+                        setIsFreeShipping(false)
+                        setShippingMessage(null)
                         setFormData({
                           cep: '',
                           address: '',
@@ -671,24 +743,58 @@ export default function Checkout() {
                           state: ''
                         })
                       }}
-                      className="text-sm text-primary-600 hover:text-primary-700 mb-4 flex items-center"
                     >
-                      <ArrowLeft className="w-4 h-4 mr-1" />
-                      Voltar para endereços salvos
-                    </button>
-                  )}
-
-                  {isEditingSelected && selectedAddress && (
-                    <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-800">
-                        <strong>Editando:</strong> {selectedAddress.nickname}
-                      </p>
-                      <p className="text-xs text-blue-600 mt-1">
-                        As alterações serão salvas automaticamente ao finalizar a compra
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="radio"
+                          name="deliveryOption"
+                          checked={deliveryOption === 'new'}
+                          onChange={() => {
+                            setDeliveryOption('new')
+                            setSelectedAddressId(null)
+                            setEditingAddressId(null)
+                            // Limpa o frete quando muda para novo endereço e CEP está vazio
+                            setShippingFee(null)
+                            setIsFreeShipping(false)
+                            setShippingMessage(null)
+                            setFormData({
+                              cep: '',
+                              address: '',
+                              number: '',
+                              complement: '',
+                              city: '',
+                              state: ''
+                            })
+                          }}
+                          className="mt-1 w-4 h-4 text-primary-600"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold text-gray-900">Novo endereço</span>
+                            {/* Só mostra frete se deliveryOption for 'new', CEP estiver completo (9 caracteres) E frete foi calculado */}
+                            {deliveryOption === 'new' && formData.cep.length === 9 && (
+                              (promoCodesValidation?.freeShipping || isFreeShipping) ? (
+                                <span className="text-green-600 font-medium text-sm">Grátis</span>
+                              ) : shippingFee !== null ? (
+                                <span className="text-gray-900 text-sm">R$ {shippingFee.toFixed(2).replace('.', ',')}</span>
+                              ) : null
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            Preencha um novo endereço de entrega
                       </p>
                     </div>
-                  )}
+                      </div>
+                    </div>
+                  </>
+                )}
 
+                {/* Formulário de Novo Endereço */}
+                {deliveryOption === 'new' && (
+                  <form onSubmit={handleSubmit} className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+
+                  {/* Grupo 1: Localização */}
+                  <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       CEP *
@@ -710,23 +816,6 @@ export default function Checkout() {
                         </div>
                       )}
                     </div>
-                    {shippingMessage && (
-                      <div className={`mt-2 text-sm flex items-center ${
-                        isFreeShipping 
-                          ? 'text-green-600' 
-                          : shippingFee === null 
-                          ? 'text-red-600' 
-                          : 'text-gray-600'
-                      }`}>
-                        <Truck className="w-4 h-4 mr-1" />
-                        {shippingMessage}
-                      </div>
-                    )}
-                    {!isFreeShipping && shippingFee !== null && subtotal < freeShippingThreshold && (
-                      <div className="mt-2 text-xs text-gray-500">
-                        Adicione mais R$ {(freeShippingThreshold - subtotal).toFixed(2).replace('.', ',')} para ganhar frete grátis!
-                      </div>
-                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -742,6 +831,9 @@ export default function Checkout() {
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                   </div>
+                  </div>
+
+                  {/* Grupo 2: Detalhes */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -771,6 +863,8 @@ export default function Checkout() {
                       />
                     </div>
                   </div>
+
+                  {/* Grupo 3: Região */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -803,323 +897,172 @@ export default function Checkout() {
                     </div>
                   </div>
 
-                  {/* Botão para salvar endereço (apenas se for novo) */}
-                  {!isEditingSelected && formData.cep && formData.address && formData.number && formData.city && formData.state && (
-                    <div className="pt-4 border-t">
-                      <button
-                        type="button"
-                        onClick={() => setShowSaveAddressModal(true)}
-                        className="text-sm text-primary-600 hover:text-primary-700 flex items-center"
-                      >
-                        <Save className="w-4 h-4 mr-1" />
+                    {/* Checkbox para salvar endereço */}
+                    {formData.cep && formData.address && formData.number && formData.city && formData.state && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={saveNewAddress}
+                            onChange={(e) => setSaveNewAddress(e.target.checked)}
+                            className="w-4 h-4 text-primary-600 rounded"
+                          />
+                          <span className="text-sm text-gray-700">
                         Salvar este endereço para entregas futuras
-                      </button>
+                          </span>
+                        </label>
                     </div>
                   )}
-
-                  <div className="flex justify-between mt-6">
-                    <button 
-                      type="submit" 
-                      className="btn-primary ml-auto flex items-center"
-                      disabled={creatingOrder}
-                    >
-                      {creatingOrder ? (
-                        <>
-                          <Loader2 className="animate-spin mr-2" size={20} />
-                          Processando e redirecionando para o Mercado Pago...
-                        </>
-                      ) : (
-                        'Continuar para o Pagamento no Mercado Pago'
-                      )}
-                    </button>
-                  </div>
                 </form>
               )}
 
-              {/* Botão de continuar quando endereço salvo está selecionado (sem edição) */}
-              {!showNewAddressForm && selectedAddressId && !isEditingSelected && (
+                {/* Botão Continuar */}
                 <div className="mt-6">
-                  <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                    <p className="text-sm text-gray-600 mb-2">
-                      <strong>Endereço selecionado:</strong> {selectedAddress?.nickname}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Clique no endereço acima para editar ou use o botão de editar
-                    </p>
-                  </div>
                   <button 
                     onClick={() => handleSubmit()}
-                    className="btn-primary w-full flex items-center justify-center"
-                    disabled={creatingOrder}
+                    className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={
+                      creatingOrder || 
+                      (deliveryOption === 'saved' && !selectedAddressId) || 
+                      (deliveryOption === 'new' && (!formData.cep || !formData.address || !formData.number || !formData.city || !formData.state)) ||
+                      calculatingShipping ||
+                      (formData.cep.replace(/\D/g, '').length === 8 && shippingFee === null && shippingMessage && shippingMessage.includes('não estamos enviando'))
+                    }
                   >
                     {creatingOrder ? (
                       <>
-                        <Loader2 className="animate-spin mr-2" size={20} />
-                        Processando e redirecionando para o Mercado Pago...
+                        <Loader2 className="animate-spin mr-2 inline" size={20} />
+                        Processando...
                       </>
                     ) : (
-                      'Continuar para o Pagamento no Mercado Pago'
+                      'Continuar'
                     )}
                   </button>
                 </div>
-              )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Order Summary */}
+        {/* Order Summary - Resumo simplificado (estilo Mercado Livre) */}
         <div className="lg:col-span-1">
-          <div className="card p-6 sticky top-24">
-            {/* Código Promocional */}
-            <div className="mb-6 pb-6 border-b">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                <Tag className="w-5 h-5 mr-2" />
-                Código Promocional
-              </h3>
-              {appliedPromoCodes.length === 0 ? (
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                      placeholder="Digite o código"
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          handleValidatePromoCode()
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={handleValidatePromoCode}
-                      disabled={validatingPromoCode || !promoCode.trim()}
-                      className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {validatingPromoCode ? (
-                        <Loader2 className="animate-spin" size={16} />
-                      ) : (
-                        'Aplicar'
-                      )}
-                    </button>
-                  </div>
-                  {promoCodeError && (
-                    <p className="text-sm text-red-600">{promoCodeError}</p>
-                  )}
-                </div>
-              ) : (
-                <>
-                  {/* Mostra múltiplos cupons aplicados */}
-                  {appliedPromoCodes.length > 0 && promoCodesValidation && (
-                    <div className="space-y-2 mb-3">
-                      {promoCodesValidation.promoCodes.map((promoCode) => {
-                        const appliedDiscount = promoCodesValidation.appliedDiscounts.percentage?.code === promoCode.code
-                          ? promoCodesValidation.appliedDiscounts.percentage
-                          : promoCodesValidation.appliedDiscounts.fixed.find(f => f.code === promoCode.code)
-                        
-                        return (
-                          <div key={promoCode.id} className="bg-green-50 border border-green-200 rounded-lg p-3">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <p className="text-sm font-semibold text-green-900 mb-1">
-                                  {promoCode.name} ({promoCode.code})
-                                </p>
-                                {appliedDiscount && (
-                                  <p className="text-xs text-green-700">
-                                    {promoCode.discount_type === 'percentage' 
-                                      ? `${promoCode.discount_value}% OFF`
-                                      : `R$ ${appliedDiscount.discount.toFixed(2).replace('.', ',')} OFF`}
-                                  </p>
-                                )}
-                                {promoCode.free_shipping && (
-                                  <p className="text-xs text-green-700 mt-1 flex items-center">
-                                    <Truck className="w-3 h-3 mr-1" />
-                                    Frete grátis
-                                  </p>
-                                )}
-                              </div>
-                              <button
-                                onClick={() => handleRemovePromoCode(promoCode.code)}
-                                className="text-red-600 hover:text-red-700 p-1"
-                                title="Remover código"
-                                disabled={validatingPromoCode}
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        )
-                      })}
-                      
-                      {promoCodesValidation.totalDiscount > 0 && (
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mt-2">
-                          <p className="text-sm font-bold text-blue-900">
-                            Desconto Total: R$ {promoCodesValidation.totalDiscount.toFixed(2).replace('.', ',')}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Input para adicionar novo código */}
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                        placeholder="Digite um código"
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            handleValidatePromoCode()
-                          }
-                        }}
-                        disabled={validatingPromoCode}
-                      />
-                      <button
-                        onClick={handleValidatePromoCode}
-                        disabled={validatingPromoCode || !promoCode.trim()}
-                        className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {validatingPromoCode ? (
-                          <Loader2 className="animate-spin" size={16} />
-                        ) : (
-                          'Aplicar'
-                        )}
-                      </button>
-                    </div>
-                    {promoCodeError && (
-                      <p className="text-sm text-red-600">{promoCodeError}</p>
-                    )}
-                    {appliedPromoCodes.length > 0 && (
-                      <button
-                        onClick={handleRemoveAllPromoCodes}
-                        className="text-sm text-red-600 hover:text-red-700 underline"
-                        disabled={validatingPromoCode}
-                      >
-                        Remover todos os códigos
-                      </button>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 sticky top-24">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">
+              Resumo da compra
+            </h2>
 
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Resumo do Pedido</h2>
-            <div className="space-y-2 mb-4">
-              {items.map(item => {
-                const price = item.product?.price || item.customMedication?.price || 0
-                const itemTotal = price * item.quantity
-                const itemDiscountedPrice = isSubscription 
-                  ? itemTotal * (1 - subscriptionDiscount)
-                  : itemTotal
-                
-                return (
-                  <div key={item.id} className="text-sm">
-                    <p className="font-medium">
-                      {item.product?.name || item.customMedication?.name}
-                    </p>
-                    <p className="text-gray-600">
-                      Qtd: {item.quantity} × R$ {price.toFixed(2).replace('.', ',')}
-                    </p>
-                    {isSubscription && itemTotal !== itemDiscountedPrice && (
-                      <p className="text-xs text-gray-400 line-through">
-                        R$ {itemTotal.toFixed(2).replace('.', ',')}
-                      </p>
-                    )}
-                    {isSubscription && (
-                      <p className="text-primary-600 font-semibold">
-                        R$ {itemDiscountedPrice.toFixed(2).replace('.', ',')}
-                      </p>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-            <div className="border-t pt-4 space-y-3">
+            <div className="space-y-4">
+              {/* Produtos */}
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Subtotal</span>
-                <span className="font-semibold text-gray-900">R$ {subtotal.toFixed(2).replace('.', ',')}</span>
-              </div>
-
-              {isSubscription && (
-                <div className="bg-primary-50 rounded-lg p-3 border border-primary-100">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-semibold text-primary-700">Desconto Assinatura</span>
-                    <span className="text-sm font-bold text-primary-600">
-                      -{subscriptionDiscount * 100}%
+                <span className="text-gray-600">
+                  Produtos ({items.length})
                     </span>
-                  </div>
-                  <p className="text-xs text-gray-600">
-                    {subscriptionPlan === 'quarterly' ? 'Plano Trimestral' : 'Plano Mensal'}
-                  </p>
-                </div>
-              )}
-
-              {promoCodesValidation && promoCodesValidation.totalDiscount > 0 && (
-                <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-semibold text-green-700">Desconto Promocional</span>
-                    <span className="text-sm font-bold text-green-600">
-                      - R$ {promoCodesValidation.totalDiscount.toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-                  {promoCodesValidation.promoCodes.length > 1 && (
-                    <p className="text-xs text-gray-600 mt-1">
-                      {promoCodesValidation.promoCodes.length} código(s) aplicado(s)
+                <div className="text-right">
+                  {isSubscription && baseTotal !== subtotal && (
+                    <p className="text-xs text-gray-400 line-through mb-0.5">
+                      R$ {baseTotal.toFixed(2).replace('.', ',')}
                     </p>
                   )}
+                  <span className="font-medium text-gray-900">
+                    R$ {subtotal.toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
                 </div>
-              )}
               
               {/* Frete */}
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600 flex items-center">
-                  <Truck className="w-4 h-4 mr-1" />
-                  Frete
-                </span>
+                <span className="text-gray-600">Frete</span>
                 <div className="text-right">
                   {calculatingShipping ? (
-                    <Loader2 className="animate-spin text-gray-400" size={16} />
-                  ) : (promoCodesValidation?.freeShipping || isFreeShipping) ? (
-                    <span className="text-green-600 font-semibold">Grátis</span>
+                    <Loader2 className="animate-spin text-gray-400 inline" size={14} />
+                  ) : (promoCodesValidation?.freeShipping || (isFreeShipping && freeShippingThreshold > 0 && subtotal >= freeShippingThreshold)) ? (
+                    <span className="text-green-600 font-medium">Grátis</span>
                   ) : shippingFee !== null ? (
                     <span className="text-gray-900">R$ {shippingFee.toFixed(2).replace('.', ',')}</span>
                   ) : formData.cep.length === 9 ? (
-                    <span className="text-red-600 text-xs">Não disponível</span>
+                    <span className="text-red-500 text-xs">Não disponível</span>
                   ) : (
                     <span className="text-gray-400">-</span>
                   )}
                 </div>
               </div>
+              
+              {/* Mensagem de frete não disponível */}
+              {shippingFee === null && shippingMessage && shippingMessage.includes('não estamos enviando') && (
+                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-700">
+                    {shippingMessage}
+                  </p>
+                </div>
+              )}
+              
+              {/* Motivo do frete grátis */}
+              {(promoCodesValidation?.freeShipping || (isFreeShipping && freeShippingThreshold > 0 && subtotal >= freeShippingThreshold)) && (
+                <div className="text-xs text-green-600 mt-1 mb-2">
+                  {promoCodesValidation?.freeShipping ? (
+                    <span>Frete grátis por cupom promocional</span>
+                  ) : isFreeShipping && freeShippingThreshold > 0 && subtotal >= freeShippingThreshold ? (
+                    <span>Frete grátis para pedidos acima de R$ {freeShippingThreshold.toFixed(2).replace('.', ',')}</span>
+                  ) : null}
+                </div>
+              )}
 
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold">Total</span>
-                <div className="text-right">
-                  {isSubscription && baseTotal !== subtotal && (
-                    <p className="text-xs text-gray-400 line-through mb-1">
-                      R$ {baseTotal.toFixed(2).replace('.', ',')}
-                    </p>
-                  )}
-                  <span className="text-2xl font-bold text-primary-600">
+              {/* Cupons */}
+              {promoCodesValidation && promoCodesValidation.totalDiscount > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">
+                    {promoCodesValidation.promoCodes.length > 1 
+                      ? `Cupons (${promoCodesValidation.promoCodes.length})`
+                      : 'Cupom'}
+                  </span>
+                  <span className="text-green-600 font-medium">
+                    - R$ {promoCodesValidation.totalDiscount.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+              )}
+
+              {/* Total */}
+              <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                <span className="text-lg font-bold text-gray-900">Total</span>
+                <span className="text-xl font-bold text-gray-900">
                     R$ {currentTotal.toFixed(2).replace('.', ',')}
                   </span>
                 </div>
-              </div>
-              {isSubscription && (
-                <p className="text-xs text-gray-500 text-right">
-                  {subscriptionPlan === 'quarterly' ? 'A cada 3 meses' : 'Por mês'}
-                </p>
+
+              {/* Botão de Pagamento como Admin */}
+              {isAdmin && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={handlePayAsAdmin}
+                    disabled={creatingOrder || 
+                      (deliveryOption === 'saved' && !selectedAddressId) || 
+                      (deliveryOption === 'new' && (!formData.cep || !formData.address || !formData.number || !formData.city || !formData.state)) ||
+                      calculatingShipping ||
+                      (formData.cep.replace(/\D/g, '').length === 8 && shippingFee === null && shippingMessage && shippingMessage.includes('não estamos enviando'))
+                    }
+                    className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {creatingOrder ? (
+                      <>
+                        <Loader2 className="animate-spin" size={20} />
+                        Processando...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-5 h-5" />
+                        Pagar como Admin (Sem Mercado Pago)
+                      </>
+                    )}
+                  </button>
+                  <p className="text-xs text-gray-500 mt-2 text-center">
+                    Este botão só aparece para administradores. O pedido será marcado como pago automaticamente.
+                  </p>
+                </div>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Modal para salvar endereço */}
       {showSaveAddressModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowSaveAddressModal(false)}>
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
@@ -1363,3 +1306,4 @@ export default function Checkout() {
     </div>
   )
 }
+

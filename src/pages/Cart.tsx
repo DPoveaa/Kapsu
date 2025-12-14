@@ -1,11 +1,13 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, FileText, Loader2, CheckCircle, Repeat, Check, Sparkles, Truck, Gift } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, FileText, Loader2, CheckCircle, Repeat, Check, Sparkles, Truck, Gift, Tag, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { productsService } from '../services/products.service'
 import { cartService } from '../services/cart.service'
 import { promotionsService, Promotion } from '../services/promotions.service'
+import { promoCodesService, MultiplePromoCodesValidation } from '../services/promo-codes.service'
+import { shippingService } from '../services/shipping.service'
 import { Product } from '../types'
 
 export default function Cart() {
@@ -21,6 +23,15 @@ export default function Cart() {
   const [localPurchaseType, setLocalPurchaseType] = useState<'one-time' | 'subscription' | null>(null)
   const [applicablePromotions, setApplicablePromotions] = useState<Promotion[]>([])
   const [loadingPromotions, setLoadingPromotions] = useState(false)
+  
+  // Estados para códigos promocionais
+  const [promoCode, setPromoCode] = useState('')
+  const [appliedPromoCodes, setAppliedPromoCodes] = useState<string[]>([])
+  const [promoCodesValidation, setPromoCodesValidation] = useState<MultiplePromoCodesValidation | null>(null)
+  const [validatingPromoCode, setValidatingPromoCode] = useState(false)
+  const [promoCodeError, setPromoCodeError] = useState<string | null>(null)
+  const [currentCouponIndex, setCurrentCouponIndex] = useState(0)
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState<number>(0)
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     const target = e.target as HTMLImageElement
@@ -75,7 +86,16 @@ export default function Cart() {
   }
 
   const promotionDiscount = calculatePromotionDiscount(isSubscription ? discountedTotal : baseTotal)
-  const totalAfterPromotions = (isSubscription ? discountedTotal : baseTotal) - promotionDiscount
+  const subtotalAfterPromotions = (isSubscription ? discountedTotal : baseTotal) - promotionDiscount
+  
+  // Desconto de cupons promocionais
+  const promoCodeDiscount = promoCodesValidation?.totalDiscount || 0
+  const totalAfterPromotions = subtotalAfterPromotions - promoCodeDiscount
+
+  // Verifica se há frete grátis (por cupom ou valor mínimo)
+  const hasFreeShippingByCoupon = promoCodesValidation?.freeShipping || false
+  const hasFreeShippingByThreshold = freeShippingThreshold > 0 && totalAfterPromotions >= freeShippingThreshold
+  const hasFreeShipping = hasFreeShippingByCoupon || hasFreeShippingByThreshold
 
   // Remove a barra de progresso de frete grátis hardcoded
   // O frete grátis agora é calculado pelo backend baseado nas configurações
@@ -113,6 +133,20 @@ export default function Cart() {
 
     checkPromotions()
   }, [items, baseTotal, user])
+
+  // Busca configurações de frete grátis
+  useEffect(() => {
+    const loadShippingSettings = async () => {
+      try {
+        const settings = await shippingService.getShippingSettings()
+        setFreeShippingThreshold(settings.free_shipping_threshold || 0)
+      } catch (error) {
+        console.error('Erro ao carregar configurações de frete:', error)
+        // Mantém o valor padrão 0 em caso de erro
+      }
+    }
+    loadShippingSettings()
+  }, [])
 
   // Processa o token do WhatsApp na URL
   useEffect(() => {
@@ -175,6 +209,148 @@ export default function Cart() {
       .filter(item => item.type === 'product' && item.product)
       .map(item => item.product!.id)
   }, [items])
+
+  // Carrega cupons do localStorage ao montar
+  useEffect(() => {
+    const savedCodes = localStorage.getItem('cart_promo_codes')
+    const savedValidation = localStorage.getItem('cart_promo_codes_validation')
+    if (savedCodes) {
+      try {
+        const codes = JSON.parse(savedCodes)
+        setAppliedPromoCodes(codes)
+        if (savedValidation) {
+          const validation = JSON.parse(savedValidation)
+          setPromoCodesValidation(validation)
+        }
+      } catch (error) {
+        console.error('Erro ao carregar cupons:', error)
+      }
+    }
+  }, [])
+
+  // Salva cupons no localStorage quando mudarem
+  useEffect(() => {
+    if (appliedPromoCodes.length > 0) {
+      localStorage.setItem('cart_promo_codes', JSON.stringify(appliedPromoCodes))
+      if (promoCodesValidation) {
+        localStorage.setItem('cart_promo_codes_validation', JSON.stringify(promoCodesValidation))
+      }
+    } else {
+      localStorage.removeItem('cart_promo_codes')
+      localStorage.removeItem('cart_promo_codes_validation')
+    }
+  }, [appliedPromoCodes, promoCodesValidation])
+
+  // Função para validar código promocional
+  const handleValidatePromoCode = async () => {
+    if (!promoCode.trim()) {
+      setPromoCodeError('Digite um código promocional')
+      return
+    }
+
+    const codeToAdd = promoCode.trim().toUpperCase()
+    
+    if (appliedPromoCodes.includes(codeToAdd)) {
+      setPromoCodeError('Este código já foi aplicado')
+      return
+    }
+
+    try {
+      setValidatingPromoCode(true)
+      setPromoCodeError(null)
+      
+      const cartItems = items
+        .filter(item => item.product)
+        .map(item => ({
+          product_id: item.product!.id,
+          quantity: item.quantity,
+          price: item.product!.price,
+        }))
+      
+      const codesToValidate = [...appliedPromoCodes, codeToAdd]
+      const subtotal = isSubscription ? discountedTotal : baseTotal
+      
+      const validation = await promoCodesService.validateMultiplePromoCodes(
+        codesToValidate,
+        subtotal,
+        cartItems,
+        user?.id
+      )
+      
+      const validatedCodes = validation.promoCodes.map(pc => pc.code.toUpperCase())
+      const newCodeWasAccepted = validatedCodes.includes(codeToAdd)
+      
+      if (!newCodeWasAccepted) {
+        let codeError = 'Este código não pode ser aplicado'
+        if (validation.errors && validation.errors.length > 0) {
+          const specificError = validation.errors.find(err => 
+            err.toLowerCase().includes(codeToAdd.toLowerCase())
+          )
+          codeError = specificError || validation.errors[0] || codeError
+        }
+        setPromoCodeError(codeError)
+        setAppliedPromoCodes(validatedCodes)
+        setPromoCodesValidation(validation)
+        return
+      }
+      
+      setPromoCodesValidation(validation)
+      setAppliedPromoCodes(validatedCodes)
+      setPromoCode('')
+      setPromoCodeError(null)
+      setCurrentCouponIndex(0)
+    } catch (error: any) {
+      setPromoCodeError(error.message || 'Erro ao validar código promocional')
+    } finally {
+      setValidatingPromoCode(false)
+    }
+  }
+
+  // Função para remover cupom
+  const handleRemovePromoCode = async (codeToRemove: string) => {
+    const newCodes = appliedPromoCodes.filter(code => code !== codeToRemove)
+    setAppliedPromoCodes(newCodes)
+    
+    if (newCodes.length === 0) {
+      setPromoCodesValidation(null)
+      return
+    }
+
+    try {
+      setValidatingPromoCode(true)
+      const cartItems = items
+        .filter(item => item.product)
+        .map(item => ({
+          product_id: item.product!.id,
+          quantity: item.quantity,
+          price: item.product!.price,
+        }))
+      
+      const subtotal = isSubscription ? discountedTotal : baseTotal
+      const validation = await promoCodesService.validateMultiplePromoCodes(
+        newCodes,
+        subtotal,
+        cartItems,
+        user?.id
+      )
+      
+      setPromoCodesValidation(validation)
+      setCurrentCouponIndex(prev => prev >= newCodes.length ? Math.max(0, newCodes.length - 1) : prev)
+    } catch (error: any) {
+      console.error('Erro ao revalidar códigos:', error)
+    } finally {
+      setValidatingPromoCode(false)
+    }
+  }
+
+  // Reset índice do carrossel quando cupons mudam
+  useEffect(() => {
+    if (appliedPromoCodes.length <= 1) {
+      setCurrentCouponIndex(0)
+    } else if (currentCouponIndex >= appliedPromoCodes.length) {
+      setCurrentCouponIndex(0)
+    }
+  }, [appliedPromoCodes.length])
 
   // Busca produtos recomendados
   useEffect(() => {
@@ -430,6 +606,8 @@ export default function Cart() {
               Cada produto mostra apenas: imagem, nome, quantidade e preço.
               A opção de assinatura está APENAS no topo (seção global acima).
             */}
+            {/* Banner de economia com cupons (similar ao Mercado Livre) */}
+
             {/* Lista de Produtos */}
             <div className="space-y-4">
               {items.map(item => {
@@ -592,6 +770,222 @@ export default function Cart() {
           {/* Summary - Sidebar moderno */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-24">
+              {/* Seção de Cupons Promocionais */}
+              <div className="mb-6 pb-6 border-b border-gray-200">
+                <h3 className="text-base font-semibold text-gray-900 mb-3 flex items-center">
+                  <Tag className="w-4 h-4 mr-2 text-gray-600" />
+                  Cupons Promocionais
+                </h3>
+                
+                {appliedPromoCodes.length === 0 ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                        placeholder="Digite o código"
+                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleValidatePromoCode()
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={handleValidatePromoCode}
+                        disabled={validatingPromoCode || !promoCode.trim()}
+                        className="px-3 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {validatingPromoCode ? (
+                          <Loader2 className="animate-spin" size={14} />
+                        ) : (
+                          'Aplicar'
+                        )}
+                      </button>
+                    </div>
+                    {promoCodeError && (
+                      <p className="text-xs text-red-600">{promoCodeError}</p>
+                    )}
+                    {!promoCodeError && (
+                      <p className="text-xs text-gray-400">
+                        Possui um código promocional? Insira acima.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {/* Carrossel de cupons - se tiver mais de 1 */}
+                    {appliedPromoCodes.length > 1 && promoCodesValidation ? (
+                      <div className="relative">
+                        <div className="overflow-hidden">
+                          <div 
+                            className="flex transition-transform duration-300 ease-in-out"
+                            style={{ transform: `translateX(-${currentCouponIndex * 100}%)` }}
+                          >
+                            {promoCodesValidation.promoCodes.map((promoCode) => {
+                              const appliedDiscount = promoCodesValidation.appliedDiscounts.percentage?.code === promoCode.code
+                                ? promoCodesValidation.appliedDiscounts.percentage
+                                : promoCodesValidation.appliedDiscounts.fixed.find(f => f.code === promoCode.code)
+                              
+                              return (
+                                <div key={promoCode.id} className="min-w-full flex-shrink-0">
+                                  <div className="bg-green-50 border border-green-200 rounded-md px-3 py-2 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      <Check className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-semibold text-green-900 truncate">
+                                          {promoCode.name}
+                                        </p>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                          <span className="text-xs text-green-700">
+                                            {promoCode.code}
+                                          </span>
+                                          {appliedDiscount && (
+                                            <span className="text-xs font-bold text-green-600">
+                                              • {promoCode.discount_type === 'percentage' 
+                                                ? `${promoCode.discount_value}% OFF`
+                                                : `R$ ${appliedDiscount.discount.toFixed(2).replace('.', ',')} OFF`}
+                                            </span>
+                                          )}
+                                          {promoCode.free_shipping && (
+                                            <Truck className="w-3 h-3 text-green-600" />
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <button
+                                      onClick={() => handleRemovePromoCode(promoCode.code)}
+                                      className="text-red-500 hover:text-red-600 p-1 flex-shrink-0 opacity-70 hover:opacity-100"
+                                      title="Remover código"
+                                      disabled={validatingPromoCode}
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                        
+                        {/* Navegação do carrossel */}
+                        <div className="flex items-center justify-between mt-2">
+                          <button
+                            onClick={() => setCurrentCouponIndex(prev => prev > 0 ? prev - 1 : promoCodesValidation.promoCodes.length - 1)}
+                            className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                            disabled={validatingPromoCode}
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <div className="flex gap-1">
+                            {promoCodesValidation.promoCodes.map((_, index) => (
+                              <button
+                                key={index}
+                                onClick={() => setCurrentCouponIndex(index)}
+                                className={`w-1.5 h-1.5 rounded-full transition-all ${
+                                  index === currentCouponIndex ? 'bg-primary-600 w-4' : 'bg-gray-300'
+                                }`}
+                                disabled={validatingPromoCode}
+                              />
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => setCurrentCouponIndex(prev => prev < promoCodesValidation.promoCodes.length - 1 ? prev + 1 : 0)}
+                            className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                            disabled={validatingPromoCode}
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* Cupom único - sem carrossel */
+                      appliedPromoCodes.length === 1 && promoCodesValidation && (
+                        <div className="bg-green-50 border border-green-200 rounded-md px-3 py-2">
+                          {promoCodesValidation.promoCodes.map((promoCode) => {
+                            const appliedDiscount = promoCodesValidation.appliedDiscounts.percentage?.code === promoCode.code
+                              ? promoCodesValidation.appliedDiscounts.percentage
+                              : promoCodesValidation.appliedDiscounts.fixed.find(f => f.code === promoCode.code)
+                            
+                            return (
+                              <div key={promoCode.id} className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <Check className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-semibold text-green-900 truncate">
+                                      {promoCode.name}
+                                    </p>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <span className="text-xs text-green-700">
+                                        {promoCode.code}
+                                      </span>
+                                      {appliedDiscount && (
+                                        <span className="text-xs font-bold text-green-600">
+                                          • {promoCode.discount_type === 'percentage' 
+                                            ? `${promoCode.discount_value}% OFF`
+                                            : `R$ ${appliedDiscount.discount.toFixed(2).replace('.', ',')} OFF`}
+                                        </span>
+                                      )}
+                                      {promoCode.free_shipping && (
+                                        <Truck className="w-3 h-3 text-green-600" />
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <button
+                                  onClick={() => handleRemovePromoCode(promoCode.code)}
+                                  className="text-red-500 hover:text-red-600 p-1 flex-shrink-0 opacity-70 hover:opacity-100"
+                                  title="Remover código"
+                                  disabled={validatingPromoCode}
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    )}
+                    
+                    {/* Input para adicionar novo código */}
+                    <div className="space-y-1">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={promoCode}
+                          onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                          placeholder="Digite um código"
+                          className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleValidatePromoCode()
+                            }
+                          }}
+                          disabled={validatingPromoCode}
+                        />
+                        <button
+                          onClick={handleValidatePromoCode}
+                          disabled={validatingPromoCode || !promoCode.trim()}
+                          className="px-3 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {validatingPromoCode ? (
+                            <Loader2 className="animate-spin" size={14} />
+                          ) : (
+                            'Aplicar'
+                          )}
+                        </button>
+                      </div>
+                      {promoCodeError && (
+                        <p className="text-xs text-red-600">{promoCodeError}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <h2 className="text-xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-200">
                 Resumo do Pedido
               </h2>
@@ -613,6 +1007,20 @@ export default function Cart() {
                     <p className="text-xs text-gray-600">
                       {subscriptionPlan === 'quarterly' ? 'Plano Trimestral' : 'Plano Mensal'}
                     </p>
+                  </div>
+                )}
+
+                {/* Cupons Aplicados */}
+                {promoCodesValidation && promoCodesValidation.totalDiscount > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">
+                      {promoCodesValidation.promoCodes.length > 1 
+                        ? `Cupom (${promoCodesValidation.promoCodes.length})`
+                        : 'Cupom'}
+                    </span>
+                    <span className="text-green-600 font-semibold">
+                      - R$ {promoCodesValidation.totalDiscount.toFixed(2).replace('.', ',')}
+                    </span>
                   </div>
                 )}
 
@@ -680,11 +1088,28 @@ export default function Cart() {
                   </div>
                 )}
 
+                {/* Frete */}
+                {hasFreeShipping && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">Frete</span>
+                    <div className="text-right">
+                      <span className="text-green-600 font-medium">Grátis</span>
+                      <div className="text-xs text-green-600 mt-0.5">
+                        {hasFreeShippingByCoupon ? (
+                          <span>Frete grátis por cupom promocional</span>
+                        ) : hasFreeShippingByThreshold ? (
+                          <span>Frete grátis para pedidos acima de R$ {freeShippingThreshold.toFixed(2).replace('.', ',')}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="border-t border-gray-200 pt-4">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold text-gray-900">Total</span>
                     <span className="text-2xl font-bold text-primary-600">
-                      R$ {totalAfterPromotions.toFixed(2).replace('.', ',')}
+                      R$ {currentTotal.toFixed(2).replace('.', ',')}
                     </span>
                   </div>
                   {isSubscription && (

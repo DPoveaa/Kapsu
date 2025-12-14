@@ -13,6 +13,7 @@ export interface PromoCode {
   min_product_quantity?: number
   applicable_product_ids?: string[]
   free_shipping: boolean
+  can_combine_with_others?: boolean
   start_date?: string
   end_date?: string
   usage_limit?: number

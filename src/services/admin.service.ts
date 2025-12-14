@@ -805,6 +805,43 @@ class AdminService {
       throw new Error('Erro de conexão ao buscar detalhes do pedido')
     }
   }
+
+  /**
+   * Cria um pedido e marca como pago diretamente (apenas admin)
+   */
+  async createOrderAsPaid(shippingAddress?: string, subscriptionPlan?: 'monthly' | 'quarterly'): Promise<{ orderId: string; subscriptionId?: string; isSubscription: boolean }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const response = await fetch(`${this.baseUrl}/orders/pay-as-admin`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          shippingAddress,
+          subscriptionPlan,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || 'Erro ao criar pedido como pago')
+      }
+
+      const result = await response.json()
+      return result.data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao criar pedido como pago')
+    }
+  }
 }
 
 export const adminService = new AdminService()

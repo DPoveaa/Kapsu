@@ -38,6 +38,7 @@ export default function ManagePromoCodes() {
     user_usage_limit: '',
     priority: 0,
     active: true,
+    can_combine_with_others: true,
   })
 
   useEffect(() => {
@@ -125,6 +126,7 @@ export default function ManagePromoCodes() {
         active: formData.active,
         priority: Number(formData.priority) || 0,
         free_shipping: formData.free_shipping,
+        can_combine_with_others: formData.can_combine_with_others,
         start_date: startDate,
         end_date: endDate,
         // Aplica limites conforme o tipo selecionado
@@ -239,6 +241,7 @@ export default function ManagePromoCodes() {
       user_usage_limit: code.user_usage_limit ? String(code.user_usage_limit) : '',
       priority: code.priority,
       active: code.active,
+      can_combine_with_others: code.can_combine_with_others !== false, // Default true se não definido
     })
     setShowForm(true)
   }
@@ -266,6 +269,7 @@ export default function ManagePromoCodes() {
       user_usage_limit: '',
       priority: 0,
       active: true,
+      can_combine_with_others: true,
     })
   }
 
@@ -549,6 +553,26 @@ export default function ManagePromoCodes() {
                       </div>
                     </div>
 
+                    {/* Permite combinação com outros cupons */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="can_combine_with_others"
+                          checked={formData.can_combine_with_others}
+                          onChange={(e) => setFormData({ ...formData, can_combine_with_others: e.target.checked })}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor="can_combine_with_others" className="ml-2 text-sm text-gray-700 flex items-center">
+                          <Tag className="w-4 h-4 mr-1" />
+                          Permitir uso junto com outros cupons
+                        </label>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500 ml-6">
+                        Se desmarcado, este cupom só poderá ser usado sozinho, não poderá ser combinado com outros cupons.
+                      </p>
+                    </div>
+
                     {/* Expiração por Tempo */}
                     <div className="border-t pt-4">
                       <h4 className="text-sm font-semibold text-gray-900 mb-3">Expiração por Tempo (Opcional)</h4>
@@ -818,6 +842,12 @@ export default function ManagePromoCodes() {
                                 <span className="flex items-center">
                                   <Truck className="w-3 h-3 mr-1" />
                                   Frete grátis
+                                </span>
+                              )}
+                              {code.can_combine_with_others === false && (
+                                <span className="flex items-center text-orange-600">
+                                  <Tag className="w-3 h-3 mr-1" />
+                                  Não combinável
                                 </span>
                               )}
                             </div>

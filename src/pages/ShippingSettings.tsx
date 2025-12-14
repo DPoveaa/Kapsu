@@ -5,7 +5,7 @@ import { shippingService, ShippingRegion, ShippingSettings as ShippingSettingsTy
 
 export default function ShippingSettings() {
   const [regions, setRegions] = useState<ShippingRegion[]>([])
-  const [settings, setSettings] = useState<ShippingSettingsType>({ free_shipping_threshold: 200 })
+  const [settings, setSettings] = useState<ShippingSettingsType>({ free_shipping_threshold: 0 })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -33,7 +33,13 @@ export default function ShippingSettings() {
         shippingService.getShippingSettings(),
       ])
       setRegions(regionsData)
-      setSettings(settingsData)
+      // Garante que o valor seja exatamente o que vem do banco, ou 0 se não existir
+      const threshold = settingsData.free_shipping_threshold !== undefined 
+        ? settingsData.free_shipping_threshold 
+        : 0
+      setSettings({
+        free_shipping_threshold: threshold
+      })
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar dados')
     } finally {
@@ -48,6 +54,8 @@ export default function ShippingSettings() {
       await shippingService.updateShippingSettings(settings)
       setSuccess('Configurações salvas com sucesso!')
       setTimeout(() => setSuccess(null), 3000)
+      // Recarrega os dados após salvar para garantir que está sincronizado
+      await loadData()
     } catch (err: any) {
       setError(err.message || 'Erro ao salvar configurações')
     } finally {
@@ -196,16 +204,23 @@ export default function ShippingSettings() {
                     type="number"
                     min="0"
                     step="0.01"
-                    value={settings.free_shipping_threshold || 200}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      free_shipping_threshold: Number(e.target.value),
-                    })}
+                    value={settings.free_shipping_threshold !== undefined ? settings.free_shipping_threshold : ''}
+                    onChange={(e) => {
+                      const inputValue = e.target.value;
+                      // Permite valor vazio, mas quando há valor, converte para número
+                      const value = inputValue === '' ? 0 : Number(inputValue);
+                      setSettings({
+                        ...settings,
+                        free_shipping_threshold: isNaN(value) ? 0 : value,
+                      });
+                    }}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="200.00"
                   />
                   <p className="mt-1 text-xs text-gray-500">
-                    Pedidos acima deste valor terão frete grátis
+                    {settings.free_shipping_threshold === 0 || settings.free_shipping_threshold === null
+                      ? 'Frete grátis desabilitado. Defina um valor maior que 0 para habilitar.'
+                      : `Pedidos acima de R$ ${settings.free_shipping_threshold.toFixed(2).replace('.', ',')} terão frete grátis`}
                   </p>
                 </div>
 
