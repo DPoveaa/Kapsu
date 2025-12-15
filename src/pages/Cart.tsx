@@ -471,14 +471,14 @@ export default function Cart() {
             */}
             {/* Seção Global de Escolha de Tipo de Compra - APLICA PARA TODO O CARRINHO */}
             {items.length > 0 && (
-              <div className="bg-gradient-to-br from-white via-primary-50/30 to-gray-50 rounded-2xl shadow-xl border-2 border-primary-200 p-6 mb-6">
+              <div className="bg-gradient-to-br from-white dark:from-[#065084] via-primary-50/30 dark:via-[#065084] to-gray-50 dark:to-[#065084] rounded-2xl shadow-xl dark:shadow-lg border-2 border-primary-200 dark:border-[#0F828C] p-6 mb-6">
               <div className="flex items-center gap-2 mb-2">
                 <Sparkles size={24} className="text-primary-600" />
-                <h4 className="text-xl font-bold text-gray-900">
+                <h4 className="text-xl font-bold text-gray-900 dark:text-white">
                   Forma de Compra do Carrinho
                 </h4>
               </div>
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                 A opção selecionada será aplicada para <strong>todos os produtos</strong> do seu carrinho
               </p>
 
@@ -488,8 +488,8 @@ export default function Cart() {
                   onClick={() => handlePurchaseTypeChange('subscription')}
                   className={`flex-1 py-4 px-6 rounded-xl font-bold text-base transition-all duration-200 ${
                     isSubscription
-                      ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-xl shadow-primary-200 scale-105'
-                      : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-primary-300 hover:shadow-md'
+                      ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white scale-105'
+                      : 'bg-white dark:bg-[#065084] text-gray-700 dark:text-white border-2 border-gray-200 dark:border-[#0F828C] hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
                   }`}
                 >
                   <div className="flex items-center justify-center gap-3">
@@ -501,8 +501,8 @@ export default function Cart() {
                   onClick={() => handlePurchaseTypeChange('one-time')}
                   className={`flex-1 py-4 px-6 rounded-xl font-bold text-base transition-all duration-200 ${
                     !isSubscription
-                      ? 'bg-gradient-to-r from-gray-800 to-gray-900 text-white shadow-xl shadow-gray-200 scale-105'
-                      : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-gray-300 hover:shadow-md'
+                      ? 'bg-gradient-to-r from-gray-800 to-gray-900 text-white scale-105'
+                      : 'bg-white dark:bg-[#065084] text-gray-700 dark:text-white border-2 border-gray-200 dark:border-[#0F828C] hover:border-gray-300 dark:hover:border-[#0F828C] hover:shadow-md'
                   }`}
                 >
                   Compra Única
@@ -514,7 +514,7 @@ export default function Cart() {
                 <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
                   {/* Planos de assinatura */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-3">
                       Escolha seu Plano:
                     </label>
                     <div className="grid grid-cols-2 gap-4">
@@ -522,20 +522,20 @@ export default function Cart() {
                         onClick={() => setSubscriptionPlan('monthly')}
                         className={`relative p-5 rounded-xl transition-all ${
                           subscriptionPlan === 'monthly'
-                            ? 'bg-white border-2 border-primary-500 shadow-lg'
-                            : 'bg-white border-2 border-gray-200 hover:border-primary-300 hover:shadow-md'
+                            ? 'bg-white dark:bg-[#065084] border-2 border-primary-500 dark:border-[#0F828C] shadow-lg dark:shadow-xl'
+                            : 'bg-white dark:bg-[#065084] border-2 border-gray-200 dark:border-[#0F828C] hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
                         }`}
                       >
                         <div className="text-left">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-base font-bold text-gray-900">Mensal</span>
+                            <span className="text-base font-bold text-gray-900 dark:text-white">Mensal</span>
                             {subscriptionPlan === 'monthly' && (
                               <Check size={18} className="text-primary-600" />
                             )}
                           </div>
-                          <p className="text-xl font-bold text-primary-600">
+                          <p className="text-xl font-bold text-primary-600 dark:text-primary-400">
                             R$ {monthlySubscriptionPrice.toFixed(2).replace('.', ',')}
-                            <span className="text-sm text-gray-500 font-normal">/mês</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-300 font-normal">/mês</span>
                           </p>
                         </div>
                       </button>
@@ -543,13 +543,13 @@ export default function Cart() {
                         onClick={() => setSubscriptionPlan('quarterly')}
                         className={`relative p-5 rounded-xl transition-all ${
                           subscriptionPlan === 'quarterly'
-                            ? 'bg-white border-2 border-primary-500 shadow-lg'
-                            : 'bg-white border-2 border-gray-200 hover:border-primary-300 hover:shadow-md'
+                            ? 'bg-white dark:bg-[#065084] border-2 border-primary-500 dark:border-[#0F828C] shadow-lg dark:shadow-xl'
+                            : 'bg-white dark:bg-[#065084] border-2 border-gray-200 dark:border-[#0F828C] hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
                         }`}
                       >
                         <div className="text-left">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-base font-bold text-gray-900">Trimestral</span>
+                            <span className="text-base font-bold text-gray-900 dark:text-white">Trimestral</span>
                             {subscriptionPlan === 'quarterly' && (
                               <Check size={18} className="text-primary-600" />
                             )}
@@ -557,33 +557,33 @@ export default function Cart() {
                               Mais pedido
                             </span>
                           </div>
-                          <p className="text-xl font-bold text-primary-600">
+                          <p className="text-xl font-bold text-primary-600 dark:text-primary-400">
                             R$ {quarterlySubscriptionPrice.toFixed(2).replace('.', ',')}
-                            <span className="text-sm text-gray-500 font-normal">/mês</span>
+                            <span className="text-sm text-gray-500 dark:text-gray-300 font-normal">/mês</span>
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">Economia de 15%</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">Economia de 15%</p>
                         </div>
                       </button>
                     </div>
                   </div>
 
                   {/* Benefícios da assinatura */}
-                  <div className="bg-gradient-to-r from-primary-50 to-purple-50 rounded-xl p-5 border border-primary-100">
-                    <p className="text-sm font-semibold text-gray-900 mb-3">Você receberá:</p>
+                  <div className="bg-gradient-to-r from-primary-50 dark:from-[#065084] to-purple-50 dark:to-[#065084] rounded-xl p-5 border border-primary-100 dark:border-[#0F828C]">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Você receberá:</p>
                     <ul className="space-y-3">
-                      <li className="flex items-center gap-3 text-sm text-gray-700">
+                      <li className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
                         <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
                           <Check size={14} className="text-white" />
                         </div>
                         <span>Seus produtos a cada 30 dias</span>
                       </li>
-                      <li className="flex items-center gap-3 text-sm text-gray-700">
+                      <li className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
                         <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
                           <Check size={14} className="text-white" />
                         </div>
                         <span>{subscriptionPlan === 'quarterly' ? '15%' : '10%'} de desconto automático</span>
                       </li>
-                      <li className="flex items-center gap-3 text-sm text-gray-700">
+                      <li className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
                         <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
                           <Check size={14} className="text-white" />
                         </div>
@@ -593,7 +593,7 @@ export default function Cart() {
                   </div>
 
                   {/* Política de cancelamento */}
-                  <p className="text-xs text-gray-500 text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-300 text-center">
                     Cancele ou edite a qualquer momento antes da próxima entrega
                   </p>
                 </div>
@@ -618,7 +618,7 @@ export default function Cart() {
                   : itemTotal
 
                 return (
-                  <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-200">
+                  <div key={item.id} className="bg-white dark:bg-[#065084] rounded-xl shadow-sm dark:shadow-lg border border-gray-100 dark:border-[#0F828C] overflow-hidden hover:shadow-md dark:hover:shadow-xl transition-all duration-200">
                     <div className="p-5">
                       <div className="flex gap-5">
                         {/* Imagem do produto */}
@@ -639,19 +639,19 @@ export default function Cart() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1">
-                              <h3 className="text-lg font-bold text-gray-900 mb-1">
+                              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
                                 {item.product?.name || item.customMedication?.name}
                               </h3>
                               {item.product && (
-                                <p className="text-sm text-gray-500 line-clamp-1">{item.product.description}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-300 line-clamp-1">{item.product.description}</p>
                               )}
                               {item.customMedication && (
-                                <div className="text-sm text-gray-600">
+                                <div className="text-sm text-gray-600 dark:text-gray-300">
                                   <p className="line-clamp-1">
                                     <strong>Ativos:</strong> {item.customMedication.activeIngredients.map(i => i.name).join(', ')}
                                   </p>
                                   {item.customMedication.prescriptionRequired && (
-                                    <span className="inline-block mt-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-medium">
+                                    <span className="inline-block mt-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs px-2 py-1 rounded-full font-medium">
                                       Receita necessária
                                     </span>
                                   )}
@@ -669,20 +669,20 @@ export default function Cart() {
 
                           {/* Controles de quantidade e preço */}
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center border-2 border-gray-200 rounded-lg overflow-hidden">
+                            <div className="flex items-center border-2 border-gray-200 dark:border-[#0F828C] rounded-lg overflow-hidden">
                               <button
                                 onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                className="p-2 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="p-2 hover:bg-gray-50 dark:hover:bg-[#0F828C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 disabled={item.quantity <= 1}
                               >
                                 <Minus size={16} />
                               </button>
-                              <span className="px-4 py-1.5 text-sm font-semibold min-w-[2.5rem] text-center bg-gray-50">
+                              <span className="px-4 py-1.5 text-sm font-semibold min-w-[2.5rem] text-center bg-gray-50 dark:bg-[#0F828C] dark:text-white">
                                 {item.quantity}
                               </span>
                               <button
                                 onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                className="p-2 hover:bg-gray-50 transition-colors"
+                                className="p-2 hover:bg-gray-50 dark:hover:bg-[#0F828C] transition-colors"
                               >
                                 <Plus size={16} />
                               </button>
@@ -708,15 +708,15 @@ export default function Cart() {
 
             {/* Recomendações */}
             {recommendedProducts.length > 0 && (
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-[#0F828C]">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
                   Produtos que você pode gostar
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {recommendedProducts.map(product => (
                     <div
                       key={product.id}
-                      className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-lg transition-all cursor-pointer group"
+                      className="bg-white dark:bg-[#065084] rounded-xl border border-gray-200 dark:border-[#0F828C] p-4 hover:shadow-lg dark:hover:shadow-xl transition-all cursor-pointer group"
                       onClick={() => navigate(`/produtos/${product.id}`)}
                     >
                       <img
@@ -725,10 +725,10 @@ export default function Cart() {
                         className="w-full h-32 object-cover rounded-lg mb-3 group-hover:scale-105 transition-transform"
                         onError={handleImageError}
                       />
-                      <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">
                         {product.name}
                       </h3>
-                      <p className="text-xs text-gray-500 mb-3 line-clamp-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-300 mb-3 line-clamp-1">
                         {product.description}
                       </p>
                       <div className="flex items-center justify-between">
@@ -759,9 +759,9 @@ export default function Cart() {
             )}
 
             {loadingRecommendations && (
-              <div className="mt-8 pt-6 border-t border-gray-200">
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-[#0F828C]">
                 <div className="flex justify-center py-8">
-                  <Loader2 className="animate-spin text-primary-600" size={32} />
+                  <Loader2 className="animate-spin text-primary-600 dark:text-primary-400" size={32} />
                 </div>
               </div>
             )}
@@ -769,11 +769,11 @@ export default function Cart() {
 
           {/* Summary - Sidebar moderno */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-24">
+            <div className="bg-white dark:bg-[#065084] rounded-2xl shadow-lg dark:shadow-xl border border-gray-100 dark:border-[#0F828C] p-6 sticky top-24">
               {/* Seção de Cupons Promocionais */}
-              <div className="mb-6 pb-6 border-b border-gray-200">
-                <h3 className="text-base font-semibold text-gray-900 mb-3 flex items-center">
-                  <Tag className="w-4 h-4 mr-2 text-gray-600" />
+              <div className="mb-6 pb-6 border-b border-gray-200 dark:border-[#0F828C]">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
+                  <Tag className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-300" />
                   Cupons Promocionais
                 </h3>
                 
@@ -785,7 +785,7 @@ export default function Cart() {
                         value={promoCode}
                         onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                         placeholder="Digite o código"
-                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault()
@@ -831,33 +831,33 @@ export default function Cart() {
                               
                               return (
                                 <div key={promoCode.id} className="min-w-full flex-shrink-0">
-                                  <div className="bg-green-50 border border-green-200 rounded-md px-3 py-2 flex items-center justify-between gap-2">
+                                  <div className="bg-green-50 dark:bg-[#065084] border border-green-200 dark:border-[#0F828C] rounded-md px-3 py-2 flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2 flex-1 min-w-0">
                                       <Check className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-semibold text-green-900 truncate">
+                                        <p className="text-xs font-semibold text-green-900 dark:text-green-300 truncate">
                                           {promoCode.name}
                                         </p>
                                         <div className="flex items-center gap-1.5 mt-0.5">
-                                          <span className="text-xs text-green-700">
+                                          <span className="text-xs text-green-700 dark:text-green-300">
                                             {promoCode.code}
                                           </span>
                                           {appliedDiscount && (
-                                            <span className="text-xs font-bold text-green-600">
+                                            <span className="text-xs font-bold text-green-600 dark:text-green-400">
                                               • {promoCode.discount_type === 'percentage' 
                                                 ? `${promoCode.discount_value}% OFF`
                                                 : `R$ ${appliedDiscount.discount.toFixed(2).replace('.', ',')} OFF`}
                                             </span>
                                           )}
                                           {promoCode.free_shipping && (
-                                            <Truck className="w-3 h-3 text-green-600" />
+                                            <Truck className="w-3 h-3 text-green-600 dark:text-green-400" />
                                           )}
                                         </div>
                                       </div>
                                     </div>
                                     <button
                                       onClick={() => handleRemovePromoCode(promoCode.code)}
-                                      className="text-red-500 hover:text-red-600 p-1 flex-shrink-0 opacity-70 hover:opacity-100"
+                                      className="text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 p-1 flex-shrink-0 opacity-70 hover:opacity-100"
                                       title="Remover código"
                                       disabled={validatingPromoCode}
                                     >
@@ -874,7 +874,7 @@ export default function Cart() {
                         <div className="flex items-center justify-between mt-2">
                           <button
                             onClick={() => setCurrentCouponIndex(prev => prev > 0 ? prev - 1 : promoCodesValidation.promoCodes.length - 1)}
-                            className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                            className="p-1 text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 disabled:opacity-30"
                             disabled={validatingPromoCode}
                           >
                             <ChevronLeft className="w-4 h-4" />
@@ -885,7 +885,7 @@ export default function Cart() {
                                 key={index}
                                 onClick={() => setCurrentCouponIndex(index)}
                                 className={`w-1.5 h-1.5 rounded-full transition-all ${
-                                  index === currentCouponIndex ? 'bg-primary-600 w-4' : 'bg-gray-300'
+                                  index === currentCouponIndex ? 'bg-primary-600 dark:bg-primary-400 w-4' : 'bg-gray-300 dark:bg-gray-600'
                                 }`}
                                 disabled={validatingPromoCode}
                               />
@@ -893,7 +893,7 @@ export default function Cart() {
                           </div>
                           <button
                             onClick={() => setCurrentCouponIndex(prev => prev < promoCodesValidation.promoCodes.length - 1 ? prev + 1 : 0)}
-                            className="p-1 text-gray-500 hover:text-gray-700 disabled:opacity-30"
+                            className="p-1 text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 disabled:opacity-30"
                             disabled={validatingPromoCode}
                           >
                             <ChevronRight className="w-4 h-4" />
@@ -903,7 +903,7 @@ export default function Cart() {
                     ) : (
                       /* Cupom único - sem carrossel */
                       appliedPromoCodes.length === 1 && promoCodesValidation && (
-                        <div className="bg-green-50 border border-green-200 rounded-md px-3 py-2">
+                        <div className="bg-green-50 dark:bg-[#065084] border border-green-200 dark:border-[#0F828C] rounded-md px-3 py-2">
                           {promoCodesValidation.promoCodes.map((promoCode) => {
                             const appliedDiscount = promoCodesValidation.appliedDiscounts.percentage?.code === promoCode.code
                               ? promoCodesValidation.appliedDiscounts.percentage
@@ -912,31 +912,31 @@ export default function Cart() {
                             return (
                               <div key={promoCode.id} className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <Check className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+                                  <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-400 flex-shrink-0" />
                                   <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-semibold text-green-900 truncate">
+                                    <p className="text-xs font-semibold text-green-900 dark:text-green-300 truncate">
                                       {promoCode.name}
                                     </p>
                                     <div className="flex items-center gap-1.5 mt-0.5">
-                                      <span className="text-xs text-green-700">
+                                      <span className="text-xs text-green-700 dark:text-green-300">
                                         {promoCode.code}
                                       </span>
                                       {appliedDiscount && (
-                                        <span className="text-xs font-bold text-green-600">
+                                        <span className="text-xs font-bold text-green-600 dark:text-green-400">
                                           • {promoCode.discount_type === 'percentage' 
                                             ? `${promoCode.discount_value}% OFF`
                                             : `R$ ${appliedDiscount.discount.toFixed(2).replace('.', ',')} OFF`}
                                         </span>
                                       )}
                                       {promoCode.free_shipping && (
-                                        <Truck className="w-3 h-3 text-green-600" />
+                                        <Truck className="w-3 h-3 text-green-600 dark:text-green-400" />
                                       )}
                                     </div>
                                   </div>
                                 </div>
                                 <button
                                   onClick={() => handleRemovePromoCode(promoCode.code)}
-                                  className="text-red-500 hover:text-red-600 p-1 flex-shrink-0 opacity-70 hover:opacity-100"
+                                  className="text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 p-1 flex-shrink-0 opacity-70 hover:opacity-100"
                                   title="Remover código"
                                   disabled={validatingPromoCode}
                                 >
@@ -957,7 +957,7 @@ export default function Cart() {
                           value={promoCode}
                           onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                           placeholder="Digite um código"
-                          className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault()
@@ -986,25 +986,25 @@ export default function Cart() {
                 )}
               </div>
 
-              <h2 className="text-xl font-bold text-gray-900 mb-6 pb-4 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 pb-4 border-b border-gray-200 dark:border-[#0F828C]">
                 Resumo do Pedido
               </h2>
 
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-semibold text-gray-900">R$ {baseTotal.toFixed(2).replace('.', ',')}</span>
+                  <span className="text-gray-600 dark:text-gray-300">Subtotal</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">R$ {baseTotal.toFixed(2).replace('.', ',')}</span>
                 </div>
 
                 {isSubscription && (
-                  <div className="bg-primary-50 rounded-lg p-3 border border-primary-100">
+                  <div className="bg-primary-50 dark:bg-[#065084] rounded-lg p-3 border border-primary-100 dark:border-[#0F828C]">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-primary-700">Desconto Assinatura</span>
-                      <span className="text-sm font-bold text-primary-600">
+                      <span className="text-sm font-semibold text-primary-700 dark:text-primary-400">Desconto Assinatura</span>
+                      <span className="text-sm font-bold text-primary-600 dark:text-primary-400">
                         -{subscriptionDiscount * 100}%
                       </span>
                     </div>
-                    <p className="text-xs text-gray-600">
+                    <p className="text-xs text-gray-600 dark:text-gray-300">
                       {subscriptionPlan === 'quarterly' ? 'Plano Trimestral' : 'Plano Mensal'}
                     </p>
                   </div>
@@ -1013,12 +1013,12 @@ export default function Cart() {
                 {/* Cupons Aplicados */}
                 {promoCodesValidation && promoCodesValidation.totalDiscount > 0 && (
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">
+                    <span className="text-gray-600 dark:text-gray-300">
                       {promoCodesValidation.promoCodes.length > 1 
                         ? `Cupom (${promoCodesValidation.promoCodes.length})`
                         : 'Cupom'}
                     </span>
-                    <span className="text-green-600 font-semibold">
+                    <span className="text-green-600 dark:text-green-400 font-semibold">
                       - R$ {promoCodesValidation.totalDiscount.toFixed(2).replace('.', ',')}
                     </span>
                   </div>
@@ -1026,13 +1026,13 @@ export default function Cart() {
 
                 {/* Promoções Aplicadas */}
                 {applicablePromotions.length > 0 && (
-                  <div className="border-t border-gray-200 pt-4">
+                  <div className="border-t border-gray-200 dark:border-[#0F828C] pt-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <Gift className="w-4 h-4 text-pink-600" />
-                      <span className="text-sm font-semibold text-gray-900">Promoções Aplicadas</span>
+                      <Gift className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">Promoções Aplicadas</span>
                     </div>
                     {loadingPromotions ? (
-                      <div className="text-xs text-gray-500">Verificando promoções...</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-300">Verificando promoções...</div>
                     ) : (
                       <div className="space-y-2">
                         {applicablePromotions.map((promo) => {
@@ -1046,12 +1046,12 @@ export default function Cart() {
                             discountText += discountText ? ' + Frete Grátis' : 'Frete Grátis'
                           }
                           return (
-                            <div key={promo.id} className="bg-pink-50 border border-pink-200 rounded-lg p-2">
+                            <div key={promo.id} className="bg-pink-50 dark:bg-[#065084] border border-pink-200 dark:border-[#0F828C] rounded-lg p-2">
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                  <p className="text-xs font-semibold text-pink-900">{promo.name}</p>
+                                  <p className="text-xs font-semibold text-pink-900 dark:text-pink-300">{promo.name}</p>
                                   {discountText && (
-                                    <p className="text-xs text-pink-700 mt-1">{discountText}</p>
+                                    <p className="text-xs text-pink-700 dark:text-pink-300 mt-1">{discountText}</p>
                                   )}
                                 </div>
                               </div>
@@ -1059,7 +1059,7 @@ export default function Cart() {
                           )
                         })}
                         {promotionDiscount > 0 && (
-                          <div className="flex justify-between items-center text-pink-600 pt-2 border-t border-pink-200">
+                          <div className="flex justify-between items-center text-pink-600 dark:text-pink-400 pt-2 border-t border-pink-200 dark:border-[#0F828C]">
                             <span className="text-sm font-semibold">Desconto Total</span>
                             <span className="font-bold">
                               - R$ {promotionDiscount.toFixed(2).replace('.', ',')}
@@ -1073,14 +1073,14 @@ export default function Cart() {
 
 
                 {isSubscription && (
-                  <div className="bg-gradient-to-r from-primary-50 to-purple-50 rounded-xl p-4 border border-primary-100">
+                  <div className="bg-gradient-to-r from-primary-50 dark:from-[#065084] to-purple-50 dark:to-[#065084] rounded-xl p-4 border border-primary-100 dark:border-[#0F828C]">
                     <div className="flex items-start gap-2">
-                      <Repeat size={18} className="text-primary-600 mt-0.5" />
+                      <Repeat size={18} className="text-primary-600 dark:text-primary-400 mt-0.5" />
                       <div>
-                        <p className="text-sm font-semibold text-gray-900 mb-1">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
                           Assinatura Ativa
                         </p>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-gray-600 dark:text-gray-300">
                           Seus produtos serão entregues mensalmente
                         </p>
                       </div>
@@ -1091,10 +1091,10 @@ export default function Cart() {
                 {/* Frete */}
                 {hasFreeShipping && (
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-600">Frete</span>
+                    <span className="text-gray-600 dark:text-gray-300">Frete</span>
                     <div className="text-right">
-                      <span className="text-green-600 font-medium">Grátis</span>
-                      <div className="text-xs text-green-600 mt-0.5">
+                      <span className="text-green-600 dark:text-green-400 font-medium">Grátis</span>
+                      <div className="text-xs text-green-600 dark:text-green-400 mt-0.5">
                         {hasFreeShippingByCoupon ? (
                           <span>Frete grátis por cupom promocional</span>
                         ) : hasFreeShippingByThreshold ? (
@@ -1105,15 +1105,15 @@ export default function Cart() {
                   </div>
                 )}
 
-                <div className="border-t border-gray-200 pt-4">
+                <div className="border-t border-gray-200 dark:border-[#0F828C] pt-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-900">Total</span>
-                    <span className="text-2xl font-bold text-primary-600">
+                    <span className="text-lg font-bold text-gray-900 dark:text-white">Total</span>
+                    <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">
                       R$ {currentTotal.toFixed(2).replace('.', ',')}
                     </span>
                   </div>
                   {isSubscription && (
-                    <p className="text-xs text-gray-500 mt-1 text-right">
+                    <p className="text-xs text-gray-500 dark:text-gray-300 mt-1 text-right">
                       {subscriptionPlan === 'quarterly' ? 'A cada 3 meses' : 'Por mês'}
                     </p>
                   )}
@@ -1130,7 +1130,7 @@ export default function Cart() {
                   }
                   navigate('/checkout')
                 }}
-                className="w-full bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 shadow-lg shadow-primary-200 hover:shadow-xl mb-4 flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 mb-4 flex items-center justify-center gap-2"
               >
                 Finalizar Compra
                 <ArrowRight size={20} />
@@ -1138,7 +1138,7 @@ export default function Cart() {
 
               <Link
                 to="/produtos"
-                className="block text-center text-sm text-primary-600 hover:text-primary-700 font-medium transition-colors"
+                className="block text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors"
               >
                 Continuar Comprando
               </Link>
