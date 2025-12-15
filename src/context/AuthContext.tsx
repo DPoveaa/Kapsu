@@ -36,27 +36,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (savedUser && savedToken) {
         try {
-          // Verificar se o token ainda é válido
-          const isValid = await authService.verifyToken(savedToken)
-          if (isValid && isValid.user) {
-            // Atualiza os dados do usuário com os dados mais recentes do servidor
-            const updatedUser: User = {
-              id: isValid.user.id,
-              email: isValid.user.email,
-              name: isValid.user.name,
-              phone: isValid.user.phone,
-              role: 'user',
-              isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || false
+          // Tenta restaurar o usuário do localStorage primeiro (mais rápido)
+          const parsedUser = JSON.parse(savedUser)
+          setUser(parsedUser)
+          
+          // Depois verifica se o token ainda é válido (sem bloquear a UI)
+          try {
+            const isValid = await authService.verifyToken(savedToken)
+            if (isValid && isValid.user) {
+              // Atualiza os dados do usuário com os dados mais recentes do servidor
+              const updatedUser: User = {
+                id: isValid.user.id,
+                email: isValid.user.email,
+                name: isValid.user.name,
+                phone: isValid.user.phone,
+                role: 'user',
+                isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || false
+              }
+              setUser(updatedUser)
+              localStorage.setItem('sanare_user', JSON.stringify(updatedUser))
+            } else if (isValid && !isValid.success && !isValid.isNetworkError) {
+              // Token inválido confirmado pelo servidor (não é erro de rede), limpar dados
+              console.log('Token inválido confirmado pelo servidor')
+              localStorage.removeItem('sanare_user')
+              localStorage.removeItem('sanare_token')
+              setUser(null)
             }
-            setUser(updatedUser)
-            localStorage.setItem('sanare_user', JSON.stringify(updatedUser))
-          } else {
-            // Token inválido, limpar dados
-            localStorage.removeItem('sanare_user')
-            localStorage.removeItem('sanare_token')
-            setUser(null)
+            // Se for erro de rede (isNetworkError === true), mantém o usuário logado
+            // O token pode ainda ser válido, só não conseguimos verificar agora
+          } catch (verifyError) {
+            // Erro ao verificar token (pode ser rede), mas mantém o usuário logado
+            // O token pode ainda ser válido, só não conseguimos verificar agora
+            console.warn('Erro ao verificar token (mantendo sessão):', verifyError)
+            // Não limpa o token em caso de erro de rede
           }
         } catch (error) {
+          // Erro ao fazer parse do usuário salvo, limpar dados corrompidos
           console.error('Erro ao carregar usuário:', error)
           localStorage.removeItem('sanare_user')
           localStorage.removeItem('sanare_token')
@@ -69,13 +84,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth()
   }, [])
 
-  // Verificar periodicamente se o token ainda é válido (a cada 10 minutos)
+  // Verificar periodicamente se o token ainda é válido (a cada 15 minutos)
   useEffect(() => {
     const savedToken = localStorage.getItem('sanare_token')
     if (!savedToken || !user) return
 
     let consecutiveFailures = 0
-    const maxFailures = 3 // Só desconecta após 3 falhas consecutivas
+    const maxFailures = 5 // Só desconecta após 5 falhas consecutivas (mais tolerante)
 
     const verifyTokenPeriodically = async () => {
       try {
@@ -93,34 +108,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           setUser(updatedUser)
           localStorage.setItem('sanare_user', JSON.stringify(updatedUser))
-        } else {
-          // Token expirado ou inválido
+        } else if (isValid && !isValid.success && !isValid.isNetworkError) {
+          // Token inválido confirmado pelo servidor (não é erro de rede)
           consecutiveFailures++
+          console.warn('Token inválido confirmado pelo servidor (tentativa', consecutiveFailures, ')')
           if (consecutiveFailures >= maxFailures) {
-            console.log('Token expirado após múltiplas tentativas, fazendo logout...')
+            console.log('Token inválido após múltiplas confirmações, fazendo logout...')
             setUser(null)
             localStorage.removeItem('sanare_user')
             localStorage.removeItem('sanare_token')
           }
+        } else if (isValid && isValid.isNetworkError) {
+          // Erro de rede - NÃO incrementa contador de falhas
+          // Mantém o usuário logado pois pode ser problema temporário
+          console.warn('Erro de rede ao verificar token (mantendo sessão)')
+          consecutiveFailures = 0 // Reset pois não é falha do token
         }
       } catch (error) {
-        // Se houver erro na verificação, incrementa contador mas não desconecta imediatamente
-        // Pode ser um problema de rede temporário
-        consecutiveFailures++
-        console.error('Erro ao verificar token (tentativa', consecutiveFailures, '):', error)
-        
-        // Só desconecta se houver múltiplas falhas consecutivas
-        if (consecutiveFailures >= maxFailures) {
-          console.log('Múltiplas falhas na verificação do token, fazendo logout...')
-          setUser(null)
-          localStorage.removeItem('sanare_user')
-          localStorage.removeItem('sanare_token')
-        }
+        // Erro de rede ou conexão - NÃO incrementa contador de falhas
+        // Mantém o usuário logado pois pode ser problema temporário
+        console.warn('Erro de rede ao verificar token (mantendo sessão):', error)
+        // Não desconecta em caso de erro de rede
       }
     }
 
-    // Verifica a cada 10 minutos (aumentado de 5 para 10 para reduzir requisições)
-    const interval = setInterval(verifyTokenPeriodically, 10 * 60 * 1000)
+    // Verifica a cada 15 minutos (reduzido de 10 para menos requisições)
+    const interval = setInterval(verifyTokenPeriodically, 15 * 60 * 1000)
 
     return () => clearInterval(interval)
   }, [user])

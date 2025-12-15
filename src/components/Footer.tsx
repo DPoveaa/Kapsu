@@ -1,10 +1,22 @@
 import { Facebook, Instagram, Twitter, Linkedin, MapPin, Mail, Phone } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import logoImage from '../images/logo.png'
 
 export default function Footer() {
   return (
     <footer className="mt-auto" style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
       <div className="container mx-auto px-6 md:px-8 lg:px-12 py-4">
         <div className="flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-white">
+          {/* Logo */}
+          <Link to="/" className="flex items-center space-x-2 mb-2 md:mb-0">
+            <img 
+              src={logoImage} 
+              alt="Kapsu Logo" 
+              className="h-8 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+            />
+            <span className="text-sm font-semibold text-white">Kapsu</span>
+          </Link>
+          
           {/* Informações da Empresa */}
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
             <div className="flex items-center gap-1.5">

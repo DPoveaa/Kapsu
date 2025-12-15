@@ -47,11 +47,19 @@ class ShippingService {
     cartTotal: number, 
     cartItems?: Array<{ product_id: string; quantity: number }>
   ): Promise<ShippingCalculation> {
+    const token = localStorage.getItem('sanare_token')
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    }
+    
+    // Adiciona token de autenticação se disponível para associar logs ao usuário
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+    
     const response = await fetch(`${API_URL}/shipping/calculate`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({ cep, cartTotal, cartItems }),
     })
 

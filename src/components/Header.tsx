@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { whatsappService } from '../services/whatsapp.service'
+import logoImage from '../images/logo.png'
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -61,9 +62,11 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3 group">
-            <div className="w-11 h-11 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-200">
-              <span className="text-white font-bold text-xl">K</span>
-            </div>
+            <img 
+              src={logoImage} 
+              alt="Kapsu Logo" 
+              className="h-11 w-auto object-contain group-hover:opacity-90 transition-opacity duration-200"
+            />
             <span className="text-2xl font-bold text-gray-900 tracking-tight">Kapsu</span>
           </Link>
 

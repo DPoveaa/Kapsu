@@ -114,7 +114,7 @@ class AuthService {
   /**
    * Verifica se o token é válido e retorna os dados do usuário
    */
-  async verifyToken(token: string): Promise<{ success: boolean; user?: AuthResponse['user'] }> {
+  async verifyToken(token: string): Promise<{ success: boolean; user?: AuthResponse['user']; isNetworkError?: boolean }> {
     try {
       const response = await fetch(`${this.baseUrl}/verify`, {
         method: 'GET',
@@ -125,7 +125,8 @@ class AuthService {
 
       const text = await response.text()
       if (!text) {
-        return { success: false }
+        // Resposta vazia - pode ser erro de rede ou servidor
+        return { success: false, isNetworkError: true }
       }
 
       const data = JSON.parse(text)
@@ -137,9 +138,11 @@ class AuthService {
         }
       }
 
-      return { success: false }
-    } catch {
-      return { success: false }
+      // Token inválido confirmado pelo servidor (não é erro de rede)
+      return { success: false, isNetworkError: false }
+    } catch (error) {
+      // Erro de rede ou conexão
+      return { success: false, isNetworkError: true }
     }
   }
 }

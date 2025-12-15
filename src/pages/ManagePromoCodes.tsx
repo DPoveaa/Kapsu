@@ -77,12 +77,24 @@ export default function ManagePromoCodes() {
         return
       }
 
-      if (!formData.discount_value || Number(formData.discount_value) <= 0) {
-        setError('Valor do desconto é obrigatório e deve ser maior que zero')
-        return
+      // Se não for frete grátis, exige valor de desconto maior que zero
+      if (!formData.free_shipping) {
+        if (!formData.discount_value || Number(formData.discount_value) <= 0) {
+          setError('Valor do desconto é obrigatório e deve ser maior que zero')
+          return
+        }
+      } else {
+        // Para frete grátis, permite valor 0 ou qualquer valor válido
+        if (formData.discount_value !== undefined && formData.discount_value !== null && formData.discount_value !== '') {
+          const discountValue = Number(formData.discount_value)
+          if (discountValue < 0) {
+            setError('Valor do desconto não pode ser negativo')
+            return
+          }
+        }
       }
 
-      if (formData.discount_type === 'percentage' && Number(formData.discount_value) > 100) {
+      if (formData.discount_type === 'percentage' && formData.discount_value && Number(formData.discount_value) > 100) {
         setError('Desconto percentual não pode ser maior que 100%')
         return
       }
