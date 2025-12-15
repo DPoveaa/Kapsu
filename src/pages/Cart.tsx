@@ -415,11 +415,11 @@ export default function Cart() {
 
   if (items.length === 0) {
     return (
-      <div className="bg-gray-50 min-h-[60vh] flex items-center justify-center py-12">
+      <div className="bg-gray-50 dark:bg-[#320A6B] min-h-[60vh] flex items-center justify-center py-12">
         <div className="max-w-md mx-auto text-center px-4">
-          <ShoppingCart size={64} className="mx-auto text-gray-300 mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Seu carrinho está vazio</h2>
-          <p className="text-gray-600 mb-6 text-sm">
+          <ShoppingCart size={64} className="mx-auto text-gray-300 dark:text-gray-400 mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Seu carrinho está vazio</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">
             Adicione produtos ou personalize um medicamento para começar
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -436,9 +436,9 @@ export default function Cart() {
   }
 
   return (
-    <div className="bg-gradient-to-b from-gray-50 to-white min-h-screen pb-12">
+    <div className="bg-gradient-to-b from-gray-50 dark:from-[#320A6B] to-white dark:to-[#065084] min-h-screen pb-12">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Carrinho de Compras</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Carrinho de Compras</h1>
 
         {/* Mensagem de vinculação do carrinho WhatsApp */}
         {linkMessage && (

@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { whatsappService } from '../services/whatsapp.service'
 import AnimatedLogo from './AnimatedLogo'
+import ThemeToggle from './ThemeToggle'
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -54,7 +55,7 @@ export default function Header() {
   }, [userMenuOpen])
 
   return (
-    <header className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-sm bg-white/95">
+    <header className="bg-white dark:bg-[#065084] border-b border-gray-100 dark:border-[#0F828C] sticky top-0 z-50 backdrop-blur-sm bg-white/95 dark:bg-[#065084]/95">
       {/* Barra superior verde */}
       <div className="h-1" style={{ backgroundColor: '#67C090' }}></div>
       
@@ -66,32 +67,32 @@ export default function Header() {
               className="h-11 w-auto object-contain group-hover:opacity-90 transition-opacity duration-200"
               alt="Kapsu Logo"
             />
-            <span className="text-2xl font-bold text-gray-900 tracking-tight">Kapsu</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Kapsu</span>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
             <Link 
               to="/produtos" 
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-all duration-200"
             >
               Produtos
             </Link>
             <Link 
               to="/personalizar" 
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-all duration-200"
             >
               Personalizar
             </Link>
             <Link 
               to="/sobre" 
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-all duration-200"
             >
               Sobre
             </Link>
             <Link 
               to="/contato" 
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
+              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-all duration-200"
             >
               Contato
             </Link>
@@ -99,9 +100,10 @@ export default function Header() {
 
           {/* Actions */}
           <div className="flex items-center space-x-2">
+            <ThemeToggle />
             <Link 
               to="/carrinho" 
-              className="relative p-2.5 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
+              className="relative p-2.5 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-all duration-200"
             >
               <ShoppingCart size={22} />
               {itemCount > 0 && (
@@ -113,7 +115,7 @@ export default function Header() {
             {(isAdmin || isPharmacist) && (
               <Link 
                 to="/admin/whatsapp/support" 
-                className="relative p-2.5 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
+                className="relative p-2.5 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-all duration-200"
                 title="Conversas que precisam de intervenção"
               >
                 <MessageCircle size={22} />
@@ -128,19 +130,19 @@ export default function Header() {
               <div className="hidden md:block relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors duration-200 group"
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-[#0F828C] transition-colors duration-200 group"
                 >
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: '#67C090' }}>
                     {user.name.charAt(0).toUpperCase()}
                   </div>
-                  <span className="font-medium text-gray-700 text-sm max-w-[120px] truncate">{user.name}</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-200 text-sm max-w-[120px] truncate">{user.name}</span>
                   {isAdmin && <Shield size={14} className="text-yellow-500" />}
                 </button>
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 py-2 z-50 overflow-hidden">
-                    <div className="px-4 py-3 bg-gradient-to-r from-primary-50 to-primary-100 border-b border-gray-100">
-                      <p className="text-sm font-semibold text-gray-900">{user.name}</p>
-                      <p className="text-xs text-gray-600 mt-0.5">{user.email}</p>
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#065084] rounded-xl shadow-xl dark:shadow-2xl border border-gray-100 dark:border-[#0F828C] py-2 z-50 overflow-hidden">
+                    <div className="px-4 py-3 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-[#065084] dark:to-[#0F828C] border-b border-gray-100 dark:border-[#0F828C]">
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{user.name}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">{user.email}</p>
                       {isAdmin && (
                         <span className="inline-block mt-2 text-xs bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-full font-medium">
                           Administrador
@@ -151,7 +153,7 @@ export default function Header() {
                       <Link
                         to="/admin"
                         onClick={() => setUserMenuOpen(false)}
-                        className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-primary-50 hover:text-primary-600 flex items-center space-x-2 transition-colors"
+                        className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-[#0F828C] hover:text-primary-600 dark:hover:text-[#78B9B5] flex items-center space-x-2 transition-colors"
                       >
                         <Shield size={16} />
                         <span>Painel Admin</span>
@@ -162,7 +164,7 @@ export default function Header() {
                         logout()
                         setUserMenuOpen(false)
                       }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 flex items-center space-x-2 transition-colors"
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 flex items-center space-x-2 transition-colors"
                     >
                       <LogOut size={16} />
                       <span>Sair</span>
@@ -173,14 +175,14 @@ export default function Header() {
             ) : (
               <Link
                 to="/login"
-                className="hidden md:flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
+                className="hidden md:flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-all duration-200"
               >
                 <User size={20} />
                 <span>Entrar</span>
               </Link>
             )}
             <button
-              className="md:hidden p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+              className="md:hidden p-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#0F828C] rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               <Menu size={22} />
@@ -190,44 +192,44 @@ export default function Header() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-100 pt-4 pb-4 space-y-1">
+          <div className="md:hidden border-t border-gray-100 dark:border-[#0F828C] pt-4 pb-4 space-y-1">
             <Link
               to="/produtos"
-              className="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Produtos
             </Link>
             <Link
               to="/personalizar"
-              className="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Personalizar
             </Link>
             <Link
               to="/sobre"
-              className="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Sobre
             </Link>
             <Link
               to="/contato"
-              className="block px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Contato
             </Link>
             {user ? (
-              <div className="pt-2 border-t border-gray-100 mt-2 space-y-1">
+              <div className="pt-2 border-t border-gray-100 dark:border-[#0F828C] mt-2 space-y-1">
                 <div className="flex items-center space-x-2 px-4 py-2.5 mb-2">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: '#67C090' }}>
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-900">{user.name}</p>
-                    <p className="text-xs text-gray-500">{user.email}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{user.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-300">{user.email}</p>
                   </div>
                   {isAdmin && <Shield size={14} className="text-yellow-500" />}
                 </div>
@@ -236,7 +238,7 @@ export default function Header() {
                     <Link
                       to="/admin"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                      className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-colors"
                     >
                       <Shield size={16} />
                       <span>Painel Admin</span>
@@ -261,7 +263,7 @@ export default function Header() {
                     logout()
                     setMobileMenuOpen(false)
                   }}
-                  className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="w-full flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                 >
                   <LogOut size={16} />
                   <span>Sair</span>

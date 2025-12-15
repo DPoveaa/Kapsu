@@ -230,7 +230,7 @@ export default function Customize() {
                 value={medicationName}
                 onChange={(e) => setMedicationName(e.target.value)}
                 placeholder="Ex: Complexo Multivitamínico Personalizado"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-200 text-black dark:text-black"
               />
             </div>
 
@@ -239,7 +239,7 @@ export default function Customize() {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Ativos Farmacêuticos *
               </label>
-              <div className="border border-gray-300 rounded-lg p-4 min-h-[200px]">
+              <div className="card border border-gray-300 rounded-lg p-4 min-h-[200px]">
                 {selectedIngredients.length === 0 ? (
                   <p className="text-gray-400 text-sm">Nenhum ativo selecionado</p>
                 ) : (
@@ -304,7 +304,7 @@ export default function Customize() {
                       <button
                         key={composto.id}
                         onClick={() => handleAddIngredient(composto)}
-                        className="text-left p-3 border border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-sm min-h-[80px] flex flex-col justify-between"
+                        className="card text-left p-3 border border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-sm min-h-[80px] flex flex-col justify-between"
                       >
                         <div className="font-medium break-words mb-2">{composto.name}</div>
                         <div className="text-primary-600 font-semibold text-xs">
@@ -326,7 +326,7 @@ export default function Customize() {
                 value={dosage}
                 onChange={(e) => setDosage(e.target.value)}
                 placeholder="Ex: 1 cápsula ao dia, após o almoço"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-200 text-black dark:text-black"
               />
             </div>
 
@@ -336,7 +336,7 @@ export default function Customize() {
                 Quantidade
               </label>
               <div className="flex items-center space-x-4">
-                <div className="flex items-center border border-gray-300 rounded-lg">
+                <div className="card flex items-center border border-gray-300 rounded-lg">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     className="p-2 hover:bg-gray-100 transition-colors"
@@ -365,7 +365,7 @@ export default function Customize() {
                 onChange={(e) => setInstructions(e.target.value)}
                 placeholder="Instruções adicionais (opcional)"
                 rows={4}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-200 text-black dark:text-black"
               />
             </div>
 

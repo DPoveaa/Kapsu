@@ -158,7 +158,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#DDF4E7' }}>
+    <div className="min-h-screen bg-palette-light dark:bg-palette-darker transition-colors duration-300">
       {/* Banner Hero - Carrossel de Imagens */}
       <section 
         className="relative overflow-hidden mb-4"
@@ -213,7 +213,7 @@ export default function Home() {
         {/* Controles do Carrossel - Setas nas laterais da section */}
         <button
           onClick={() => setBannerIndex((prev) => (prev - 1 + bannerImages.length) % bannerImages.length)}
-          className={`absolute left-0 top-1/2 -translate-y-1/2 p-3 bg-white/90 hover:bg-white text-gray-900 shadow-lg transition-all z-10 ${
+          className={`absolute left-0 top-1/2 -translate-y-1/2 p-3 text-white transition-all z-10 ${
             isBannerHovered ? 'opacity-100' : 'opacity-0'
           }`}
           aria-label="Imagem anterior"
@@ -223,7 +223,7 @@ export default function Home() {
         </button>
         <button
           onClick={() => setBannerIndex((prev) => (prev + 1) % bannerImages.length)}
-          className={`absolute right-0 top-1/2 -translate-y-1/2 p-3 bg-white/90 hover:bg-white text-gray-900 shadow-lg transition-all z-10 ${
+          className={`absolute right-0 top-1/2 -translate-y-1/2 p-3 text-white transition-all z-10 ${
             isBannerHovered ? 'opacity-100' : 'opacity-0'
           }`}
           aria-label="Próxima imagem"
@@ -234,11 +234,11 @@ export default function Home() {
       </section>
 
       {/* Produtos em Destaque - Scroll Horizontal */}
-      <section className="bg-white py-6 rounded-lg mb-4 shadow-sm" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
+      <section className="bg-white dark:bg-[#065084] py-6 rounded-lg mb-4 shadow-sm dark:shadow-lg transition-colors duration-300" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
         <div className="px-2 md:px-3 lg:px-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Produtos em Destaque</h2>
-            <Link to="/produtos" className="text-sm text-primary-600 hover:text-primary-700 font-semibold flex items-center">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Produtos em Destaque</h2>
+            <Link to="/produtos" className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-semibold flex items-center">
               Ver todos
               <ArrowRight className="ml-1" size={16} />
             </Link>
@@ -253,7 +253,7 @@ export default function Home() {
                 <Link
                   key={product.id}
                   to={`/produtos/${product.id}`}
-                  className="flex-shrink-0 w-48 bg-white rounded-lg p-3 hover:shadow-md transition-all"
+                  className="flex-shrink-0 w-48 bg-white dark:bg-[#0F828C] rounded-lg p-3 hover:shadow-md dark:hover:shadow-xl transition-all"
                 >
                   <div className="relative mb-2">
                     <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
@@ -274,8 +274,8 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">{product.name}</h3>
-                  <p className="text-lg font-bold text-primary-600 mb-1">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">{product.name}</h3>
+                  <p className="text-lg font-bold text-primary-600 dark:text-primary-400 mb-1">
                     R$ {product.price.toFixed(2).replace('.', ',')}
                   </p>
                   <p className="text-xs text-green-600">Frete grátis</p>
@@ -288,10 +288,10 @@ export default function Home() {
 
       {/* Vitaminas - Scroll Horizontal */}
       {vitaminProducts.length > 0 && (
-        <section className="bg-white py-6 rounded-lg mb-4 shadow-sm" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
+        <section className="bg-white dark:bg-[#065084] py-6 rounded-lg mb-4 shadow-sm dark:shadow-lg transition-colors duration-300" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
           <div className="px-2 md:px-3 lg:px-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Vitaminas</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Vitaminas</h2>
               <Link to="/produtos?categoria=vitamina" className="text-sm text-primary-600 hover:text-primary-700 font-semibold flex items-center">
                 Ver todos
                 <ArrowRight className="ml-1" size={16} />
@@ -302,7 +302,7 @@ export default function Home() {
                 <Link
                   key={product.id}
                   to={`/produtos/${product.id}`}
-                  className="flex-shrink-0 w-48 bg-white rounded-lg p-3 hover:shadow-md transition-all"
+                  className="flex-shrink-0 w-48 bg-white dark:bg-[#0F828C] rounded-lg p-3 hover:shadow-md dark:hover:shadow-xl transition-all"
                 >
                   <div className="relative mb-2">
                     <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
@@ -323,8 +323,8 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">{product.name}</h3>
-                  <p className="text-lg font-bold text-primary-600 mb-1">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">{product.name}</h3>
+                  <p className="text-lg font-bold text-primary-600 dark:text-primary-400 mb-1">
                     R$ {product.price.toFixed(2).replace('.', ',')}
                   </p>
                   <p className="text-xs text-green-600">Frete grátis</p>
@@ -337,10 +337,10 @@ export default function Home() {
 
       {/* Minerais - Scroll Horizontal */}
       {mineralProducts.length > 0 && (
-        <section className="bg-white py-6 rounded-lg mb-4 shadow-sm" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
+        <section className="bg-white dark:bg-[#065084] py-6 rounded-lg mb-4 shadow-sm dark:shadow-lg transition-colors duration-300" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
           <div className="px-2 md:px-3 lg:px-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Minerais</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Minerais</h2>
               <Link to="/produtos?categoria=mineral" className="text-sm text-primary-600 hover:text-primary-700 font-semibold flex items-center">
                 Ver todos
                 <ArrowRight className="ml-1" size={16} />
@@ -351,7 +351,7 @@ export default function Home() {
                 <Link
                   key={product.id}
                   to={`/produtos/${product.id}`}
-                  className="flex-shrink-0 w-48 bg-white rounded-lg p-3 hover:shadow-md transition-all"
+                  className="flex-shrink-0 w-48 bg-white dark:bg-[#0F828C] rounded-lg p-3 hover:shadow-md dark:hover:shadow-xl transition-all"
                 >
                   <div className="relative mb-2">
                     <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
@@ -372,8 +372,8 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">{product.name}</h3>
-                  <p className="text-lg font-bold text-primary-600 mb-1">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">{product.name}</h3>
+                  <p className="text-lg font-bold text-primary-600 dark:text-primary-400 mb-1">
                     R$ {product.price.toFixed(2).replace('.', ',')}
                   </p>
                   <p className="text-xs text-green-600">Frete grátis</p>
@@ -386,10 +386,10 @@ export default function Home() {
 
       {/* Fitoterápicos - Scroll Horizontal */}
       {fitoterapicoProducts.length > 0 && (
-        <section className="bg-white py-6 rounded-lg mb-4 shadow-sm" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
+        <section className="bg-white dark:bg-[#065084] py-6 rounded-lg mb-4 shadow-sm dark:shadow-lg transition-colors duration-300" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
           <div className="px-2 md:px-3 lg:px-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Fitoterápicos</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Fitoterápicos</h2>
               <Link to="/produtos?categoria=fitoterapico" className="text-sm text-primary-600 hover:text-primary-700 font-semibold flex items-center">
                 Ver todos
                 <ArrowRight className="ml-1" size={16} />
@@ -400,7 +400,7 @@ export default function Home() {
                 <Link
                   key={product.id}
                   to={`/produtos/${product.id}`}
-                  className="flex-shrink-0 w-48 bg-white rounded-lg p-3 hover:shadow-md transition-all"
+                  className="flex-shrink-0 w-48 bg-white dark:bg-[#0F828C] rounded-lg p-3 hover:shadow-md dark:hover:shadow-xl transition-all"
                 >
                   <div className="relative mb-2">
                     <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
@@ -421,8 +421,8 @@ export default function Home() {
                       </div>
                     )}
                   </div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">{product.name}</h3>
-                  <p className="text-lg font-bold text-primary-600 mb-1">
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">{product.name}</h3>
+                  <p className="text-lg font-bold text-primary-600 dark:text-primary-400 mb-1">
                     R$ {product.price.toFixed(2).replace('.', ',')}
                   </p>
                   <p className="text-xs text-green-600">Frete grátis</p>
@@ -434,9 +434,9 @@ export default function Home() {
       )}
 
       {/* Reviews - Carrossel */}
-      <section className="bg-white py-8 rounded-lg mb-4 shadow-sm" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
+      <section className="bg-white dark:bg-[#065084] py-8 rounded-lg mb-4 shadow-sm dark:shadow-lg transition-colors duration-300" style={{ marginLeft: '10rem', marginRight: '10rem' }}>
         <div className="px-2 md:px-3 lg:px-4">
-          <h2 className="text-xl font-bold text-gray-900 mb-6 text-center">O que nossos clientes dizem</h2>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 text-center">O que nossos clientes dizem</h2>
           
           <div className="relative">
             {/* Container do carrossel */}
@@ -447,20 +447,20 @@ export default function Home() {
               >
                 {reviews.map((review) => (
                   <div key={review.id} className="flex-shrink-0 w-1/2 px-2">
-                    <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow h-full">
+                    <div className="bg-white dark:bg-[#0F828C] rounded-lg border border-gray-200 dark:border-[#0F828C] p-6 hover:shadow-md dark:hover:shadow-xl transition-shadow h-full">
                       <div className="flex items-center mb-3">
                         {[...Array(review.rating)].map((_, i) => (
                           <Star key={i} className="text-yellow-400 fill-current" size={18} />
                         ))}
                       </div>
-                      <p className="text-gray-700 text-base mb-4">"{review.comment}"</p>
+                      <p className="text-gray-700 dark:text-gray-200 text-base mb-4">"{review.comment}"</p>
                       <div className="flex items-center gap-3">
                         {/* Avatar circular */}
                         <div className="flex-shrink-0">
                           <img
                             src={review.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name)}&size=64&background=67C090&color=fff&bold=true`}
                             alt={review.name}
-                            className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                            className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 dark:border-[#0F828C]"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement
                               target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name)}&size=64&background=67C090&color=fff&bold=true`
@@ -468,8 +468,8 @@ export default function Home() {
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900">{review.name}</p>
-                          <p className="text-sm text-gray-500">{review.product} • {review.date}</p>
+                          <p className="font-semibold text-gray-900 dark:text-white">{review.name}</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-300">{review.product} • {review.date}</p>
                         </div>
                       </div>
                     </div>
@@ -482,7 +482,7 @@ export default function Home() {
             <div className="flex items-center justify-center mt-6 space-x-4">
               <button
                 onClick={prevReview}
-                className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                className="p-2 rounded-full bg-gray-100 dark:bg-[#0F828C] hover:bg-gray-200 dark:hover:bg-[#78B9B5] text-gray-700 dark:text-white transition-colors"
                 aria-label="Review anterior"
               >
                 <ChevronLeft size={20} />
@@ -499,7 +499,7 @@ export default function Home() {
                       className={`h-2 w-2 rounded-full transition-all ${
                         currentIndex === reviewIndex
                           ? ''
-                          : 'bg-gray-300'
+                                : 'bg-gray-300 dark:bg-[#0F828C]'
                       }`}
                       style={currentIndex === reviewIndex ? { backgroundColor: '#67C090' } : {}}
                       aria-label={`Ir para reviews ${currentIndex + 1}-${currentIndex + 2}`}
@@ -510,7 +510,7 @@ export default function Home() {
               
               <button
                 onClick={nextReview}
-                className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                className="p-2 rounded-full bg-gray-100 dark:bg-[#0F828C] hover:bg-gray-200 dark:hover:bg-[#78B9B5] text-gray-700 dark:text-white transition-colors"
                 aria-label="Próximo review"
               >
                 <ChevronRight size={20} />

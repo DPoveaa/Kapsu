@@ -21,7 +21,7 @@ export default function Layout({ children }: LayoutProps) {
   usePageTracking()
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#DDF4E7' }}>
+    <div className="min-h-screen flex flex-col bg-palette-light dark:bg-palette-darker transition-colors duration-300">
       {!hideHeaderFooter && <Header />}
       <main className="flex-grow">
         {children}

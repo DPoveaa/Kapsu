@@ -4,7 +4,7 @@
 
 @layer base {
   body {
-    @apply text-gray-900;
+    @apply text-gray-900 dark:text-white;
     margin: 0;
     padding: 0;
     background-color: #DDF4E7;
@@ -14,6 +14,58 @@
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     text-shadow: 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  html.dark body {
+    background-color: #320A6B;
+    color: #FFFFFF !important;
+    text-shadow: 0.5px 0.5px 0.5px rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Garante que todos os textos sejam brancos no modo escuro */
+  html.dark p,
+  html.dark span:not([class*="text-"]):not([style*="color"]),
+  html.dark div:not([class*="text-"]):not([style*="color"]),
+  html.dark h1:not([class*="text-"]):not([style*="color"]),
+  html.dark h2:not([class*="text-"]):not([style*="color"]),
+  html.dark h3:not([class*="text-"]):not([style*="color"]),
+  html.dark h4:not([class*="text-"]):not([style*="color"]),
+  html.dark h5:not([class*="text-"]):not([style*="color"]),
+  html.dark h6:not([class*="text-"]):not([style*="color"]),
+  html.dark a:not([class*="text-"]):not([style*="color"]),
+  html.dark label:not([class*="text-"]):not([style*="color"]),
+  html.dark li:not([class*="text-"]):not([style*="color"]),
+  html.dark td:not([class*="text-"]):not([style*="color"]),
+  html.dark th:not([class*="text-"]):not([style*="color"]) {
+    color: #FFFFFF !important;
+  }
+  
+  /* Sobrescreve classes de texto do Tailwind no modo escuro */
+  html.dark .text-gray-900,
+  html.dark .text-gray-800,
+  html.dark .text-gray-700,
+  html.dark .text-gray-600,
+  html.dark .text-gray-500,
+  html.dark .text-gray-400,
+  html.dark .text-gray-300,
+  html.dark .text-gray-200,
+  html.dark .text-primary-600,
+  html.dark .text-primary-700,
+  html.dark .text-primary-800,
+  html.dark .text-primary-900 {
+    color: #FFFFFF !important;
+  }
+  
+  /* Exceção: elementos com fundo branco e texto preto devem manter texto preto mesmo no modo escuro */
+  html.dark button[class*="bg-white"][class*="text-black"],
+  html.dark [class*="bg-white"][class*="text-black"] {
+    color: #000000 !important;
+  }
+  
+  /* Garante que text-black seja respeitado quando explicitamente usado */
+  html.dark .text-black {
+    color: #000000 !important;
   }
   
   * {
@@ -30,12 +82,22 @@
     margin: 0;
     padding: 0;
     background-color: #DDF4E7;
+    transition: background-color 0.3s ease;
+  }
+  
+  html.dark {
+    background-color: #320A6B;
   }
   
   #root {
     margin: 0;
     padding: 0;
     background-color: #DDF4E7;
+    transition: background-color 0.3s ease;
+  }
+  
+  html.dark #root {
+    background-color: #320A6B;
   }
 }
 
@@ -103,15 +165,15 @@
 
 @layer components {
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200;
+    @apply bg-primary-600 hover:bg-primary-700 dark:bg-primary-400 dark:hover:bg-primary-500 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200;
   }
   
   .btn-secondary {
-    @apply bg-white hover:bg-primary-50 text-primary-600 font-semibold py-2 px-6 rounded-lg border-2 border-primary-600 transition-colors duration-200;
+    @apply bg-white dark:bg-[#065084] hover:bg-primary-50 dark:hover:bg-[#0F828C] text-primary-600 dark:text-white font-semibold py-2 px-6 rounded-lg border-2 border-primary-600 dark:border-[#0F828C] transition-colors duration-200;
   }
   
   .card {
-    @apply bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-200;
+    @apply bg-white dark:bg-[#065084] rounded-xl shadow-md dark:shadow-lg hover:shadow-lg dark:hover:shadow-xl transition-shadow duration-200;
   }
 
   .scrollbar-hide {
@@ -126,7 +188,7 @@
 
 /* Estilos personalizados para o checkout do Mercado Pago */
 .mercado-pago-checkout {
-  @apply bg-white rounded-lg border border-gray-200 p-6;
+  @apply bg-white dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C] p-6;
 }
 
 .mercado-pago-checkout .mp-form-controls {
@@ -138,16 +200,16 @@
 }
 
 .mercado-pago-checkout .mp-form-control label {
-  @apply block text-sm font-medium text-gray-700 mb-2;
+  @apply block text-sm font-medium text-gray-700 dark:text-white mb-2;
 }
 
 .mercado-pago-checkout .mp-form-control input,
 .mercado-pago-checkout .mp-form-control select {
-  @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  @apply w-full px-4 py-3 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-[#78B9B5] focus:border-transparent bg-white dark:bg-[#065084] text-gray-900 dark:text-white;
 }
 
 .mercado-pago-checkout .mp-form-control .mp-error-message {
-  @apply text-red-600 text-sm mt-1;
+  @apply text-red-600 dark:text-red-400 text-sm mt-1;
 }
 
 .mercado-pago-checkout .mp-checkout-button {

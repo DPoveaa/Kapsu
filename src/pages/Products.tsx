@@ -68,7 +68,7 @@ export default function Products() {
               placeholder="Buscar produtos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-200 text-black dark:text-black"
             />
           </div>
           <button
@@ -90,7 +90,7 @@ export default function Products() {
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   selectedCategory === category.value
                     ? 'text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                    : 'bg-white dark:bg-gray-200 text-black hover:bg-gray-100 dark:hover:bg-gray-300 border border-gray-300 dark:border-gray-400'
                 }`}
                 style={selectedCategory === category.value ? { backgroundColor: '#67C090' } : {}}
               >

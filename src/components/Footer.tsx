@@ -4,7 +4,7 @@ import AnimatedLogo from './AnimatedLogo'
 
 export default function Footer() {
   return (
-    <footer className="mt-auto" style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+    <footer className="mt-auto bg-gray-900 dark:bg-[#065084] border-t border-gray-800 dark:border-[#0F828C] transition-colors duration-300">
       <div className="container mx-auto px-6 md:px-8 lg:px-12 py-4">
         <div className="flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-white">
           {/* Logo */}

@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class', // Habilita dark mode usando classe
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -29,6 +30,13 @@ export default {
           700: '#124170',  // Nova cor darker
           800: '#1a6b2d',
           900: '#155724',
+          // Cores do tema escuro
+          dark: {
+            darkest: '#320A6B',  // Roxo escuro - background principal
+            dark: '#065084',      // Azul escuro - cards, elementos secundários
+            medium: '#0F828C',   // Azul turquesa - bordas, hover
+            light: '#78B9B5',     // Verde azulado claro - destaques, botões
+          }
         },
         // Azul confiança - cor secundária (profissionalismo, segurança)
         medical: {

@@ -790,7 +790,7 @@ const FloatingChat: React.FC = () => {
       {isOpen && (
         <div
           ref={chatContainerRef}
-          className="fixed z-50 bg-white rounded-lg shadow-2xl flex flex-col"
+          className="fixed z-50 bg-white dark:bg-[#065084] rounded-lg shadow-2xl dark:shadow-2xl flex flex-col transition-colors duration-300"
           style={{
             left: `${chatPosition.x}px`,
             top: `${chatPosition.y}px`,
@@ -802,7 +802,8 @@ const FloatingChat: React.FC = () => {
           {/* Cabeçalho (arrastável) */}
           <div
             onMouseDown={handleChatMouseDown}
-            className="bg-green-600 text-white p-4 rounded-t-lg cursor-move flex items-center justify-between select-none"
+            className="text-white p-4 rounded-t-lg cursor-move flex items-center justify-between select-none"
+            style={{ backgroundColor: '#67C090' }}
           >
             <div className="flex items-center space-x-2">
               <MessageSquare className="w-5 h-5" />
@@ -811,7 +812,16 @@ const FloatingChat: React.FC = () => {
             <div className="flex items-center space-x-2">
               <button
                 onClick={toggleChat}
-                className="p-1 hover:bg-green-700 rounded transition-colors"
+                className="p-1 rounded transition-colors"
+                style={{ 
+                  backgroundColor: 'transparent',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#5aad7d'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent'
+                }}
                 aria-label="Fechar chat"
               >
                 <X className="w-4 h-4" />
@@ -822,17 +832,17 @@ const FloatingChat: React.FC = () => {
           {/* Conteúdo do chat */}
           <>
               {/* Mensagens */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-[#065084]">
                 {messages.length === 0 ? (
-                  <div className="text-center text-gray-500 mt-8">
+                  <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
                     <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p className="font-medium text-gray-700 mb-2">
+                    <p className="font-medium text-gray-700 dark:text-gray-200 mb-2">
                       Olá{user ? `, ${user.name}` : ''}! Eu sou a Kaia 👋
                     </p>
-                    <p className="text-sm text-gray-600 mb-3">
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
                       Como posso ajudar você hoje?
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                       {isAuthenticated
                         ? 'Posso ajudar você a encontrar produtos, adicionar ao carrinho e finalizar sua compra.'
                         : 'Posso ajudar você a encontrar produtos e informações. Faça login para adicionar produtos ao carrinho.'}
@@ -874,8 +884,8 @@ const FloatingChat: React.FC = () => {
                           <div
                             className={`max-w-[80%] rounded-lg px-4 py-2 ${
                               msg.role === 'user'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-white text-gray-800 border border-gray-200'
+                                ? 'bg-green-600 dark:bg-[#78B9B5] text-white'
+                                : 'bg-white dark:bg-[#0F828C] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#0F828C]'
                             }`}
                           >
                             <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
@@ -887,8 +897,8 @@ const FloatingChat: React.FC = () => {
                 )}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-white border border-gray-200 rounded-lg px-4 py-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-green-600" />
+                    <div className="bg-white dark:bg-[#0F828C] border border-gray-200 dark:border-[#0F828C] rounded-lg px-4 py-2">
+                      <Loader2 className="w-4 h-4 animate-spin text-green-600 dark:text-primary-400" />
                     </div>
                   </div>
                 )}
@@ -896,20 +906,20 @@ const FloatingChat: React.FC = () => {
               </div>
 
               {/* Input */}
-              <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200 bg-white">
+              <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200 dark:border-[#0F828C] bg-white dark:bg-[#065084]">
                 <div className="flex space-x-2">
                   <input
                     type="text"
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     placeholder="Digite sua mensagem..."
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-[#0F828C] bg-white dark:bg-[#065084] text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-[#78B9B5] focus:border-transparent outline-none"
                     disabled={isLoading}
                   />
                   <button
                     type="submit"
                     disabled={isLoading || !inputMessage.trim()}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                    className="px-4 py-2 bg-green-600 dark:bg-[#78B9B5] text-white rounded-lg hover:bg-green-700 dark:hover:bg-[#78B9B5] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
                   >
                     {isLoading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />

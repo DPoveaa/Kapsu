@@ -74,7 +74,7 @@ export default function ProductDetail() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center items-center py-12">
-          <Loader2 className="animate-spin text-primary-600" size={48} />
+          <Loader2 className="animate-spin text-primary-600 dark:text-[#78B9B5]" size={48} />
         </div>
       </div>
     )
@@ -84,10 +84,10 @@ export default function ProductDetail() {
   if (error || !product) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
-        <p className="text-red-600 text-lg font-semibold mb-2">
+        <p className="text-red-600 dark:text-red-400 text-lg font-semibold mb-2">
           {error || 'Produto não encontrado'}
         </p>
-        <p className="text-gray-500 mb-4">
+        <p className="text-gray-500 dark:text-gray-300 mb-4">
           O produto que você está procurando não existe ou foi removido.
         </p>
         <button onClick={() => navigate('/produtos')} className="btn-primary">
@@ -140,30 +140,30 @@ export default function ProductDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Breadcrumbs */}
         <nav className="mb-4 text-sm">
-          <div className="flex items-center space-x-2 text-gray-600">
+          <div className="flex items-center space-x-2 text-gray-600 dark:text-white">
             {getCategoryPath().map((item, index) => (
               <div key={index} className="flex items-center">
                 {index > 0 && <span className="mx-2">/</span>}
                 {item.path ? (
                   <button
                     onClick={() => navigate(item.path)}
-                    className="hover:text-primary-600"
+                    className="hover:text-primary-600 dark:hover:text-[#78B9B5]"
                   >
                     {item.label}
                   </button>
                 ) : (
-                  <span className="text-gray-900 font-medium">{item.label}</span>
+                  <span className="text-gray-900 dark:text-white font-medium">{item.label}</span>
                 )}
               </div>
             ))}
           </div>
         </nav>
 
-        <div className="bg-white rounded-lg shadow-sm p-4 lg:p-6">
+        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-sm dark:shadow-lg p-4 lg:p-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             {/* Galeria de Imagens - Compacta */}
             <div>
@@ -171,7 +171,7 @@ export default function ProductDetail() {
                 <img
                   src={productImages[selectedImage] || product?.image || ''}
                   alt={product?.name}
-                  className="w-full h-64 lg:h-80 object-cover rounded-lg border border-gray-200"
+                  className="w-full h-64 lg:h-80 object-cover rounded-lg border border-gray-200 dark:border-[#0F828C]"
                   onError={handleImageError}
                 />
               </div>
@@ -182,7 +182,7 @@ export default function ProductDetail() {
                       key={index}
                       onClick={() => setSelectedImage(index)}
                       className={`w-16 h-16 rounded-lg border-2 overflow-hidden ${
-                        selectedImage === index ? 'border-primary-600' : 'border-gray-200'
+                        selectedImage === index ? 'border-primary-600 dark:border-[#78B9B5]' : 'border-gray-200 dark:border-[#0F828C]'
                       }`}
                     >
                       <img
@@ -200,32 +200,32 @@ export default function ProductDetail() {
               {productDetails && (
                 <div className="mt-4 space-y-4">
                   {productDetails.compositions && (
-                    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <h3 className="font-semibold text-gray-900 mb-2 text-sm flex items-center">
-                        <CheckCircle size={16} className="text-green-600 mr-2" />
+                    <div className="p-4 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]">
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm flex items-center">
+                        <CheckCircle size={16} className="text-green-600 dark:text-[#78B9B5] mr-2" />
                         Composição
                       </h3>
-                      <p className="text-sm text-gray-700 whitespace-pre-line">{productDetails.compositions}</p>
+                      <p className="text-sm text-gray-700 dark:text-white whitespace-pre-line">{productDetails.compositions}</p>
                     </div>
                   )}
                   
                   {productDetails.indication && (
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <h3 className="font-semibold text-gray-900 mb-2 text-sm flex items-center">
-                        <CheckCircle size={16} className="text-blue-600 mr-2" />
+                    <div className="p-4 bg-blue-50 dark:bg-[#065084] rounded-lg border border-blue-200 dark:border-[#0F828C]">
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm flex items-center">
+                        <CheckCircle size={16} className="text-blue-600 dark:text-[#78B9B5] mr-2" />
                         Indicações
                       </h3>
-                      <p className="text-sm text-gray-700 whitespace-pre-line">{productDetails.indication}</p>
+                      <p className="text-sm text-gray-700 dark:text-white whitespace-pre-line">{productDetails.indication}</p>
                     </div>
                   )}
                   
                   {productDetails.contraindication && (
-                    <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
-                      <h3 className="font-semibold text-gray-900 mb-2 text-sm flex items-center">
-                        <AlertCircle size={16} className="text-orange-600 mr-2" />
+                    <div className="p-4 bg-orange-50 dark:bg-[#065084] rounded-lg border border-orange-200 dark:border-[#0F828C]">
+                      <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm flex items-center">
+                        <AlertCircle size={16} className="text-orange-600 dark:text-[#78B9B5] mr-2" />
                         Contraindicações
                       </h3>
-                      <p className="text-sm text-gray-700 whitespace-pre-line">{productDetails.contraindication}</p>
+                      <p className="text-sm text-gray-700 dark:text-white whitespace-pre-line">{productDetails.contraindication}</p>
                     </div>
                   )}
                 </div>
@@ -237,33 +237,33 @@ export default function ProductDetail() {
               {/* Status e Badges */}
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-medium">
+                  <span className="bg-green-100 dark:bg-[#065084] text-green-800 dark:text-white px-2 py-0.5 rounded text-xs font-medium border border-green-200 dark:border-[#0F828C]">
                     Novo
                   </span>
-                  <span className="text-gray-500 text-xs">+100 vendidos</span>
+                  <span className="text-gray-500 dark:text-gray-300 text-xs">+100 vendidos</span>
                 </div>
               </div>
 
               {/* Título - Menor */}
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">{product?.name}</h1>
+              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-2">{product?.name}</h1>
 
               {/* Preço - Compacto */}
               <div className="mb-4">
-                <p className="text-3xl lg:text-4xl font-bold text-gray-900 mb-1">
+                <p className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1">
                   R$ {product?.price.toFixed(2).replace('.', ',')}
                 </p>
-                <p className="text-sm lg:text-base text-gray-600">
+                <p className="text-sm lg:text-base text-gray-600 dark:text-gray-300">
                   em 12x de R$ {installmentValue.replace('.', ',')} sem juros
                 </p>
               </div>
 
               {/* Frete - Compacto */}
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-[#065084] rounded-lg border border-blue-200 dark:border-[#0F828C]">
                 <div className="flex items-center mb-1">
-                  <Truck size={16} className="text-blue-600 mr-2" />
-                  <span className="font-semibold text-blue-900 text-sm">FRETE GRÁTIS ACIMA DE R$ 19</span>
+                  <Truck size={16} className="text-blue-600 dark:text-[#78B9B5] mr-2" />
+                  <span className="font-semibold text-blue-900 dark:text-white text-sm">FRETE GRÁTIS ACIMA DE R$ 19</span>
                 </div>
-                <p className="text-xs text-blue-700">
+                <p className="text-xs text-blue-700 dark:text-gray-300">
                   Receba grátis em 2-3 dias úteis
                 </p>
               </div>
@@ -271,11 +271,11 @@ export default function ProductDetail() {
               {/* Estoque e Quantidade - Compacto */}
               <div className="mb-4">
                 <div className="flex items-center space-x-2 mb-2">
-                  <span className="text-xs font-semibold text-gray-700">Quantidade:</span>
+                  <span className="text-xs font-semibold text-gray-700 dark:text-white">Quantidade:</span>
                   <select
                     value={quantity}
                     onChange={(e) => setQuantity(Number(e.target.value))}
-                    className="border border-gray-300 rounded-lg px-2 py-1.5 text-sm"
+                    className="border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg px-2 py-1.5 text-sm"
                   >
                     {[...Array(Math.min(10, productDetails?.stock || 1))].map((_, i) => (
                       <option key={i + 1} value={i + 1}>
@@ -284,7 +284,7 @@ export default function ProductDetail() {
                     ))}
                   </select>
                   {productDetails && productDetails.stock > 10 && (
-                    <span className="text-xs text-gray-500">(+{productDetails.stock - 10})</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-300">(+{productDetails.stock - 10})</span>
                   )}
                 </div>
               </div>
@@ -294,20 +294,20 @@ export default function ProductDetail() {
                 <button
                   onClick={handleBuyNow}
                   disabled={!product?.inStock}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center text-base"
+                  className="w-full bg-blue-600 dark:bg-[#0F828C] hover:bg-blue-700 dark:hover:bg-[#78B9B5] text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center text-base"
                 >
                   Comprar agora
                 </button>
                 <button
                   onClick={handleAddToCart}
                   disabled={!product?.inStock}
-                  className="w-full bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center text-base"
+                  className="w-full bg-blue-600 dark:bg-[#0F828C] hover:bg-blue-700 dark:hover:bg-[#78B9B5] text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center text-base"
                 >
                   <ShoppingCart size={18} className="mr-2" />
                   Adicionar ao carrinho
                 </button>
                 {!product?.inStock && (
-                  <p className="text-red-600 text-xs text-center">
+                  <p className="text-red-600 dark:text-red-400 text-xs text-center">
                     Produto temporariamente fora de estoque
                   </p>
                 )}
@@ -315,24 +315,24 @@ export default function ProductDetail() {
 
               {/* Descrição do Produto - Compacta */}
               {productDetails && productDetails.description && (
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                  <h3 className="font-semibold text-gray-900 mb-2 text-sm">
+                <div className="mb-4 p-3 bg-gray-50 dark:bg-[#065084] rounded-lg">
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">
                     O que você precisa saber
                   </h3>
-                  <p className="text-xs text-gray-700">{productDetails.description}</p>
+                  <p className="text-xs text-gray-700 dark:text-white">{productDetails.description}</p>
                 </div>
               )}
 
               {/* Personalizável - Compacto */}
               {product?.isCustomizable && (
-                <div className="p-3 bg-primary-50 rounded-lg border border-primary-200">
+                <div className="p-3 bg-primary-50 dark:bg-[#065084] rounded-lg border border-primary-200 dark:border-[#0F828C]">
                   <div className="flex items-start">
-                    <Sparkles size={16} className="text-primary-600 mr-2 mt-0.5 flex-shrink-0" />
+                    <Sparkles size={16} className="text-primary-600 dark:text-[#78B9B5] mr-2 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-semibold text-primary-900 mb-1 text-sm">Personalizável</p>
+                      <p className="font-semibold text-primary-900 dark:text-white mb-1 text-sm">Personalizável</p>
                       <button
                         onClick={() => navigate('/personalizar')}
-                        className="text-xs text-primary-600 hover:text-primary-700 font-semibold underline"
+                        className="text-xs text-primary-600 dark:text-[#78B9B5] hover:text-primary-700 dark:hover:text-[#78B9B5] font-semibold underline"
                       >
                         Personalizar agora →
                       </button>
