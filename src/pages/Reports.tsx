@@ -315,46 +315,46 @@ export default function Reports() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Relatórios</h1>
-          <p className="mt-2 text-gray-600">Estatísticas de acesso e comportamento dos usuários</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Relatórios</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-300">Estatísticas de acesso e comportamento dos usuários</p>
         </div>
 
         {/* Filtros */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 mb-6 border border-gray-200 dark:border-[#0F828C]">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-white mb-2">
                 Data Inicial
               </label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-white mb-2">
                 Data Final
               </label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-white mb-2">
                 Agrupar Por
               </label>
               <select
                 value={groupBy}
                 onChange={(e) => setGroupBy(e.target.value as 'hour' | 'day' | 'week' | 'month')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="hour">Hora</option>
                 <option value="day">Dia</option>
@@ -377,115 +377,115 @@ export default function Reports() {
         </div>
 
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-md mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="flex -mb-px">
+        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg mb-6 border border-gray-200 dark:border-[#0F828C]">
+          <div className="border-b border-gray-200 dark:border-[#0F828C]">
+            <nav className="flex -mb-px overflow-x-auto">
               <button
                 onClick={() => setActiveTab('overview')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'overview'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
                 Visão Geral
               </button>
               <button
                 onClick={() => setActiveTab('behavior')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'behavior'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
                 Comportamento
               </button>
               <button
                 onClick={() => setActiveTab('orders')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'orders'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
                 Pedidos
               </button>
               <button
                 onClick={() => setActiveTab('shipping')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'shipping'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
                 Frete
               </button>
               <button
                 onClick={() => setActiveTab('promoCodes')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'promoCodes'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
                 Cupons
               </button>
               <button
                 onClick={() => setActiveTab('promotions')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'promotions'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
                 Promoções
               </button>
               <button
                 onClick={() => setActiveTab('users')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'users'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
                 Clientes
               </button>
               <button
                 onClick={() => setActiveTab('products')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'products'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
                 Produtos
               </button>
               <button
                 onClick={() => setActiveTab('whatsapp')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'whatsapp'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
                 WhatsApp
               </button>
               <button
                 onClick={() => setActiveTab('chat')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'chat'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
                 Chat Interno
               </button>
               <button
                 onClick={() => setActiveTab('whatsappHumanSupport')}
-                className={`py-4 px-6 text-sm font-medium border-b-2 ${
+                className={`py-4 px-6 text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'whatsappHumanSupport'
-                    ? 'border-indigo-500 text-indigo-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
                 Atendimento Humano
@@ -498,80 +498,80 @@ export default function Reports() {
           <>
             {loading ? (
               <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-                <p className="mt-2 text-gray-600">Carregando dados...</p>
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
+                <p className="mt-2 text-gray-600 dark:text-gray-300">Carregando dados...</p>
               </div>
             ) : error ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-800">{error}</p>
+              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-red-800 dark:text-red-300">{error}</p>
               </div>
             ) : (
               <>
                 {/* Cards de Estatísticas */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                  <div className="bg-white rounded-lg shadow-md p-6">
+                  <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Total de Sessões</p>
-                        <p className="text-2xl font-bold text-gray-900 mt-1">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total de Sessões</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                           {stats?.totalSessions.toLocaleString('pt-BR') || 0}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           {stats?.totalPageViews.toLocaleString('pt-BR') || 0} visualizações
                         </p>
                       </div>
-                      <div className="bg-blue-100 p-3 rounded-lg">
-                        <Eye className="w-6 h-6 text-blue-600" />
+                      <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg">
+                        <Eye className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-lg shadow-md p-6">
+                  <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Visitantes Únicos</p>
-                        <p className="text-2xl font-bold text-gray-900 mt-1">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Visitantes Únicos</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                           {stats?.uniqueVisitors.toLocaleString('pt-BR') || 0}
                         </p>
                       </div>
-                      <div className="bg-green-100 p-3 rounded-lg">
-                        <Users className="w-6 h-6 text-green-600" />
+                      <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg">
+                        <Users className="w-6 h-6 text-green-600 dark:text-green-400" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-lg shadow-md p-6">
+                  <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">IPs Únicos</p>
-                        <p className="text-2xl font-bold text-gray-900 mt-1">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">IPs Únicos</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                           {stats?.uniqueIPs.toLocaleString('pt-BR') || 0}
                         </p>
                       </div>
-                      <div className="bg-purple-100 p-3 rounded-lg">
-                        <BarChart3 className="w-6 h-6 text-purple-600" />
+                      <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-lg">
+                        <BarChart3 className="w-6 h-6 text-purple-600 dark:text-purple-400" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-lg shadow-md p-6">
+                  <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-medium text-gray-600">Usuários Autenticados</p>
-                        <p className="text-2xl font-bold text-gray-900 mt-1">
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Usuários Autenticados</p>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                           {stats?.uniqueAuthenticatedUsers.toLocaleString('pt-BR') || 0}
                         </p>
                       </div>
-                      <div className="bg-yellow-100 p-3 rounded-lg">
-                        <Calendar className="w-6 h-6 text-yellow-600" />
+                      <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg">
+                        <Calendar className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Gráfico de Acessos */}
-                <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 mb-6 border border-gray-200 dark:border-[#0F828C]">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                     Sessões e Visualizações ao Site
                   </h2>
                   {chartData.length > 0 ? (
@@ -620,15 +620,15 @@ export default function Reports() {
                       </LineChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="text-center py-12 text-gray-500">
+                    <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                       Nenhum dado disponível para o período selecionado
                     </div>
                   )}
                 </div>
 
                 {/* Gráfico de Barras Comparativo */}
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                     Comparativo: Sessões vs. Visitantes Únicos
                   </h2>
                   {chartData.length > 0 ? (

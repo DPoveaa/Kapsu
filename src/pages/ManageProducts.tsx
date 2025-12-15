@@ -62,12 +62,12 @@ export default function ManageProducts() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex items-center justify-between">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center text-gray-600 hover:text-gray-900"
+            className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
             <ArrowLeft size={20} className="mr-2" />
             Voltar
@@ -82,12 +82,12 @@ export default function ManageProducts() {
         </div>
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Gerenciar Produtos e Compostos</h1>
-          <p className="text-gray-600">Gerencie produtos e compostos do sistema</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Gerenciar Produtos e Compostos</h1>
+          <p className="text-gray-600 dark:text-gray-300">Gerencie produtos e compostos do sistema</p>
         </div>
 
         {/* Abas */}
-        <div className="mb-6 border-b border-gray-200">
+        <div className="mb-6 border-b border-gray-200 dark:border-[#0F828C]">
           <nav className="-mb-px flex space-x-8">
             <button
               onClick={() => {
@@ -96,8 +96,8 @@ export default function ManageProducts() {
               }}
               className={`${
                 activeTab === 'products'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-primary-500 dark:border-primary-400 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
             >
               <Package size={20} className="mr-2" />
@@ -111,8 +111,8 @@ export default function ManageProducts() {
               }}
               className={`${
                 activeTab === 'compostos'
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'border-primary-500 dark:border-primary-400 text-primary-600 dark:text-primary-400'
+                  : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
               } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
             >
               <FlaskConical size={20} className="mr-2" />
@@ -124,13 +124,13 @@ export default function ManageProducts() {
         {/* Busca */}
         <div className="mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
             <input
               type="text"
               placeholder="Buscar produtos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -138,17 +138,17 @@ export default function ManageProducts() {
         {/* Loading */}
         {loading && (
           <div className="flex justify-center items-center py-12">
-            <Loader2 className="animate-spin text-primary-600" size={48} />
+            <Loader2 className="animate-spin text-primary-600 dark:text-primary-400" size={48} />
           </div>
         )}
 
         {/* Error */}
         {error && !loading && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-600">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+            <p className="text-red-600 dark:text-red-400">{error}</p>
             <button
               onClick={loadProducts}
-              className="mt-2 text-red-600 hover:text-red-700 underline"
+              className="mt-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 underline"
             >
               Tentar novamente
             </button>
@@ -157,38 +157,38 @@ export default function ManageProducts() {
 
         {/* Tabela de Produtos */}
         {!loading && !error && (
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-[#0F828C]">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <thead className="bg-gray-50 dark:bg-[#065084]">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Produto
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Categoria
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Preço
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Estoque
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Ações
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
                   {filteredProducts.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                         Nenhum produto encontrado
                       </td>
                     </tr>
                   ) : (
                     filteredProducts.map((product) => (
-                      <tr key={product.id} className="hover:bg-gray-50">
+                      <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-[#065084]">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <img
@@ -198,26 +198,26 @@ export default function ManageProducts() {
                               onError={handleImageError}
                             />
                             <div>
-                              <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                              <div className="text-sm text-gray-500 truncate max-w-xs">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</div>
+                              <div className="text-sm text-gray-500 dark:text-gray-300 truncate max-w-xs">
                                 {product.description || 'Sem descrição'}
                               </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
                             {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                           R$ {product.price.toFixed(2).replace('.', ',')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                             product.inStock
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-red-100 text-red-800'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                              : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
                           }`}>
                             {product.inStock ? 'Em estoque' : 'Sem estoque'}
                           </span>
@@ -226,7 +226,7 @@ export default function ManageProducts() {
                           <div className="flex justify-end space-x-2">
                             <button
                               onClick={() => navigate(`/admin/products/edit/${product.id}`)}
-                              className="text-blue-600 hover:text-blue-900"
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                               title="Editar"
                             >
                               <Edit size={18} />
@@ -234,7 +234,7 @@ export default function ManageProducts() {
                             <button
                               onClick={() => handleDelete(product.id)}
                               disabled={deletingId === product.id}
-                              className="text-red-600 hover:text-red-900 disabled:opacity-50"
+                              className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 disabled:opacity-50"
                               title="Excluir"
                             >
                               {deletingId === product.id ? (

@@ -3,26 +3,26 @@ import { Settings, MessageSquare, Users, Package, ShoppingCart, BarChart3, Truck
 
 export default function AdminPanel() {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Painel Administrativo</h1>
-          <p className="mt-2 text-gray-600">Gerencie seu sistema Kapsu</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Painel Administrativo</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-300">Gerencie seu sistema Kapsu</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Card WhatsApp */}
           <Link
             to="/admin/whatsapp"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
           >
             <div className="flex items-center space-x-4">
-              <div className="bg-green-100 p-3 rounded-lg">
-                <MessageSquare className="w-6 h-6 text-green-600" />
+              <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg">
+                <MessageSquare className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">WhatsApp</h3>
-                <p className="text-sm text-gray-600">Conectar e gerenciar WhatsApp</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">WhatsApp</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Conectar e gerenciar WhatsApp</p>
               </div>
             </div>
           </Link>
@@ -30,15 +30,15 @@ export default function AdminPanel() {
           {/* Card Produtos */}
           <Link
             to="/admin/products"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
           >
             <div className="flex items-center space-x-4">
-              <div className="bg-blue-100 p-3 rounded-lg">
-                <Package className="w-6 h-6 text-blue-600" />
+              <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg">
+                <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Produtos</h3>
-                <p className="text-sm text-gray-600">Gerenciar produtos</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Produtos</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Gerenciar produtos</p>
               </div>
             </div>
           </Link>
@@ -46,15 +46,15 @@ export default function AdminPanel() {
           {/* Card Pedidos */}
           <Link
             to="/admin/orders"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
           >
             <div className="flex items-center space-x-4">
-              <div className="bg-purple-100 p-3 rounded-lg">
-                <ShoppingCart className="w-6 h-6 text-purple-600" />
+              <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-lg">
+                <ShoppingCart className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Pedidos</h3>
-                <p className="text-sm text-gray-600">Visualizar pedidos</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pedidos</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Visualizar pedidos</p>
               </div>
             </div>
           </Link>
@@ -62,15 +62,15 @@ export default function AdminPanel() {
           {/* Card Usuários */}
           <Link
             to="/admin/users"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
           >
             <div className="flex items-center space-x-4">
-              <div className="bg-yellow-100 p-3 rounded-lg">
-                <Users className="w-6 h-6 text-yellow-600" />
+              <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg">
+                <Users className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Usuários</h3>
-                <p className="text-sm text-gray-600">Gerenciar usuários</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Usuários</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Gerenciar usuários</p>
               </div>
             </div>
           </Link>
@@ -78,15 +78,15 @@ export default function AdminPanel() {
           {/* Card Relatórios */}
           <Link
             to="/admin/reports"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
           >
             <div className="flex items-center space-x-4">
-              <div className="bg-indigo-100 p-3 rounded-lg">
-                <BarChart3 className="w-6 h-6 text-indigo-600" />
+              <div className="bg-indigo-100 dark:bg-indigo-900/30 p-3 rounded-lg">
+                <BarChart3 className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Relatórios</h3>
-                <p className="text-sm text-gray-600">Visualizar relatórios</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Relatórios</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Visualizar relatórios</p>
               </div>
             </div>
           </Link>
@@ -94,15 +94,15 @@ export default function AdminPanel() {
           {/* Card Configurações */}
           <Link
             to="/admin/settings"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
           >
             <div className="flex items-center space-x-4">
-              <div className="bg-gray-100 p-3 rounded-lg">
-                <Settings className="w-6 h-6 text-gray-600" />
+              <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
+                <Settings className="w-6 h-6 text-gray-600 dark:text-gray-300" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Configurações</h3>
-                <p className="text-sm text-gray-600">Configurações do sistema</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Configurações</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Configurações do sistema</p>
               </div>
             </div>
           </Link>
@@ -110,15 +110,15 @@ export default function AdminPanel() {
           {/* Card Frete */}
           <Link
             to="/admin/shipping"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
           >
             <div className="flex items-center space-x-4">
-              <div className="bg-orange-100 p-3 rounded-lg">
-                <Truck className="w-6 h-6 text-orange-600" />
+              <div className="bg-orange-100 dark:bg-orange-900/30 p-3 rounded-lg">
+                <Truck className="w-6 h-6 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Frete</h3>
-                <p className="text-sm text-gray-600">Configurar frete e regiões</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Frete</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Configurar frete e regiões</p>
               </div>
             </div>
           </Link>
@@ -126,15 +126,15 @@ export default function AdminPanel() {
           {/* Card Promoções */}
           <Link
             to="/admin/promotions"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
           >
             <div className="flex items-center space-x-4">
-              <div className="bg-pink-100 p-3 rounded-lg">
-                <Gift className="w-6 h-6 text-pink-600" />
+              <div className="bg-pink-100 dark:bg-pink-900/30 p-3 rounded-lg">
+                <Gift className="w-6 h-6 text-pink-600 dark:text-pink-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Promoções</h3>
-                <p className="text-sm text-gray-600">Criar e gerenciar promoções</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Promoções</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Criar e gerenciar promoções</p>
               </div>
             </div>
           </Link>
@@ -142,15 +142,15 @@ export default function AdminPanel() {
           {/* Card Códigos Promocionais */}
           <Link
             to="/admin/promo-codes"
-            className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow"
+            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
           >
             <div className="flex items-center space-x-4">
-              <div className="bg-purple-100 p-3 rounded-lg">
-                <Tag className="w-6 h-6 text-purple-600" />
+              <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-lg">
+                <Tag className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Códigos Promocionais</h3>
-                <p className="text-sm text-gray-600">Criar cupons e códigos de desconto</p>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Códigos Promocionais</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Criar cupons e códigos de desconto</p>
               </div>
             </div>
           </Link>

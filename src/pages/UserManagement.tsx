@@ -132,9 +132,9 @@ export default function UserManagement() {
 
   const getRoleBadge = (role: string) => {
     const badges = {
-      admin: { bg: 'bg-red-100', text: 'text-red-700', label: 'Administrador', icon: Shield },
-      pharmacist: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Farmacêutico', icon: UserCheck },
-      user: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Usuário', icon: UserIcon },
+      admin: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Administrador', icon: Shield },
+      pharmacist: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300', label: 'Farmacêutico', icon: UserCheck },
+      user: { bg: 'bg-gray-100 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-300', label: 'Usuário', icon: UserIcon },
     }
     const badge = badges[role as keyof typeof badges] || badges.user
     const Icon = badge.icon
@@ -147,59 +147,59 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B]">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         {/* Header */}
         <div className="mb-4 sm:mb-6 lg:mb-8">
           <button
             onClick={() => navigate('/admin')}
-            className="flex items-center text-gray-600 hover:text-gray-900 mb-3 sm:mb-4 text-sm sm:text-base"
+            className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-3 sm:mb-4 text-sm sm:text-base"
           >
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
             Voltar ao painel
           </button>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Gerenciamento de Usuários</h1>
-          <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600">Gerencie usuários, cargos e permissões</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Gerenciamento de Usuários</h1>
+          <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-300">Gerencie usuários, cargos e permissões</p>
         </div>
 
         {/* Estatísticas */}
         {statistics && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
+            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-[#0F828C]">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-gray-600">Total de Usuários</p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{statistics.totalUsers}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Total de Usuários</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">{statistics.totalUsers}</p>
                 </div>
-                <UserIcon className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600" />
+                <UserIcon className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
+            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-[#0F828C]">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-gray-600">Administradores</p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{statistics.totalAdmins}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Administradores</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">{statistics.totalAdmins}</p>
                 </div>
-                <Shield className="w-8 h-8 sm:w-10 sm:h-10 text-red-600" />
+                <Shield className="w-8 h-8 sm:w-10 sm:h-10 text-red-600 dark:text-red-400" />
               </div>
             </div>
-            <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
+            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-[#0F828C]">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs sm:text-sm text-gray-600">Farmacêuticos</p>
-                  <p className="text-xl sm:text-2xl font-bold text-gray-900 mt-1">{statistics.totalPharmacists}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Farmacêuticos</p>
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">{statistics.totalPharmacists}</p>
                 </div>
-                <UserCheck className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600" />
+                <UserCheck className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
           </div>
         )}
 
         {/* Busca e Filtros */}
-        <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 mb-4 sm:mb-6">
+        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 mb-4 sm:mb-6 border border-gray-200 dark:border-[#0F828C]">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 sm:w-5 sm:h-5" />
               <input
                 type="text"
                 value={searchTerm}
@@ -208,36 +208,36 @@ export default function UserManagement() {
                   setPage(1)
                 }}
                 placeholder="Buscar por nome, email, telefone ou CPF..."
-                className="w-full pl-9 sm:pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-9 sm:pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
         </div>
 
         {/* Lista de Usuários */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-[#0F828C]">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600 text-sm sm:text-base">Carregando usuários...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400 mx-auto mb-4"></div>
+                <p className="text-gray-600 dark:text-gray-300 text-sm sm:text-base">Carregando usuários...</p>
               </div>
             </div>
           ) : users.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
-                <UserIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 text-sm sm:text-base">Nenhum usuário encontrado</p>
+                <UserIcon className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">Nenhum usuário encontrado</p>
               </div>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200">
+            <div className="divide-y divide-gray-200 dark:divide-[#0F828C]">
               {users.map((user) => {
                 const isExpanded = expandedUsers.has(user.id)
                 const userDetails = selectedUser && selectedUser.id === user.id ? selectedUser : null
 
                 return (
-                  <div key={user.id} className="p-3 sm:p-4 hover:bg-gray-50 transition-colors">
+                  <div key={user.id} className="p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors">
                     {/* Cabeçalho do Usuário */}
                     <div
                       className="flex items-center justify-between cursor-pointer"
@@ -246,23 +246,23 @@ export default function UserManagement() {
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                           <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-                            <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                              <UserIcon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                            <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                              <UserIcon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+                                <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white truncate">
                                   {user.name}
                                 </h3>
                                 {getRoleBadge(user.role)}
                               </div>
                               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1">
-                                <p className="text-xs sm:text-sm text-gray-600 truncate flex items-center">
+                                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate flex items-center">
                                   <Mail className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
                                   {user.email}
                                 </p>
                                 {user.phone && (
-                                  <p className="text-xs sm:text-sm text-gray-600 truncate flex items-center">
+                                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate flex items-center">
                                     <Phone className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
                                     {formatPhone(user.phone)}
                                   </p>
@@ -272,12 +272,12 @@ export default function UserManagement() {
                           </div>
                           <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
                             {user.last_login && (
-                              <div className="hidden sm:flex items-center text-xs text-gray-500">
+                              <div className="hidden sm:flex items-center text-xs text-gray-500 dark:text-gray-400">
                                 <Clock className="w-3 h-3 mr-1" />
                                 {formatDate(user.last_login)}
                               </div>
                             )}
-                            <button className="text-gray-400 hover:text-gray-600">
+                            <button className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
                               {isExpanded ? (
                                 <ChevronUp className="w-5 h-5" />
                               ) : (
@@ -291,29 +291,29 @@ export default function UserManagement() {
 
                     {/* Detalhes Expandidos */}
                     {isExpanded && userDetails && (
-                      <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 space-y-3 sm:space-y-4">
+                      <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-[#0F828C] space-y-3 sm:space-y-4">
                         {/* Informações Pessoais */}
                         <div>
-                          <h4 className="text-xs sm:text-sm font-semibold text-gray-900 mb-2">Informações Pessoais</h4>
+                          <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2">Informações Pessoais</h4>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
                             <div>
-                              <p className="text-gray-600">CPF:</p>
-                              <p className="text-gray-900 font-medium">{formatCPF(userDetails.cpf)}</p>
+                              <p className="text-gray-600 dark:text-gray-300">CPF:</p>
+                              <p className="text-gray-900 dark:text-white font-medium">{formatCPF(userDetails.cpf)}</p>
                             </div>
                             {userDetails.address && (
                               <div className="sm:col-span-2">
-                                <p className="text-gray-600">Endereço:</p>
-                                <p className="text-gray-900 font-medium">{userDetails.address}</p>
+                                <p className="text-gray-600 dark:text-gray-300">Endereço:</p>
+                                <p className="text-gray-900 dark:text-white font-medium">{userDetails.address}</p>
                               </div>
                             )}
                             <div>
-                              <p className="text-gray-600">Cadastrado em:</p>
-                              <p className="text-gray-900 font-medium">{formatDate(userDetails.created_at)}</p>
+                              <p className="text-gray-600 dark:text-gray-300">Cadastrado em:</p>
+                              <p className="text-gray-900 dark:text-white font-medium">{formatDate(userDetails.created_at)}</p>
                             </div>
                             {userDetails.last_login && (
                               <div>
-                                <p className="text-gray-600">Último login:</p>
-                                <p className="text-gray-900 font-medium">{formatDate(userDetails.last_login)}</p>
+                                <p className="text-gray-600 dark:text-gray-300">Último login:</p>
+                                <p className="text-gray-900 dark:text-white font-medium">{formatDate(userDetails.last_login)}</p>
                               </div>
                             )}
                           </div>
@@ -322,37 +322,37 @@ export default function UserManagement() {
                         {/* Estatísticas */}
                         {userDetails.statistics && (
                           <div>
-                            <h4 className="text-xs sm:text-sm font-semibold text-gray-900 mb-2">Estatísticas</h4>
+                            <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2">Estatísticas</h4>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                              <div className="bg-blue-50 rounded-lg p-2 sm:p-3">
+                              <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-2 sm:p-3 border border-blue-200 dark:border-blue-800">
                                 <div className="flex items-center space-x-2">
-                                  <Package className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                                  <Package className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
                                   <div>
-                                    <p className="text-[10px] sm:text-xs text-gray-600">Pedidos</p>
-                                    <p className="text-base sm:text-lg font-bold text-gray-900">
+                                    <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300">Pedidos</p>
+                                    <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
                                       {userDetails.statistics.totalOrders}
                                     </p>
                                   </div>
                                 </div>
                               </div>
-                              <div className="bg-green-50 rounded-lg p-2 sm:p-3">
+                              <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-2 sm:p-3 border border-green-200 dark:border-green-800">
                                 <div className="flex items-center space-x-2">
-                                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
                                   <div>
-                                    <p className="text-[10px] sm:text-xs text-gray-600">Total Gasto</p>
-                                    <p className="text-base sm:text-lg font-bold text-gray-900">
+                                    <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300">Total Gasto</p>
+                                    <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
                                       R$ {userDetails.statistics.totalSpent.toFixed(2)}
                                     </p>
                                   </div>
                                 </div>
                               </div>
                               {userDetails.statistics.lastOrder && (
-                                <div className="bg-purple-50 rounded-lg p-2 sm:p-3 col-span-2 sm:col-span-1">
+                                <div className="bg-purple-50 dark:bg-purple-900/30 rounded-lg p-2 sm:p-3 col-span-2 sm:col-span-1 border border-purple-200 dark:border-purple-800">
                                   <div className="flex items-center space-x-2">
-                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
                                     <div>
-                                      <p className="text-[10px] sm:text-xs text-gray-600">Último Pedido</p>
-                                      <p className="text-xs sm:text-sm font-bold text-gray-900">
+                                      <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300">Último Pedido</p>
+                                      <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
                                         {formatDateOnly(userDetails.statistics.lastOrder.created_at)}
                                       </p>
                                     </div>
@@ -365,7 +365,7 @@ export default function UserManagement() {
 
                         {/* Alterar Cargo */}
                         <div>
-                          <h4 className="text-xs sm:text-sm font-semibold text-gray-900 mb-2">Alterar Cargo</h4>
+                          <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2">Alterar Cargo</h4>
                           <div className="flex flex-wrap gap-2">
                             {(['user', 'pharmacist', 'admin'] as const).map((role) => (
                               <button
@@ -378,7 +378,7 @@ export default function UserManagement() {
                                 className={`flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                                   user.role === role
                                     ? 'bg-blue-600 text-white cursor-default'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                                 } disabled:opacity-50 disabled:cursor-not-allowed`}
                               >
                                 {updatingRole === user.id ? (
@@ -411,22 +411,22 @@ export default function UserManagement() {
 
           {/* Paginação */}
           {totalPages > 1 && (
-            <div className="px-3 sm:px-4 py-3 sm:py-4 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-              <p className="text-xs sm:text-sm text-gray-600">
+            <div className="px-3 sm:px-4 py-3 sm:py-4 border-t border-gray-200 dark:border-[#0F828C] flex flex-col sm:flex-row items-center justify-between gap-3">
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                 Página {page} de {totalPages}
               </p>
               <div className="flex items-center space-x-2">
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Anterior
                 </button>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Próxima
                 </button>

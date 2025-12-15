@@ -129,41 +129,41 @@ export default function SiteSettings() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando configurações...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Carregando configurações...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B] py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900">Configurações do Site</h1>
-            <p className="mt-2 text-gray-600">Gerencie as configurações gerais do site</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Configurações do Site</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">Gerencie as configurações gerais do site</p>
           </div>
 
           {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <div className="mb-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+            <div className="mb-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded">
               {success}
             </div>
           )}
 
           {/* Seção: Logo */}
-          <div className="mb-8 border-b pb-6">
+          <div className="mb-8 border-b border-gray-200 dark:border-[#0F828C] pb-6">
             <div className="flex items-center mb-4">
-              <ImageIcon className="w-5 h-5 text-gray-600 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900">Logo do Site</h2>
+              <ImageIcon className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Logo do Site</h2>
             </div>
             
             <div className="space-y-4">
@@ -172,7 +172,7 @@ export default function SiteSettings() {
                   <img
                     src={logoPreview}
                     alt="Logo atual"
-                    className="max-h-32 max-w-full object-contain border border-gray-200 rounded p-2"
+                    className="max-h-32 max-w-full object-contain border border-gray-200 dark:border-[#0F828C] rounded p-2"
                   />
                   <button
                     onClick={handleDeleteLogo}
@@ -185,7 +185,7 @@ export default function SiteSettings() {
               )}
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Enviar Nova Logo
                 </label>
                 <div className="flex items-center space-x-4">
@@ -200,7 +200,7 @@ export default function SiteSettings() {
                       disabled={uploading}
                     />
                   </label>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     Formatos: JPEG, PNG, GIF, WEBP, SVG (máx. 5MB)
                   </span>
                 </div>
@@ -209,35 +209,35 @@ export default function SiteSettings() {
           </div>
 
           {/* Seção: Informações Básicas */}
-          <div className="mb-8 border-b pb-6">
+          <div className="mb-8 border-b border-gray-200 dark:border-[#0F828C] pb-6">
             <div className="flex items-center mb-4">
-              <Globe className="w-5 h-5 text-gray-600 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900">Informações Básicas</h2>
+              <Globe className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Informações Básicas</h2>
             </div>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Nome do Site
                 </label>
                 <input
                   type="text"
                   value={settings.site_name || ''}
                   onChange={(e) => handleInputChange('site_name', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                   placeholder="Ex: Kapsu Farmácia"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Descrição do Site
                 </label>
                 <textarea
                   value={settings.site_description || ''}
                   onChange={(e) => handleInputChange('site_description', e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                   placeholder="Descrição breve do site"
                 />
               </div>
@@ -245,15 +245,15 @@ export default function SiteSettings() {
           </div>
 
           {/* Seção: Contato */}
-          <div className="mb-8 border-b pb-6">
+          <div className="mb-8 border-b border-gray-200 dark:border-[#0F828C] pb-6">
             <div className="flex items-center mb-4">
-              <Phone className="w-5 h-5 text-gray-600 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900">Informações de Contato</h2>
+              <Phone className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Informações de Contato</h2>
             </div>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   <Mail className="w-4 h-4 inline mr-1" />
                   Email de Contato
                 </label>
@@ -261,13 +261,13 @@ export default function SiteSettings() {
                   type="email"
                   value={settings.contact_email || ''}
                   onChange={(e) => handleInputChange('contact_email', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                   placeholder="contato@kapsu.com"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   <Phone className="w-4 h-4 inline mr-1" />
                   Telefone de Contato
                 </label>
@@ -275,13 +275,13 @@ export default function SiteSettings() {
                   type="tel"
                   value={settings.contact_phone || ''}
                   onChange={(e) => handleInputChange('contact_phone', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                   placeholder="(11) 99999-9999"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   <MapPin className="w-4 h-4 inline mr-1" />
                   Endereço
                 </label>
@@ -289,7 +289,7 @@ export default function SiteSettings() {
                   value={settings.address || ''}
                   onChange={(e) => handleInputChange('address', e.target.value)}
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                   placeholder="Endereço completo"
                 />
               </div>
@@ -297,61 +297,61 @@ export default function SiteSettings() {
           </div>
 
           {/* Seção: Redes Sociais */}
-          <div className="mb-8 border-b pb-6">
+          <div className="mb-8 border-b border-gray-200 dark:border-[#0F828C] pb-6">
             <div className="flex items-center mb-4">
-              <Globe className="w-5 h-5 text-gray-600 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900">Redes Sociais</h2>
+              <Globe className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Redes Sociais</h2>
             </div>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Facebook
                 </label>
                 <input
                   type="url"
                   value={settings.social_media?.facebook || ''}
                   onChange={(e) => handleSocialMediaChange('facebook', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                   placeholder="https://facebook.com/kapsu"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Instagram
                 </label>
                 <input
                   type="url"
                   value={settings.social_media?.instagram || ''}
                   onChange={(e) => handleSocialMediaChange('instagram', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                   placeholder="https://instagram.com/kapsu"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Twitter
                 </label>
                 <input
                   type="url"
                   value={settings.social_media?.twitter || ''}
                   onChange={(e) => handleSocialMediaChange('twitter', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                   placeholder="https://twitter.com/kapsu"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   LinkedIn
                 </label>
                 <input
                   type="url"
                   value={settings.social_media?.linkedin || ''}
                   onChange={(e) => handleSocialMediaChange('linkedin', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                   placeholder="https://linkedin.com/company/kapsu"
                 />
               </div>
@@ -361,13 +361,13 @@ export default function SiteSettings() {
           {/* Seção: Cores do Tema */}
           <div className="mb-8">
             <div className="flex items-center mb-4">
-              <Palette className="w-5 h-5 text-gray-600 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900">Cores do Tema</h2>
+              <Palette className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Cores do Tema</h2>
             </div>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Cor Primária
                 </label>
                 <div className="flex items-center space-x-2">
@@ -375,20 +375,20 @@ export default function SiteSettings() {
                     type="color"
                     value={settings.theme_colors?.primary || '#3B82F6'}
                     onChange={(e) => handleThemeColorChange('primary', e.target.value)}
-                    className="h-10 w-20 border border-gray-300 rounded cursor-pointer"
+                    className="h-10 w-20 border border-gray-300 dark:border-[#0F828C] rounded cursor-pointer"
                   />
                   <input
                     type="text"
                     value={settings.theme_colors?.primary || '#3B82F6'}
                     onChange={(e) => handleThemeColorChange('primary', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                     placeholder="#3B82F6"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Cor Secundária
                 </label>
                 <div className="flex items-center space-x-2">
@@ -396,20 +396,20 @@ export default function SiteSettings() {
                     type="color"
                     value={settings.theme_colors?.secondary || '#10B981'}
                     onChange={(e) => handleThemeColorChange('secondary', e.target.value)}
-                    className="h-10 w-20 border border-gray-300 rounded cursor-pointer"
+                    className="h-10 w-20 border border-gray-300 dark:border-[#0F828C] rounded cursor-pointer"
                   />
                   <input
                     type="text"
                     value={settings.theme_colors?.secondary || '#10B981'}
                     onChange={(e) => handleThemeColorChange('secondary', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                     placeholder="#10B981"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Cor de Destaque
                 </label>
                 <div className="flex items-center space-x-2">
@@ -417,13 +417,13 @@ export default function SiteSettings() {
                     type="color"
                     value={settings.theme_colors?.accent || '#F59E0B'}
                     onChange={(e) => handleThemeColorChange('accent', e.target.value)}
-                    className="h-10 w-20 border border-gray-300 rounded cursor-pointer"
+                    className="h-10 w-20 border border-gray-300 dark:border-[#0F828C] rounded cursor-pointer"
                   />
                   <input
                     type="text"
                     value={settings.theme_colors?.accent || '#F59E0B'}
                     onChange={(e) => handleThemeColorChange('accent', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                     placeholder="#F59E0B"
                   />
                 </div>
@@ -436,7 +436,7 @@ export default function SiteSettings() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-600 dark:hover:bg-blue-700"
             >
               <Save className="w-5 h-5 mr-2" />
               {saving ? 'Salvando...' : 'Salvar Configurações'}

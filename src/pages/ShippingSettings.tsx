@@ -146,23 +146,23 @@ export default function ShippingSettings() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Carregando configurações de frete...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Carregando configurações de frete...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B] py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Configurações de Frete</h1>
-              <p className="mt-2 text-gray-600">Gerencie as regiões de entrega e valores de frete</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Configurações de Frete</h1>
+              <p className="mt-2 text-gray-600 dark:text-gray-300">Gerencie as regiões de entrega e valores de frete</p>
             </div>
             <Link
               to="/admin/shipping/free-rules"
@@ -175,13 +175,13 @@ export default function ShippingSettings() {
         </div>
 
         {error && (
-          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          <div className="mb-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+          <div className="mb-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 px-4 py-3 rounded">
             {success}
           </div>
         )}
@@ -189,15 +189,15 @@ export default function ShippingSettings() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Configurações Gerais */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
               <div className="flex items-center mb-4">
-                <DollarSign className="w-5 h-5 text-gray-600 mr-2" />
-                <h2 className="text-xl font-semibold text-gray-900">Configurações Gerais</h2>
+                <DollarSign className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Configurações Gerais</h2>
               </div>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Valor Mínimo para Frete Grátis (R$)
                   </label>
                   <input
@@ -214,10 +214,10 @@ export default function ShippingSettings() {
                         free_shipping_threshold: isNaN(value) ? 0 : value,
                       });
                     }}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                     placeholder="200.00"
                   />
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                     {settings.free_shipping_threshold === 0 || settings.free_shipping_threshold === null
                       ? 'Frete grátis desabilitado. Defina um valor maior que 0 para habilitar.'
                       : `Pedidos acima de R$ ${settings.free_shipping_threshold.toFixed(2).replace('.', ',')} terão frete grátis`}
@@ -238,11 +238,11 @@ export default function ShippingSettings() {
 
           {/* Lista de Regiões e Formulário */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center">
-                  <Truck className="w-5 h-5 text-gray-600 mr-2" />
-                  <h2 className="text-xl font-semibold text-gray-900">Regiões de Entrega</h2>
+                  <Truck className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Regiões de Entrega</h2>
                 </div>
                 {!editingRegion && (
                   <button
@@ -257,27 +257,27 @@ export default function ShippingSettings() {
 
               {/* Formulário de Nova/Edição */}
               {(editingRegion !== null) && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <div className="mb-6 p-4 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                     {editingRegion.id ? 'Editar Região' : 'Nova Região'}
                   </h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Município *
                       </label>
                       <input
                         type="text"
                         value={formData.municipality}
                         onChange={(e) => setFormData({ ...formData, municipality: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                         placeholder="Ex: São Paulo"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         CEP Inicial *
                       </label>
                       <input
@@ -288,13 +288,13 @@ export default function ShippingSettings() {
                           setFormData({ ...formData, cepFrom: formatted })
                         }}
                         maxLength={9}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                         placeholder="00000-000"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         CEP Final *
                       </label>
                       <input
@@ -305,13 +305,13 @@ export default function ShippingSettings() {
                           setFormData({ ...formData, cepTo: formatted })
                         }}
                         maxLength={9}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                         placeholder="00000-000"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Valor do Frete (R$) *
                       </label>
                       <input
@@ -320,7 +320,7 @@ export default function ShippingSettings() {
                         step="0.01"
                         value={formData.shippingFee}
                         onChange={(e) => setFormData({ ...formData, shippingFee: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                         placeholder="18.00"
                       />
                     </div>
@@ -333,7 +333,7 @@ export default function ShippingSettings() {
                         onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
-                      <label htmlFor="active" className="ml-2 text-sm text-gray-700">
+                      <label htmlFor="active" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
                         Região ativa
                       </label>
                     </div>
@@ -342,7 +342,7 @@ export default function ShippingSettings() {
                   <div className="flex justify-end space-x-3 mt-4">
                     <button
                       onClick={handleCancelEdit}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="px-4 py-2 border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                     >
                       Cancelar
                     </button>
@@ -359,56 +359,56 @@ export default function ShippingSettings() {
 
               {/* Lista de Regiões */}
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
+                  <thead className="bg-gray-50 dark:bg-[#065084]">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         Município
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         CEP Inicial
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         CEP Final
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         Valor (R$)
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         Status
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         Ações
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
                     {regions.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                           Nenhuma região cadastrada. Clique em "Nova Região" para adicionar.
                         </td>
                       </tr>
                     ) : (
                       regions.map((region) => (
-                        <tr key={region.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <tr key={region.id} className="hover:bg-gray-50 dark:hover:bg-[#065084]">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                             {region.municipality}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                             {region.cep_from}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
                             {region.cep_to}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                             R$ {Number(region.shipping_fee).toFixed(2).replace('.', ',')}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                               region.active
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                                : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
                             }`}>
                               {region.active ? 'Ativa' : 'Inativa'}
                             </span>
@@ -416,13 +416,13 @@ export default function ShippingSettings() {
                           <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                             <button
                               onClick={() => handleEditRegion(region)}
-                              className="text-blue-600 hover:text-blue-900 mr-3"
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 mr-3"
                             >
                               Editar
                             </button>
                             <button
                               onClick={() => handleDeleteRegion(region.id)}
-                              className="text-red-600 hover:text-red-900"
+                              className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                             >
                               <Trash2 className="w-4 h-4 inline" />
                             </button>
