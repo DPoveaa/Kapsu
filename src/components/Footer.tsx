@@ -1,6 +1,6 @@
 import { Facebook, Instagram, Twitter, Linkedin, MapPin, Mail, Phone } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import logoImage from '../images/logo.png'
+import AnimatedLogo from './AnimatedLogo'
 
 export default function Footer() {
   return (
@@ -9,10 +9,9 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-white">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 mb-2 md:mb-0">
-            <img 
-              src={logoImage} 
-              alt="Kapsu Logo" 
+            <AnimatedLogo 
               className="h-8 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+              alt="Kapsu Logo"
             />
             <span className="text-sm font-semibold text-white">Kapsu</span>
           </Link>
