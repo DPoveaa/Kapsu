@@ -211,12 +211,12 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">Criar Pedido Manual</h2>
+      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-xl dark:shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-[#0F828C]">
+        <div className="sticky top-0 bg-white dark:bg-[#065084] border-b border-gray-200 dark:border-[#0F828C] px-6 py-4 flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Criar Pedido Manual</h2>
           <button
             onClick={handleClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white"
           >
             <X size={24} />
           </button>
@@ -224,18 +224,18 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-red-600">{error}</p>
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <p className="text-red-600 dark:text-red-300">{error}</p>
             </div>
           )}
 
           {/* Seleção de Usuário */}
           <div className="user-dropdown-container">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Cliente <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" size={18} />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 z-10" size={18} />
               <input
                 type="text"
                 placeholder="Digite para buscar ou selecione um cliente..."
@@ -246,7 +246,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                   setShowUserDropdown(true)
                 }}
                 onFocus={() => setShowUserDropdown(true)}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
               />
               {selectedUserId && (
                 <button
@@ -256,7 +256,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                     setUserSearch('')
                     setShowUserDropdown(false)
                   }}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white"
                 >
                   <X size={18} />
                 </button>
@@ -264,14 +264,14 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
               
               {/* Dropdown de usuários */}
               {showUserDropdown && (
-                <div className="absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                <div className="absolute z-20 w-full mt-1 bg-white dark:bg-[#065084] border border-gray-200 dark:border-[#0F828C] rounded-lg shadow-lg dark:shadow-xl max-h-60 overflow-y-auto">
                   {loadingUsers ? (
-                    <div className="p-4 text-center text-gray-500">
+                    <div className="p-4 text-center text-gray-500 dark:text-gray-400">
                       <Loader2 className="animate-spin mx-auto mb-2" size={20} />
                       Carregando...
                     </div>
                   ) : filteredUsers.length === 0 ? (
-                    <div className="p-4 text-center text-gray-500">Nenhum usuário encontrado</div>
+                    <div className="p-4 text-center text-gray-500 dark:text-gray-400">Nenhum usuário encontrado</div>
                   ) : (
                     filteredUsers.map(user => (
                       <button
@@ -282,14 +282,14 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                           setUserSearch(user.name)
                           setShowUserDropdown(false)
                         }}
-                        className={`w-full text-left px-4 py-2 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
-                          selectedUserId === user.id ? 'bg-blue-50' : ''
+                        className={`w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-[#065084] border-b border-gray-100 dark:border-[#0F828C] last:border-b-0 ${
+                          selectedUserId === user.id ? 'bg-blue-50 dark:bg-blue-900/30' : ''
                         }`}
                       >
-                        <div className="font-medium text-gray-900">{user.name}</div>
-                        <div className="text-sm text-gray-500">{user.email}</div>
+                        <div className="font-medium text-gray-900 dark:text-white">{user.name}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-300">{user.email}</div>
                         {user.phone && (
-                          <div className="text-xs text-gray-400">{user.phone}</div>
+                          <div className="text-xs text-gray-400 dark:text-gray-400">{user.phone}</div>
                         )}
                       </button>
                     ))
@@ -298,7 +298,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
               )}
             </div>
             {selectedUserId && (
-              <div className="mt-2 text-sm text-green-600">
+              <div className="mt-2 text-sm text-green-600 dark:text-green-400">
                 ✓ Usuário selecionado: {users.find(u => u.id === selectedUserId)?.name} ({users.find(u => u.id === selectedUserId)?.email})
               </div>
             )}
@@ -306,24 +306,24 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
 
           {/* Adicionar Produtos */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Produtos <span className="text-red-500">*</span>
             </label>
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={18} />
                 <input
                   type="text"
                   placeholder="Buscar produto..."
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                 />
               </div>
               <select
                 value={selectedProductId}
                 onChange={(e) => setSelectedProductId(e.target.value)}
-                className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="flex-1 border border-gray-300 dark:border-[#0F828C] rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
               >
                 <option value="">Selecione um produto</option>
                 {filteredProducts.map(product => (
@@ -350,11 +350,11 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                   return (
                     <div
                       key={item.productId}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]"
                     >
                       <div className="flex-1">
-                        <div className="font-medium text-gray-900">{product?.name || 'Produto'}</div>
-                        <div className="text-sm text-gray-500">
+                        <div className="font-medium text-gray-900 dark:text-white">{product?.name || 'Produto'}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-300">
                           R$ {product?.price.toFixed(2).replace('.', ',')} x {item.quantity} = R$ {(product?.price || 0) * item.quantity}
                         </div>
                       </div>
@@ -362,22 +362,22 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                          className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                          className="px-2 py-1 bg-gray-200 dark:bg-[#065084] dark:border dark:border-[#0F828C] dark:text-white rounded hover:bg-gray-300 dark:hover:bg-[#065084]"
                         >
                           -
                         </button>
-                        <span className="w-12 text-center">{item.quantity}</span>
+                        <span className="w-12 text-center dark:text-white">{item.quantity}</span>
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                          className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                          className="px-2 py-1 bg-gray-200 dark:bg-[#065084] dark:border dark:border-[#0F828C] dark:text-white rounded hover:bg-gray-300 dark:hover:bg-[#065084]"
                         >
                           +
                         </button>
                         <button
                           type="button"
                           onClick={() => removeItem(item.productId)}
-                          className="ml-2 text-red-600 hover:text-red-800"
+                          className="ml-2 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
                         >
                           <Trash2 size={18} />
                         </button>
@@ -385,10 +385,10 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                     </div>
                   )
                 })}
-                <div className="mt-4 p-3 bg-primary-50 rounded-lg">
+                <div className="mt-4 p-3 bg-primary-50 dark:bg-primary-900/30 rounded-lg border border-primary-200 dark:border-primary-800">
                   <div className="flex justify-between items-center">
-                    <span className="font-medium text-gray-900">Total:</span>
-                    <span className="text-2xl font-bold text-primary-600">
+                    <span className="font-medium text-gray-900 dark:text-white">Total:</span>
+                    <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">
                       R$ {calculateTotal().toFixed(2).replace('.', ',')}
                     </span>
                   </div>
@@ -399,13 +399,13 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
 
           {/* Método de Pagamento */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Método de Pagamento
             </label>
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full border border-gray-300 dark:border-[#0F828C] rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
             >
               <option value="">Selecione um método</option>
               {paymentMethods.map(method => (
@@ -418,27 +418,27 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
 
           {/* Endereço de Entrega */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Endereço de Entrega
             </label>
             <textarea
               value={shippingAddress}
               onChange={(e) => setShippingAddress(e.target.value)}
               rows={3}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full border border-gray-300 dark:border-[#0F828C] rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
               placeholder="Rua, número, complemento, cidade - estado, CEP"
             />
           </div>
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Status Inicial
             </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full border border-gray-300 dark:border-[#0F828C] rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
             >
               {orderStatuses.map(statusOption => (
                 <option key={statusOption.value} value={statusOption.value}>
@@ -449,11 +449,11 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
           </div>
 
           {/* Botões */}
-          <div className="flex justify-end gap-4 pt-4 border-t border-gray-200">
+          <div className="flex justify-end gap-4 pt-4 border-t border-gray-200 dark:border-[#0F828C]">
             <button
               type="button"
               onClick={handleClose}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              className="px-6 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-[#065084]"
             >
               Cancelar
             </button>

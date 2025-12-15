@@ -76,35 +76,35 @@ export default function CreateProduct() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
+          className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-6"
         >
           <ArrowLeft size={20} className="mr-2" />
           Voltar
         </button>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Criar Novo Produto</h1>
+        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Criar Novo Produto</h1>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600">{error}</p>
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-red-600 dark:text-red-300">{error}</p>
             </div>
           )}
 
           {imageError && (
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-yellow-600">{imageError}</p>
+            <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <p className="text-yellow-600 dark:text-yellow-300">{imageError}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Nome */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Nome do Produto <span className="text-red-500">*</span>
               </label>
               <input
@@ -114,14 +114,14 @@ export default function CreateProduct() {
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                 placeholder="Ex: Vitamina D3 2000UI"
               />
             </div>
 
             {/* Descrição */}
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Descrição
               </label>
               <textarea
@@ -130,7 +130,7 @@ export default function CreateProduct() {
                 value={formData.description}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                 placeholder="Descreva o produto..."
               />
             </div>
@@ -138,7 +138,7 @@ export default function CreateProduct() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Preço */}
               <div>
-                <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Preço (R$) <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -150,14 +150,14 @@ export default function CreateProduct() {
                   required
                   min="0"
                   step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                   placeholder="0.00"
                 />
               </div>
 
               {/* Estoque */}
               <div>
-                <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="stock" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Estoque
                 </label>
                 <input
@@ -167,7 +167,7 @@ export default function CreateProduct() {
                   value={formData.stock}
                   onChange={handleChange}
                   min="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                   placeholder="0"
                 />
               </div>
@@ -175,7 +175,7 @@ export default function CreateProduct() {
 
             {/* Categoria */}
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Categoria
               </label>
               <select
@@ -183,7 +183,7 @@ export default function CreateProduct() {
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
               >
                 {categories.map(cat => (
                   <option key={cat.value} value={cat.value}>
@@ -195,7 +195,7 @@ export default function CreateProduct() {
 
             {/* Imagem */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Imagem do Produto
               </label>
               <ImageUpload
@@ -208,7 +208,7 @@ export default function CreateProduct() {
 
             {/* Composições */}
             <div>
-              <label htmlFor="compositions" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="compositions" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Composições
               </label>
               <textarea
@@ -217,14 +217,14 @@ export default function CreateProduct() {
                 value={formData.compositions}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                 placeholder="Informe as composições do produto..."
               />
             </div>
 
             {/* Indicação */}
             <div>
-              <label htmlFor="indication" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="indication" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Indicação
               </label>
               <textarea
@@ -233,14 +233,14 @@ export default function CreateProduct() {
                 value={formData.indication}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                 placeholder="Informe as indicações do produto..."
               />
             </div>
 
             {/* Contraindicação */}
             <div>
-              <label htmlFor="contraindication" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="contraindication" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Contraindicação
               </label>
               <textarea
@@ -249,17 +249,17 @@ export default function CreateProduct() {
                 value={formData.contraindication}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                 placeholder="Informe as contraindicações do produto..."
               />
             </div>
 
             {/* Botões */}
-            <div className="flex justify-end space-x-4 pt-4 border-t">
+            <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-[#0F828C]">
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-6 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                 disabled={loading}
               >
                 Cancelar
