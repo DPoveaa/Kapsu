@@ -35,6 +35,14 @@ interface ProductResponse {
 class ProductsService {
   private baseUrl = `${API_URL}/products`
 
+  private getAuthHeaders() {
+    const token = localStorage.getItem('sanare_token')
+    return {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    }
+  }
+
   /**
    * Converte URL de imagem relativa para URL completa
    */
@@ -237,9 +245,7 @@ class ProductsService {
     try {
       const response = await fetch(`${this.baseUrl}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(productData),
       })
 
@@ -270,9 +276,7 @@ class ProductsService {
     try {
       const response = await fetch(`${this.baseUrl}/admin/all`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
       })
 
       const text = await response.text()
@@ -302,9 +306,7 @@ class ProductsService {
     try {
       const response = await fetch(`${this.baseUrl}/admin/${id}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
       })
 
       const text = await response.text()
@@ -334,9 +336,7 @@ class ProductsService {
     try {
       const response = await fetch(`${this.baseUrl}/admin/${id}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
       })
 
       const text = await response.text()
@@ -377,9 +377,7 @@ class ProductsService {
     try {
       const response = await fetch(`${this.baseUrl}/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
         body: JSON.stringify(productData),
       })
 
@@ -410,9 +408,7 @@ class ProductsService {
     try {
       const response = await fetch(`${this.baseUrl}/${id}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
       })
 
       const text = await response.text()

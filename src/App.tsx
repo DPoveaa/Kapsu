@@ -48,6 +48,8 @@ function AppContent() {
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/checkout/success" element={<PaymentSuccess />} />
               <Route path="/checkout/failure" element={<PaymentFailure />} />
+              <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/payment-failure" element={<PaymentFailure />} />
               <Route path="/login" element={<Login />} />
               <Route path="/cadastro" element={<Register />} />
               <Route

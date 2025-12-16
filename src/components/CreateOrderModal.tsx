@@ -26,6 +26,7 @@ const paymentMethods = [
 const orderStatuses = [
   { value: 'PENDING', label: 'Pendente' },
   { value: 'CONFIRMED', label: 'Confirmado' },
+  { value: 'DISTRIBUTOR_INFORMED', label: 'Solicitado na Distribuidora' },
   { value: 'PROCESSING', label: 'Processando' },
   { value: 'SHIPPED', label: 'Enviado' },
   { value: 'DELIVERED', label: 'Entregue' },

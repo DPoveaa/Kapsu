@@ -158,6 +158,41 @@ class OrderService {
       throw new Error('Erro de conexão. Verifique se o servidor está rodando.')
     }
   }
+
+  /**
+   * Cria um pedido sem pagamento (apenas para admins em testes)
+   */
+  async createOrderWithoutPayment(
+    shippingAddress: string,
+    subscriptionPlan?: 'monthly' | 'quarterly',
+    shippingFee?: number
+  ): Promise<Order> {
+    try {
+      const response = await fetch(`${this.baseUrl}/create-without-payment`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ shippingAddress, subscriptionPlan, shippingFee }),
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const data: OrderResponse = JSON.parse(text)
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao criar pedido sem pagamento')
+      }
+
+      return data.data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão. Verifique se o servidor está rodando.')
+    }
+  }
 }
 
 export const orderService = new OrderService()

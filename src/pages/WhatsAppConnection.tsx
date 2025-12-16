@@ -148,6 +148,25 @@ export default function WhatsAppConnection() {
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [addingPharmacist, setAddingPharmacist] = useState(false)
 
+  // Estados para gerenciar números da distribuidora
+  const [showDistributorConfig, setShowDistributorConfig] = useState(false)
+  const [distributorNumbers, setDistributorNumbers] = useState<Array<{
+    id: string
+    phone: string
+    name: string | null
+    userId: string | null
+    userEmail: string | null
+    isActive: boolean
+    createdAt: string
+    updatedAt: string
+  }>>([])
+  const [loadingDistributorNumbers, setLoadingDistributorNumbers] = useState(false)
+  const [showAddDistributorModal, setShowAddDistributorModal] = useState(false)
+  const [newDistributorPhone, setNewDistributorPhone] = useState('')
+  const [newDistributorUserId, setNewDistributorUserId] = useState<string | null>(null)
+  const [newDistributorName, setNewDistributorName] = useState('')
+  const [addingDistributor, setAddingDistributor] = useState(false)
+
   // Chave para armazenamento no localStorage
   const TEST_CHAT_STORAGE_KEY = 'sanare_ai_test_chat_history'
   const TEST_PHONE_STORAGE_KEY = 'sanare_ai_test_phone'
@@ -2050,6 +2069,82 @@ export default function WhatsAppConnection() {
     }
   }, [showPharmacistConfig])
 
+  // Funções para gerenciar números da distribuidora
+  const loadDistributorNumbers = async () => {
+    setLoadingDistributorNumbers(true)
+    try {
+      const numbers = await whatsappService.getDistributorNumbers()
+      setDistributorNumbers(numbers)
+    } catch (error: any) {
+      console.error('Erro ao carregar números da distribuidora:', error)
+      alert('Erro ao carregar números da distribuidora: ' + error.message)
+    } finally {
+      setLoadingDistributorNumbers(false)
+    }
+  }
+
+  const handleOpenAddDistributorModal = async () => {
+    setShowAddDistributorModal(true)
+    setNewDistributorPhone('')
+    setNewDistributorUserId(null)
+    setNewDistributorName('')
+    await loadUsersWithPhone()
+  }
+
+  const handleAddDistributor = async () => {
+    if (!newDistributorPhone.trim() && !newDistributorUserId) {
+      alert('Por favor, selecione um usuário ou digite um número de telefone')
+      return
+    }
+
+    setAddingDistributor(true)
+    try {
+      await whatsappService.addDistributorNumber(
+        newDistributorPhone.trim(),
+        newDistributorUserId || undefined,
+        newDistributorName.trim() || undefined
+      )
+      await loadDistributorNumbers()
+      setShowAddDistributorModal(false)
+      setNewDistributorPhone('')
+      setNewDistributorUserId(null)
+      setNewDistributorName('')
+    } catch (error: any) {
+      alert('Erro ao adicionar número: ' + error.message)
+    } finally {
+      setAddingDistributor(false)
+    }
+  }
+
+  const handleRemoveDistributor = async (id: string) => {
+    if (!confirm('Tem certeza que deseja remover este número?')) {
+      return
+    }
+
+    try {
+      await whatsappService.removeDistributorNumber(id)
+      await loadDistributorNumbers()
+    } catch (error: any) {
+      alert('Erro ao remover número: ' + error.message)
+    }
+  }
+
+  const handleDistributorUserSelect = (userId: string) => {
+    const user = usersWithPhone.find(u => u.id === userId)
+    if (user) {
+      setNewDistributorUserId(userId)
+      setNewDistributorPhone(user.phone)
+      setNewDistributorName(user.name)
+    }
+  }
+
+  // Carrega números da distribuidora quando o painel é aberto
+  useEffect(() => {
+    if (showDistributorConfig) {
+      loadDistributorNumbers()
+    }
+  }, [showDistributorConfig])
+
   return (
     <>
       <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B]">
@@ -2775,6 +2870,81 @@ export default function WhatsAppConnection() {
                 </div>
               )}
             </div>
+
+            {/* Painel de Configuração de Números da Distribuidora */}
+            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-6 border border-gray-200 dark:border-[#0F828C]">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                  <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-green-600" />
+                  Números da Distribuidora
+                </h2>
+                <button
+                  onClick={() => setShowDistributorConfig(!showDistributorConfig)}
+                  className="text-sm text-green-600 hover:text-green-700 font-medium"
+                >
+                  {showDistributorConfig ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </div>
+              
+              {showDistributorConfig && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      Configure os números que receberão mensagens automáticas quando um pedido for marcado como pago. A mensagem será enviada apenas uma vez por pedido para todos os números configurados.
+                    </p>
+                    <button
+                      onClick={handleOpenAddDistributorModal}
+                      className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Adicionar</span>
+                    </button>
+                  </div>
+
+                  {loadingDistributorNumbers ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-green-600" />
+                      <p className="ml-2 text-gray-600 dark:text-gray-300">Carregando...</p>
+                    </div>
+                  ) : distributorNumbers.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <Phone className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                      <p>Nenhum número configurado</p>
+                      <p className="text-sm mt-1">Adicione um número para receber notificações</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {distributorNumbers.map((distributor) => (
+                        <div
+                          key={distributor.id}
+                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <Phone className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                              <p className="font-medium text-gray-900 dark:text-white">{distributor.phone}</p>
+                              {distributor.name && (
+                                <span className="text-sm text-gray-600 dark:text-gray-300">({distributor.name})</span>
+                              )}
+                            </div>
+                            {distributor.userEmail && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Usuário: {distributor.userEmail}</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => handleRemoveDistributor(distributor.id)}
+                            className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Remover"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             
             {/* Painel de Envio de Mensagem e Conversas */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -2851,20 +3021,20 @@ export default function WhatsAppConnection() {
             <div className="lg:col-span-2 order-1 lg:order-2">
               <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg overflow-hidden flex flex-col border border-gray-200 dark:border-[#0F828C]" style={{ minHeight: '400px', height: 'calc(100vh - 300px)', maxHeight: '800px' }}>
                 {/* Lista de Conversas */}
-                <div className="border-b border-gray-200 p-3 sm:p-4">
+                <div className="border-b border-gray-200 dark:border-[#0F828C] p-3 sm:p-4 bg-white dark:bg-[#065084]">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
                     <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
                       <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                       <span className="truncate">{showNeedingResponse ? 'Fila de Atendimento' : 'Conversas'}</span>
                       {showNeedingResponse ? (
                         conversationsNeedingResponse.length > 0 && (
-                          <span className="ml-2 px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full flex-shrink-0">
+                          <span className="ml-2 px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 rounded-full flex-shrink-0">
                             {conversationsNeedingResponse.length}
                           </span>
                         )
                       ) : (
                         conversations.length > 0 && (
-                          <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full flex-shrink-0">
+                          <span className="ml-2 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full flex-shrink-0">
                             {conversations.length}
                           </span>
                         )
@@ -2879,8 +3049,8 @@ export default function WhatsAppConnection() {
                       }}
                       className={`px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors whitespace-nowrap ${
                         showNeedingResponse
-                          ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                     >
                       {showNeedingResponse ? 'Ver Todas' : 'Ver Fila'}
@@ -2901,10 +3071,10 @@ export default function WhatsAppConnection() {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         placeholder="Buscar por nome ou número..."
-                        className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                       <svg
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -2919,7 +3089,7 @@ export default function WhatsAppConnection() {
                       {searchTerm && (
                         <button
                           onClick={() => setSearchTerm('')}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                           type="button"
                         >
                           <svg
@@ -2952,8 +3122,8 @@ export default function WhatsAppConnection() {
                         }}
                         className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors ${
                           !selectedFilters.cliente && !selectedFilters.farmaceutico && !selectedFilters.assumida && !selectedFilters.controlado
-                            ? 'bg-gray-700 text-white'
-                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            ? 'bg-gray-700 dark:bg-gray-600 text-white dark:text-white'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                         }`}
                       >
                         Todas
@@ -2962,8 +3132,8 @@ export default function WhatsAppConnection() {
                         onClick={() => setSelectedFilters({ ...selectedFilters, cliente: !selectedFilters.cliente })}
                         className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
                           selectedFilters.cliente
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                            ? 'bg-blue-600 dark:bg-blue-600 text-white dark:text-white'
+                            : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50'
                         }`}
                       >
                         <span>💬</span>
@@ -2973,8 +3143,8 @@ export default function WhatsAppConnection() {
                         onClick={() => setSelectedFilters({ ...selectedFilters, farmaceutico: !selectedFilters.farmaceutico })}
                         className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
                           selectedFilters.farmaceutico
-                            ? 'bg-red-600 text-white'
-                            : 'bg-red-100 text-red-700 hover:bg-red-200'
+                            ? 'bg-red-600 dark:bg-red-600 text-white dark:text-white'
+                            : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
                         }`}
                       >
                         <span>👨‍⚕️</span>
@@ -2984,8 +3154,8 @@ export default function WhatsAppConnection() {
                         onClick={() => setSelectedFilters({ ...selectedFilters, assumida: !selectedFilters.assumida })}
                         className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
                           selectedFilters.assumida
-                            ? 'bg-yellow-600 text-white'
-                            : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                            ? 'bg-yellow-600 dark:bg-yellow-600 text-white dark:text-white'
+                            : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
                         }`}
                       >
                         <span>🔒</span>
@@ -2995,8 +3165,8 @@ export default function WhatsAppConnection() {
                         onClick={() => setSelectedFilters({ ...selectedFilters, controlado: !selectedFilters.controlado })}
                         className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
                           selectedFilters.controlado
-                            ? 'bg-orange-600 text-white'
-                            : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                            ? 'bg-orange-600 dark:bg-orange-600 text-white dark:text-white'
+                            : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50'
                         }`}
                       >
                         <span>⚠️</span>
@@ -3052,7 +3222,7 @@ export default function WhatsAppConnection() {
                 ).length > 0 && (
                   <div className="flex flex-1 overflow-hidden">
                     {/* Lista de Conversas */}
-                    <div className={`${showMessagesOnMobile ? 'hidden' : 'flex'} lg:flex w-full lg:w-1/3 border-r border-gray-200 overflow-y-auto flex-col`}>
+                    <div className={`${showMessagesOnMobile ? 'hidden' : 'flex'} lg:flex w-full lg:w-1/3 border-r border-gray-200 dark:border-[#0F828C] overflow-y-auto flex-col`}>
                       {filterConversations(
                         showNeedingResponse ? conversationsNeedingResponse : conversations,
                         searchTerm
@@ -3523,6 +3693,113 @@ export default function WhatsAppConnection() {
                 <Download size={18} />
                 <span className="hidden sm:inline">Baixar</span>
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Modal para Adicionar Número da Distribuidora */}
+        {showAddDistributorModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-[#0F828C]">
+              <div className="p-4 sm:p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Adicionar Número da Distribuidora</h3>
+                  <button
+                    onClick={() => setShowAddDistributorModal(false)}
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Seleção de usuário */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                      Selecionar usuário (opcional):
+                    </label>
+                    <select
+                      value={newDistributorUserId || ''}
+                      onChange={(e) => {
+                        const userId = e.target.value
+                        if (userId) {
+                          handleDistributorUserSelect(userId)
+                        } else {
+                          setNewDistributorUserId(null)
+                          setNewDistributorPhone('')
+                          setNewDistributorName('')
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    >
+                      <option value="">Selecione um usuário...</option>
+                      {usersWithPhone.map((user) => (
+                        <option key={user.id} value={user.id}>
+                          {user.name} ({user.phone})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Ou digite manualmente */}
+                  <div className="text-center text-sm text-gray-500 dark:text-gray-400">ou</div>
+
+                  {/* Número de telefone */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                      Número de telefone:
+                    </label>
+                    <input
+                      type="text"
+                      value={newDistributorPhone}
+                      onChange={(e) => {
+                        setNewDistributorPhone(e.target.value)
+                        setNewDistributorUserId(null) // Limpa seleção de usuário quando digita
+                      }}
+                      placeholder="5511999999999"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Formato: 55 + DDD + Número</p>
+                  </div>
+
+                  {/* Nome (opcional) */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                      Nome (opcional):
+                    </label>
+                    <input
+                      type="text"
+                      value={newDistributorName}
+                      onChange={(e) => setNewDistributorName(e.target.value)}
+                      placeholder="Nome da distribuidora"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
+                  <button
+                    onClick={() => setShowAddDistributorModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleAddDistributor}
+                    disabled={addingDistributor || (!newDistributorPhone.trim() && !newDistributorUserId)}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                  >
+                    {addingDistributor ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Adicionando...
+                      </>
+                    ) : (
+                      'Adicionar'
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
