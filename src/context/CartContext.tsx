@@ -56,11 +56,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
         purchaseType: (item.purchase_type as 'one-time' | 'subscription' | undefined) || 'one-time',
       }))
 
-      setItems(cartItems)
+      // Preserva custom medications (formulações) que são armazenados apenas localmente
+      setItems(prevItems => {
+        const customItems = prevItems.filter(item => item.type === 'custom')
+        return [...cartItems, ...customItems]
+      })
     } catch (error) {
       console.error('Erro ao carregar carrinho:', error)
-      // Em caso de erro, mantém carrinho vazio
-      setItems([])
+      // Em caso de erro, preserva apenas custom medications locais
+      setItems(prevItems => prevItems.filter(item => item.type === 'custom'))
     } finally {
       setLoading(false)
     }

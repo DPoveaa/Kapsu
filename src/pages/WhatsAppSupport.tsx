@@ -80,12 +80,12 @@ function AudioPlayer({
   if (hasError) {
     return (
       <div className="space-y-2">
-        <p className="text-xs sm:text-sm text-red-600 mb-2">Áudio não disponível</p>
+        <p className="text-xs sm:text-sm text-red-600 dark:text-red-400 mb-2">Áudio não disponível</p>
         {messageId && (
           <a 
             href={mediaUrl} 
             download={`audio-${messageId}.${fileExtension || 'ogg'}`}
-            className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
           >
             <span>🎵</span>
             <span>Tentar baixar áudio</span>
@@ -529,6 +529,10 @@ export default function WhatsAppSupport() {
   }
 
   const renderMessageContent = (msg: WhatsAppMessage) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WhatsAppSupport.tsx:531',message:'renderMessageContent called',data:{messageId:msg.id,type:msg.type,hasMediaUrl:!!msg.mediaUrl,bodyLength:msg.body?.length,bodyStart:msg.body?.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     // Verifica se o body contém base64 (imagem) - mesmo que não seja tipo 'image'
     const bodyTrimmed = (msg.body || '').trim()
     const isBase64Image = bodyTrimmed && (
@@ -538,6 +542,10 @@ export default function WhatsAppSupport() {
       bodyTrimmed.startsWith('R0lGODlh') || // GIF
       (bodyTrimmed.length > 100 && /^[A-Za-z0-9+/=]+$/.test(bodyTrimmed.replace(/\s/g, ''))) // Base64 genérico
     )
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WhatsAppSupport.tsx:541',message:'Base64 detection result',data:{isBase64Image,bodyTrimmed:bodyTrimmed?.substring(0,30),bodyLength:bodyTrimmed?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
     
     // Se for imagem OU se o body contém base64, trata como imagem
     if (msg.type === 'image' || isBase64Image) {
@@ -591,7 +599,13 @@ export default function WhatsAppSupport() {
         } else if (bodyTrimmed.startsWith('UklGR')) {
           mimeType = 'image/webp'
         }
-        imageSrc = `data:${mimeType};base64,${bodyTrimmed}`
+        // Remove espaços e quebras de linha do base64 para evitar erros
+        const cleanBase64 = bodyTrimmed.replace(/\s/g, '')
+        imageSrc = `data:${mimeType};base64,${cleanBase64}`
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WhatsAppSupport.tsx:596',message:'Using body as base64 image',data:{mimeType,cleanBase64Length:cleanBase64.length,imageSrcStart:imageSrc.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
       } 
       // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
       else if (msg.id) {
@@ -731,15 +745,15 @@ export default function WhatsAppSupport() {
                 </button>
               </div>
             </div>
-            {/* Legenda da imagem */}
-            {msg.body && (
+            {/* Legenda da imagem - só mostra se o body não for base64 (evita mostrar base64 como texto) */}
+            {msg.body && !isBase64Image && (
               <p className="text-xs sm:text-sm whitespace-pre-wrap break-words px-2 pt-1">{msg.body}</p>
             )}
           </div>
         )
       }
       // Se não tiver mediaUrl nem ID, mostra placeholder
-      return <p className="text-xs sm:text-sm text-gray-500 italic">(imagem não disponível)</p>
+      return <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">(imagem não disponível)</p>
     }
 
     // Se for áudio, sempre tenta mostrar player
@@ -806,12 +820,12 @@ export default function WhatsAppSupport() {
       // Se não tiver mediaUrl nem ID, mostra link para baixar
       return (
         <div className="space-y-2">
-          <p className="text-xs sm:text-sm text-gray-500 italic mb-2">Áudio não disponível ainda. Aguarde alguns segundos...</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic mb-2">Áudio não disponível ainda. Aguarde alguns segundos...</p>
           {msg.id && (
           <a 
               href={`${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`}
             download
-            className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
           >
             <span>🎵</span>
             <span>Baixar áudio</span>
@@ -951,7 +965,7 @@ export default function WhatsAppSupport() {
           <a 
             href={msg.id ? `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}` : '#'}
             download
-            className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
           >
             <span>🎬</span>
             <span>Baixar vídeo</span>
@@ -1025,11 +1039,11 @@ export default function WhatsAppSupport() {
             <a 
               href={mediaUrl || `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`}
               download
-              className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+              className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
             >
               <span className="text-lg">{getFileIcon(msg.mediaMimetype)}</span>
               <span className="font-medium">{getFileName(msg.mediaMimetype)}</span>
-              <span className="text-gray-500">(clique para baixar)</span>
+              <span className="text-gray-500 dark:text-gray-400">(clique para baixar)</span>
             </a>
             {msg.body && (
               <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.body}</p>
@@ -1040,7 +1054,7 @@ export default function WhatsAppSupport() {
       // Se não tiver mediaUrl nem ID, mostra placeholder
       return (
         <div className="space-y-2">
-          <p className="text-xs sm:text-sm text-gray-500 italic flex items-center space-x-2">
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic flex items-center space-x-2">
             <span>📎</span>
             <span>(arquivo não disponível)</span>
           </p>
@@ -1074,17 +1088,18 @@ export default function WhatsAppSupport() {
         if (!body.startsWith('data:')) {
           // Tenta detectar o tipo de imagem pelo início do base64
           let mimeType = 'image/jpeg' // Padrão
-          if (body.startsWith('iVBORw0KGgo')) {
+          const bodyTrimmed = body.trim()
+          if (bodyTrimmed.startsWith('iVBORw0KGgo')) {
             mimeType = 'image/png'
-          } else if (body.startsWith('/9j/') || body.includes('/9j/')) {
+          } else if (bodyTrimmed.startsWith('/9j/') || bodyTrimmed.includes('/9j/')) {
             mimeType = 'image/jpeg'
-          } else if (body.startsWith('R0lGODlh') || body.startsWith('R0lGODdh')) {
+          } else if (bodyTrimmed.startsWith('R0lGODlh') || bodyTrimmed.startsWith('R0lGODdh')) {
             mimeType = 'image/gif'
-          } else if (body.startsWith('UklGR')) {
+          } else if (bodyTrimmed.startsWith('UklGR')) {
             mimeType = 'image/webp'
           }
-          // Remove espaços em branco e quebras de linha do base64
-          const cleanBase64 = body.trim().replace(/\s/g, '')
+          // Remove espaços em branco e quebras de linha do base64 para evitar erros
+          const cleanBase64 = bodyTrimmed.replace(/\s/g, '')
           imageSrc = `data:${mimeType};base64,${cleanBase64}`
         }
         
@@ -1137,7 +1152,7 @@ export default function WhatsAppSupport() {
           <a 
             href={mediaUrl || `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`}
             download
-            className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
           >
             <span>📎</span>
             <span>Baixar arquivo</span>
@@ -1237,7 +1252,7 @@ export default function WhatsAppSupport() {
   const selectedConv = conversations.find(c => c.phone === selectedConversation)
 
   return (
-    <div className="fixed inset-0 h-screen flex flex-col bg-gray-100 z-50" style={{ marginTop: 0, marginLeft: 0, marginRight: 0 }}>
+    <div className="fixed inset-0 h-screen flex flex-col bg-gray-100 dark:bg-[#320A6B] z-50" style={{ marginTop: 0, marginLeft: 0, marginRight: 0 }}>
       {/* Header */}
       <div className="bg-green-600 text-white px-3 sm:px-4 lg:px-6 py-3 sm:py-4 shadow-lg">
         <div className="flex items-center justify-between">
@@ -1271,23 +1286,23 @@ export default function WhatsAppSupport() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Lista de Conversas - Estilo WhatsApp Web */}
-        <div className={`${showConversationList ? 'flex' : 'hidden'} lg:flex w-full lg:w-1/3 bg-white border-r border-gray-300 flex-col`}>
+        <div className={`${showConversationList ? 'flex' : 'hidden'} lg:flex w-full lg:w-1/3 bg-white dark:bg-[#065084] border-r border-gray-300 dark:border-[#0F828C] flex-col`}>
           {/* Busca e Filtros */}
-          <div className="p-2 sm:p-3 bg-gray-50 border-b border-gray-200 space-y-2">
+          <div className="p-2 sm:p-3 bg-gray-50 dark:bg-[#065084] border-b border-gray-200 dark:border-[#0F828C] space-y-2">
             {/* Campo de Busca */}
             <div className="relative">
-              <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
+              <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 sm:w-5 sm:h-5" />
               <input
                 type="text"
                 placeholder="Buscar conversas..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2 text-sm sm:text-base bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2 text-sm sm:text-base bg-white dark:bg-[#065084] dark:text-white border border-gray-300 dark:border-[#0F828C] rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                   type="button"
                 >
                   <X size={16} className="sm:w-5 sm:h-5" />
@@ -1308,8 +1323,8 @@ export default function WhatsAppSupport() {
                 }}
                 className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors ${
                   !selectedFilters.cliente && !selectedFilters.farmaceutico && !selectedFilters.assumida && !selectedFilters.controlado
-                    ? 'bg-gray-700 text-white'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    ? 'bg-gray-700 dark:bg-gray-600 text-white'
+                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
               >
                 Todas
@@ -1318,8 +1333,8 @@ export default function WhatsAppSupport() {
                 onClick={() => setSelectedFilters({ ...selectedFilters, cliente: !selectedFilters.cliente })}
                 className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
                   selectedFilters.cliente
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                    : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50'
                 }`}
               >
                 <span>💬</span>
@@ -1329,8 +1344,8 @@ export default function WhatsAppSupport() {
                 onClick={() => setSelectedFilters({ ...selectedFilters, farmaceutico: !selectedFilters.farmaceutico })}
                 className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
                   selectedFilters.farmaceutico
-                    ? 'bg-red-600 text-white'
-                    : 'bg-red-100 text-red-700 hover:bg-red-200'
+                    ? 'bg-red-600 dark:bg-red-500 text-white'
+                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
                 }`}
               >
                 <span>👨‍⚕️</span>
@@ -1340,8 +1355,8 @@ export default function WhatsAppSupport() {
                 onClick={() => setSelectedFilters({ ...selectedFilters, assumida: !selectedFilters.assumida })}
                 className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
                   selectedFilters.assumida
-                    ? 'bg-yellow-600 text-white'
-                    : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                    ? 'bg-yellow-600 dark:bg-yellow-500 text-white'
+                    : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
                 }`}
               >
                 <span>🔒</span>
@@ -1351,8 +1366,8 @@ export default function WhatsAppSupport() {
                 onClick={() => setSelectedFilters({ ...selectedFilters, controlado: !selectedFilters.controlado })}
                 className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
                   selectedFilters.controlado
-                    ? 'bg-orange-600 text-white'
-                    : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                    ? 'bg-orange-600 dark:bg-orange-500 text-white'
+                    : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50'
                 }`}
               >
                 <span>⚠️</span>
@@ -1364,8 +1379,8 @@ export default function WhatsAppSupport() {
           {/* Lista */}
           <div className="flex-1 overflow-y-auto">
             {filteredConversations.length === 0 ? (
-              <div className="p-6 sm:p-8 text-center text-gray-500">
-                <MessageSquare size={40} className="sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-gray-300" />
+              <div className="p-6 sm:p-8 text-center text-gray-500 dark:text-gray-400">
+                <MessageSquare size={40} className="sm:w-12 sm:h-12 mx-auto mb-3 sm:mb-4 text-gray-300 dark:text-gray-600" />
                 <p className="text-sm sm:text-base">Nenhuma conversa encontrada</p>
               </div>
             ) : (
@@ -1373,44 +1388,44 @@ export default function WhatsAppSupport() {
                 <div
                   key={conv.phone}
                   onClick={() => handleSelectConversation(conv.phone)}
-                  className={`p-3 sm:p-4 border-b border-gray-200 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors ${
-                    selectedConversation === conv.phone ? 'bg-green-50 border-l-4 border-l-green-600' : ''
+                  className={`p-3 sm:p-4 border-b border-gray-200 dark:border-[#0F828C] cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 active:bg-gray-100 dark:active:bg-gray-700 transition-colors ${
+                    selectedConversation === conv.phone ? 'bg-green-50 dark:bg-green-900/30 border-l-4 border-l-green-600 dark:border-l-green-500' : ''
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center flex-wrap gap-1.5 sm:gap-2 mb-1">
-                        <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">
+                        <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white truncate">
                           {conv.contactName || conv.phone}
                         </h3>
                         {/* Marcação: Última mensagem foi do cliente - sempre mostra se a última mensagem não foi do bot */}
                         {conv.lastMessage && !conv.lastMessage.isFromMe && (
-                          <span className="flex-shrink-0 bg-blue-100 text-blue-700 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium">
+                          <span className="flex-shrink-0 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium">
                             Cliente
                           </span>
                         )}
                         {/* Marcação: Medicamento controlado detectado - aguardando confirmação */}
                         {conv.awaitingControlledConfirmation && (
-                          <span className="flex-shrink-0 bg-orange-100 text-orange-700 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium">
+                          <span className="flex-shrink-0 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium">
                             Controlado
                           </span>
                         )}
                         {/* Marcação: Precisa de farmacêutico (confirmado) */}
                         {conv.needsPharmacist && (
-                          <span className="flex-shrink-0 bg-red-100 text-red-700 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium">
+                          <span className="flex-shrink-0 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium">
                             Farmacêutico
                           </span>
                         )}
                         {conv.isAssumed && (
-                          <span className="flex-shrink-0 bg-yellow-100 text-yellow-700 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium">
+                          <span className="flex-shrink-0 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium">
                             {conv.assumedBy ? `Assumido por ${conv.assumedBy}` : 'Assumida'}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs sm:text-sm text-gray-600 truncate">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">
                         {getMessagePreview(conv.lastMessage)}
                       </p>
-                      <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 sm:mt-1">
+                      <p className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500 mt-0.5 sm:mt-1">
                         {formatTime(conv.lastMessage.timestamp)}
                       </p>
                     </div>
@@ -1427,39 +1442,39 @@ export default function WhatsAppSupport() {
         </div>
 
         {/* Área de Conversa */}
-        <div className={`${!showConversationList ? 'flex' : 'hidden'} lg:flex flex-1 flex-col bg-gray-100`}>
+        <div className={`${!showConversationList ? 'flex' : 'hidden'} lg:flex flex-1 flex-col bg-gray-100 dark:bg-[#320A6B]`}>
           {selectedConversation && selectedConv ? (
             <>
               {/* Header da Conversa */}
-              <div className="border-b border-gray-200 p-3 sm:p-4 bg-gray-50">
+              <div className="border-b border-gray-200 dark:border-[#0F828C] p-3 sm:p-4 bg-gray-50 dark:bg-[#065084]">
                 <div className="flex items-center justify-between space-x-3">
                   <div className="flex items-center space-x-3 min-w-0 flex-1">
                     {/* Botão voltar (apenas mobile) */}
                   <button
                     onClick={handleBackToConversations}
-                      className="lg:hidden flex-shrink-0 p-1 hover:bg-gray-200 rounded transition-colors"
+                      className="lg:hidden flex-shrink-0 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
                   >
-                      <ArrowLeft className="w-5 h-5 text-gray-600" />
+                      <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                   </button>
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600" />
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 text-sm sm:text-base truncate">
+                      <p className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">
                         {selectedConv.contactName || formatPhone(selectedConv.phone)}
                       </p>
-                      <p className="text-xs text-gray-500 truncate">{formatPhone(selectedConv.phone)}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{formatPhone(selectedConv.phone)}</p>
                   </div>
                 </div>
                   {/* Badges e botões de ação */}
                   <div className="flex items-center space-x-2 flex-shrink-0">
                   {selectedConv.needsPharmacist && (
-                    <span className="bg-red-100 text-red-700 text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
+                    <span className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
                         Farmacêutico
                     </span>
                   )}
                   {selectedConv.isAssumed && (
-                    <span className="bg-yellow-100 text-yellow-700 text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
+                    <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
                       {selectedConv.assumedBy ? `Assumido por ${selectedConv.assumedBy}` : 'Assumida'}
                     </span>
                   )}
@@ -1490,12 +1505,12 @@ export default function WhatsAppSupport() {
               {/* Mensagens */}
               <div
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50"
+                className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50 dark:bg-[#320A6B]"
                 style={{ scrollBehavior: 'auto' }}
               >
                 {messages.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-500 text-sm sm:text-base">Nenhuma mensagem ainda</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">Nenhuma mensagem ainda</p>
                   </div>
                 ) : (
                   <div className="space-y-3 sm:space-y-4">
@@ -1507,8 +1522,8 @@ export default function WhatsAppSupport() {
                     <div
                           className={`max-w-[85%] sm:max-w-xs lg:max-w-md rounded-lg shadow-sm overflow-hidden ${
                             message.isFromMe
-                              ? 'bg-blue-600 text-white'
-                          : 'bg-white text-gray-900 border border-gray-200'
+                              ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                          : 'bg-white dark:bg-[#065084] text-gray-900 dark:text-white border border-gray-200 dark:border-[#0F828C]'
                           } ${message.type === 'image' && message.mediaUrl ? 'p-0' : 'px-3 sm:px-4 py-2'}`}
                     >
                           {message.type === 'image' && message.mediaUrl ? (
@@ -1529,7 +1544,7 @@ export default function WhatsAppSupport() {
                               {renderMessageContent(message)}
                           <p
                             className={`text-[10px] sm:text-xs mt-1 ${
-                                  message.isFromMe ? 'text-blue-100' : 'text-gray-400'
+                                  message.isFromMe ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'
                             }`}
                           >
                                 {formatTime(message.timestamp)}
@@ -1544,28 +1559,28 @@ export default function WhatsAppSupport() {
               </div>
 
               {/* Input de Mensagem */}
-              <div className="bg-white border-t border-gray-300 px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+              <div className="bg-white dark:bg-[#065084] border-t border-gray-300 dark:border-[#0F828C] px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
                 {/* Preview do arquivo selecionado */}
                 {selectedFile && (
-                  <div className="mb-2 p-2 bg-gray-50 rounded-lg flex items-center justify-between">
+                  <div className="mb-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex items-center justify-between">
                     <div className="flex items-center space-x-2 flex-1 min-w-0">
                       {filePreview ? (
                         <img src={filePreview} alt="Preview" className="w-12 h-12 object-cover rounded" />
                       ) : (
-                        <Paperclip className="w-5 h-5 text-gray-600 flex-shrink-0" />
+                        <Paperclip className="w-5 h-5 text-gray-600 dark:text-gray-300 flex-shrink-0" />
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">{selectedFile.name}</p>
-                        <p className="text-[10px] sm:text-xs text-gray-500">
+                        <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate">{selectedFile.name}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
                           {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                         </p>
                       </div>
                     </div>
                     <button
                       onClick={removeFile}
-                      className="ml-2 p-1 hover:bg-gray-200 rounded transition-colors flex-shrink-0"
+                      className="ml-2 p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors flex-shrink-0"
                     >
-                      <X className="w-4 h-4 text-gray-600" />
+                      <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                     </button>
                   </div>
                 )}
@@ -1580,7 +1595,7 @@ export default function WhatsAppSupport() {
                   />
                   <label
                     htmlFor="file-input"
-                    className="p-2 sm:p-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition-colors cursor-pointer flex-shrink-0"
+                    className="p-2 sm:p-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors cursor-pointer flex-shrink-0"
                     title="Anexar arquivo"
                   >
                     <Paperclip className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -1591,13 +1606,13 @@ export default function WhatsAppSupport() {
                     onChange={handleMessageChange}
                     onKeyPress={handleKeyPress}
                     placeholder={selectedFile ? "Adicione uma legenda (opcional)..." : "Digite uma mensagem..."}
-                    className="flex-1 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="flex-1 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
                     disabled={sending}
                   />
                   <button
                     onClick={sendMessage}
                     disabled={(!messageText.trim() && !selectedFile) || sending}
-                    className="bg-green-600 text-white p-2 sm:p-3 rounded-full hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                    className="bg-green-600 text-white p-2 sm:p-3 rounded-full hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex-shrink-0"
                   >
                     {sending ? (
                       <Clock className="animate-spin w-5 h-5 sm:w-6 sm:h-6" />
@@ -1609,9 +1624,9 @@ export default function WhatsAppSupport() {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-gray-50">
-              <div className="text-center text-gray-500 px-4">
-                <MessageSquare size={48} className="sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-gray-300" />
+            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-[#320A6B]">
+              <div className="text-center text-gray-500 dark:text-gray-400 px-4">
+                <MessageSquare size={48} className="sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-gray-300 dark:text-gray-600" />
                 <p className="text-base sm:text-lg font-medium">Selecione uma conversa para começar</p>
                 <p className="text-xs sm:text-sm mt-2">Escolha uma conversa da lista ao lado</p>
               </div>

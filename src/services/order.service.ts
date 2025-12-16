@@ -127,6 +127,37 @@ class OrderService {
       throw new Error('Erro de conexão. Verifique se o servidor está rodando.')
     }
   }
+
+  /**
+   * Atualiza o status de um pedido (apenas para admins em testes)
+   */
+  async updateOrderStatus(orderId: string, status: string): Promise<Order> {
+    try {
+      const response = await fetch(`${this.baseUrl}/${orderId}/status`, {
+        method: 'PATCH',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ status }),
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const data: OrderResponse = JSON.parse(text)
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao atualizar status do pedido')
+      }
+
+      return data.data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão. Verifique se o servidor está rodando.')
+    }
+  }
 }
 
 export const orderService = new OrderService()

@@ -1093,13 +1093,13 @@ export default function Cart() {
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-600 dark:text-gray-300">Frete</span>
                     <div className="text-right">
-                      <span className="text-green-600 dark:text-green-400 font-medium">Grátis</span>
+                      <span className="text-green-600 dark:text-green-400 font-medium">
+                        {hasFreeShippingByCoupon ? 'Grátis - pelo cupom' : 'Grátis'}
+                      </span>
                       <div className="text-xs text-green-600 dark:text-green-400 mt-0.5">
-                        {hasFreeShippingByCoupon ? (
-                          <span>Frete grátis por cupom promocional</span>
-                        ) : hasFreeShippingByThreshold ? (
+                        {!hasFreeShippingByCoupon && hasFreeShippingByThreshold && (
                           <span>Frete grátis para pedidos acima de R$ {freeShippingThreshold.toFixed(2).replace('.', ',')}</span>
-                        ) : null}
+                        )}
                       </div>
                     </div>
                   </div>

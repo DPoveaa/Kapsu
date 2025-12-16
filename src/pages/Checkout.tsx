@@ -897,7 +897,9 @@ export default function Checkout() {
                   {calculatingShipping ? (
                     <Loader2 className="animate-spin text-gray-400 dark:text-gray-500" size={16} />
                   ) : (promoCodesValidation?.freeShipping || isFreeShipping) ? (
-                    <span className="text-green-600 dark:text-green-400 font-semibold">Grátis</span>
+                    <span className="text-green-600 dark:text-green-400 font-semibold">
+                      {promoCodesValidation?.freeShipping ? 'Grátis - pelo cupom' : 'Grátis'}
+                    </span>
                   ) : shippingFee !== null ? (
                     <span className="text-gray-900 dark:text-white">R$ {shippingFee.toFixed(2).replace('.', ',')}</span>
                   ) : formData.cep.length === 9 ? (

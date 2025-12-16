@@ -40,7 +40,7 @@ export interface UploadLogoResponse {
 
 class SiteSettingsService {
   private getAuthHeaders() {
-    const token = localStorage.getItem('token')
+    const token = localStorage.getItem('token') || localStorage.getItem('sanare_token')
     return {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -74,6 +74,10 @@ class SiteSettingsService {
     })
 
     if (!response.ok) {
+      // Se for 404, a configuração não existe ainda - isso é normal
+      if (response.status === 404) {
+        return null
+      }
       throw new Error('Erro ao obter configuração')
     }
 

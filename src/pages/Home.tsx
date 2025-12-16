@@ -60,9 +60,10 @@ export default function Home() {
   const [mineralProducts, setMineralProducts] = useState<Product[]>([])
   const [fitoterapicoProducts, setFitoterapicoProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [bannerIndex, setBannerIndex] = useState(0)
+  const [bannerIndex, setBannerIndex] = useState(1) // Começa em 1 porque o índice 0 é um clone
   const [reviewIndex, setReviewIndex] = useState(0)
   const [isBannerHovered, setIsBannerHovered] = useState(false)
+  const [isTransitioning, setIsTransitioning] = useState(true)
   
   // Array de imagens do carrossel - adicione suas imagens aqui
   // Para imagens locais da pasta src/images, importe no topo e use a variável
@@ -72,6 +73,13 @@ export default function Home() {
     banner1, // Imagem importada
     '/banner2.jpg', // Imagem da pasta public (se tiver)
     'https://images.unsplash.com/photo-1557683316-973673baf926?w=1920&q=80' // URL online
+  ]
+  
+  // Cria array com clones para loop infinito: [última, ...originais, primeira]
+  const infiniteBannerImages = [
+    bannerImages[bannerImages.length - 1], // Clone da última no início
+    ...bannerImages, // Imagens originais
+    bannerImages[0] // Clone da primeira no final
   ]
 
   // Carrega produtos por categoria usando rotas da API
@@ -122,13 +130,36 @@ export default function Home() {
     loadProducts()
   }, [])
 
-  // Auto-rotaciona banners
+  // Auto-rotaciona banners com loop infinito
   useEffect(() => {
     const interval = setInterval(() => {
-      setBannerIndex((prev) => (prev + 1) % bannerImages.length)
+      setBannerIndex((prev) => {
+        const next = prev + 1
+        // Se chegou no último clone (última imagem duplicada), reseta sem animação para a primeira original
+        if (next >= infiniteBannerImages.length - 1) {
+          setTimeout(() => {
+            setIsTransitioning(false)
+            setBannerIndex(1) // Volta para a primeira imagem original
+            setTimeout(() => setIsTransitioning(true), 50)
+          }, 500) // Espera a animação terminar
+          return next
+        }
+        return next
+      })
     }, 6000)
     return () => clearInterval(interval)
-  }, [])
+  }, [infiniteBannerImages.length])
+  
+  // Reseta para o final quando volta para o clone inicial
+  useEffect(() => {
+    if (bannerIndex === 0) {
+      setTimeout(() => {
+        setIsTransitioning(false)
+        setBannerIndex(bannerImages.length) // Vai para a última imagem original
+        setTimeout(() => setIsTransitioning(true), 50)
+      }, 500)
+    }
+  }, [bannerIndex, bannerImages.length])
 
   // Auto-rotaciona reviews (2 por vez)
   useEffect(() => {
@@ -166,12 +197,12 @@ export default function Home() {
         onMouseLeave={() => setIsBannerHovered(false)}
         style={{ minHeight: '400px' }}
       >
-        {/* Container do carrossel com efeito de slide */}
+        {/* Container do carrossel com efeito de slide infinito */}
         <div 
-          className="flex transition-transform duration-500 ease-in-out h-full"
+          className={`flex h-full ${isTransitioning ? 'transition-transform duration-500 ease-in-out' : ''}`}
           style={{ transform: `translateX(-${bannerIndex * 100}%)` }}
         >
-          {bannerImages.map((image, index) => (
+          {infiniteBannerImages.map((image, index) => (
             <div 
               key={index} 
               className="flex-shrink-0 w-full h-full relative"
@@ -183,11 +214,18 @@ export default function Home() {
                 minHeight: '400px'
               }}
             >
-              {/* Gradiente indo para #DDF4E7 */}
+              {/* Gradiente de baixo para cima, ocupando 1/5 da altura, seguindo a cor do fundo */}
               <div 
-                className="absolute inset-0"
+                className="absolute inset-0 z-10"
                 style={{
-                  background: 'linear-gradient(to bottom, transparent 0%, transparent 70%, rgba(221, 244, 231, 0.3) 85%, #DDF4E7 100%)'
+                  background: 'linear-gradient(to top, #DDF4E7 0%, rgba(221, 244, 231, 0.5) 10%, transparent 20%, transparent 100%)'
+                }}
+              ></div>
+              {/* Gradiente para modo escuro - sobrepõe o gradiente claro quando dark mode está ativo */}
+              <div 
+                className="absolute inset-0 z-10 opacity-0 dark:opacity-100 transition-opacity duration-300"
+                style={{
+                  background: 'linear-gradient(to top, #124170 0%, rgba(18, 65, 112, 0.5) 10%, transparent 20%, transparent 100%)'
                 }}
               ></div>
             </div>
@@ -196,24 +234,48 @@ export default function Home() {
         
         {/* Indicadores (dots) - na parte inferior */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-center space-x-2 z-10">
-          {bannerImages.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setBannerIndex(index)}
-              className={`h-2 w-2 rounded-full transition-all ${
-                index === bannerIndex
-                  ? 'bg-white'
-                  : 'bg-white/50'
-              }`}
-              aria-label={`Ir para imagem ${index + 1}`}
-            />
-          ))}
+          {bannerImages.map((_, index) => {
+            // Calcula o índice real (considerando que começamos em 1 e temos clones)
+            const realIndex = bannerIndex === 0 ? bannerImages.length - 1 : 
+                             bannerIndex === infiniteBannerImages.length - 1 ? 0 : 
+                             bannerIndex - 1
+            return (
+              <button
+                key={index}
+                onClick={() => {
+                  setIsTransitioning(true)
+                  setBannerIndex(index + 1) // +1 porque o índice 0 é um clone
+                }}
+                className={`h-2 w-2 rounded-full transition-all ${
+                  index === realIndex
+                    ? 'bg-white'
+                    : 'bg-white/50'
+                }`}
+                aria-label={`Ir para imagem ${index + 1}`}
+              />
+            )
+          })}
         </div>
         
         {/* Controles do Carrossel - Setas nas laterais da section */}
         <button
-          onClick={() => setBannerIndex((prev) => (prev - 1 + bannerImages.length) % bannerImages.length)}
-          className={`absolute left-0 top-1/2 -translate-y-1/2 p-3 text-white transition-all z-10 ${
+          onClick={() => {
+            setIsTransitioning(true)
+            setBannerIndex((prev) => {
+              const next = prev - 1
+              // Se voltou para o clone inicial (índice 0), reseta para o final sem animação
+              if (next < 0) {
+                setTimeout(() => {
+                  setIsTransitioning(false)
+                  setBannerIndex(bannerImages.length) // Vai para a última imagem original
+                  setTimeout(() => setIsTransitioning(true), 50)
+                }, 500)
+                return 0
+              }
+              return next
+            })
+          }}
+          className={`absolute left-0 top-1/2 -translate-y-1/2 p-3 text-black dark:text-white transition-all z-10 ${
             isBannerHovered ? 'opacity-100' : 'opacity-0'
           }`}
           aria-label="Imagem anterior"
@@ -222,8 +284,23 @@ export default function Home() {
           <ChevronLeft size={24} />
         </button>
         <button
-          onClick={() => setBannerIndex((prev) => (prev + 1) % bannerImages.length)}
-          className={`absolute right-0 top-1/2 -translate-y-1/2 p-3 text-white transition-all z-10 ${
+          onClick={() => {
+            setIsTransitioning(true)
+            setBannerIndex((prev) => {
+              const next = prev + 1
+              // Se chegou no último clone, reseta para o início sem animação
+              if (next >= infiniteBannerImages.length - 1) {
+                setTimeout(() => {
+                  setIsTransitioning(false)
+                  setBannerIndex(1) // Volta para a primeira imagem original
+                  setTimeout(() => setIsTransitioning(true), 50)
+                }, 500)
+                return next
+              }
+              return next
+            })
+          }}
+          className={`absolute right-0 top-1/2 -translate-y-1/2 p-3 text-black dark:text-white transition-all z-10 ${
             isBannerHovered ? 'opacity-100' : 'opacity-0'
           }`}
           aria-label="Próxima imagem"

@@ -10,6 +10,7 @@ export interface SavedAddress {
   address: string
   number: string
   complement: string | null
+  bairro: string | null
   city: string
   state: string
   is_default: boolean
@@ -53,6 +54,7 @@ class AddressService {
     address: string
     number: string
     complement?: string
+    bairro?: string
     city: string
     state: string
     isDefault?: boolean
@@ -83,6 +85,7 @@ class AddressService {
       address: string
       number: string
       complement: string
+      bairro: string
       city: string
       state: string
       isDefault: boolean

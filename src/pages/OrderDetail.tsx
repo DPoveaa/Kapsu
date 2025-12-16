@@ -75,8 +75,8 @@ export default function OrderDetail() {
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
-      PENDING: { label: 'Pendente', className: 'bg-yellow-100 text-yellow-800' },
-      CONFIRMED: { label: 'Confirmado', className: 'bg-blue-100 text-blue-800' },
+      PENDING: { label: 'Aguardando Pagamento', className: 'bg-yellow-100 text-yellow-800' },
+      CONFIRMED: { label: 'Pago', className: 'bg-green-100 text-green-800' },
       PROCESSING: { label: 'Processando', className: 'bg-purple-100 text-purple-800' },
       SHIPPED: { label: 'Enviado', className: 'bg-indigo-100 text-indigo-800' },
       DELIVERED: { label: 'Entregue', className: 'bg-green-100 text-green-800' },

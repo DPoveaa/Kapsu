@@ -222,7 +222,7 @@ export default function Customize() {
           <div className="lg:col-span-2 space-y-6">
             {/* Medication Name */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
                 Nome do Medicamento *
               </label>
               <input
@@ -230,18 +230,18 @@ export default function Customize() {
                 value={medicationName}
                 onChange={(e) => setMedicationName(e.target.value)}
                 placeholder="Ex: Complexo Multivitamínico Personalizado"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-200 text-black dark:text-black"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-[#065084] text-black dark:text-white"
               />
             </div>
 
             {/* Active Ingredients */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
                 Ativos Farmacêuticos *
               </label>
-              <div className="card border border-gray-300 rounded-lg p-4 min-h-[200px]">
+              <div className="card border border-gray-300 dark:border-[#0F828C] rounded-lg p-4 min-h-[200px] dark:bg-[#065084]">
                 {selectedIngredients.length === 0 ? (
-                  <p className="text-gray-400 text-sm">Nenhum ativo selecionado</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-sm">Nenhum ativo selecionado</p>
                 ) : (
                   <div className="space-y-2">
                     {selectedIngredients.map(ingredient => {
@@ -251,35 +251,35 @@ export default function Customize() {
                       return (
                         <div
                           key={ingredient.id}
-                          className={`bg-primary-50 p-3 rounded-lg ${validationError ? 'border border-red-300' : ''}`}
+                          className={`bg-primary-50 dark:bg-primary-900/30 p-3 rounded-lg ${validationError ? 'border border-red-300 dark:border-red-500' : ''}`}
                         >
                           <div className="flex items-center justify-between mb-2">
                             <div>
-                              <span className="font-medium">{ingredient.name}</span>
+                              <span className="font-medium dark:text-white">{ingredient.name}</span>
                             </div>
                             <button
                               onClick={() => handleRemoveIngredient(ingredient.id)}
-                              className="text-red-600 hover:text-red-700"
+                              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
                             >
                               <X size={18} />
                             </button>
                           </div>
                           <div className="space-y-1">
                             <div className="flex items-center space-x-2">
-                              <label className="text-sm text-gray-600">Concentração:</label>
+                              <label className="text-sm text-gray-600 dark:text-gray-300">Concentração:</label>
                               <input
                                 type="text"
                                 value={ingredient.concentration}
                                 onChange={(e) => handleUpdateConcentration(ingredient.id, e.target.value)}
-                                className={`w-24 px-2 py-1 border rounded text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent ${
-                                  validationError ? 'border-red-500' : 'border-gray-300'
+                                className={`w-24 px-2 py-1 border rounded text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white dark:border-[#0F828C] ${
+                                  validationError ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-[#0F828C]'
                                 }`}
                                 placeholder={composto?.concentration || ''}
                               />
-                              <span className="text-sm text-gray-600">{ingredient.unit}</span>
+                              <span className="text-sm text-gray-600 dark:text-gray-300">{ingredient.unit}</span>
                             </div>
                             {hasRange && (
-                              <div className="text-xs text-gray-500">
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
                                 Faixa permitida: {composto.min_concentration || 'sem mínimo'} - {composto.max_concentration || 'sem máximo'} {composto.unit}
                               </div>
                             )}
@@ -296,7 +296,7 @@ export default function Customize() {
                 )}
               </div>
               <div className="mt-3">
-                <p className="text-sm text-gray-600 mb-2">Adicionar ativo:</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Adicionar ativo:</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                   {availableCompostos
                     .filter(composto => !selectedIngredients.find(si => si.id === composto.id))
@@ -304,10 +304,10 @@ export default function Customize() {
                       <button
                         key={composto.id}
                         onClick={() => handleAddIngredient(composto)}
-                        className="card text-left p-3 border border-gray-300 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-colors text-sm min-h-[80px] flex flex-col justify-between"
+                        className="card text-left p-3 border border-gray-300 dark:border-[#0F828C] rounded-lg hover:border-primary-500 dark:hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors text-sm min-h-[80px] flex flex-col justify-between dark:bg-[#065084] dark:text-white"
                       >
-                        <div className="font-medium break-words mb-2">{composto.name}</div>
-                        <div className="text-primary-600 font-semibold text-xs">
+                        <div className="font-medium break-words mb-2 dark:text-white">{composto.name}</div>
+                        <div className="text-primary-600 dark:text-primary-400 font-semibold text-xs">
                           + R$ {getCompostoPrice().toFixed(2).replace('.', ',')}
                         </div>
                       </button>
@@ -318,7 +318,7 @@ export default function Customize() {
 
             {/* Dosage */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
                 Dosagem *
               </label>
               <input
@@ -326,38 +326,38 @@ export default function Customize() {
                 value={dosage}
                 onChange={(e) => setDosage(e.target.value)}
                 placeholder="Ex: 1 cápsula ao dia, após o almoço"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-200 text-black dark:text-black"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-[#065084] text-black dark:text-white"
               />
             </div>
 
             {/* Quantity */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
                 Quantidade
               </label>
               <div className="flex items-center space-x-4">
-                <div className="card flex items-center border border-gray-300 rounded-lg">
+                <div className="card flex items-center border border-gray-300 dark:border-[#0F828C] rounded-lg dark:bg-[#065084]">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="p-2 hover:bg-gray-100 transition-colors"
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
                   >
                     <Minus size={20} />
                   </button>
-                  <span className="px-4 py-2 font-semibold">{quantity}</span>
+                  <span className="px-4 py-2 font-semibold dark:text-white">{quantity}</span>
                   <button
                     onClick={() => setQuantity(quantity + 1)}
-                    className="p-2 hover:bg-gray-100 transition-colors"
+                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
                   >
                     <Plus size={20} />
                   </button>
                 </div>
-                <span className="text-gray-600">unidades</span>
+                <span className="text-gray-600 dark:text-gray-300">unidades</span>
               </div>
             </div>
 
             {/* Instructions */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
                 Instruções de Uso
               </label>
               <textarea
@@ -365,7 +365,7 @@ export default function Customize() {
                 onChange={(e) => setInstructions(e.target.value)}
                 placeholder="Instruções adicionais (opcional)"
                 rows={4}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-200 text-black dark:text-black"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-[#065084] text-black dark:text-white"
               />
             </div>
 
@@ -376,9 +376,9 @@ export default function Customize() {
                 id="prescription"
                 checked={prescriptionRequired}
                 onChange={(e) => setPrescriptionRequired(e.target.checked)}
-                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                className="w-4 h-4 text-primary-600 dark:text-primary-400 border-gray-300 dark:border-[#0F828C] rounded focus:ring-primary-500 dark:bg-[#065084]"
               />
-              <label htmlFor="prescription" className="ml-2 text-sm text-gray-700">
+              <label htmlFor="prescription" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
                 Este medicamento requer receita médica
               </label>
             </div>
@@ -386,21 +386,21 @@ export default function Customize() {
 
           {/* Summary */}
           <div className="lg:col-span-1">
-            <div className="card p-6 sticky top-24">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Resumo</h2>
+            <div className="card p-6 sticky top-24 dark:bg-[#065084] dark:border-[#0F828C]">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Resumo</h2>
               
               <div className="space-y-4 mb-6">
                 <div>
-                  <p className="text-sm text-gray-600">Ativos selecionados:</p>
-                  <p className="font-semibold">{selectedIngredients.length}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Ativos selecionados:</p>
+                  <p className="font-semibold dark:text-white">{selectedIngredients.length}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600">Quantidade:</p>
-                  <p className="font-semibold">{quantity} unidades</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Quantidade:</p>
+                  <p className="font-semibold dark:text-white">{quantity} unidades</p>
                 </div>
                 {prescriptionRequired && (
-                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800 font-semibold">
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-300 font-semibold">
                       <FileText size={16} className="inline mr-1" />
                       Receita necessária
                     </p>
@@ -408,10 +408,10 @@ export default function Customize() {
                 )}
               </div>
 
-              <div className="border-t pt-4 mb-6">
+              <div className="border-t dark:border-[#0F828C] pt-4 mb-6">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-600">Preço estimado:</span>
-                  <span className="text-2xl font-bold text-primary-600">
+                  <span className="text-gray-600 dark:text-gray-300">Preço estimado:</span>
+                  <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">
                     R$ {calculatePrice().toFixed(2).replace('.', ',')}
                   </span>
                 </div>

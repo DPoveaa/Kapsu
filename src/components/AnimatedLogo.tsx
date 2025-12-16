@@ -16,12 +16,61 @@ interface AnimatedLogoProps {
   alt?: string
 }
 
+interface ZBubble {
+  id: number
+  delay: number
+}
+
 export default function AnimatedLogo({ className = '', alt = 'Kapsu Logo' }: AnimatedLogoProps) {
   const [isBlinking, setIsBlinking] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [zBubbles, setZBubbles] = useState<ZBubble[]>([])
   const blinkChanceRef = useRef(10) // Começa com 10% (1 em 10)
+  const zChanceRef = useRef(10) // Começa com 10% (1 em 10) para os Z
   const intervalRef = useRef<number | null>(null)
+  const zIntervalRef = useRef<number | null>(null)
+  const zIdCounterRef = useRef(0)
 
+  // Detecta modo escuro
   useEffect(() => {
+    const checkDarkMode = () => {
+      const isDark = document.documentElement.classList.contains('dark')
+      setIsDarkMode(isDark)
+      // Se estiver em modo escuro, mantém os olhos fechados
+      if (isDark) {
+        setIsBlinking(true)
+      } else {
+        setIsBlinking(false)
+      }
+    }
+
+    // Verifica inicialmente
+    checkDarkMode()
+
+    // Observa mudanças no elemento raiz
+    const observer = new MutationObserver(checkDarkMode)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [])
+
+  // Lógica de piscar aleatório (apenas no modo claro)
+  useEffect(() => {
+    // Se estiver em modo escuro, não faz nada (olhos ficam fechados)
+    if (isDarkMode) {
+      // Limpa qualquer intervalo existente
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      return
+    }
+
     const checkBlink = () => {
       // Gera número aleatório de 1 a 100
       const random = Math.floor(Math.random() * 100) + 1
@@ -56,7 +105,66 @@ export default function AnimatedLogo({ className = '', alt = 'Kapsu Logo' }: Ani
       }
       clearTimeout(timeoutId)
     }
-  }, [])
+  }, [isDarkMode])
+
+  // Lógica de Z saindo (apenas no modo escuro)
+  useEffect(() => {
+    // Se não estiver em modo escuro, não faz nada
+    if (!isDarkMode) {
+      // Limpa qualquer intervalo existente
+      if (zIntervalRef.current) {
+        clearInterval(zIntervalRef.current)
+        zIntervalRef.current = null
+      }
+      // Remove todos os Z quando sair do modo escuro
+      setZBubbles([])
+      return
+    }
+
+    const checkZ = () => {
+      // Gera número aleatório de 1 a 100
+      const random = Math.floor(Math.random() * 100) + 1
+      
+      // Se o número aleatório for menor ou igual à chance atual, mostra os Z
+      if (random <= zChanceRef.current) {
+        // Cria sequência de 3 Z com micro intervalo entre cada (200ms)
+        const newZBubbles: ZBubble[] = []
+        for (let i = 0; i < 3; i++) {
+          newZBubbles.push({
+            id: zIdCounterRef.current++,
+            delay: i * 200 // 200ms de intervalo entre cada Z
+          })
+        }
+        setZBubbles(newZBubbles)
+        
+        // Reseta a chance para 10% após mostrar os Z
+        zChanceRef.current = 10
+        
+        // Remove os Z após a animação (2 segundos para subir e desaparecer)
+        setTimeout(() => {
+          setZBubbles([])
+        }, 2000 + (2 * 200)) // 2000ms de animação + 2 intervalos de 200ms
+      } else {
+        // Se não mostrou os Z, aumenta a chance para a próxima tentativa
+        // Aumenta em 5% a cada tentativa (máximo 100%)
+        zChanceRef.current = Math.min(zChanceRef.current + 5, 100)
+      }
+    }
+
+    // Verifica a cada 5 segundos
+    const intervalTime = 5000
+    zIntervalRef.current = setInterval(checkZ, intervalTime)
+
+    // Primeira verificação após o intervalo
+    const timeoutId = setTimeout(checkZ, intervalTime)
+
+    return () => {
+      if (zIntervalRef.current) {
+        clearInterval(zIntervalRef.current)
+      }
+      clearTimeout(timeoutId)
+    }
+  }, [isDarkMode])
 
   return (
     <div 
@@ -203,6 +311,39 @@ export default function AnimatedLogo({ className = '', alt = 'Kapsu Logo' }: Ani
         />
         
       </div>
+
+      {/* Z bubbles - aparecem quando está dormindo (modo escuro) */}
+      {zBubbles.map((zBubble, index) => (
+        <div
+          key={zBubble.id}
+          className="absolute text-2xl sm:text-3xl font-bold text-gray-400 dark:text-gray-500 pointer-events-none z-50"
+          style={{
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+            animation: `zFloat${zBubble.id} 2s ${zBubble.delay}ms ease-out forwards`,
+            opacity: 0
+          }}
+        >
+          <style>{`
+            @keyframes zFloat${zBubble.id} {
+              0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) translateY(0px) translateX(${index * 5 - 5}px) rotate(0deg) scale(0.8);
+              }
+              5% {
+                opacity: 1;
+                transform: translate(-50%, -50%) translateY(-8px) translateX(${index * 5 - 5}px) rotate(-4deg) scale(0.95);
+              }
+              100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) translateY(-120px) translateX(${(index * 6 - 3) * 0.3}px) rotate(${(index % 2 === 0 ? -2 : 2)}deg) scale(0.5);
+              }
+            }
+          `}</style>
+          Z
+        </div>
+      ))}
     </div>
   )
 }

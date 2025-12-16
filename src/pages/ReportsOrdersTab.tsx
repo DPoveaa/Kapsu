@@ -91,8 +91,8 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         {Object.entries(ordersStats.byStatus).map(([status, data]: [string, any]) => {
           const statusConfig: Record<string, { label: string; icon: any; color: string; bgColor: string }> = {
-            PENDING: { label: 'Pendente', icon: AlertCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-100' },
-            CONFIRMED: { label: 'Confirmado', icon: CheckCircle, color: 'text-blue-600', bgColor: 'bg-blue-100' },
+            PENDING: { label: 'Aguardando Pagamento', icon: AlertCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-100' },
+            CONFIRMED: { label: 'Pago', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100' },
             PROCESSING: { label: 'Processando', icon: Package, color: 'text-purple-600', bgColor: 'bg-purple-100' },
             SHIPPED: { label: 'Enviado', icon: Truck, color: 'text-indigo-600', bgColor: 'bg-indigo-100' },
             DELIVERED: { label: 'Entregue', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100' },
@@ -128,8 +128,8 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
             <PieChart>
               <Pie
                 data={Object.entries(ordersStats.byStatus).map(([status, data]: [string, any]) => ({
-                  name: status === 'PENDING' ? 'Pendente' :
-                        status === 'CONFIRMED' ? 'Confirmado' :
+                  name: status === 'PENDING' ? 'Aguardando Pagamento' :
+                        status === 'CONFIRMED' ? 'Pago' :
                         status === 'PROCESSING' ? 'Processando' :
                         status === 'SHIPPED' ? 'Enviado' :
                         status === 'DELIVERED' ? 'Entregue' :
@@ -227,8 +227,8 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                 dataKey="status" 
                 tickFormatter={(value) => {
                   const statusMap: Record<string, string> = {
-                    PENDING: 'Pendente',
-                    CONFIRMED: 'Confirmado',
+                    PENDING: 'Aguardando Pagamento',
+                    CONFIRMED: 'Pago',
                     PROCESSING: 'Processando',
                     SHIPPED: 'Enviado',
                     DELIVERED: 'Entregue',
@@ -397,7 +397,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Pedidos Pendentes Antigos</p>
+              <p className="text-sm font-medium text-gray-600">Aguardando Pagamento (Antigos)</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
                 {ordersStats.overview.oldPendingOrders}
               </p>
