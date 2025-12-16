@@ -91,8 +91,11 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         {Object.entries(ordersStats.byStatus).map(([status, data]: [string, any]) => {
           const statusConfig: Record<string, { label: string; icon: any; color: string; bgColor: string }> = {
+            AWAITING_PAYMENT: { label: 'Aguardando Pagamento', icon: AlertCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-100' },
             PENDING: { label: 'Aguardando Pagamento', icon: AlertCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-100' },
+            PAID: { label: 'Pago', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100' },
             CONFIRMED: { label: 'Pago', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100' },
+            DISTRIBUTOR_INFORMED: { label: 'Solicitado na Distribuidora', icon: Package, color: 'text-blue-600', bgColor: 'bg-blue-100' },
             PROCESSING: { label: 'Processando', icon: Package, color: 'text-purple-600', bgColor: 'bg-purple-100' },
             SHIPPED: { label: 'Enviado', icon: Truck, color: 'text-indigo-600', bgColor: 'bg-indigo-100' },
             DELIVERED: { label: 'Entregue', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100' },
@@ -128,8 +131,9 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
             <PieChart>
               <Pie
                 data={Object.entries(ordersStats.byStatus).map(([status, data]: [string, any]) => ({
-                  name: status === 'PENDING' ? 'Aguardando Pagamento' :
-                        status === 'CONFIRMED' ? 'Pago' :
+                  name: status === 'AWAITING_PAYMENT' || status === 'PENDING' ? 'Aguardando Pagamento' :
+                        status === 'PAID' || status === 'CONFIRMED' ? 'Pago' :
+                        status === 'DISTRIBUTOR_INFORMED' ? 'Solicitado na Distribuidora' :
                         status === 'PROCESSING' ? 'Processando' :
                         status === 'SHIPPED' ? 'Enviado' :
                         status === 'DELIVERED' ? 'Entregue' :
@@ -227,8 +231,11 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                 dataKey="status" 
                 tickFormatter={(value) => {
                   const statusMap: Record<string, string> = {
+                    AWAITING_PAYMENT: 'Aguardando Pagamento',
                     PENDING: 'Aguardando Pagamento',
+                    PAID: 'Pago',
                     CONFIRMED: 'Pago',
+                    DISTRIBUTOR_INFORMED: 'Solicitado na Distribuidora',
                     PROCESSING: 'Processando',
                     SHIPPED: 'Enviado',
                     DELIVERED: 'Entregue',

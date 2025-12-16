@@ -943,6 +943,97 @@ class WhatsAppService {
       return { isAllowed: false }
     }
   }
+
+  /**
+   * Lista todos os números da distribuidora configurados
+   */
+  async getDistributorNumbers(): Promise<Array<{
+    id: string
+    phone: string
+    name: string | null
+    userId: string | null
+    userEmail: string | null
+    isActive: boolean
+    createdAt: string
+    updatedAt: string
+  }>> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      const response = await fetch(`${this.baseUrl}/distributor-numbers`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }))
+        throw new Error(errorData.message || 'Erro ao buscar números da distribuidora')
+      }
+
+      const data = await response.json()
+      return data.distributorNumbers || []
+    } catch (error: any) {
+      throw new Error('Erro ao buscar números da distribuidora: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  /**
+   * Adiciona um novo número da distribuidora
+   */
+  async addDistributorNumber(phone: string, userId?: string, name?: string): Promise<{
+    id: string
+    phone: string
+    name: string | null
+    userId: string | null
+    userEmail: string | null
+    isActive: boolean
+    createdAt: string
+    updatedAt: string
+  }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      const response = await fetch(`${this.baseUrl}/distributor-numbers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ phone, userId, name }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }))
+        throw new Error(errorData.message || 'Erro ao adicionar número da distribuidora')
+      }
+
+      const data = await response.json()
+      return data.distributorNumber
+    } catch (error: any) {
+      throw new Error('Erro ao adicionar número da distribuidora: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
+
+  /**
+   * Remove um número da distribuidora
+   */
+  async removeDistributorNumber(id: string): Promise<void> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      const response = await fetch(`${this.baseUrl}/distributor-numbers/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erro desconhecido' }))
+        throw new Error(errorData.message || 'Erro ao remover número da distribuidora')
+      }
+    } catch (error: any) {
+      throw new Error('Erro ao remover número da distribuidora: ' + (error.message || 'Erro desconhecido'))
+    }
+  }
 }
 
 export const whatsappService = new WhatsAppService()

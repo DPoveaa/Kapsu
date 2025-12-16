@@ -62,8 +62,11 @@ export default function ManageOrders() {
   // Formata status
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
-      PENDING: { label: 'Pendente', className: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' },
-      CONFIRMED: { label: 'Confirmado', className: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' },
+      AWAITING_PAYMENT: { label: 'Aguardando Pagamento', className: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' },
+      PENDING: { label: 'Aguardando Pagamento', className: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' },
+      PAID: { label: 'Pago', className: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' },
+      CONFIRMED: { label: 'Pago', className: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' },
+      DISTRIBUTOR_INFORMED: { label: 'Solicitado na Distribuidora', className: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' },
       PROCESSING: { label: 'Processando', className: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' },
       SHIPPED: { label: 'Enviado', className: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300' },
       DELIVERED: { label: 'Entregue', className: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' },
@@ -160,7 +163,7 @@ export default function ManageOrders() {
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-300">Pedidos Pendentes</p>
                   <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {orders.filter(o => o.status === 'PENDING').length}
+                    {orders.filter(o => o.status === 'PENDING' || o.status === 'AWAITING_PAYMENT').length}
                   </p>
                 </div>
               </div>

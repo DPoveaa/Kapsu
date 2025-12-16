@@ -5,22 +5,22 @@ export default function PaymentFailure() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-          <XCircle className="mx-auto text-red-600 mb-6" size={64} />
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B] flex items-center justify-center py-8">
+      <div className="max-w-lg w-full mx-auto px-4 sm:px-6">
+        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-lg dark:shadow-xl border border-gray-100 dark:border-[#0F828C] p-6 text-center">
+          <XCircle className="mx-auto text-red-600 dark:text-red-400 mb-4" size={48} />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
             Pagamento Não Aprovado
           </h1>
-          <p className="text-lg text-gray-600 mb-8">
+          <p className="text-base text-gray-600 dark:text-gray-300 mb-4">
             Não foi possível processar seu pagamento. Por favor, tente novamente.
           </p>
           
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-8">
-            <p className="text-red-800 font-semibold mb-2">
+          <div className="bg-red-50 dark:bg-[#065084] border border-red-200 dark:border-[#0F828C] rounded-lg p-4 mb-6">
+            <p className="text-red-800 dark:text-red-300 font-semibold mb-2 text-sm">
               Possíveis motivos:
             </p>
-            <ul className="text-sm text-red-700 text-left space-y-1">
+            <ul className="text-xs text-red-700 dark:text-red-300 text-left space-y-1">
               <li>• Dados do cartão incorretos</li>
               <li>• Saldo insuficiente</li>
               <li>• Cartão bloqueado ou expirado</li>
@@ -28,19 +28,19 @@ export default function PaymentFailure() {
             </ul>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
               onClick={() => navigate('/carrinho')}
-              className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center"
+              className="px-5 py-2.5 bg-primary-600 dark:bg-primary-500 text-white rounded-lg hover:bg-primary-700 dark:hover:bg-primary-600 transition-colors flex items-center justify-center text-sm"
             >
-              <RotateCcw className="mr-2" size={20} />
+              <RotateCcw className="mr-2" size={18} />
               Tentar Novamente
             </button>
             <button
               onClick={() => navigate(-1)}
-              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center"
+              className="px-5 py-2.5 border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors flex items-center justify-center text-sm"
             >
-              <ArrowLeft className="mr-2" size={20} />
+              <ArrowLeft className="mr-2" size={18} />
               Voltar
             </button>
           </div>

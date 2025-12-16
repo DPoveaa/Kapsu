@@ -1,18 +1,20 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, Loader2, Truck, Plus, Save, Edit2, Trash2, Check, X } from 'lucide-react'
+import { ArrowLeft, MapPin, Loader2, Truck, Plus, Save, Edit2, Trash2, Check, X, TestTube } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { paymentService } from '../services/payment.service'
 import { shippingService } from '../services/shipping.service'
 import { addressService, SavedAddress } from '../services/address.service'
+import { orderService } from '../services/order.service'
 import { MultiplePromoCodesValidation } from '../services/promo-codes.service'
 
 export default function Checkout() {
   const navigate = useNavigate()
   const { items, getTotal } = useCart()
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isAdmin } = useAuth()
   const [creatingOrder, setCreatingOrder] = useState(false)
+  const [creatingOrderWithoutPayment, setCreatingOrderWithoutPayment] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'quarterly'>('monthly')
   
@@ -58,7 +60,6 @@ export default function Checkout() {
         if (validation.freeShipping) {
           setIsFreeShipping(true)
           setShippingFee(0)
-          setShippingMessage('Frete grátis aplicado pelo(s) código(s) promocional(is)!')
         }
       } catch (error) {
         console.error('Erro ao carregar códigos promocionais:', error)
@@ -440,6 +441,52 @@ export default function Checkout() {
     }
   }
 
+  // Função para criar pedido sem pagamento (apenas para admins)
+  const handleCreateOrderWithoutPayment = async () => {
+    // Valida endereço
+    if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep) {
+      alert('Por favor, preencha todos os campos do endereço')
+      return
+    }
+
+    // Valida se há entrega disponível
+    const cleanCep = formData.cep.replace(/\D/g, '')
+    const hasFreeShippingByCoupon = promoCodesValidation?.freeShipping || false
+    if (cleanCep.length === 8 && shippingFee === null && !isFreeShipping && !hasFreeShippingByCoupon) {
+      alert('Infelizmente, não estamos enviando para este CEP no momento. Por favor, verifique o endereço ou entre em contato conosco.')
+      return
+    }
+
+    // Se estiver editando um endereço salvo, salva as alterações primeiro
+    if (editingAddressId && selectedAddressId) {
+      await handleUpdateAddress()
+    }
+
+    try {
+      setCreatingOrderWithoutPayment(true)
+      setCheckoutError(null)
+
+      // Monta endereço completo
+      const shippingAddress = `${formData.address}, ${formData.number}${formData.complement ? ` - ${formData.complement}` : ''}, ${formData.city} - ${formData.state}, CEP: ${formData.cep}`
+
+      // Cria pedido sem pagamento
+      const order = await orderService.createOrderWithoutPayment(
+        shippingAddress,
+        isSubscription ? subscriptionPlan : undefined,
+        shippingCost > 0 ? shippingCost : undefined
+      )
+
+      console.log('✅ Pedido criado sem pagamento:', order)
+
+      // Redireciona para a página de sucesso
+      navigate(`/payment-success?order_id=${order.id}`)
+    } catch (error: any) {
+      console.error('Erro ao criar pedido sem pagamento:', error)
+      setCheckoutError(error.message || 'Erro ao criar pedido. Tente novamente.')
+      setCreatingOrderWithoutPayment(false)
+    }
+  }
+
   if (!isAuthenticated || !user) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
@@ -648,7 +695,7 @@ export default function Checkout() {
                         </div>
                       )}
                     </div>
-                    {shippingMessage && isFreeShipping && (
+                    {shippingMessage && isFreeShipping && !promoCodesValidation?.freeShipping && (
                       <div className="mt-2 text-sm flex items-center text-green-600 dark:text-green-400">
                         <Truck className="w-4 h-4 mr-1" />
                         {shippingMessage}
@@ -766,11 +813,32 @@ export default function Checkout() {
 
                   {/* Botão de continuar - só aparece se o CEP for válido */}
                   {!hasInvalidCep() && (
-                    <div className="flex justify-between mt-6">
+                    <div className="flex justify-between items-center mt-6 gap-3">
+                      {isAdmin && (
+                        <button 
+                          type="button"
+                          onClick={handleCreateOrderWithoutPayment}
+                          className="text-xs px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-1.5"
+                          disabled={!canProceedToPayment() || creatingOrderWithoutPayment}
+                          title="Criar pedido sem pagamento (apenas para testes)"
+                        >
+                          {creatingOrderWithoutPayment ? (
+                            <>
+                              <Loader2 className="animate-spin" size={14} />
+                              Criando...
+                            </>
+                          ) : (
+                            <>
+                              <TestTube size={14} />
+                              Teste (sem pagamento)
+                            </>
+                          )}
+                        </button>
+                      )}
                       <button 
                         type="submit" 
                         className="btn-primary ml-auto flex items-center"
-                        disabled={!canProceedToPayment()}
+                        disabled={!canProceedToPayment() || creatingOrderWithoutPayment}
                       >
                         {creatingOrder ? (
                           <>
@@ -799,20 +867,43 @@ export default function Checkout() {
                   )}
                   {/* Botão de continuar - só aparece se o CEP for válido */}
                   {!hasInvalidCep() && (
-                    <button 
-                      onClick={() => handleSubmit()}
-                      className="btn-primary w-full flex items-center justify-center"
-                      disabled={!canProceedToPayment()}
-                    >
-                      {creatingOrder ? (
-                        <>
-                          <Loader2 className="animate-spin mr-2" size={20} />
-                          Processando e redirecionando para o Mercado Pago...
-                        </>
-                      ) : (
-                        'Continuar para o Pagamento no Mercado Pago'
+                    <div className="flex gap-3">
+                      {isAdmin && (
+                        <button 
+                          type="button"
+                          onClick={handleCreateOrderWithoutPayment}
+                          className="text-xs px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-1.5"
+                          disabled={!canProceedToPayment() || creatingOrderWithoutPayment}
+                          title="Criar pedido sem pagamento (apenas para testes)"
+                        >
+                          {creatingOrderWithoutPayment ? (
+                            <>
+                              <Loader2 className="animate-spin" size={14} />
+                              Criando...
+                            </>
+                          ) : (
+                            <>
+                              <TestTube size={14} />
+                              Teste (sem pagamento)
+                            </>
+                          )}
+                        </button>
                       )}
-                    </button>
+                      <button 
+                        onClick={() => handleSubmit()}
+                        className="btn-primary flex-1 flex items-center justify-center"
+                        disabled={!canProceedToPayment() || creatingOrderWithoutPayment}
+                      >
+                        {creatingOrder ? (
+                          <>
+                            <Loader2 className="animate-spin mr-2" size={20} />
+                            Processando e redirecionando para o Mercado Pago...
+                          </>
+                        ) : (
+                          'Continuar para o Pagamento no Mercado Pago'
+                        )}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -898,7 +989,7 @@ export default function Checkout() {
                     <Loader2 className="animate-spin text-gray-400 dark:text-gray-500" size={16} />
                   ) : (promoCodesValidation?.freeShipping || isFreeShipping) ? (
                     <span className="text-green-600 dark:text-green-400 font-semibold">
-                      {promoCodesValidation?.freeShipping ? 'Grátis - pelo cupom' : 'Grátis'}
+                      {promoCodesValidation?.freeShipping ? 'Grátis (cupom)' : 'Grátis'}
                     </span>
                   ) : shippingFee !== null ? (
                     <span className="text-gray-900 dark:text-white">R$ {shippingFee.toFixed(2).replace('.', ',')}</span>

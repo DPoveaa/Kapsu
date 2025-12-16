@@ -842,7 +842,7 @@ export default function Cart() {
                                           <span className="text-xs text-green-700 dark:text-green-300">
                                             {promoCode.code}
                                           </span>
-                                          {appliedDiscount && (
+                                          {appliedDiscount && appliedDiscount.discount > 0 && (
                                             <span className="text-xs font-bold text-green-600 dark:text-green-400">
                                               • {promoCode.discount_type === 'percentage' 
                                                 ? `${promoCode.discount_value}% OFF`
@@ -850,7 +850,13 @@ export default function Cart() {
                                             </span>
                                           )}
                                           {promoCode.free_shipping && (
-                                            <Truck className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                            <>
+                                              {appliedDiscount && appliedDiscount.discount > 0 && (
+                                                <span className="text-xs text-green-600 dark:text-green-400">•</span>
+                                              )}
+                                              <span className="text-xs text-green-600 dark:text-green-400">FRETE</span>
+                                              <Truck className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                            </>
                                           )}
                                         </div>
                                       </div>
@@ -921,7 +927,7 @@ export default function Cart() {
                                       <span className="text-xs text-green-700 dark:text-green-300">
                                         {promoCode.code}
                                       </span>
-                                      {appliedDiscount && (
+                                      {appliedDiscount && appliedDiscount.discount > 0 && (
                                         <span className="text-xs font-bold text-green-600 dark:text-green-400">
                                           • {promoCode.discount_type === 'percentage' 
                                             ? `${promoCode.discount_value}% OFF`
@@ -929,7 +935,13 @@ export default function Cart() {
                                         </span>
                                       )}
                                       {promoCode.free_shipping && (
-                                        <Truck className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                        <>
+                                          {appliedDiscount && appliedDiscount.discount > 0 && (
+                                            <span className="text-xs text-green-600 dark:text-green-400">•</span>
+                                          )}
+                                          <span className="text-xs text-green-600 dark:text-green-400">FRETE</span>
+                                          <Truck className="w-3 h-3 text-green-600 dark:text-green-400" />
+                                        </>
                                       )}
                                     </div>
                                   </div>
@@ -1094,13 +1106,13 @@ export default function Cart() {
                     <span className="text-gray-600 dark:text-gray-300">Frete</span>
                     <div className="text-right">
                       <span className="text-green-600 dark:text-green-400 font-medium">
-                        {hasFreeShippingByCoupon ? 'Grátis - pelo cupom' : 'Grátis'}
+                        {hasFreeShippingByCoupon ? 'Grátis (cupom)' : 'Grátis'}
                       </span>
-                      <div className="text-xs text-green-600 dark:text-green-400 mt-0.5">
-                        {!hasFreeShippingByCoupon && hasFreeShippingByThreshold && (
-                          <span>Frete grátis para pedidos acima de R$ {freeShippingThreshold.toFixed(2).replace('.', ',')}</span>
-                        )}
-                      </div>
+                      {!hasFreeShippingByCoupon && hasFreeShippingByThreshold && (
+                        <div className="text-xs text-green-600 dark:text-green-400 mt-0.5">
+                          Frete grátis para pedidos acima de R$ {freeShippingThreshold.toFixed(2).replace('.', ',')}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
