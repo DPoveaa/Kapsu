@@ -1,7 +1,5 @@
-import { Truck, MapPin, XCircle, CheckCircle, DollarSign, TrendingUp, Users, AlertCircle, Gift, Tag, Package } from 'lucide-react'
+import { Truck, XCircle, CheckCircle, DollarSign, TrendingUp, AlertCircle, Gift, Tag, Package } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
 interface ShippingStatsTabProps {
   shippingStats: any

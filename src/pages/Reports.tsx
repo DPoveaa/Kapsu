@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BarChart3, Users, Eye, Calendar, Clock, TrendingDown, MousePointer, ArrowRight, Package, DollarSign, TrendingUp, XCircle, CheckCircle, AlertCircle, Truck, ShoppingCart } from 'lucide-react'
+import { BarChart3, Users, Eye, Calendar, Clock, TrendingDown, MousePointer, ArrowRight } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { adminService } from '../services/admin.service'
 import OrdersStatsTab from './ReportsOrdersTab'
@@ -13,18 +13,20 @@ import ChatStatsTab from './ReportsChatTab'
 import WhatsAppHumanSupportStatsTab from './ReportsWhatsAppHumanSupportTab'
 
 interface SiteAccessStats {
-  totalSessions: number
-  totalPageViews: number
+  totalAccesses: number
   uniqueVisitors: number
   uniqueIPs: number
   uniqueAuthenticatedUsers: number
-  avgPageViewsPerSession: number
+  totalSessions?: number
+  totalPageViews?: number
+  avgPageViewsPerSession?: number
 }
 
 interface ChartDataPoint {
   date: string
   total: number
   unique: number
+  pageViews?: number
 }
 
 interface BehaviorAnalytics {
@@ -514,10 +516,10 @@ export default function Reports() {
                       <div>
                         <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Total de Sessões</p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                          {stats?.totalSessions.toLocaleString('pt-BR') || 0}
+                          {stats?.totalAccesses.toLocaleString('pt-BR') || 0}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          {stats?.totalPageViews.toLocaleString('pt-BR') || 0} visualizações
+                          {stats?.totalAccesses.toLocaleString('pt-BR') || 0} visualizações
                         </p>
                       </div>
                       <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg">

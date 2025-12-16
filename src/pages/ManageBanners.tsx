@@ -12,7 +12,7 @@ export default function ManageBanners() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null)
-  const [uploading, setUploading] = useState(false)
+  const [uploading] = useState(false)
   const [formData, setFormData] = useState<CreateBannerData>({
     image_url: '',
     title: '',

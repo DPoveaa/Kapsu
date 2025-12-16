@@ -154,7 +154,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                 ))}
               </Pie>
               <Tooltip 
-                formatter={(value: number, name: string, props: any) => [
+                formatter={(value: number, _name: string, props: any) => [
                   `${value} pedidos (R$ ${props.payload.totalValue.toFixed(2).replace('.', ',')})`,
                   props.payload.name
                 ]}

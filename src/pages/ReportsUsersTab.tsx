@@ -1,4 +1,4 @@
-import { Users, UserPlus, TrendingUp, Clock, Calendar, Activity, ShoppingCart, UserCheck, UserX, BarChart3 } from 'lucide-react'
+import { Users, UserPlus, TrendingUp, Activity, ShoppingCart, UserCheck, UserX } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
@@ -316,7 +316,7 @@ export default function UsersStatsTab({ usersStats, usersLoading }: UsersStatsTa
                 fill="#8884d8"
                 dataKey="count"
               >
-                {usersStats.distributionByTimeOfDay.map((_, index: number) => (
+                {usersStats.distributionByTimeOfDay.map((_item: any, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

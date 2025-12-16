@@ -21,7 +21,7 @@ interface ZBubble {
   delay: number
 }
 
-export default function AnimatedLogo({ className = '', alt = 'Kapsu Logo' }: AnimatedLogoProps) {
+export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
   const [isBlinking, setIsBlinking] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [zBubbles, setZBubbles] = useState<ZBubble[]>([])

@@ -1,5 +1,5 @@
-import { Gift, DollarSign, TrendingDown, Users, Calendar, Package, CheckCircle, XCircle, AlertCircle, ShoppingCart, Truck } from 'lucide-react'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { Gift, DollarSign, TrendingDown, CheckCircle, XCircle, Truck } from 'lucide-react'
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Link } from 'react-router-dom'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
@@ -530,12 +530,12 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {(promotionsStats?.statsByType || []).map((_, index: number) => (
+                  {(promotionsStats?.statsByType || []).map((_item: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip 
-                  formatter={(value: number, name: string, props: any) => [
+                  formatter={(value: number, _name: string, props: any) => [
                     `${value} usos (${formatCurrency(props.payload.totalValueSaved)})`,
                     props.payload.name
                   ]}

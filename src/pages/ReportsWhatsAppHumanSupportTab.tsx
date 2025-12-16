@@ -1,4 +1,4 @@
-import { Users, Clock, AlertCircle, TrendingUp, CheckCircle, XCircle, UserCheck, Timer, MessageSquare } from 'lucide-react'
+import { Clock, AlertCircle, TrendingUp, CheckCircle, XCircle, Timer, MessageSquare } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
@@ -420,12 +420,12 @@ export default function WhatsAppHumanSupportStatsTab({
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ reason, count }) => `${reason}: ${count}`}
+                  label={(entry: any) => `${entry.reason}: ${entry.count}`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="count"
                 >
-                  {whatsappHumanSupportStats.assumptionReasons.map((entry: any, index: number) => (
+                  {whatsappHumanSupportStats.assumptionReasons.map((_entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>

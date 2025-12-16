@@ -1,7 +1,5 @@
-import { MessageSquare, Send, Inbox, Clock, TrendingUp, AlertCircle, BarChart3, Calendar, Users } from 'lucide-react'
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
+import { MessageSquare, Send, Inbox, Clock, TrendingUp, AlertCircle, Users } from 'lucide-react'
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 interface WhatsAppStatsTabProps {
   whatsappStats: any

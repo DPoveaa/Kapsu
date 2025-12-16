@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, Plus, Trash2, Gift, DollarSign, Package, ShoppingBag, X, Edit2 } from 'lucide-react'
+import { Plus, Trash2, Gift, DollarSign, Package, ShoppingBag, X, Edit2 } from 'lucide-react'
 import { freeShippingRulesService, FreeShippingRule } from '../services/free-shipping-rules.service'
 import { productsService } from '../services/products.service'
 import { Product } from '../types'

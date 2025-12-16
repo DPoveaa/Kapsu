@@ -1,4 +1,4 @@
-import { Package, TrendingUp, DollarSign, ShoppingCart, AlertTriangle, XCircle, BarChart3, Calendar, Clock } from 'lucide-react'
+import { Package, TrendingUp, DollarSign, ShoppingCart, AlertTriangle, XCircle, Calendar } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 interface ProductsStatsTabProps {

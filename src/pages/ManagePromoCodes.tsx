@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, Plus, Trash2, Tag, Percent, DollarSign, Truck, X, Edit2, Calendar, Users, Copy, CheckCircle } from 'lucide-react'
+import { Plus, Trash2, Tag, Percent, DollarSign, Truck, X, Edit2, Copy, CheckCircle, Calendar, Users } from 'lucide-react'
 import { promoCodesService, PromoCode } from '../services/promo-codes.service'
 import { productsService } from '../services/products.service'
 import { Product } from '../types'
