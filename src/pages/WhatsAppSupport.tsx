@@ -1252,7 +1252,7 @@ export default function WhatsAppSupport() {
   const selectedConv = conversations.find(c => c.phone === selectedConversation)
 
   return (
-    <div className="fixed inset-0 h-screen flex flex-col bg-gray-100 dark:bg-[#320A6B] z-50" style={{ marginTop: 0, marginLeft: 0, marginRight: 0 }}>
+    <div className="fixed inset-0 h-screen flex flex-col bg-gray-100 dark:bg-gray-900 z-50" style={{ marginTop: 0, marginLeft: 0, marginRight: 0 }}>
       {/* Header */}
       <div className="bg-green-600 text-white px-3 sm:px-4 lg:px-6 py-3 sm:py-4 shadow-lg">
         <div className="flex items-center justify-between">
@@ -1442,7 +1442,7 @@ export default function WhatsAppSupport() {
         </div>
 
         {/* Área de Conversa */}
-        <div className={`${!showConversationList ? 'flex' : 'hidden'} lg:flex flex-1 flex-col bg-gray-100 dark:bg-[#320A6B]`}>
+        <div className={`${!showConversationList ? 'flex' : 'hidden'} lg:flex flex-1 flex-col bg-gray-100 dark:bg-gray-900`}>
           {selectedConversation && selectedConv ? (
             <>
               {/* Header da Conversa */}
@@ -1505,7 +1505,7 @@ export default function WhatsAppSupport() {
               {/* Mensagens */}
               <div
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50 dark:bg-[#320A6B]"
+                className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50 dark:bg-gray-900"
                 style={{ scrollBehavior: 'auto' }}
               >
                 {messages.length === 0 ? (
@@ -1624,7 +1624,7 @@ export default function WhatsAppSupport() {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-[#320A6B]">
+            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
               <div className="text-center text-gray-500 dark:text-gray-400 px-4">
                 <MessageSquare size={48} className="sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-gray-300 dark:text-gray-600" />
                 <p className="text-base sm:text-lg font-medium">Selecione uma conversa para começar</p>

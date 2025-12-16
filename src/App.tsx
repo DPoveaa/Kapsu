@@ -24,6 +24,7 @@ import FreeShippingRules from './pages/FreeShippingRules'
 import ManagePromotions from './pages/ManagePromotions'
 import ManagePromoCodes from './pages/ManagePromoCodes'
 import ManageCompostos from './pages/ManageCompostos'
+import ManageBanners from './pages/ManageBanners'
 import OrderDetail from './pages/OrderDetail'
 import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentFailure from './pages/PaymentFailure'
@@ -169,6 +170,14 @@ function AppContent() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <ManagePromoCodes />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/banners"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <ManageBanners />
                   </ProtectedRoute>
                 }
               />

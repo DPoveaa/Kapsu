@@ -3,6 +3,17 @@
 @tailwind utilities;
 
 @layer base {
+  /* Transição suave para mudança de tema */
+  html.theme-transitioning,
+  html.theme-transitioning *,
+  html.theme-transitioning *::before,
+  html.theme-transitioning *::after {
+    transition: background-color 0.3s ease, 
+                color 0.3s ease, 
+                border-color 0.3s ease,
+                opacity 0.3s ease !important;
+  }
+
   body {
     @apply text-gray-900 dark:text-white;
     margin: 0;
@@ -18,7 +29,7 @@
   }
   
   html.dark body {
-    background-color: #320A6B;
+    background-color: #111827;
     color: #FFFFFF !important;
     text-shadow: 0.5px 0.5px 0.5px rgba(255, 255, 255, 0.1);
   }
@@ -86,18 +97,18 @@
   }
   
   html.dark {
-    background-color: #320A6B;
+    background-color: #111827;
   }
-  
+
   #root {
     margin: 0;
     padding: 0;
     background-color: #DDF4E7;
     transition: background-color 0.3s ease;
   }
-  
+
   html.dark #root {
-    background-color: #320A6B;
+    background-color: #111827;
   }
 }
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, Sparkles, Star, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Product } from '../types'
 import { productsService } from '../services/products.service'
+import { bannersService, Banner } from '../services/banners.service'
 import banner1 from '../images/banner_1.webp'
 
 // Reviews de clientes
@@ -60,27 +61,49 @@ export default function Home() {
   const [mineralProducts, setMineralProducts] = useState<Product[]>([])
   const [fitoterapicoProducts, setFitoterapicoProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [banners, setBanners] = useState<Banner[]>([])
   const [bannerIndex, setBannerIndex] = useState(1) // Começa em 1 porque o índice 0 é um clone
   const [reviewIndex, setReviewIndex] = useState(0)
   const [isBannerHovered, setIsBannerHovered] = useState(false)
   const [isTransitioning, setIsTransitioning] = useState(true)
   
-  // Array de imagens do carrossel - adicione suas imagens aqui
-  // Para imagens locais da pasta src/images, importe no topo e use a variável
-  // Para imagens na pasta public, use: '/nome-da-imagem.jpg'
-  // Para URLs online, use: 'https://exemplo.com/imagem.jpg'
-  const bannerImages = [
-    banner1, // Imagem importada
-    '/banner2.jpg', // Imagem da pasta public (se tiver)
-    'https://images.unsplash.com/photo-1557683316-973673baf926?w=1920&q=80' // URL online
-  ]
+  // Carrega banners da API ou usa fallback
+  useEffect(() => {
+    const loadBanners = async () => {
+      try {
+        const apiBanners = await bannersService.getAll() // Apenas banners ativos
+        if (apiBanners && apiBanners.length > 0) {
+          // Ordena por order
+          const sorted = apiBanners.sort((a, b) => a.order - b.order)
+          setBanners(sorted)
+        } else {
+          // Fallback para banners padrão se não houver banners na API
+          setBanners([
+            { id: '1', image_url: banner1, order: 0, active: true, created_at: new Date(), updated_at: new Date() }
+          ])
+        }
+      } catch (error) {
+        console.error('Erro ao carregar banners:', error)
+        // Fallback para banners padrão em caso de erro
+        setBanners([
+          { id: '1', image_url: banner1, order: 0, active: true, created_at: new Date(), updated_at: new Date() }
+        ])
+      }
+    }
+    loadBanners()
+  }, [])
+  
+  // Array de imagens do carrossel - usa banners da API ou fallback
+  const bannerImages = banners.length > 0 
+    ? banners.map(banner => banner.image_url)
+    : [banner1] // Fallback
   
   // Cria array com clones para loop infinito: [última, ...originais, primeira]
-  const infiniteBannerImages = [
+  const infiniteBannerImages = bannerImages.length > 0 ? [
     bannerImages[bannerImages.length - 1], // Clone da última no início
     ...bannerImages, // Imagens originais
     bannerImages[0] // Clone da primeira no final
-  ]
+  ] : [banner1, banner1, banner1] // Fallback mínimo
 
   // Carrega produtos por categoria usando rotas da API
   useEffect(() => {
@@ -189,7 +212,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-palette-light dark:bg-palette-darker transition-colors duration-300">
+    <div className="min-h-screen bg-palette-light dark:bg-gray-900 transition-colors duration-300">
       {/* Banner Hero - Carrossel de Imagens */}
       <section 
         className="relative overflow-hidden mb-4"

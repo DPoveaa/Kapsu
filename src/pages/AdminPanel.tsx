@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
-import { Settings, MessageSquare, Users, Package, ShoppingCart, BarChart3, Truck, Gift, Tag } from 'lucide-react'
+import { Settings, MessageSquare, Users, Package, ShoppingCart, BarChart3, Truck, Gift, Tag, Image } from 'lucide-react'
 
 export default function AdminPanel() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B]">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Painel Administrativo</h1>
@@ -151,6 +151,22 @@ export default function AdminPanel() {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Códigos Promocionais</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-300">Criar cupons e códigos de desconto</p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Card Banners */}
+          <Link
+            to="/admin/banners"
+            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
+          >
+            <div className="flex items-center space-x-4">
+              <div className="bg-teal-100 dark:bg-teal-900/30 p-3 rounded-lg">
+                <Image className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Banners</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Gerenciar banners da página inicial</p>
               </div>
             </div>
           </Link>
