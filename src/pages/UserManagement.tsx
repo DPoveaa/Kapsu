@@ -147,7 +147,7 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B]">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         {/* Header */}
         <div className="mb-4 sm:mb-6 lg:mb-8">

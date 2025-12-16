@@ -24,14 +24,14 @@ export default function PaymentSuccess() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <Loader2 className="animate-spin text-primary-600" size={48} />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="bg-white rounded-lg shadow-lg p-8 text-center">
           <CheckCircle className="mx-auto text-green-600 mb-6" size={64} />

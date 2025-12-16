@@ -5,7 +5,7 @@ export default function PaymentFailure() {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="bg-white rounded-lg shadow-lg p-8 text-center">
           <XCircle className="mx-auto text-red-600 mb-6" size={64} />

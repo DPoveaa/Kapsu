@@ -415,7 +415,7 @@ export default function Cart() {
 
   if (items.length === 0) {
     return (
-      <div className="bg-gray-50 dark:bg-[#320A6B] min-h-[60vh] flex items-center justify-center py-12">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-[60vh] flex items-center justify-center py-12">
         <div className="max-w-md mx-auto text-center px-4">
           <ShoppingCart size={64} className="mx-auto text-gray-300 dark:text-gray-400 mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Seu carrinho está vazio</h2>
@@ -436,7 +436,7 @@ export default function Cart() {
   }
 
   return (
-    <div className="bg-gradient-to-b from-gray-50 dark:from-[#320A6B] to-white dark:to-[#065084] min-h-screen pb-12">
+    <div className="bg-gradient-to-b from-gray-50 dark:from-gray-900 to-white dark:to-gray-900 min-h-screen pb-12">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Carrinho de Compras</h1>
 

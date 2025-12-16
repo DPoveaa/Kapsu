@@ -129,7 +129,7 @@ export default function SiteSettings() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-300">Carregando configurações...</p>
@@ -139,7 +139,7 @@ export default function SiteSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#320A6B] py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
           <div className="mb-6">

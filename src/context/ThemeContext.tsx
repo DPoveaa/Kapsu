@@ -63,15 +63,26 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     const root = document.documentElement
     const body = document.body
     
-    if (themeToApply === 'dark') {
-      root.classList.add('dark')
-      body.classList.add('dark')
-      root.style.colorScheme = 'dark'
-    } else {
-      root.classList.remove('dark')
-      body.classList.remove('dark')
-      root.style.colorScheme = 'light'
-    }
+    // Adiciona classe de transição
+    root.classList.add('theme-transitioning')
+    
+    // Aplica o tema após um pequeno delay para suavizar a transição
+    setTimeout(() => {
+      if (themeToApply === 'dark') {
+        root.classList.add('dark')
+        body.classList.add('dark')
+        root.style.colorScheme = 'dark'
+      } else {
+        root.classList.remove('dark')
+        body.classList.remove('dark')
+        root.style.colorScheme = 'light'
+      }
+      
+      // Remove a classe de transição após a animação
+      setTimeout(() => {
+        root.classList.remove('theme-transitioning')
+      }, 300)
+    }, 10)
   }
 
   // Aplica o tema ao documento sempre que mudar
