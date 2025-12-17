@@ -4,6 +4,7 @@ import { ArrowRight, Sparkles, Star, ChevronLeft, ChevronRight } from 'lucide-re
 import { Product } from '../types'
 import { productsService } from '../services/products.service'
 import { bannersService, Banner } from '../services/banners.service'
+import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import banner1 from '../images/banner_1.webp'
 
 // Reviews de clientes
@@ -228,7 +229,7 @@ export default function Home() {
           {infiniteBannerImages.map((image, index) => (
             <div 
               key={index} 
-              className="flex-shrink-0 w-full h-full relative"
+              className="flex-shrink-0 w-full h-full relative bg-gray-200 dark:bg-gray-800"
               style={{
                 backgroundImage: `url(${image})`,
                 backgroundSize: 'cover',
@@ -358,13 +359,10 @@ export default function Home() {
                   <div className="relative mb-2">
                     <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                       <img
-                        src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'}
+                        src={product.image || PRODUCT_IMAGE_FALLBACK}
                         alt={product.name}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
-                        }}
+                        onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
                       />
                     </div>
                     {product.isCustomizable && (
@@ -407,13 +405,10 @@ export default function Home() {
                   <div className="relative mb-2">
                     <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                       <img
-                        src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'}
+                        src={product.image || PRODUCT_IMAGE_FALLBACK}
                         alt={product.name}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
-                        }}
+                        onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
                       />
                     </div>
                     {product.isCustomizable && (
@@ -456,13 +451,10 @@ export default function Home() {
                   <div className="relative mb-2">
                     <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                       <img
-                        src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'}
+                        src={product.image || PRODUCT_IMAGE_FALLBACK}
                         alt={product.name}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
-                        }}
+                        onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
                       />
                     </div>
                     {product.isCustomizable && (
@@ -505,13 +497,10 @@ export default function Home() {
                   <div className="relative mb-2">
                     <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                       <img
-                        src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'}
+                        src={product.image || PRODUCT_IMAGE_FALLBACK}
                         alt={product.name}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
-                        }}
+                        onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
                       />
                     </div>
                     {product.isCustomizable && (

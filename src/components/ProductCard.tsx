@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { ShoppingCart, Sparkles } from 'lucide-react'
 import { Product } from '../types'
 import { useCart } from '../context/CartContext'
+import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 
 interface ProductCardProps {
   product: Product
@@ -16,20 +17,10 @@ export default function ProductCard({ product }: ProductCardProps) {
     addProduct(product, 1)
   }
 
-  const defaultImage = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
-  
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement
-    // Evita loop infinito se o placeholder também falhar
-    if (target.src !== defaultImage) {
-      target.src = defaultImage
-    }
-  }
-
   // Garante que sempre temos uma URL de imagem válida
   const imageUrl = product.image && product.image.trim() !== '' 
     ? product.image 
-    : defaultImage
+    : PRODUCT_IMAGE_FALLBACK
 
   return (
     <Link to={`/produtos/${product.id}`} className="card p-6 block">
@@ -39,7 +30,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             src={imageUrl}
             alt={product.name}
             className="w-full h-full object-cover"
-            onError={handleImageError}
+            onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
           />
         </div>
         {product.isCustomizable && (

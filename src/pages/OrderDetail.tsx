@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader2, Package, User, MapPin, CreditCard, Calendar, FileText } from 'lucide-react'
 import { adminService } from '../services/admin.service'
+import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 
 interface OrderItem {
   id: string
@@ -44,9 +45,8 @@ export default function OrderDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement
-    target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
+  const handleProductImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    handleImageError(e, PRODUCT_IMAGE_FALLBACK)
   }
 
   useEffect(() => {
@@ -199,7 +199,7 @@ export default function OrderDetail() {
                         src={item.product.image}
                         alt={item.product.name}
                         className="w-20 h-20 object-cover rounded-lg border border-gray-200"
-                        onError={handleImageError}
+                        onError={handleProductImageError}
                       />
                     )}
                     <div className="flex-1">

@@ -9,6 +9,7 @@ import { promotionsService, Promotion } from '../services/promotions.service'
 import { promoCodesService, MultiplePromoCodesValidation } from '../services/promo-codes.service'
 import { shippingService } from '../services/shipping.service'
 import { Product } from '../types'
+import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 
 export default function Cart() {
   const navigate = useNavigate()
@@ -33,9 +34,8 @@ export default function Cart() {
   const [currentCouponIndex, setCurrentCouponIndex] = useState(0)
   const [freeShippingThreshold, setFreeShippingThreshold] = useState<number>(0)
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement
-    target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
+  const handleProductImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    handleImageError(e, PRODUCT_IMAGE_FALLBACK)
   }
   
   // Tipo de compra global do carrinho (usa estado local se disponível, senão usa o primeiro item)
@@ -627,7 +627,7 @@ export default function Cart() {
                             src={item.product.image}
                             alt={item.product.name}
                             className="w-24 h-24 object-cover rounded-lg border-2 border-gray-100 flex-shrink-0"
-                            onError={handleImageError}
+                            onError={handleProductImageError}
                           />
                         ) : (
                           <div className="w-24 h-24 bg-gradient-to-br from-primary-100 via-primary-50 to-accent-100 rounded-lg border-2 border-gray-100 flex items-center justify-center flex-shrink-0">

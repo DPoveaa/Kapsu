@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Edit, Trash2, Loader2, Search, Package, FlaskConical } from 'lucide-react'
 import { productsService } from '../services/products.service'
 import { Product } from '../types'
+import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 
 export default function ManageProducts() {
   const navigate = useNavigate()
@@ -13,9 +14,8 @@ export default function ManageProducts() {
   const [searchTerm, setSearchTerm] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement
-    target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
+  const handleProductImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    handleImageError(e, PRODUCT_IMAGE_FALLBACK)
   }
 
   // Carrega produtos
@@ -195,7 +195,7 @@ export default function ManageProducts() {
                               src={product.image}
                               alt={product.name}
                               className="h-10 w-10 rounded-lg object-cover mr-3"
-                              onError={handleImageError}
+                              onError={handleProductImageError}
                             />
                             <div>
                               <div className="text-sm font-medium text-gray-900 dark:text-white">{product.name}</div>

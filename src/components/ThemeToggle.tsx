@@ -42,7 +42,7 @@ const ThemeToggle = () => {
             }
           `}
         >
-          <Moon size={20} />
+        <Moon size={20} />
         </div>
         <div
           className={`
@@ -54,7 +54,7 @@ const ThemeToggle = () => {
             }
           `}
         >
-          <Sun size={20} />
+        <Sun size={20} />
         </div>
       </div>
     </button>

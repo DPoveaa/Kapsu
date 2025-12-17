@@ -68,15 +68,15 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     
     // Aplica o tema após um pequeno delay para suavizar a transição
     setTimeout(() => {
-      if (themeToApply === 'dark') {
-        root.classList.add('dark')
-        body.classList.add('dark')
-        root.style.colorScheme = 'dark'
-      } else {
-        root.classList.remove('dark')
-        body.classList.remove('dark')
-        root.style.colorScheme = 'light'
-      }
+    if (themeToApply === 'dark') {
+      root.classList.add('dark')
+      body.classList.add('dark')
+      root.style.colorScheme = 'dark'
+    } else {
+      root.classList.remove('dark')
+      body.classList.remove('dark')
+      root.style.colorScheme = 'light'
+    }
       
       // Remove a classe de transição após a animação
       setTimeout(() => {

@@ -1,4 +1,5 @@
 import { env } from '../config/env'
+import { BANNER_IMAGE_FALLBACK } from '../utils/imageFallback'
 
 const API_URL = env.apiUrl
 
@@ -57,11 +58,8 @@ class BannersService {
    * Converte URL de imagem relativa para URL completa
    */
   private getImageUrl(imageUrl: string | null | undefined): string {
-    // Imagem padrão placeholder se não houver
-    const defaultImage = 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1920&q=80'
-    
     if (!imageUrl || imageUrl.trim() === '') {
-      return defaultImage
+      return BANNER_IMAGE_FALLBACK
     }
 
     const trimmedImage = imageUrl.trim()

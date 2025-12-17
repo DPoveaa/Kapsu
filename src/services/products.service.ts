@@ -1,5 +1,6 @@
 import { env } from '../config/env'
 import { Product } from '../types'
+import { PRODUCT_IMAGE_FALLBACK } from '../utils/imageFallback'
 
 const API_URL = env.apiUrl
 
@@ -47,11 +48,8 @@ class ProductsService {
    * Converte URL de imagem relativa para URL completa
    */
   private getImageUrl(image: string | null): string {
-    // Imagem padrão placeholder
-    const defaultImage = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
-    
     if (!image || image.trim() === '') {
-      return defaultImage
+      return PRODUCT_IMAGE_FALLBACK
     }
 
     const trimmedImage = image.trim()
@@ -66,7 +64,7 @@ class ProductsService {
     
     // Se não é URL, não é caminho e não tem extensão de imagem, provavelmente é texto inválido
     if (!isUrl && !isPath && !hasImageExtension && trimmedImage.length > 50) {
-      return defaultImage
+      return PRODUCT_IMAGE_FALLBACK
     }
 
     // Se já é uma URL completa (http:// ou https://), retorna como está
