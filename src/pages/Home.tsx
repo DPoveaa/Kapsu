@@ -7,6 +7,73 @@ import { bannersService, Banner } from '../services/banners.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import banner1 from '../images/banner_1.webp'
 
+// Componente para slide de banner com tratamento de erro
+function BannerSlide({ image, index }: { image: string; index: number }) {
+  const [imageError, setImageError] = useState(false)
+
+  useEffect(() => {
+    // Reset quando a imagem muda
+    setImageError(false)
+  }, [image])
+
+  return (
+    <div 
+      className="flex-shrink-0 w-full h-full relative bg-gray-200 dark:bg-gray-800"
+      style={{
+        backgroundImage: imageError ? 'none' : `url(${image})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        minHeight: '400px'
+      }}
+    >
+      {/* Imagem oculta para detectar erros de carregamento */}
+      <img
+        src={image}
+        alt=""
+        className="hidden"
+        onLoad={() => {
+          setImageError(false)
+        }}
+        onError={() => {
+          console.error('❌ Erro ao carregar banner:', image)
+          setImageError(true)
+        }}
+      />
+      
+      {/* Fallback quando a imagem não carrega */}
+      {imageError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-200 dark:bg-gray-800">
+          <div className="text-center p-8">
+            <svg className="w-24 h-24 mx-auto text-gray-400 dark:text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <p className="text-gray-500 dark:text-gray-400">Imagem não disponível</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 break-all px-4">
+              URL: {image.length > 80 ? `${image.substring(0, 80)}...` : image}
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {/* Gradiente de baixo para cima, ocupando 1/5 da altura, seguindo a cor do fundo */}
+      <div 
+        className="absolute inset-0 z-10"
+        style={{
+          background: 'linear-gradient(to top, #DDF4E7 0%, rgba(221, 244, 231, 0.5) 10%, transparent 20%, transparent 100%)'
+        }}
+      ></div>
+      {/* Gradiente para modo escuro - sobrepõe o gradiente claro quando dark mode está ativo */}
+      <div 
+        className="absolute inset-0 z-10 opacity-0 dark:opacity-100 transition-opacity duration-300"
+        style={{
+          background: 'linear-gradient(to top, #124170 0%, rgba(18, 65, 112, 0.5) 10%, transparent 20%, transparent 100%)'
+        }}
+      ></div>
+    </div>
+  )
+}
+
 // Reviews de clientes
 const reviews = [
   {
@@ -227,32 +294,7 @@ export default function Home() {
           style={{ transform: `translateX(-${bannerIndex * 100}%)` }}
         >
           {infiniteBannerImages.map((image, index) => (
-            <div 
-              key={index} 
-              className="flex-shrink-0 w-full h-full relative bg-gray-200 dark:bg-gray-800"
-              style={{
-                backgroundImage: `url(${image})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                minHeight: '400px'
-              }}
-            >
-              {/* Gradiente de baixo para cima, ocupando 1/5 da altura, seguindo a cor do fundo */}
-              <div 
-                className="absolute inset-0 z-10"
-                style={{
-                  background: 'linear-gradient(to top, #DDF4E7 0%, rgba(221, 244, 231, 0.5) 10%, transparent 20%, transparent 100%)'
-                }}
-              ></div>
-              {/* Gradiente para modo escuro - sobrepõe o gradiente claro quando dark mode está ativo */}
-              <div 
-                className="absolute inset-0 z-10 opacity-0 dark:opacity-100 transition-opacity duration-300"
-                style={{
-                  background: 'linear-gradient(to top, #124170 0%, rgba(18, 65, 112, 0.5) 10%, transparent 20%, transparent 100%)'
-                }}
-              ></div>
-            </div>
+            <BannerSlide key={index} image={image} index={index} />
           ))}
         </div>
         

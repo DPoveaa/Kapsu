@@ -1,5 +1,6 @@
 import { env } from '../config/env'
 import { BANNER_IMAGE_FALLBACK } from '../utils/imageFallback'
+import { getImageUrl, normalizeImagePath } from '../utils/imageUrl'
 
 const API_URL = env.apiUrl
 
@@ -56,28 +57,16 @@ class BannersService {
 
   /**
    * Converte URL de imagem relativa para URL completa
+   * Funciona tanto localmente quanto no servidor
+   * Usa função utilitária compartilhada para garantir consistência
    */
-  private getImageUrl(imageUrl: string | null | undefined): string {
+  private convertImageUrl(imageUrl: string | null | undefined): string {
     if (!imageUrl || imageUrl.trim() === '') {
       return BANNER_IMAGE_FALLBACK
     }
 
-    const trimmedImage = imageUrl.trim()
-
-    // Se já é uma URL completa (http:// ou https://), retorna como está
-    if (trimmedImage.startsWith('http://') || trimmedImage.startsWith('https://')) {
-      return trimmedImage
-    }
-
-    // Se é um caminho relativo (começa com /), converte para URL completa
-    if (trimmedImage.startsWith('/')) {
-      const baseUrl = API_URL.replace('/api', '')
-      return `${baseUrl}${trimmedImage}`
-    }
-
-    // Se não começa com /, assume que é um caminho relativo e adiciona /uploads/banners/
-    const baseUrl = API_URL.replace('/api', '')
-    return `${baseUrl}/uploads/banners/${trimmedImage}`
+    const url = getImageUrl(imageUrl)
+    return url || BANNER_IMAGE_FALLBACK
   }
 
   /**
@@ -103,7 +92,7 @@ class BannersService {
     // Converte URLs relativas para URLs completas
     return banners.map(banner => ({
       ...banner,
-      image_url: this.getImageUrl(banner.image_url)
+      image_url: this.convertImageUrl(banner.image_url)
     }))
   }
 
@@ -123,7 +112,7 @@ class BannersService {
     const data: BannerResponse = await response.json()
     return {
       ...data.data,
-      image_url: this.getImageUrl(data.data.image_url)
+      image_url: this.convertImageUrl(data.data.image_url)
     }
   }
 
@@ -182,6 +171,7 @@ class BannersService {
 
   /**
    * Faz upload de imagem do banner (apenas admin)
+   * Retorna o caminho relativo para ser salvo no banco
    */
   async uploadImage(file: File): Promise<string> {
     const formData = new FormData()
@@ -202,8 +192,9 @@ class BannersService {
     }
 
     const data = await response.json()
-    // Retorna a URL completa da imagem
-    return data.data.url || data.data.path
+    // O backend sempre retorna o caminho relativo em data.path
+    // Normaliza para garantir que está no formato correto
+    return normalizeImagePath(data.data.path || data.data.url)
   }
 
   /**
