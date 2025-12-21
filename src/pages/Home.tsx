@@ -8,7 +8,7 @@ import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback
 import banner1 from '../images/banner_1.webp'
 
 // Componente para slide de banner com tratamento de erro
-function BannerSlide({ image, index }: { image: string; index: number }) {
+function BannerSlide({ image }: { image: string; index: number }) {
   const [imageError, setImageError] = useState(false)
 
   useEffect(() => {
