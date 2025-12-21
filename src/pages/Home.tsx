@@ -7,20 +7,37 @@ import { bannersService, Banner } from '../services/banners.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import banner1 from '../images/banner_1.webp'
 
-// Componente para slide de banner com tratamento de erro
+// Componente para slide de banner com tratamento de erro e fallback via API
 function BannerSlide({ image }: { image: string; index: number }) {
   const [imageError, setImageError] = useState(false)
+  const [imageUrl, setImageUrl] = useState(image)
+  const [triedApiUrl, setTriedApiUrl] = useState(false)
 
   useEffect(() => {
     // Reset quando a imagem muda
     setImageError(false)
+    setImageUrl(image)
+    setTriedApiUrl(false)
   }, [image])
+
+  // Tenta URL via API se a direta falhar
+  const tryApiUrl = () => {
+    if (triedApiUrl) return // Já tentou, não tenta de novo
+    
+    // Converte URL direta para URL via API
+    // https://kapsu.com.br/uploads/banners/image.jpg -> https://kapsu.com.br/api/uploads/banners/image.jpg
+    const apiUrl = image.replace('/uploads/', '/api/uploads/')
+    console.log('🔄 Tentando URL via API:', apiUrl)
+    setImageUrl(apiUrl)
+    setTriedApiUrl(true)
+    setImageError(false)
+  }
 
   return (
     <div 
       className="flex-shrink-0 w-full h-full relative bg-gray-200 dark:bg-gray-800"
       style={{
-        backgroundImage: imageError ? 'none' : `url(${image})`,
+        backgroundImage: imageError ? 'none' : `url(${imageUrl})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -29,15 +46,21 @@ function BannerSlide({ image }: { image: string; index: number }) {
     >
       {/* Imagem oculta para detectar erros de carregamento */}
       <img
-        src={image}
+        src={imageUrl}
         alt=""
         className="hidden"
         onLoad={() => {
           setImageError(false)
         }}
         onError={() => {
-          console.error('❌ Erro ao carregar banner:', image)
-          setImageError(true)
+          console.error('❌ Erro ao carregar banner:', imageUrl)
+          if (!triedApiUrl) {
+            // Primeira tentativa falhou, tenta via API
+            tryApiUrl()
+          } else {
+            // Ambas as tentativas falharam
+            setImageError(true)
+          }
         }}
       />
       

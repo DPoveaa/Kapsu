@@ -84,20 +84,29 @@ export function getImageUrl(imagePath: string | null | undefined): string {
   }
 
   // Se é um caminho relativo (começa com /), converte para URL completa
-  // Exemplo: /uploads/banners/image.jpg -> https://kapsu.com.br/uploads/banners/image.jpg
+  // Tenta primeiro via rota direta, depois via API (para funcionar com proxy reverso)
   if (trimmedPath.startsWith('/')) {
-    const fullUrl = `${baseUrl}${trimmedPath}`
-    // Log sempre em produção para debug (ajuda a identificar problemas)
+    // Primeiro tenta a rota direta: https://kapsu.com.br/uploads/banners/image.jpg
+    const directUrl = `${baseUrl}${trimmedPath}`
+    
+    // Também prepara uma URL via API: https://kapsu.com.br/api/uploads/banners/image.jpg
+    // Isso funciona mesmo se o proxy reverso não passar /uploads para o Express
+    const apiUrl = `${env.apiUrl.replace('/api', '')}/api${trimmedPath}`
+    
+    // Log sempre em produção para debug
     if (env.isProd) {
       console.log('🔗 URL da imagem gerada:', {
         original: trimmedPath,
         baseUrl: baseUrl,
-        fullUrl: fullUrl,
-        envApiUrl: env.apiUrl,
-        expected: 'https://kapsu.com.br' + trimmedPath
+        directUrl: directUrl,
+        apiUrl: apiUrl,
+        'Tentando primeiro': directUrl
       })
     }
-    return fullUrl
+    
+    // Retorna a URL direta primeiro (mais eficiente se funcionar)
+    // Se não funcionar, o navegador vai tentar a API como fallback
+    return directUrl
   }
 
   // Se não começa com /, assume que é apenas o nome do arquivo

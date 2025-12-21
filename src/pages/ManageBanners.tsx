@@ -5,6 +5,85 @@ import { bannersService, Banner, CreateBannerData } from '../services/banners.se
 import BannerImageUpload from '../components/BannerImageUpload'
 import { normalizeImagePath } from '../utils/imageUrl'
 
+// Componente para preview de imagem com fallback automático via API
+function BannerImagePreview({ banner }: { banner: Banner }) {
+  const [imageUrl, setImageUrl] = useState(banner.image_url)
+  const [triedApiUrl, setTriedApiUrl] = useState(false)
+  const [hasError, setHasError] = useState(false)
+
+  useEffect(() => {
+    setImageUrl(banner.image_url)
+    setTriedApiUrl(false)
+    setHasError(false)
+  }, [banner.image_url])
+
+  const handleError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const target = e.target as HTMLImageElement
+    
+    if (!triedApiUrl) {
+      // Primeira tentativa falhou, tenta via API
+      const apiUrl = banner.image_url.replace('/uploads/', '/api/uploads/')
+      console.log('🔄 Tentando URL via API:', apiUrl)
+      setImageUrl(apiUrl)
+      setTriedApiUrl(true)
+      setHasError(false)
+    } else {
+      // Ambas as tentativas falharam
+      console.error('❌ Erro ao carregar imagem do banner:', {
+        bannerId: banner.id,
+        attemptedUrl: target.src,
+        originalPath: banner.image_url
+      })
+      setHasError(true)
+      target.onerror = null
+      target.style.display = 'none'
+      
+      const parent = target.parentElement
+      if (parent) {
+        parent.innerHTML = `
+          <div class="w-32 h-20 bg-gray-200 dark:bg-gray-700 flex items-center justify-center rounded-lg border border-gray-200 dark:border-[#0F828C]">
+            <div class="text-center p-2">
+              <svg class="w-8 h-8 mx-auto text-gray-400 dark:text-gray-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+              <p class="text-xs text-gray-500 dark:text-gray-400">Erro ao carregar</p>
+            </div>
+          </div>
+        `
+      }
+    }
+  }
+
+  if (hasError) {
+    return (
+      <div className="w-32 h-20 bg-gray-200 dark:bg-gray-700 flex items-center justify-center rounded-lg border border-gray-200 dark:border-[#0F828C]">
+        <div className="text-center p-2">
+          <svg className="w-8 h-8 mx-auto text-gray-400 dark:text-gray-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Erro ao carregar</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex-shrink-0">
+      <img
+        src={imageUrl}
+        alt={banner.title || 'Banner'}
+        className="w-32 h-20 object-cover rounded-lg border border-gray-200 dark:border-[#0F828C]"
+        onError={handleError}
+        onLoad={() => {
+          if (triedApiUrl) {
+            console.log('✅ Imagem carregada via API:', imageUrl)
+          }
+        }}
+      />
+    </div>
+  )
+}
+
 export default function ManageBanners() {
   const navigate = useNavigate()
   const [banners, setBanners] = useState<Banner[]>([])
@@ -369,53 +448,7 @@ export default function ManageBanners() {
                     </div>
 
                     {/* Preview da imagem */}
-                    <div className="flex-shrink-0">
-                      <img
-                        src={banner.image_url}
-                        alt={banner.title || 'Banner'}
-                        className="w-32 h-20 object-cover rounded-lg border border-gray-200 dark:border-[#0F828C]"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          const imageUrl = target.src
-                          const originalPath = banner.image_url
-                          
-                          console.error('❌ Erro ao carregar imagem do banner:', {
-                            bannerId: banner.id,
-                            attemptedUrl: imageUrl,
-                            originalPath: originalPath,
-                            envApiUrl: import.meta.env.VITE_API_URL,
-                            windowLocation: window.location.origin
-                          })
-                          
-                          // Previne loop infinito
-                          target.onerror = null
-                          target.style.display = 'none'
-                          
-                          const parent = target.parentElement
-                          if (parent) {
-                            parent.innerHTML = `
-                              <div class="w-32 h-20 bg-gray-200 dark:bg-gray-700 flex items-center justify-center rounded-lg border border-gray-200 dark:border-[#0F828C]">
-                                <div class="text-center p-2">
-                                  <svg class="w-8 h-8 mx-auto text-gray-400 dark:text-gray-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                  </svg>
-                                  <p class="text-xs text-gray-500 dark:text-gray-400">Erro ao carregar</p>
-                                  <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 break-all px-1" title="${imageUrl}">
-                                    ${imageUrl.length > 30 ? imageUrl.substring(0, 30) + '...' : imageUrl}
-                                  </p>
-                                </div>
-                              </div>
-                            `
-                          }
-                        }}
-                        onLoad={() => {
-                          console.log('✅ Imagem do banner carregada com sucesso:', {
-                            bannerId: banner.id,
-                            imageUrl: banner.image_url
-                          })
-                        }}
-                      />
-                    </div>
+                    <BannerImagePreview banner={banner} />
 
                     {/* Informações */}
                     <div className="flex-1 min-w-0">
