@@ -3,9 +3,26 @@ import { env } from '../config/env'
 /**
  * Normaliza a URL base removendo /api se existir
  * Isso garante que funcione tanto localmente quanto no servidor
+ * Tenta múltiplas estratégias para encontrar a URL correta
  */
 function getBaseUrl(): string {
   let baseUrl = env.apiUrl
+  
+  // Estratégia 1: Se estamos no browser, tenta usar a origem atual como fallback
+  if (typeof window !== 'undefined') {
+    const currentOrigin = window.location.origin
+    
+    // Se a apiUrl não está configurada ou é localhost, usa a origem atual
+    if (!baseUrl || baseUrl.includes('localhost')) {
+      // Se o frontend e backend estão no mesmo domínio, usa a origem atual
+      return currentOrigin
+    }
+    
+    // Se a apiUrl está configurada mas aponta para localhost em produção, usa origem atual
+    if (env.isProd && baseUrl.includes('localhost')) {
+      return currentOrigin
+    }
+  }
   
   // Remove /api do final se existir
   if (baseUrl.endsWith('/api')) {
@@ -43,12 +60,29 @@ export function getImageUrl(imagePath: string | null | undefined): string {
 
   // Se é um caminho relativo (começa com /), converte para URL completa
   if (trimmedPath.startsWith('/')) {
-    return `${baseUrl}${trimmedPath}`
+    const fullUrl = `${baseUrl}${trimmedPath}`
+    // Log apenas em desenvolvimento para debug
+    if (import.meta.env.DEV) {
+      console.log('🔗 Construindo URL da imagem:', {
+        original: trimmedPath,
+        baseUrl: baseUrl,
+        fullUrl: fullUrl
+      })
+    }
+    return fullUrl
   }
 
   // Se não começa com /, assume que é apenas o nome do arquivo
   // e adiciona /uploads/banners/ (padrão para banners)
-  return `${baseUrl}/uploads/banners/${trimmedPath}`
+  const fullUrl = `${baseUrl}/uploads/banners/${trimmedPath}`
+  if (import.meta.env.DEV) {
+    console.log('🔗 Construindo URL da imagem (sem /):', {
+      original: trimmedPath,
+      baseUrl: baseUrl,
+      fullUrl: fullUrl
+    })
+  }
+  return fullUrl
 }
 
 /**

@@ -377,10 +377,14 @@ export default function ManageBanners() {
                         onError={(e) => {
                           const target = e.target as HTMLImageElement
                           const imageUrl = target.src
+                          const originalPath = banner.image_url
+                          
                           console.error('❌ Erro ao carregar imagem do banner:', {
                             bannerId: banner.id,
-                            imageUrl: imageUrl,
-                            originalPath: banner.image_url
+                            attemptedUrl: imageUrl,
+                            originalPath: originalPath,
+                            envApiUrl: import.meta.env.VITE_API_URL,
+                            windowLocation: window.location.origin
                           })
                           
                           // Previne loop infinito
@@ -396,6 +400,9 @@ export default function ManageBanners() {
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                                   </svg>
                                   <p class="text-xs text-gray-500 dark:text-gray-400">Erro ao carregar</p>
+                                  <p class="text-xs text-gray-400 dark:text-gray-500 mt-1 break-all px-1" title="${imageUrl}">
+                                    ${imageUrl.length > 30 ? imageUrl.substring(0, 30) + '...' : imageUrl}
+                                  </p>
                                 </div>
                               </div>
                             `
