@@ -3,28 +3,26 @@ import { env } from '../config/env'
 /**
  * Normaliza a URL base removendo /api se existir
  * Isso garante que funcione tanto localmente quanto no servidor
- * Tenta múltiplas estratégias para encontrar a URL correta
+ * SEMPRE usa a URL do backend configurada em VITE_API_URL
+ * 
+ * Exemplo: https://kapsu.com.br/api -> https://kapsu.com.br
  */
 function getBaseUrl(): string {
   let baseUrl = env.apiUrl
   
-  // Estratégia 1: Se estamos no browser, tenta usar a origem atual como fallback
-  if (typeof window !== 'undefined') {
-    const currentOrigin = window.location.origin
-    
-    // Se a apiUrl não está configurada ou é localhost, usa a origem atual
-    if (!baseUrl || baseUrl.includes('localhost')) {
-      // Se o frontend e backend estão no mesmo domínio, usa a origem atual
-      return currentOrigin
+  // Se não há apiUrl configurada, tenta usar window.location apenas em desenvolvimento
+  if (!baseUrl || baseUrl === 'http://localhost:3000/api') {
+    if (typeof window !== 'undefined' && env.isDev) {
+      // Apenas em desenvolvimento, usa a origem atual se não configurado
+      return window.location.origin
     }
-    
-    // Se a apiUrl está configurada mas aponta para localhost em produção, usa origem atual
-    if (env.isProd && baseUrl.includes('localhost')) {
-      return currentOrigin
-    }
+    // Em produção, se não está configurado, retorna vazio (vai dar erro, mas é melhor que usar URL errada)
+    console.error('⚠️ VITE_API_URL não está configurada! Configure no .env')
+    return ''
   }
   
   // Remove /api do final se existir
+  // Exemplo: https://kapsu.com.br/api -> https://kapsu.com.br
   if (baseUrl.endsWith('/api')) {
     baseUrl = baseUrl.slice(0, -4) // Remove '/api'
   } else if (baseUrl.endsWith('/api/')) {
@@ -33,6 +31,16 @@ function getBaseUrl(): string {
   
   // Remove barra final se existir
   baseUrl = baseUrl.replace(/\/$/, '')
+  
+  // Log em produção para debug - mostra a transformação
+  if (env.isProd && typeof window !== 'undefined') {
+    console.log('🔗 Configuração de URL:', {
+      'VITE_API_URL (original)': env.apiUrl,
+      'Base URL (sem /api)': baseUrl,
+      'Origem atual (frontend)': window.location.origin,
+      'URLs de imagem serão': `${baseUrl}/uploads/banners/...`
+    })
+  }
   
   return baseUrl
 }
@@ -57,16 +65,36 @@ export function getImageUrl(imagePath: string | null | undefined): string {
   }
 
   const baseUrl = getBaseUrl()
+  
+  // Se baseUrl está vazio, algo está errado
+  if (!baseUrl) {
+    console.error('❌ Erro: baseUrl está vazio! VITE_API_URL não está configurada corretamente.')
+    console.error('Configuração atual:', {
+      envApiUrl: env.apiUrl,
+      isProd: env.isProd,
+      isDev: env.isDev
+    })
+    // Em produção, tenta usar a origem atual como último recurso
+    if (typeof window !== 'undefined') {
+      const fallbackUrl = `${window.location.origin}${trimmedPath}`
+      console.warn('⚠️ Usando fallback:', fallbackUrl)
+      return fallbackUrl
+    }
+    return ''
+  }
 
   // Se é um caminho relativo (começa com /), converte para URL completa
+  // Exemplo: /uploads/banners/image.jpg -> https://kapsu.com.br/uploads/banners/image.jpg
   if (trimmedPath.startsWith('/')) {
     const fullUrl = `${baseUrl}${trimmedPath}`
-    // Log apenas em desenvolvimento para debug
-    if (import.meta.env.DEV) {
-      console.log('🔗 Construindo URL da imagem:', {
+    // Log sempre em produção para debug (ajuda a identificar problemas)
+    if (env.isProd) {
+      console.log('🔗 URL da imagem gerada:', {
         original: trimmedPath,
         baseUrl: baseUrl,
-        fullUrl: fullUrl
+        fullUrl: fullUrl,
+        envApiUrl: env.apiUrl,
+        expected: 'https://kapsu.com.br' + trimmedPath
       })
     }
     return fullUrl
@@ -74,12 +102,14 @@ export function getImageUrl(imagePath: string | null | undefined): string {
 
   // Se não começa com /, assume que é apenas o nome do arquivo
   // e adiciona /uploads/banners/ (padrão para banners)
+  // Exemplo: image.jpg -> https://kapsu.com.br/uploads/banners/image.jpg
   const fullUrl = `${baseUrl}/uploads/banners/${trimmedPath}`
-  if (import.meta.env.DEV) {
-    console.log('🔗 Construindo URL da imagem (sem /):', {
+  if (env.isProd) {
+    console.log('🔗 URL da imagem gerada (sem /):', {
       original: trimmedPath,
       baseUrl: baseUrl,
-      fullUrl: fullUrl
+      fullUrl: fullUrl,
+      envApiUrl: env.apiUrl
     })
   }
   return fullUrl
