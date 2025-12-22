@@ -884,7 +884,7 @@ export default function WhatsAppConnection() {
                 <img 
                   src={mediaUrl} 
                   alt={msg.isFromMe ? "Imagem enviada por você" : "Imagem recebida"} 
-                  className="w-full max-w-[280px] sm:max-w-[320px] h-auto rounded-lg hover:opacity-90 transition-opacity block pointer-events-none"
+                  className="w-full max-w-[240px] sm:max-w-[280px] lg:max-w-[320px] h-auto rounded-lg hover:opacity-90 transition-opacity block pointer-events-none"
                   onError={(e) => {
                     // Fallback se a imagem não carregar
                     const target = e.target as HTMLImageElement
@@ -993,7 +993,7 @@ export default function WhatsAppConnection() {
             <audio 
               key={`audio-${normalizedMessageId}`}
               controls 
-              className="w-full max-w-md min-w-[280px]"
+              className="w-full max-w-md min-w-[240px] sm:min-w-[280px]"
               preload="metadata"
               crossOrigin="anonymous"
               src={mediaUrlWithCache}
@@ -2148,76 +2148,76 @@ export default function WhatsAppConnection() {
   return (
     <>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4 lg:py-6 xl:py-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-4 sm:mb-6 lg:mb-8">
           <button
             onClick={() => navigate('/admin')}
-            className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-4"
+            className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-3 sm:mb-4 text-sm sm:text-base"
           >
-            <ArrowLeft className="w-5 h-5 mr-2" />
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
             Voltar ao painel
           </button>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Conexão WhatsApp</h1>
-          <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-300">Conecte seu WhatsApp para enviar e receber mensagens</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Conexão WhatsApp</h1>
+          <p className="mt-1 sm:mt-2 text-xs sm:text-sm lg:text-base text-gray-600 dark:text-gray-300">Conecte seu WhatsApp para enviar e receber mensagens</p>
         </div>
 
         {/* Status Card */}
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-6 mb-6 border border-gray-200 dark:border-[#0F828C]">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Status da Conexão</h2>
+        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 border border-gray-200 dark:border-[#0F828C]">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 gap-2 sm:gap-3">
+            <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white">Status da Conexão</h2>
             <button
               onClick={checkStatus}
               disabled={loading || initializing}
-              className="flex items-center justify-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 text-sm sm:text-base"
+              className="flex items-center justify-center text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50 text-xs sm:text-sm lg:text-base"
             >
-              <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2 ${loading ? 'animate-spin' : ''}`} />
               Atualizar
             </button>
           </div>
 
           {loading && !status ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
-              <p className="ml-3 text-gray-600 dark:text-gray-300 text-sm sm:text-base">Carregando...</p>
+            <div className="flex items-center justify-center py-6 sm:py-8">
+              <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-blue-600 dark:text-blue-400" />
+              <p className="ml-2 sm:ml-3 text-gray-600 dark:text-gray-300 text-xs sm:text-sm lg:text-base">Carregando...</p>
             </div>
           ) : initializing ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
-              <p className="ml-3 text-gray-600 dark:text-gray-300 text-sm sm:text-base">Inicializando WhatsApp... Aguarde alguns segundos</p>
+            <div className="flex items-center justify-center py-6 sm:py-8">
+              <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-blue-600 dark:text-blue-400" />
+              <p className="ml-2 sm:ml-3 text-gray-600 dark:text-gray-300 text-xs sm:text-sm lg:text-base">Inicializando WhatsApp... Aguarde alguns segundos</p>
             </div>
           ) : (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center space-x-3 sm:space-x-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+              <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
                 {status?.status === 'CONNECTED' || status?.connected ? (
                   <>
-                    <CheckCircle2 className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 dark:text-green-400 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-base sm:text-lg font-medium text-green-600 dark:text-green-400">Conectado</p>
+                    <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-green-600 dark:text-green-400 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm sm:text-base lg:text-lg font-medium text-green-600 dark:text-green-400">Conectado</p>
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 break-words">{status.message}</p>
                     </div>
                   </>
                 ) : status?.status === 'CONNECTING' ? (
                   <>
-                    <Loader2 className="w-6 h-6 sm:w-8 sm:h-8 animate-spin text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-base sm:text-lg font-medium text-blue-600 dark:text-blue-400">Conectando...</p>
+                    <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 animate-spin text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm sm:text-base lg:text-lg font-medium text-blue-600 dark:text-blue-400">Conectando...</p>
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 break-words">{status.message}</p>
                     </div>
                   </>
                 ) : status?.status === 'QRCODE_GENERATED' ? (
                   <>
-                    <QrCode className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-base sm:text-lg font-medium text-yellow-600 dark:text-yellow-400">QR Code Disponível</p>
+                    <QrCode className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-yellow-600 dark:text-yellow-400 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm sm:text-base lg:text-lg font-medium text-yellow-600 dark:text-yellow-400">QR Code Disponível</p>
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 break-words">{status.message}</p>
                     </div>
                   </>
                 ) : (
                   <>
-                    <XCircle className="w-6 h-6 sm:w-8 sm:h-8 text-red-600 dark:text-red-400 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-base sm:text-lg font-medium text-red-600 dark:text-red-400">Desconectado</p>
+                    <XCircle className="w-5 h-5 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-red-600 dark:text-red-400 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm sm:text-base lg:text-lg font-medium text-red-600 dark:text-red-400">Desconectado</p>
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 break-words">{status?.message || 'Clique no botão abaixo para conectar seu WhatsApp'}</p>
                     </div>
                   </>
@@ -2226,9 +2226,9 @@ export default function WhatsAppConnection() {
               {status?.status === 'CONNECTED' || status?.connected ? (
                 <button
                   onClick={() => setShowDisconnectModal(true)}
-                  className="flex items-center justify-center px-3 sm:px-4 py-2 text-sm sm:text-base text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors w-full sm:w-auto"
+                  className="flex items-center justify-center px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors w-full sm:w-auto mt-2 sm:mt-0"
                 >
-                  <LogOut className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                  <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2" />
                   Desconectar
                 </button>
               ) : (
@@ -2237,16 +2237,16 @@ export default function WhatsAppConnection() {
                   <button
                     onClick={initializeWhatsApp}
                     disabled={initializing}
-                    className="flex items-center justify-center px-3 sm:px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto"
+                    className="flex items-center justify-center px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto mt-2 sm:mt-0"
                   >
                     {initializing ? (
                       <>
-                        <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
+                        <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2 animate-spin" />
                         Conectando...
                       </>
                     ) : (
                       <>
-                        <Phone className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                        <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2" />
                         Conectar WhatsApp
                       </>
                     )}
@@ -2259,22 +2259,22 @@ export default function WhatsAppConnection() {
 
         {/* QR Code Card - Mostra apenas quando há QR Code ou está gerando */}
         {!status?.connected && (qrCode || status?.status === 'QRCODE_GENERATED' || status?.status === 'CONNECTING') && (
-          <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-6 mb-6 border border-gray-200 dark:border-[#0F828C]">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">QR Code para Conectar</h2>
+          <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 border border-gray-200 dark:border-[#0F828C]">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 gap-2 sm:gap-3">
+              <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white">QR Code para Conectar</h2>
               <button
                 onClick={handleRegenerateQR}
                 disabled={regenerating || initializing}
-                className="flex items-center justify-center text-sm sm:text-base text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50"
+                className="flex items-center justify-center text-xs sm:text-sm lg:text-base text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50"
               >
                 {regenerating ? (
                   <>
-                    <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2 animate-spin" />
                     Regenerando...
                   </>
                 ) : (
                   <>
-                    <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                    <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2" />
                     Regenerar QR Code
                   </>
                 )}
@@ -2283,11 +2283,11 @@ export default function WhatsAppConnection() {
             <div className="flex flex-col items-center">
               {qrCode ? (
                 <>
-                  <div className="bg-white dark:bg-white p-3 sm:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-300 mb-4">
+                  <div className="bg-white dark:bg-white p-2 sm:p-3 lg:p-4 rounded-lg border-2 border-gray-200 dark:border-gray-300 mb-3 sm:mb-4">
                     <img 
                       src={qrCode} 
                       alt="QR Code WhatsApp" 
-                      className="w-48 h-48 sm:w-64 sm:h-64"
+                      className="w-40 h-40 sm:w-48 sm:h-48 lg:w-64 lg:h-64"
                     />
                   </div>
                   <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 text-center max-w-md px-2">
@@ -2296,15 +2296,15 @@ export default function WhatsAppConnection() {
                   </p>
                 </>
               ) : (
-                <div className="flex flex-col items-center py-8">
-                  <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-blue-600 dark:text-blue-400 mb-4" />
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 text-center px-4">
+                <div className="flex flex-col items-center py-6 sm:py-8">
+                  <Loader2 className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 animate-spin text-blue-600 dark:text-blue-400 mb-3 sm:mb-4" />
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 text-center px-3 sm:px-4">
                     {regenerating ? 'Regenerando QR Code...' : status?.status === 'QRCODE_GENERATED' ? 'QR Code disponível, carregando...' : 'Gerando QR Code... Aguarde'}
                   </p>
                   {status?.status === 'QRCODE_GENERATED' && !qrCode && (
                     <button
                       onClick={checkStatus}
-                      className="mt-4 px-4 py-2 text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                      className="mt-3 sm:mt-4 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                     >
                       Atualizar QR Code
                     </button>
@@ -2317,28 +2317,28 @@ export default function WhatsAppConnection() {
 
         {/* Modal de Confirmação de Desconexão */}
         {showDisconnectModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
             <div className="bg-white dark:bg-[#065084] rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-[#0F828C]">
-              <div className="p-4 sm:p-6">
+              <div className="p-3 sm:p-4 lg:p-6">
                 {!showFinalConfirm ? (
                   <>
-                    <div className="flex items-center mb-4">
-                      <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400 mr-2" />
-                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Desconectar WhatsApp?</h3>
+                    <div className="flex items-center mb-3 sm:mb-4">
+                      <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400 mr-1.5 sm:mr-2" />
+                      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Desconectar WhatsApp?</h3>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-300 mb-6">
+                    <p className="text-xs sm:text-sm lg:text-base text-gray-600 dark:text-gray-300 mb-4 sm:mb-6">
                       Você está prestes a desconectar o WhatsApp. Esta ação irá remover a sessão atual e você precisará escanear o QR Code novamente para reconectar.
                     </p>
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                       <button
                         onClick={() => setShowDisconnectModal(false)}
-                        className="flex-1 px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                        className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                       >
                         Cancelar
                       </button>
                       <button
                         onClick={() => setShowFinalConfirm(true)}
-                        className="flex-1 px-4 py-2 text-sm sm:text-base bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+                        className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
                       >
                         Continuar
                       </button>
@@ -2346,14 +2346,14 @@ export default function WhatsAppConnection() {
                   </>
                 ) : (
                   <>
-                    <div className="flex items-center mb-4">
-                      <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400 mr-2" />
-                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Confirmação Final</h3>
+                    <div className="flex items-center mb-3 sm:mb-4">
+                      <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 dark:text-red-400 mr-1.5 sm:mr-2" />
+                      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Confirmação Final</h3>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-300 mb-6">
+                    <p className="text-xs sm:text-sm lg:text-base text-gray-600 dark:text-gray-300 mb-4 sm:mb-6">
                       <strong>ATENÇÃO:</strong> Esta ação é irreversível. A sessão será completamente removida e você precisará escanear um novo QR Code para reconectar.
                     </p>
-                    <p className="text-sm text-red-600 dark:text-red-400 mb-6 font-medium">
+                    <p className="text-xs sm:text-sm text-red-600 dark:text-red-400 mb-4 sm:mb-6 font-medium">
                       Tem certeza que deseja desconectar e remover a sessão?
                     </p>
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
@@ -2362,23 +2362,23 @@ export default function WhatsAppConnection() {
                           setShowFinalConfirm(false)
                           setShowDisconnectModal(false)
                         }}
-                        className="flex-1 px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                        className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                       >
                         Cancelar
                       </button>
                       <button
                         onClick={handleDisconnect}
                         disabled={disconnecting}
-                        className="flex-1 px-4 py-2 text-sm sm:text-base bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                        className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                       >
                         {disconnecting ? (
                           <>
-                            <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
+                            <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2 animate-spin" />
                             Desconectando...
                           </>
                         ) : (
                           <>
-                            <LogOut className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                            <LogOut className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2" />
                             Sim, Desconectar
                           </>
                         )}
@@ -2393,39 +2393,39 @@ export default function WhatsAppConnection() {
 
         {/* Test Message e Conversas */}
         {status?.connected && (
-          <div className="space-y-4 sm:space-y-6">
+          <div className="space-y-3 sm:space-y-4 lg:space-y-6">
             {/* Painel de Teste de IA */}
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-6 border border-gray-200 dark:border-[#0F828C]">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                  <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-yellow-600 dark:text-yellow-400" />
+            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                  <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2 text-yellow-600 dark:text-yellow-400" />
                   Teste de IA
                 </h2>
                 <button
                   onClick={() => setShowTestPanel(!showTestPanel)}
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                  className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
                 >
                   {showTestPanel ? 'Ocultar' : 'Mostrar'}
                 </button>
               </div>
               
               {showTestPanel && (
-                <div className="flex flex-col" style={{ height: '600px', maxHeight: '80vh' }}>
+                <div className="flex flex-col" style={{ height: '500px', maxHeight: '70vh' }}>
                   {/* Configuração do Telefone de Teste */}
-                  <div className="mb-3 p-2 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]">
+                  <div className="mb-2 sm:mb-3 p-2 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]">
                     <label className="block text-xs font-medium text-gray-700 dark:text-white mb-1">
                       Telefone de Teste (opcional)
                     </label>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       <input
                         type="text"
                         value={testAIPhone}
                         onChange={(e) => setTestAIPhone(e.target.value)}
                         placeholder="TEST_PHONE (padrão)"
-                        className="flex-1 text-sm px-3 py-1.5 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       />
                       {testAIPhone && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                           Usando: {testAIPhone}
                         </span>
                       )}
@@ -2436,28 +2436,28 @@ export default function WhatsAppConnection() {
                   </div>
 
                   {/* Header do Chat */}
-                  <div className="flex items-center justify-between pb-3 border-b">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-2 sm:pb-3 border-b gap-2 sm:gap-0">
                     <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
-                        <AlertTriangle className="w-5 h-5 text-purple-600" />
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white">Chat de Teste - IA</h3>
+                        <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">Chat de Teste - IA</h3>
                         <p className="text-xs text-gray-500">Teste como se fosse um cliente</p>
                       </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1.5 sm:gap-0">
                       {/* Carrinho Atual */}
                       {(() => {
                         // Busca o último cartInfo do histórico
                         const lastCartInfo = [...testAIChatHistory].reverse().find(msg => msg.metadata?.cartInfo)?.metadata?.cartInfo
                         if (lastCartInfo && lastCartInfo.itemCount > 0) {
                           return (
-                            <div className="flex items-center space-x-2 bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-200">
-                              <span className="text-orange-600">🛒</span>
+                            <div className="flex items-center space-x-1 sm:space-x-2 bg-orange-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-orange-200">
+                              <span className="text-orange-600 text-sm sm:text-base">🛒</span>
                               <div className="text-xs">
                                 <span className="font-medium text-orange-800">{lastCartInfo.itemCount} item(ns)</span>
-                                <span className="text-orange-600 ml-2">R$ {lastCartInfo.total.toFixed(2)}</span>
+                                <span className="text-orange-600 ml-1 sm:ml-2">R$ {lastCartInfo.total.toFixed(2)}</span>
                               </div>
                             </div>
                           )
@@ -2467,10 +2467,10 @@ export default function WhatsAppConnection() {
                       {testAIChatHistory.length > 0 && (
                         <button
                           onClick={handleClearTestChat}
-                          className="flex items-center space-x-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded transition-colors"
+                          className="flex items-center space-x-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 px-1.5 sm:px-2 py-1 sm:py-1.5 rounded transition-colors"
                           title="Limpar todo o histórico do chat"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           <span className="hidden sm:inline">Limpar Chat</span>
                         </button>
                       )}
@@ -2480,14 +2480,14 @@ export default function WhatsAppConnection() {
                   {/* Área de Mensagens */}
                   <div
                     ref={testChatContainerRef}
-                    className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-[#065084]"
+                    className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 space-y-3 sm:space-y-4 bg-gray-50 dark:bg-[#065084]"
                     style={{ minHeight: 0 }}
                   >
                     {testAIChatHistory.length === 0 ? (
                       <div className="flex items-center justify-center h-full text-center">
                         <div>
-                          <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                          <p className="text-gray-500 text-sm">Nenhuma mensagem ainda</p>
+                          <MessageSquare className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mx-auto mb-2" />
+                          <p className="text-gray-500 text-xs sm:text-sm">Nenhuma mensagem ainda</p>
                           <p className="text-gray-400 text-xs mt-1">
                             Digite uma mensagem abaixo para começar o teste
                           </p>
@@ -2500,13 +2500,13 @@ export default function WhatsAppConnection() {
                           className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                            className={`max-w-[80%] sm:max-w-[70%] rounded-lg px-3 py-2 ${
+                            className={`max-w-[85%] sm:max-w-[80%] lg:max-w-[70%] rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 ${
                               msg.role === 'user'
                                 ? 'bg-purple-600 text-white'
                                 : 'bg-white dark:bg-[#065084] text-gray-900 dark:text-white border border-gray-200 dark:border-[#0F828C]'
                             }`}
                           >
-                            <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
+                            <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                             {msg.metadata && (
                               <div className="mt-2 pt-2 border-t border-gray-200 border-opacity-20">
                                 {msg.metadata.isControlled && (
@@ -2754,8 +2754,8 @@ export default function WhatsAppConnection() {
                   </div>
 
                   {/* Input de Mensagem */}
-                  <form onSubmit={handleTestAI} className="border-t bg-white p-3">
-                    <div className="flex items-end space-x-2">
+                  <form onSubmit={handleTestAI} className="border-t bg-white dark:bg-[#065084] p-2 sm:p-3">
+                    <div className="flex items-end space-x-1.5 sm:space-x-2">
                       <div className="flex-1">
                         <textarea
                           id="testAIMessage"
@@ -2763,7 +2763,7 @@ export default function WhatsAppConnection() {
                           onChange={(e) => setTestAIMessage(e.target.value)}
                           placeholder="Digite sua mensagem..."
                           rows={1}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                          className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault()
@@ -2778,17 +2778,17 @@ export default function WhatsAppConnection() {
                       <button
                         type="submit"
                         disabled={testingAI || !testAIMessage.trim()}
-                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                        className="px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center flex-shrink-0"
                         title="Enviar mensagem (Enter)"
                       >
                         {testingAI ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                         ) : (
-                          <Send className="w-5 h-5" />
+                          <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                         )}
                       </button>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Pressione Enter para enviar • Shift+Enter para nova linha
                     </p>
                   </form>
@@ -2797,71 +2797,71 @@ export default function WhatsAppConnection() {
             </div>
 
             {/* Painel de Configuração de Números de Farmacêuticos */}
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-6 border border-gray-200 dark:border-[#0F828C]">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                  <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-blue-600" />
+            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                  <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2 text-blue-600" />
                   Números de Farmacêuticos
                 </h2>
                 <button
                   onClick={() => setShowPharmacistConfig(!showPharmacistConfig)}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium"
                 >
                   {showPharmacistConfig ? 'Ocultar' : 'Mostrar'}
                 </button>
               </div>
               
               {showPharmacistConfig && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 flex-1">
                       Configure os números que receberão notificações quando uma conversa precisar de farmacêutico
                     </p>
                     <button
                       onClick={handleOpenAddPharmacistModal}
-                      className="flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                      className="flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm whitespace-nowrap"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       <span>Adicionar</span>
                     </button>
                   </div>
 
                   {loadingPharmacistNumbers ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-                      <p className="ml-2 text-gray-600 dark:text-gray-300">Carregando...</p>
+                    <div className="flex items-center justify-center py-6 sm:py-8">
+                      <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-blue-600" />
+                      <p className="ml-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300">Carregando...</p>
                     </div>
                   ) : pharmacistNumbers.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Phone className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                      <p>Nenhum número configurado</p>
-                      <p className="text-sm mt-1">Adicione um número para receber notificações</p>
+                    <div className="text-center py-6 sm:py-8 text-gray-500">
+                      <Phone className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-300" />
+                      <p className="text-xs sm:text-sm">Nenhum número configurado</p>
+                      <p className="text-xs sm:text-sm mt-1">Adicione um número para receber notificações</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       {pharmacistNumbers.map((pharmacist) => (
                         <div
                           key={pharmacist.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]"
+                          className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C] gap-2"
                         >
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
-                              <Phone className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                              <p className="font-medium text-gray-900 dark:text-white">{pharmacist.phone}</p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
+                              <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-300 flex-shrink-0" />
+                              <p className="font-medium text-xs sm:text-sm text-gray-900 dark:text-white break-words">{pharmacist.phone}</p>
                               {pharmacist.name && (
-                                <span className="text-sm text-gray-600 dark:text-gray-300">({pharmacist.name})</span>
+                                <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">({pharmacist.name})</span>
                               )}
                             </div>
                             {pharmacist.userEmail && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Usuário: {pharmacist.userEmail}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">Usuário: {pharmacist.userEmail}</p>
                             )}
                           </div>
                           <button
                             onClick={() => handleRemovePharmacist(pharmacist.id)}
-                            className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="ml-2 p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
                             title="Remover"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </button>
                         </div>
                       ))}
@@ -2872,71 +2872,71 @@ export default function WhatsAppConnection() {
             </div>
 
             {/* Painel de Configuração de Números da Distribuidora */}
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-6 border border-gray-200 dark:border-[#0F828C]">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                  <Settings className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-green-600" />
+            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                  <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2 text-green-600" />
                   Números da Distribuidora
                 </h2>
                 <button
                   onClick={() => setShowDistributorConfig(!showDistributorConfig)}
-                  className="text-sm text-green-600 hover:text-green-700 font-medium"
+                  className="text-xs sm:text-sm text-green-600 hover:text-green-700 font-medium"
                 >
                   {showDistributorConfig ? 'Ocultar' : 'Mostrar'}
                 </button>
               </div>
               
               {showDistributorConfig && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 flex-1">
                       Configure os números que receberão mensagens automáticas quando um pedido for marcado como pago. A mensagem será enviada apenas uma vez por pedido para todos os números configurados.
                     </p>
                     <button
                       onClick={handleOpenAddDistributorModal}
-                      className="flex items-center space-x-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                      className="flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs sm:text-sm whitespace-nowrap"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       <span>Adicionar</span>
                     </button>
                   </div>
 
                   {loadingDistributorNumbers ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin text-green-600" />
-                      <p className="ml-2 text-gray-600 dark:text-gray-300">Carregando...</p>
+                    <div className="flex items-center justify-center py-6 sm:py-8">
+                      <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-green-600" />
+                      <p className="ml-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300">Carregando...</p>
                     </div>
                   ) : distributorNumbers.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Phone className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-                      <p>Nenhum número configurado</p>
-                      <p className="text-sm mt-1">Adicione um número para receber notificações</p>
+                    <div className="text-center py-6 sm:py-8 text-gray-500">
+                      <Phone className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-300" />
+                      <p className="text-xs sm:text-sm">Nenhum número configurado</p>
+                      <p className="text-xs sm:text-sm mt-1">Adicione um número para receber notificações</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       {distributorNumbers.map((distributor) => (
                         <div
                           key={distributor.id}
-                          className="flex items-center justify-between p-3 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]"
+                          className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C] gap-2"
                         >
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
-                              <Phone className="w-4 h-4 text-gray-600 dark:text-gray-300" />
-                              <p className="font-medium text-gray-900 dark:text-white">{distributor.phone}</p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
+                              <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-300 flex-shrink-0" />
+                              <p className="font-medium text-xs sm:text-sm text-gray-900 dark:text-white break-words">{distributor.phone}</p>
                               {distributor.name && (
-                                <span className="text-sm text-gray-600 dark:text-gray-300">({distributor.name})</span>
+                                <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">({distributor.name})</span>
                               )}
                             </div>
                             {distributor.userEmail && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Usuário: {distributor.userEmail}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">Usuário: {distributor.userEmail}</p>
                             )}
                           </div>
                           <button
                             onClick={() => handleRemoveDistributor(distributor.id)}
-                            className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            className="ml-2 p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
                             title="Remover"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </button>
                         </div>
                       ))}
@@ -2947,17 +2947,17 @@ export default function WhatsAppConnection() {
             </div>
             
             {/* Painel de Envio de Mensagem e Conversas */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
               {/* Painel de Envio de Mensagem */}
               <div className="lg:col-span-1 order-2 lg:order-1">
-                <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-6 border border-gray-200 dark:border-[#0F828C]">
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                    <Send className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+                  <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center">
+                    <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2" />
                     Enviar Mensagem
                   </h2>
-                <form onSubmit={handleSendTest} className="space-y-4">
+                <form onSubmit={handleSendTest} className="space-y-3 sm:space-y-4">
                   <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                    <label htmlFor="phone" className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                       Número (com DDD e código do país)
                     </label>
                     <input
@@ -2966,13 +2966,13 @@ export default function WhatsAppConnection() {
                       value={testMessage.phone}
                       onChange={(e) => setTestMessage({ ...testMessage, phone: e.target.value })}
                       placeholder="5511999999999"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
-                    <p className="mt-1 text-xs text-gray-500">Formato: 55 + DDD + Número</p>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Formato: 55 + DDD + Número</p>
                   </div>
                   <div>
-                    <label htmlFor="message" className="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                    <label htmlFor="message" className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                       Mensagem
                     </label>
                     <textarea
@@ -2981,16 +2981,16 @@ export default function WhatsAppConnection() {
                       onChange={(e) => setTestMessage({ ...testMessage, message: e.target.value })}
                       placeholder="Digite sua mensagem..."
                       rows={4}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                       required
                     />
                   </div>
                   {messageStatus.type && (
                     <div
-                      className={`p-3 rounded-lg ${
+                      className={`p-2 sm:p-3 rounded-lg text-xs sm:text-sm ${
                         messageStatus.type === 'success'
-                          ? 'bg-green-50 text-green-800'
-                          : 'bg-red-50 text-red-800'
+                          ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                          : 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'
                       }`}
                     >
                       {messageStatus.message}
@@ -2999,16 +2999,16 @@ export default function WhatsAppConnection() {
                   <button
                     type="submit"
                     disabled={sending}
-                    className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full flex items-center justify-center px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {sending ? (
                       <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 animate-spin" />
                         Enviando...
                       </>
                     ) : (
                       <>
-                        <Send className="w-5 h-5 mr-2" />
+                        <Send className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
                         Enviar Mensagem
                       </>
                     )}
@@ -3019,22 +3019,22 @@ export default function WhatsAppConnection() {
 
             {/* Painel de Conversas e Mensagens */}
             <div className="lg:col-span-2 order-1 lg:order-2">
-              <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg overflow-hidden flex flex-col border border-gray-200 dark:border-[#0F828C]" style={{ minHeight: '400px', height: 'calc(100vh - 300px)', maxHeight: '800px' }}>
+              <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg overflow-hidden flex flex-col border border-gray-200 dark:border-[#0F828C]" style={{ minHeight: '400px', height: 'calc(100vh - 200px)', maxHeight: '800px' }}>
                 {/* Lista de Conversas */}
-                <div className="border-b border-gray-200 dark:border-[#0F828C] p-3 sm:p-4 bg-white dark:bg-[#065084]">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
-                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                      <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                <div className="border-b border-gray-200 dark:border-[#0F828C] p-2 sm:p-3 lg:p-4 bg-white dark:bg-[#065084]">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-3 gap-2">
+                    <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                      <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2" />
                       <span className="truncate">{showNeedingResponse ? 'Fila de Atendimento' : 'Conversas'}</span>
                       {showNeedingResponse ? (
                         conversationsNeedingResponse.length > 0 && (
-                          <span className="ml-2 px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 rounded-full flex-shrink-0">
+                          <span className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 rounded-full flex-shrink-0">
                             {conversationsNeedingResponse.length}
                           </span>
                         )
                       ) : (
                         conversations.length > 0 && (
-                          <span className="ml-2 px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full flex-shrink-0">
+                          <span className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full flex-shrink-0">
                             {conversations.length}
                           </span>
                         )
@@ -3047,7 +3047,7 @@ export default function WhatsAppConnection() {
                           loadConversationsNeedingResponse()
                         }
                       }}
-                      className={`px-3 py-1.5 text-xs sm:text-sm rounded-lg transition-colors whitespace-nowrap ${
+                      className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs lg:text-sm rounded-lg transition-colors whitespace-nowrap ${
                         showNeedingResponse
                           ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50'
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -3057,13 +3057,13 @@ export default function WhatsAppConnection() {
                     </button>
                   </div>
                   {showNeedingResponse && (
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2 sm:mb-3">
                       Conversas onde a última mensagem foi do cliente
                     </p>
                   )}
                   
                   {/* Campo de Busca e Filtros */}
-                  <div className="space-y-2">
+                  <div className="space-y-1.5 sm:space-y-2">
                     {/* Campo de Busca */}
                     <div className="relative">
                       <input
@@ -3071,10 +3071,10 @@ export default function WhatsAppConnection() {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         placeholder="Buscar por nome ou número..."
-                        className="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 sm:px-4 py-1.5 sm:py-2 pl-8 sm:pl-10 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                       <svg
-                        className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500"
+                        className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -3089,11 +3089,11 @@ export default function WhatsAppConnection() {
                       {searchTerm && (
                         <button
                           onClick={() => setSearchTerm('')}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                          className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 p-0.5"
                           type="button"
                         >
                           <svg
-                            className="w-5 h-5"
+                            className="w-4 h-4 sm:w-5 sm:h-5"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -3110,7 +3110,7 @@ export default function WhatsAppConnection() {
                     </div>
                     
                     {/* Filtros por Tags */}
-                    <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                    <div className="flex flex-wrap gap-1 sm:gap-1.5 lg:gap-2">
                       <button
                         onClick={() => {
                           setSelectedFilters({
@@ -3120,7 +3120,7 @@ export default function WhatsAppConnection() {
                             controlado: false
                           })
                         }}
-                        className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors ${
+                        className={`px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 text-[9px] sm:text-[10px] lg:text-xs rounded-full font-medium transition-colors ${
                           !selectedFilters.cliente && !selectedFilters.farmaceutico && !selectedFilters.assumida && !selectedFilters.controlado
                             ? 'bg-gray-700 dark:bg-gray-600 text-white dark:text-white'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
@@ -3130,7 +3130,7 @@ export default function WhatsAppConnection() {
                       </button>
                       <button
                         onClick={() => setSelectedFilters({ ...selectedFilters, cliente: !selectedFilters.cliente })}
-                        className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
+                        className={`px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 text-[9px] sm:text-[10px] lg:text-xs rounded-full font-medium transition-colors flex items-center space-x-0.5 sm:space-x-1 ${
                           selectedFilters.cliente
                             ? 'bg-blue-600 dark:bg-blue-600 text-white dark:text-white'
                             : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50'
@@ -3141,18 +3141,19 @@ export default function WhatsAppConnection() {
                       </button>
                       <button
                         onClick={() => setSelectedFilters({ ...selectedFilters, farmaceutico: !selectedFilters.farmaceutico })}
-                        className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
+                        className={`px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 text-[9px] sm:text-[10px] lg:text-xs rounded-full font-medium transition-colors flex items-center space-x-0.5 sm:space-x-1 ${
                           selectedFilters.farmaceutico
                             ? 'bg-red-600 dark:bg-red-600 text-white dark:text-white'
                             : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
                         }`}
                       >
                         <span>👨‍⚕️</span>
-                        <span>Farmacêutico</span>
+                        <span className="hidden xs:inline">Farmacêutico</span>
+                        <span className="xs:hidden">Farm.</span>
                       </button>
                       <button
                         onClick={() => setSelectedFilters({ ...selectedFilters, assumida: !selectedFilters.assumida })}
-                        className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
+                        className={`px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 text-[9px] sm:text-[10px] lg:text-xs rounded-full font-medium transition-colors flex items-center space-x-0.5 sm:space-x-1 ${
                           selectedFilters.assumida
                             ? 'bg-yellow-600 dark:bg-yellow-600 text-white dark:text-white'
                             : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
@@ -3163,7 +3164,7 @@ export default function WhatsAppConnection() {
                       </button>
                       <button
                         onClick={() => setSelectedFilters({ ...selectedFilters, controlado: !selectedFilters.controlado })}
-                        className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
+                        className={`px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 text-[9px] sm:text-[10px] lg:text-xs rounded-full font-medium transition-colors flex items-center space-x-0.5 sm:space-x-1 ${
                           selectedFilters.controlado
                             ? 'bg-orange-600 dark:bg-orange-600 text-white dark:text-white'
                             : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50'
@@ -3183,11 +3184,11 @@ export default function WhatsAppConnection() {
                   if (filteredConversations.length === 0) {
                     if (searchTerm) {
                       return (
-                        <div className="flex-1 flex items-center justify-center p-8">
+                        <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
                           <div className="text-center">
-                            <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-500">Nenhuma conversa encontrada</p>
-                            <p className="text-sm text-gray-400 mt-2">
+                            <MessageSquare className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
+                            <p className="text-xs sm:text-sm lg:text-base text-gray-500">Nenhuma conversa encontrada</p>
+                            <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-1.5 sm:mt-2">
                               Tente buscar por nome ou número de telefone
                             </p>
                           </div>
@@ -3196,13 +3197,13 @@ export default function WhatsAppConnection() {
                     }
                     
                     return (
-                      <div className="flex-1 flex items-center justify-center p-8">
+                      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
                         <div className="text-center">
-                          <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                          <p className="text-gray-500">
+                          <MessageSquare className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 text-gray-300 mx-auto mb-3 sm:mb-4" />
+                          <p className="text-xs sm:text-sm lg:text-base text-gray-500 dark:text-gray-400">
                             {showNeedingResponse ? 'Nenhuma conversa precisa de resposta' : 'Nenhuma conversa ainda'}
                           </p>
-                          <p className="text-sm text-gray-400 mt-2">
+                          <p className="text-xs sm:text-sm text-gray-400 dark:text-gray-500 mt-1.5 sm:mt-2">
                             {showNeedingResponse 
                               ? 'Todas as conversas foram respondidas' 
                               : 'As mensagens recebidas aparecerão aqui'}
@@ -3241,41 +3242,41 @@ export default function WhatsAppConnection() {
                           onMouseDown={(e) => {
                             e.preventDefault()
                           }}
-                          className={`w-full p-3 sm:p-4 text-left hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors border-b border-gray-100 dark:border-[#0F828C] focus:outline-none ${
+                          className={`w-full p-2.5 sm:p-3 lg:p-4 text-left hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors border-b border-gray-100 dark:border-[#0F828C] focus:outline-none ${
                             selectedConversation === conversation.phone ? 'bg-blue-50 dark:bg-blue-900/30 border-l-4 border-l-blue-600 dark:border-l-blue-400' : ''
                           } ${
                             conversation.needsResponse ? 'bg-orange-50 dark:bg-orange-900/30 border-l-4 border-l-orange-500 dark:border-l-orange-400' : ''
                           }`}
                         >
                           <div className="flex items-start space-x-2 sm:space-x-3">
-                            <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                              <User className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
+                            <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                              <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-6 lg:h-6 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center justify-between gap-1.5 sm:gap-2">
                                 <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate">
                                   {conversation.contactName || formatPhone(conversation.phone)}
                                 </p>
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                   {conversation.needsResponse && (
-                                    <span className="px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs bg-orange-500 text-white rounded-full whitespace-nowrap">
+                                    <span className="px-1 sm:px-1.5 lg:px-2 py-0.5 text-[9px] sm:text-[10px] lg:text-xs bg-orange-500 text-white rounded-full whitespace-nowrap">
                                       Precisa resposta
                                     </span>
                                   )}
                                   {conversation.unreadCount > 0 && (
-                                    <span className="px-1.5 sm:px-2 py-0.5 text-[10px] sm:text-xs bg-blue-600 text-white rounded-full">
+                                    <span className="px-1 sm:px-1.5 lg:px-2 py-0.5 text-[9px] sm:text-[10px] lg:text-xs bg-blue-600 text-white rounded-full">
                                       {conversation.unreadCount}
                                     </span>
                                   )}
                                 </div>
                               </div>
-                              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-300 truncate mt-1">
+                              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-300 truncate mt-0.5 sm:mt-1">
                                 {(() => {
                                   const messageText = formatMessageBody(conversation.lastMessage)
                                   return messageText.length > 40 ? messageText.substring(0, 40) + '...' : messageText
                                 })()}
                               </p>
-                              <p className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-400 mt-1">
+                              <p className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-400 mt-0.5 sm:mt-1">
                                 {formatTime(conversation.lastMessage.timestamp)}
                               </p>
                             </div>
@@ -3289,42 +3290,42 @@ export default function WhatsAppConnection() {
                       {selectedConversation ? (
                         <>
                           {/* Header da Conversa */}
-                          <div className="border-b border-gray-200 dark:border-[#0F828C] p-3 sm:p-4 bg-gray-50 dark:bg-[#065084]">
-                            <div className="flex items-center justify-between space-x-3">
-                              <div className="flex items-center space-x-3 min-w-0 flex-1">
+                          <div className="border-b border-gray-200 dark:border-[#0F828C] p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-[#065084]">
+                            <div className="flex items-center justify-between gap-2 sm:gap-3">
+                              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                                 {/* Botão voltar (apenas mobile) */}
                                 <button
                                   onClick={() => {
                                     setShowMessagesOnMobile(false)
                                     setSelectedConversation(null)
                                   }}
-                                  className="lg:hidden flex-shrink-0 p-1 hover:bg-gray-200 rounded transition-colors"
+                                  className="lg:hidden flex-shrink-0 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
                                 >
-                                  <ArrowLeft className="w-5 h-5 text-gray-600" />
+                                  <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300" />
                                 </button>
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <User className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600" />
+                                <div className="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-6 lg:h-6 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <p className="font-medium text-gray-900 text-sm sm:text-base truncate">
+                                  <p className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm lg:text-base truncate">
                                     {conversations.find(c => c.phone === selectedConversation)?.contactName || formatPhone(selectedConversation)}
                                   </p>
-                                  <p className="text-xs text-gray-500 truncate">{formatPhone(selectedConversation)}</p>
+                                  <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">{formatPhone(selectedConversation)}</p>
                                 </div>
                               </div>
                               {/* Badges e botões de ação */}
-                              <div className="flex items-center space-x-2 flex-shrink-0">
+                              <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 flex-wrap">
                                 {(() => {
                                   const selectedConv = conversations.find(c => c.phone === selectedConversation)
                                   return (
                                     <>
                                       {selectedConv?.needsPharmacist && (
-                                        <span className="bg-red-100 text-red-700 text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
+                                        <span className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-[9px] sm:text-[10px] lg:text-xs px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
                                           Farmacêutico
                                         </span>
                                       )}
                                       {selectedConv?.isAssumed && (
-                                        <span className="bg-yellow-100 text-yellow-700 text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
+                                        <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-[9px] sm:text-[10px] lg:text-xs px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap truncate max-w-[120px] sm:max-w-none">
                                           {selectedConv?.assumedBy ? `Assumido por ${selectedConv.assumedBy}` : 'Assumida'}
                                         </span>
                                       )}
@@ -3332,7 +3333,7 @@ export default function WhatsAppConnection() {
                                       <button
                                         onClick={handleToggleAllowedAINumber}
                                         disabled={loadingAllowedCheck}
-                                        className={`flex items-center space-x-1 text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap ${
+                                        className={`flex items-center space-x-0.5 sm:space-x-1 text-[9px] sm:text-[10px] lg:text-xs px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap ${
                                           isNumberAllowed
                                             ? 'bg-green-600 hover:bg-green-700 text-white'
                                             : 'bg-gray-600 hover:bg-gray-700 text-white'
@@ -3344,15 +3345,15 @@ export default function WhatsAppConnection() {
                                         }
                                       >
                                         {loadingAllowedCheck ? (
-                                          <Clock size={14} className="sm:w-4 sm:h-4 animate-spin" />
+                                          <Clock size={12} className="sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4 animate-spin" />
                                         ) : isNumberAllowed ? (
                                           <>
-                                            <Bot size={14} className="sm:w-4 sm:h-4" />
+                                            <Bot size={12} className="sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4" />
                                             <span className="hidden sm:inline">IA Ativa</span>
                                           </>
                                         ) : (
                                           <>
-                                            <Power size={14} className="sm:w-4 sm:h-4" />
+                                            <Power size={12} className="sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4" />
                                             <span className="hidden sm:inline">Ativar IA</span>
                                           </>
                                         )}
@@ -3361,19 +3362,19 @@ export default function WhatsAppConnection() {
                                       {selectedConv?.isAssumed || selectedConv?.needsPharmacist ? (
                                         <button
                                           onClick={() => handleUnblockConversation(selectedConversation)}
-                                          className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
+                                          className="flex items-center space-x-0.5 sm:space-x-1 bg-green-600 hover:bg-green-700 text-white text-[9px] sm:text-[10px] lg:text-xs px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
                                           title="Desbloquear conversa (IA voltará a responder)"
                                         >
-                                          <Unlock size={14} className="sm:w-4 sm:h-4" />
+                                          <Unlock size={12} className="sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4" />
                                           <span className="hidden sm:inline">Desbloquear</span>
                                         </button>
                                       ) : (
                                         <button
                                           onClick={() => handleBlockConversation(selectedConversation)}
-                                          className="flex items-center space-x-1 bg-yellow-600 hover:bg-yellow-700 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
+                                          className="flex items-center space-x-0.5 sm:space-x-1 bg-yellow-600 hover:bg-yellow-700 text-white text-[9px] sm:text-[10px] lg:text-xs px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
                                           title="Assumir conversa (bloquear IA)"
                                         >
-                                          <Lock size={14} className="sm:w-4 sm:h-4" />
+                                          <Lock size={12} className="sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4" />
                                           <span className="hidden sm:inline">Assumir</span>
                                         </button>
                                       )}
@@ -3387,34 +3388,34 @@ export default function WhatsAppConnection() {
                           {/* Mensagens */}
                           <div 
                             ref={messagesContainerRef}
-                            className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50"
+                            className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-gray-900"
                             style={{ scrollBehavior: 'auto' }}
                           >
                             {messages.length === 0 ? (
                               <div className="flex items-center justify-center h-full">
-                                <p className="text-gray-500 text-sm sm:text-base">Nenhuma mensagem ainda</p>
+                                <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm lg:text-base">Nenhuma mensagem ainda</p>
                               </div>
                             ) : (
-                              <div className="space-y-3 sm:space-y-4">
+                              <div className="space-y-2 sm:space-y-3 lg:space-y-4">
                                 {messages.map((message) => (
                                   <div
                                     key={message.id}
                                     className={`flex ${message.isFromMe ? 'justify-end' : 'justify-start'}`}
                                   >
                                     <div
-                                      className={`max-w-[85%] sm:max-w-xs lg:max-w-md rounded-lg shadow-sm overflow-hidden ${
+                                      className={`max-w-[90%] sm:max-w-[85%] lg:max-w-xs xl:max-w-md rounded-lg shadow-sm overflow-hidden ${
                                         message.isFromMe
                                           ? 'bg-blue-600 text-white'
                                           : 'bg-white dark:bg-[#065084] text-gray-900 dark:text-white border border-gray-200 dark:border-[#0F828C]'
-                                      } ${message.type === 'image' && message.mediaUrl ? 'p-0' : 'px-3 sm:px-4 py-2'}`}
+                                      } ${message.type === 'image' && message.mediaUrl ? 'p-0' : 'px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2'}`}
                                     >
                                       {message.type === 'image' && message.mediaUrl ? (
                                         <>
                                           {renderMessageContent(message)}
-                                          <div className="px-3 sm:px-4 pb-2">
+                                          <div className="px-2 sm:px-3 lg:px-4 pb-1.5 sm:pb-2">
                                             <p
-                                              className={`text-[10px] sm:text-xs mt-1 ${
-                                                message.isFromMe ? 'text-blue-100' : 'text-gray-400 dark:text-gray-400'
+                                              className={`text-[9px] sm:text-[10px] lg:text-xs mt-0.5 sm:mt-1 ${
+                                                message.isFromMe ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'
                                               }`}
                                             >
                                               {formatTime(message.timestamp)}
@@ -3425,8 +3426,8 @@ export default function WhatsAppConnection() {
                                         <>
                                           {renderMessageContent(message)}
                                           <p
-                                            className={`text-[10px] sm:text-xs mt-1 ${
-                                              message.isFromMe ? 'text-blue-100' : 'text-gray-400 dark:text-gray-400'
+                                            className={`text-[9px] sm:text-[10px] lg:text-xs mt-0.5 sm:mt-1 ${
+                                              message.isFromMe ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'
                                             }`}
                                           >
                                             {formatTime(message.timestamp)}
@@ -3441,32 +3442,32 @@ export default function WhatsAppConnection() {
                           </div>
 
                           {/* Campo de Envio de Mensagem */}
-                          <div className="border-t border-gray-200 dark:border-[#0F828C] p-3 sm:p-4 bg-white dark:bg-[#065084]">
+                          <div className="border-t border-gray-200 dark:border-[#0F828C] p-2 sm:p-3 lg:p-4 bg-white dark:bg-[#065084]">
                             {/* Preview do arquivo selecionado */}
                             {selectedFile && (
-                              <div className="mb-2 p-2 bg-gray-50 dark:bg-[#065084] rounded-lg flex items-center justify-between border border-gray-200 dark:border-[#0F828C]">
-                                <div className="flex items-center space-x-2 flex-1 min-w-0">
+                              <div className="mb-1.5 sm:mb-2 p-1.5 sm:p-2 bg-gray-50 dark:bg-[#065084] rounded-lg flex items-center justify-between border border-gray-200 dark:border-[#0F828C] gap-2">
+                                <div className="flex items-center space-x-1.5 sm:space-x-2 flex-1 min-w-0">
                                   {filePreview ? (
-                                    <img src={filePreview} alt="Preview" className="w-12 h-12 object-cover rounded" />
+                                    <img src={filePreview} alt="Preview" className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded flex-shrink-0" />
                                   ) : (
-                                    <Paperclip className="w-5 h-5 text-gray-600 dark:text-gray-300 flex-shrink-0" />
+                                    <Paperclip className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300 flex-shrink-0" />
                                   )}
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate">{selectedFile.name}</p>
-                                    <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                                    <p className="text-[10px] sm:text-xs lg:text-sm font-medium text-gray-900 dark:text-white truncate">{selectedFile.name}</p>
+                                    <p className="text-[9px] sm:text-[10px] lg:text-xs text-gray-500 dark:text-gray-400">
                                       {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                                     </p>
                                   </div>
                                 </div>
                                 <button
                                   onClick={removeFile}
-                                  className="ml-2 p-1 hover:bg-gray-200 dark:hover:bg-[#065084] rounded transition-colors flex-shrink-0"
+                                  className="ml-1 p-0.5 sm:p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors flex-shrink-0"
                                 >
-                                  <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                                  <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-300" />
                                 </button>
                               </div>
                             )}
-                            <form onSubmit={handleSendConversationMessage} className="flex items-center space-x-2">
+                            <form onSubmit={handleSendConversationMessage} className="flex items-center space-x-1.5 sm:space-x-2">
                               <input
                                 ref={fileInputRef}
                                 type="file"
@@ -3477,23 +3478,23 @@ export default function WhatsAppConnection() {
                               />
                               <label
                                 htmlFor="file-input-conversation"
-                                className="p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-[#065084] rounded-lg transition-colors cursor-pointer flex-shrink-0"
+                                className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer flex-shrink-0"
                                 title="Anexar arquivo"
                               >
-                                <Paperclip className="w-5 h-5" />
+                                <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
                               </label>
                               <input
                                 type="text"
                                 value={conversationMessage}
                                 onChange={(e) => setConversationMessage(e.target.value)}
-                                placeholder={selectedFile ? "Adicione uma legenda (opcional)..." : "Digite uma mensagem..."}
-                                className="flex-1 px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder={selectedFile ? "Legenda (opcional)..." : "Digite uma mensagem..."}
+                                className="flex-1 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 disabled={sendingConversationMessage}
                               />
                               <button
                                 type="submit"
                                 disabled={(!conversationMessage.trim() && !selectedFile) || sendingConversationMessage}
-                                className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center flex-shrink-0"
+                                className="px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center flex-shrink-0"
                               >
                                 {sendingConversationMessage ? (
                                   <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
@@ -3506,9 +3507,9 @@ export default function WhatsAppConnection() {
                         </>
                       ) : (
                         <div className="flex-1 flex items-center justify-center">
-                          <div className="text-center">
-                            <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-500">Selecione uma conversa para ver as mensagens</p>
+                          <div className="text-center px-3 sm:px-4">
+                            <MessageSquare className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 text-gray-300 dark:text-gray-600 mx-auto mb-3 sm:mb-4" />
+                            <p className="text-xs sm:text-sm lg:text-base text-gray-500 dark:text-gray-400">Selecione uma conversa para ver as mensagens</p>
                           </div>
                         </div>
                       )}
@@ -3524,29 +3525,29 @@ export default function WhatsAppConnection() {
 
         {/* Modal para Adicionar Número de Farmacêutico */}
         {showAddPharmacistModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-[#0F828C]">
-              <div className="p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-semibold text-gray-900">Adicionar Número</h3>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-[#0F828C] max-h-[90vh] overflow-y-auto">
+              <div className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Adicionar Número</h3>
                   <button
                     onClick={() => setShowAddPharmacistModal(false)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {/* Seleção de Usuário */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                       Ou selecione um usuário do sistema:
                     </label>
                     <select
                       value={newPharmacistUserId || ''}
                       onChange={(e) => handleUserSelect(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={loadingUsers}
                     >
                       <option value="">Selecione um usuário (opcional)</option>
@@ -3557,15 +3558,15 @@ export default function WhatsAppConnection() {
                       ))}
                     </select>
                     {loadingUsers && (
-                      <p className="text-xs text-gray-500 mt-1">Carregando usuários...</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Carregando usuários...</p>
                     )}
                   </div>
 
-                  <div className="text-center text-gray-500 text-sm">ou</div>
+                  <div className="text-center text-gray-500 dark:text-gray-400 text-xs sm:text-sm">ou</div>
 
                   {/* Número Manual */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                       Digite o número manualmente:
                     </label>
                     <input
@@ -3576,14 +3577,14 @@ export default function WhatsAppConnection() {
                         setNewPharmacistUserId(null) // Limpa seleção de usuário quando digita
                       }}
                       placeholder="5511999999999"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Formato: 55 + DDD + Número</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Formato: 55 + DDD + Número</p>
                   </div>
 
                   {/* Nome (opcional) */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                       Nome (opcional):
                     </label>
                     <input
@@ -3591,26 +3592,26 @@ export default function WhatsAppConnection() {
                       value={newPharmacistName}
                       onChange={(e) => setNewPharmacistName(e.target.value)}
                       placeholder="Nome do farmacêutico"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-4 sm:mt-6">
                   <button
                     onClick={() => setShowAddPharmacistModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={handleAddPharmacist}
                     disabled={addingPharmacist || (!newPharmacistPhone.trim() && !newPharmacistUserId)}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                    className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                   >
                     {addingPharmacist ? (
                       <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 animate-spin" />
                         Adicionando...
                       </>
                     ) : (
@@ -3626,16 +3627,16 @@ export default function WhatsAppConnection() {
         {/* Modal de Preview de Imagem */}
         {imagePreview && (
           <div 
-            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4"
             onClick={() => setImagePreview(null)}
           >
             <div className="relative max-w-7xl max-h-full w-full h-full flex items-center justify-center">
               <button
                 onClick={() => setImagePreview(null)}
-                className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10 bg-black bg-opacity-50 rounded-full p-2"
+                className="absolute top-2 right-2 sm:top-4 sm:right-4 text-white hover:text-gray-300 transition-colors z-10 bg-black bg-opacity-50 rounded-full p-1.5 sm:p-2"
                 title="Fechar (ESC)"
               >
-                <X size={24} />
+                <X size={18} className="sm:w-6 sm:h-6" />
               </button>
               <img 
                 src={imagePreview} 
@@ -3687,10 +3688,10 @@ export default function WhatsAppConnection() {
                     window.open(imagePreview, '_blank')
                   }
                 }}
-                className="absolute bottom-4 right-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 z-10"
+                className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 bg-green-600 hover:bg-green-700 text-white px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg transition-colors flex items-center space-x-1 sm:space-x-2 z-10 text-xs sm:text-sm"
                 title="Baixar imagem"
               >
-                <Download size={18} />
+                <Download size={14} className="sm:w-4 sm:h-4 lg:w-[18px] lg:h-[18px]" />
                 <span className="hidden sm:inline">Baixar</span>
               </button>
             </div>
@@ -3699,23 +3700,23 @@ export default function WhatsAppConnection() {
 
         {/* Modal para Adicionar Número da Distribuidora */}
         {showAddDistributorModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-[#0F828C]">
-              <div className="p-4 sm:p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Adicionar Número da Distribuidora</h3>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-[#0F828C] max-h-[90vh] overflow-y-auto">
+              <div className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Adicionar Número da Distribuidora</h3>
                   <button
                     onClick={() => setShowAddDistributorModal(false)}
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {/* Seleção de usuário */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                       Selecionar usuário (opcional):
                     </label>
                     <select
@@ -3730,7 +3731,7 @@ export default function WhatsAppConnection() {
                           setNewDistributorName('')
                         }
                       }}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     >
                       <option value="">Selecione um usuário...</option>
                       {usersWithPhone.map((user) => (
@@ -3742,11 +3743,11 @@ export default function WhatsAppConnection() {
                   </div>
 
                   {/* Ou digite manualmente */}
-                  <div className="text-center text-sm text-gray-500 dark:text-gray-400">ou</div>
+                  <div className="text-center text-xs sm:text-sm text-gray-500 dark:text-gray-400">ou</div>
 
                   {/* Número de telefone */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                       Número de telefone:
                     </label>
                     <input
@@ -3757,14 +3758,14 @@ export default function WhatsAppConnection() {
                         setNewDistributorUserId(null) // Limpa seleção de usuário quando digita
                       }}
                       placeholder="5511999999999"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
-                    <p className="text-xs text-gray-500 mt-1">Formato: 55 + DDD + Número</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Formato: 55 + DDD + Número</p>
                   </div>
 
                   {/* Nome (opcional) */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-white mb-2">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                       Nome (opcional):
                     </label>
                     <input
@@ -3772,26 +3773,26 @@ export default function WhatsAppConnection() {
                       value={newDistributorName}
                       onChange={(e) => setNewDistributorName(e.target.value)}
                       placeholder="Nome da distribuidora"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-4 sm:mt-6">
                   <button
                     onClick={() => setShowAddDistributorModal(false)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                    className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={handleAddDistributor}
                     disabled={addingDistributor || (!newDistributorPhone.trim() && !newDistributorUserId)}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                    className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                   >
                     {addingDistributor ? (
                       <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 animate-spin" />
                         Adicionando...
                       </>
                     ) : (
@@ -3807,47 +3808,47 @@ export default function WhatsAppConnection() {
         {/* Modal de Confirmação de Encaminhamento para Farmacêutico */}
         {showPharmacistConfirmation && pendingPharmacistNotification && (
           <div 
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4"
             onClick={() => {
               setShowPharmacistConfirmation(false)
               setPendingPharmacistNotification(null)
             }}
           >
             <div 
-              className="bg-white dark:bg-[#065084] rounded-lg shadow-xl max-w-md w-full p-6 border border-gray-200 dark:border-[#0F828C]"
+              className="bg-white dark:bg-[#065084] rounded-lg shadow-xl max-w-md w-full p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]"
               onClick={(e) => e.stopPropagation()}
             >
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <span className="mr-2">🚨</span>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center">
+                <span className="mr-1.5 sm:mr-2">🚨</span>
                 Encaminhar para Farmacêutico?
               </h3>
               
-              <div className="mb-4">
-                <p className="text-sm text-gray-700 mb-2">
+              <div className="mb-3 sm:mb-4">
+                <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 mb-2">
                   A IA detectou um medicamento controlado e está pronta para enviar uma notificação aos farmacêuticos configurados.
                 </p>
-                <div className="bg-yellow-50 border border-yellow-200 rounded p-3 mb-3">
-                  <p className="text-sm font-medium text-yellow-800 mb-1">Medicamento:</p>
-                  <p className="text-sm text-yellow-900">{pendingPharmacistNotification.controlledSubstance}</p>
+                <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded p-2 sm:p-3 mb-2 sm:mb-3">
+                  <p className="text-xs sm:text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">Medicamento:</p>
+                  <p className="text-xs sm:text-sm text-yellow-900 dark:text-yellow-200">{pendingPharmacistNotification.controlledSubstance}</p>
                 </div>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
                   Ao confirmar, a notificação será enviada normalmente como em produção.
                 </p>
               </div>
 
-              <div className="flex space-x-3">
+              <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                 <button
                   onClick={() => {
                     setShowPharmacistConfirmation(false)
                     setPendingPharmacistNotification(null)
                   }}
-                  className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition-colors"
+                  className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={handleConfirmPharmacistNotification}
-                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                  className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
                 >
                   Sim, Encaminhar
                 </button>

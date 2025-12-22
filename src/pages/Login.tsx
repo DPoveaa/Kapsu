@@ -78,11 +78,11 @@ export default function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Lado Esquerdo - Formulário de Login */}
-      <div className="w-full lg:w-1/2 bg-white dark:bg-gray-900 flex items-center justify-center p-8 lg:p-12">
+      <div className="w-full lg:w-1/2 bg-white dark:bg-gray-900 flex items-center justify-center p-4 sm:p-6 lg:p-8 xl:p-12">
         <div className="w-full max-w-md">
           {/* Ilustração/Logo acima do título */}
-          <div className="mb-8 flex justify-center">
-            <div className="w-32 h-32 flex items-center justify-center">
+          <div className="mb-4 sm:mb-6 lg:mb-8 flex justify-center">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-32 lg:h-32 flex items-center justify-center">
               <AnimatedLogo 
                 className="w-full h-full object-contain"
                 alt="Kapsu Logo"
@@ -90,33 +90,33 @@ export default function Login() {
             </div>
           </div>
 
-          <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-8 text-center">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 lg:mb-8 text-center">
             Bem-vindo a Kapsu
           </h1>
 
           {successMessage && (
-            <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-500/50 rounded-lg text-green-700 dark:text-green-300 text-sm flex items-center">
-              <CheckCircle size={16} className="mr-2 flex-shrink-0" />
-              {successMessage}
+            <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-500/50 rounded-lg text-green-700 dark:text-green-300 text-xs sm:text-sm flex items-start sm:items-center">
+              <CheckCircle size={14} className="sm:w-4 sm:h-4 mr-1.5 sm:mr-2 flex-shrink-0 mt-0.5 sm:mt-0" />
+              <span className="break-words">{successMessage}</span>
             </div>
           )}
 
           {hasPendingCart && (
-            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-500/50 rounded-lg text-blue-700 dark:text-blue-300 text-sm flex items-center">
-              <ShoppingCart size={16} className="mr-2 flex-shrink-0" />
-              Você tem um carrinho do WhatsApp pendente! Faça login para vincular à sua conta.
+            <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-500/50 rounded-lg text-blue-700 dark:text-blue-300 text-xs sm:text-sm flex items-start sm:items-center">
+              <ShoppingCart size={14} className="sm:w-4 sm:h-4 mr-1.5 sm:mr-2 flex-shrink-0 mt-0.5 sm:mt-0" />
+              <span className="break-words">Você tem um carrinho do WhatsApp pendente! Faça login para vincular à sua conta.</span>
             </div>
           )}
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-500/50 rounded-lg text-red-700 dark:text-red-300 text-sm">
+            <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-500/50 rounded-lg text-red-700 dark:text-red-300 text-xs sm:text-sm break-words">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                 E-mail
               </label>
               <div className="relative">
@@ -125,15 +125,15 @@ export default function Login() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="seu@email.com"
-                  className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-[#67C090] focus:border-[#67C090] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all"
+                  className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2.5 sm:py-3 text-sm sm:text-base bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-[#67C090] focus:border-[#67C090] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all"
                   required
                 />
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
+                <Mail className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 sm:w-5 sm:h-5" />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                 Senha
               </label>
               <div className="relative">
@@ -142,33 +142,33 @@ export default function Login() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Sua senha"
-                  className="w-full pl-10 pr-12 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-[#67C090] focus:border-[#67C090] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all"
+                  className="w-full pl-9 sm:pl-10 pr-11 sm:pr-12 py-2.5 sm:py-3 text-sm sm:text-base bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-[#67C090] focus:border-[#67C090] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all"
                   required
                 />
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={20} />
+                <Lock className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 sm:w-5 sm:h-5" />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  className="absolute right-2.5 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors p-1"
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword ? <EyeOff size={18} className="sm:w-5 sm:h-5" /> : <Eye size={18} className="sm:w-5 sm:h-5" />}
                 </button>
               </div>
             </div>
 
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
               <Link
                 to={searchParams.get('redirect') 
                   ? `/cadastro?redirect=${encodeURIComponent(searchParams.get('redirect')!)}` 
                   : '/cadastro'
                 }
-                className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors break-words"
               >
                 Não tem uma conta? <span className="text-[#67C090] font-medium">Cadastre-se</span>
               </Link>
               <Link
                 to="/recuperar-senha"
-                className="text-sm text-[#67C090] hover:text-[#78B9B5] transition-colors"
+                className="text-xs sm:text-sm text-[#67C090] hover:text-[#78B9B5] transition-colors whitespace-nowrap"
               >
                 Esqueceu sua senha?
               </Link>
@@ -177,17 +177,17 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#67C090] hover:bg-[#78B9B5] text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#67C090]/20 hover:shadow-[#67C090]/30"
+              className="w-full bg-[#67C090] hover:bg-[#78B9B5] text-white font-semibold py-2.5 sm:py-3 px-4 sm:px-6 text-sm sm:text-base rounded-lg transition-colors duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#67C090]/20 hover:shadow-[#67C090]/30"
             >
               {loading ? (
                 <>
-                  <Loader2 size={20} className="mr-2 animate-spin" />
-                  Entrando...
+                  <Loader2 size={18} className="sm:w-5 sm:h-5 mr-1.5 sm:mr-2 animate-spin" />
+                  <span>Entrando...</span>
                 </>
               ) : (
                 <>
-                  <LogIn size={20} className="mr-2" />
-                  Entrar
+                  <LogIn size={18} className="sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+                  <span>Entrar</span>
                 </>
               )}
             </button>

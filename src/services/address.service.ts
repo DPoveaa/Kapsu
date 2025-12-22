@@ -71,7 +71,13 @@ class AddressService {
     }
 
     const data = await response.json()
-    return data.data
+    // Se retornar apenas { id }, busca o endereço completo
+    if (data.data && data.data.id && !data.data.nickname) {
+      const addresses = await this.getSavedAddresses()
+      const created = addresses.find(a => a.id === data.data.id)
+      return created || data.data
+    }
+    return data.data || data
   }
 
   /**

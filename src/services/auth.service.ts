@@ -22,6 +22,7 @@ export interface AuthResponse {
     email: string
     name: string
     phone?: string
+    profile_image?: string
     isAdmin?: boolean
   }
   token?: string
@@ -143,6 +144,92 @@ class AuthService {
     } catch (error) {
       // Erro de rede ou conexão
       return { success: false, isNetworkError: true }
+    }
+  }
+
+  /**
+   * Atualiza o perfil do usuário
+   */
+  async updateProfile(data: {
+    name?: string
+    phone?: string
+    currentPassword?: string
+    newPassword?: string
+  }): Promise<AuthResponse> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado. Faça login novamente.')
+      }
+
+      const response = await fetch(`${this.baseUrl}/profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const result = JSON.parse(text)
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Erro ao atualizar perfil')
+      }
+
+      return result
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao atualizar perfil')
+    }
+  }
+
+  /**
+   * Atualiza a imagem de perfil do usuário
+   */
+  async updateProfileImage(profileImage: string): Promise<AuthResponse> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado. Faça login novamente.')
+      }
+
+      const requestBody = { profile_image: profileImage }
+
+      const response = await fetch(`${this.baseUrl}/profile-image`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(requestBody),
+      })
+
+      const text = await response.text()
+      
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const result = JSON.parse(text)
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Erro ao atualizar imagem de perfil')
+      }
+
+      return result
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao atualizar imagem de perfil')
     }
   }
 }

@@ -112,8 +112,9 @@ export default function ProductDetail() {
     }
   }
 
-  // Calcula parcelamento
-  const installmentValue = product ? (product.price / 12).toFixed(2) : '0.00'
+  // Calcula parcelamento (usa preço promocional se existir)
+  const finalPrice = product?.promo_price || product?.price || 0
+  const installmentValue = product ? (finalPrice / 12).toFixed(2) : '0.00'
   
   // Cria array de imagens (por enquanto usa a mesma imagem, mas pode ser expandido)
   const productImages = product ? [product.image, product.image, product.image] : []
@@ -249,24 +250,47 @@ export default function ProductDetail() {
 
               {/* Preço - Compacto */}
               <div className="mb-4">
-                <p className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1">
-                  R$ {product?.price.toFixed(2).replace('.', ',')}
-                </p>
-                <p className="text-sm lg:text-base text-gray-600 dark:text-gray-300">
-                  em 12x de R$ {installmentValue.replace('.', ',')} sem juros
-                </p>
+                {product?.promo_price ? (
+                  <div>
+                    <div className="flex items-center gap-3 mb-1">
+                      <p className="text-3xl lg:text-4xl font-bold text-red-600 dark:text-red-400">
+                        R$ {Number(product.promo_price).toFixed(2).replace('.', ',')}
+                      </p>
+                      <p className="text-xl lg:text-2xl font-semibold text-gray-500 dark:text-gray-400 line-through">
+                        R$ {Number(product.price).toFixed(2).replace('.', ',')}
+                      </p>
+                      <span className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 px-2 py-1 rounded text-sm font-semibold">
+                        {Math.round(((Number(product.price) - Number(product.promo_price)) / Number(product.price)) * 100)}% OFF
+                      </span>
+                    </div>
+                    <p className="text-sm lg:text-base text-gray-600 dark:text-gray-300">
+                      em 12x de R$ {installmentValue.replace('.', ',')} sem juros
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-1">
+                      R$ {Number(product?.price || 0).toFixed(2).replace('.', ',')}
+                    </p>
+                    <p className="text-sm lg:text-base text-gray-600 dark:text-gray-300">
+                      em 12x de R$ {installmentValue.replace('.', ',')} sem juros
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Frete - Compacto */}
-              <div className="mb-4 p-3 bg-blue-50 dark:bg-[#065084] rounded-lg border border-blue-200 dark:border-[#0F828C]">
-                <div className="flex items-center mb-1">
-                  <Truck size={16} className="text-blue-600 dark:text-[#78B9B5] mr-2" />
-                  <span className="font-semibold text-blue-900 dark:text-white text-sm">FRETE GRÁTIS ACIMA DE R$ 19</span>
+              {product.free_shipping && (
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-[#065084] rounded-lg border border-blue-200 dark:border-[#0F828C]">
+                  <div className="flex items-center mb-1">
+                    <Truck size={16} className="text-blue-600 dark:text-[#78B9B5] mr-2" />
+                    <span className="font-semibold text-blue-900 dark:text-white text-sm">FRETE GRÁTIS</span>
+                  </div>
+                  <p className="text-xs text-blue-700 dark:text-gray-300">
+                    Receba grátis em 2-3 dias úteis
+                  </p>
                 </div>
-                <p className="text-xs text-blue-700 dark:text-gray-300">
-                  Receba grátis em 2-3 dias úteis
-                </p>
-              </div>
+              )}
 
               {/* Estoque e Quantidade - Compacto */}
               <div className="mb-4">

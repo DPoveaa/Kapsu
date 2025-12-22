@@ -8,6 +8,7 @@ interface User {
   email: string
   name: string
   phone?: string
+  profile_image?: string
   isAdmin: boolean
   role?: 'user' | 'admin' | 'pharmacist'
 }
@@ -16,6 +17,7 @@ interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<void>
   logout: () => void
+  updateUser: (userData: Partial<User>) => void
   isAuthenticated: boolean
   isAdmin: boolean
   isPharmacist: boolean
@@ -50,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 email: isValid.user.email,
                 name: isValid.user.name,
                 phone: isValid.user.phone,
+                profile_image: (isValid.user as any).profile_image,
                 role: 'user',
                 isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || false
               }
@@ -103,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: isValid.user.email,
             name: isValid.user.name,
             phone: isValid.user.phone,
+            profile_image: (isValid.user as any).profile_image,
             role: 'user',
             isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || false
           }
@@ -147,6 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: response.user.email,
         name: response.user.name,
         phone: response.user.phone,
+        profile_image: (response.user as any).profile_image,
         role: 'user',
         isAdmin: isAdminEmail(response.user.email) || response.user.isAdmin || false
       }
@@ -177,11 +182,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('sanare_token')
   }
 
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...userData }
+      setUser(updatedUser)
+      localStorage.setItem('sanare_user', JSON.stringify(updatedUser))
+    }
+  }
+
   return (
     <AuthContext.Provider value={{
       user,
       login,
       logout,
+      updateUser,
       isAuthenticated: !!user,
       isAdmin: user?.isAdmin || user?.role === 'admin' || false,
       isPharmacist: user?.role === 'pharmacist' || false,

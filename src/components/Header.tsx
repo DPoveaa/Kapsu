@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
-import { ShoppingCart, User, Menu, LogOut, Shield, MessageCircle } from 'lucide-react'
+import { ShoppingCart, User, Menu, LogOut, Shield, MessageCircle, UserCircle } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { whatsappService } from '../services/whatsapp.service'
 import AnimatedLogo from './AnimatedLogo'
 import ThemeToggle from './ThemeToggle'
+import { env } from '../config/env'
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -15,6 +16,25 @@ export default function Header() {
   const { user, logout, isAdmin, isPharmacist } = useAuth()
   const itemCount = getItemCount()
   const userMenuRef = useRef<HTMLDivElement>(null)
+
+  // Função para obter a URL da imagem de perfil
+  const getProfileImageUrl = (profileImage?: string): string | null => {
+    if (!profileImage) return null
+    if (profileImage.startsWith('http')) return profileImage
+    // Remove /api da URL base para arquivos estáticos
+    const baseUrl = env.apiUrl.replace('/api', '')
+    return `${baseUrl}${profileImage}`
+  }
+
+  // Função para obter as iniciais do nome
+  const getInitials = (name: string): string => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2)
+  }
   
   // Busca contagem de intervenções para admin e farmacêutico
   useEffect(() => {
@@ -132,23 +152,35 @@ export default function Header() {
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                   className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-[#0F828C] transition-colors duration-200 group"
                 >
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: '#67C090' }}>
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
+                  {getProfileImageUrl(user.profile_image) ? (
+                    <img
+                      src={getProfileImageUrl(user.profile_image)!}
+                      alt={user.name}
+                      className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-[#065084]"
+                      onError={(e) => {
+                        // Se a imagem falhar ao carregar, mostra a inicial
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                        const parent = target.parentElement
+                        if (parent) {
+                          const fallback = document.createElement('div')
+                          fallback.className = 'w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm'
+                          fallback.style.backgroundColor = '#67C090'
+                          fallback.textContent = getInitials(user.name)
+                          parent.appendChild(fallback)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: '#67C090' }}>
+                      {getInitials(user.name)}
+                    </div>
+                  )}
                   <span className="font-medium text-gray-700 dark:text-gray-200 text-sm max-w-[120px] truncate">{user.name}</span>
                   {isAdmin && <Shield size={14} className="text-yellow-500" />}
                 </button>
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#065084] rounded-xl shadow-xl dark:shadow-2xl border border-gray-100 dark:border-[#0F828C] py-2 z-50 overflow-hidden">
-                    <div className="px-4 py-3 bg-gradient-to-r from-primary-50 to-primary-100 dark:from-[#065084] dark:to-[#0F828C] border-b border-gray-100 dark:border-[#0F828C]">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{user.name}</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">{user.email}</p>
-                      {isAdmin && (
-                        <span className="inline-block mt-2 text-xs bg-yellow-100 text-yellow-800 px-2.5 py-1 rounded-full font-medium">
-                          Administrador
-                        </span>
-                      )}
-                    </div>
                     {isAdmin && (
                       <Link
                         to="/admin"
@@ -159,6 +191,14 @@ export default function Header() {
                         <span>Painel Admin</span>
                       </Link>
                     )}
+                    <Link
+                      to="/perfil"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-[#0F828C] hover:text-primary-600 dark:hover:text-[#78B9B5] flex items-center space-x-2 transition-colors"
+                    >
+                      <UserCircle size={16} />
+                      <span>Meu Perfil</span>
+                    </Link>
                     <button
                       onClick={() => {
                         logout()
@@ -224,9 +264,30 @@ export default function Header() {
             {user ? (
               <div className="pt-2 border-t border-gray-100 dark:border-[#0F828C] mt-2 space-y-1">
                 <div className="flex items-center space-x-2 px-4 py-2.5 mb-2">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: '#67C090' }}>
-                    {user.name.charAt(0).toUpperCase()}
-                  </div>
+                  {getProfileImageUrl(user.profile_image) ? (
+                    <img
+                      src={getProfileImageUrl(user.profile_image)!}
+                      alt={user.name}
+                      className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-[#065084]"
+                      onError={(e) => {
+                        // Se a imagem falhar ao carregar, mostra a inicial
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                        const parent = target.parentElement
+                        if (parent) {
+                          const fallback = document.createElement('div')
+                          fallback.className = 'w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm'
+                          fallback.style.backgroundColor = '#67C090'
+                          fallback.textContent = getInitials(user.name)
+                          parent.appendChild(fallback)
+                        }
+                      }}
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: '#67C090' }}>
+                      {getInitials(user.name)}
+                    </div>
+                  )}
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{user.name}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-300">{user.email}</p>
@@ -258,6 +319,14 @@ export default function Header() {
                     </Link>
                   </>
                 )}
+                <Link
+                  to="/perfil"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-colors"
+                >
+                  <UserCircle size={16} />
+                  <span>Meu Perfil</span>
+                </Link>
                 <button
                   onClick={() => {
                     logout()

@@ -22,6 +22,7 @@ export default function EditProduct() {
     name: '',
     description: '',
     price: '',
+    promo_price: '',
     stock: '',
     image: '',
     category: 'outros',
@@ -29,6 +30,7 @@ export default function EditProduct() {
     compositions: '',
     indication: '',
     contraindication: '',
+    free_shipping: false,
   })
 
   // Carrega produto para edição
@@ -50,6 +52,7 @@ export default function EditProduct() {
           name: product.name,
           description: product.description || '',
           price: product.price.toString(),
+          promo_price: productRaw.promo_price ? productRaw.promo_price.toString() : '',
           stock: productRaw.stock?.toString() || '0',
           image: product.image || '',
           category: product.category || 'outros',
@@ -57,6 +60,7 @@ export default function EditProduct() {
           compositions: productRaw.compositions || '',
           indication: productRaw.indication || '',
           contraindication: productRaw.contraindication || '',
+          free_shipping: productRaw.free_shipping ?? false,
         })
       } catch (err: any) {
         console.error('Erro ao carregar produto:', err)
@@ -97,12 +101,24 @@ export default function EditProduct() {
       return
     }
 
+    // Validação de preço promocional
+    if (formData.promo_price && (isNaN(Number(formData.promo_price)) || Number(formData.promo_price) <= 0)) {
+      setError('O preço promocional deve ser um número positivo')
+      return
+    }
+
+    if (formData.promo_price && Number(formData.promo_price) >= Number(formData.price)) {
+      setError('O preço promocional deve ser menor que o preço normal')
+      return
+    }
+
     try {
       setLoading(true)
       await productsService.update(id, {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         price: Number(formData.price),
+        promo_price: formData.promo_price ? Number(formData.promo_price) : null,
         stock: formData.stock ? Number(formData.stock) : undefined,
         image: formData.image.trim() || undefined,
         category: formData.category || undefined,
@@ -110,6 +126,7 @@ export default function EditProduct() {
         compositions: formData.compositions.trim() || undefined,
         indication: formData.indication.trim() || undefined,
         contraindication: formData.contraindication.trim() || undefined,
+        free_shipping: formData.free_shipping,
       })
 
       // Redireciona para a lista de produtos após atualizar
@@ -125,7 +142,7 @@ export default function EditProduct() {
   if (loadingProduct) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <Loader2 className="animate-spin text-primary-600" size={48} />
+        <Loader2 className="animate-spin text-primary-600 dark:text-[#78B9B5]" size={48} />
       </div>
     )
   }
@@ -135,31 +152,31 @@ export default function EditProduct() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
+          className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-6"
         >
           <ArrowLeft size={20} className="mr-2" />
           Voltar
         </button>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Editar Produto</h1>
+        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Editar Produto</h1>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600">{error}</p>
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-red-600 dark:text-red-300">{error}</p>
             </div>
           )}
 
           {imageError && (
-            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-yellow-600">{imageError}</p>
+            <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <p className="text-yellow-600 dark:text-yellow-300">{imageError}</p>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Nome */}
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Nome do Produto <span className="text-red-500">*</span>
               </label>
               <input
@@ -169,14 +186,14 @@ export default function EditProduct() {
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                 placeholder="Ex: Vitamina D3 2000UI"
               />
             </div>
 
             {/* Descrição */}
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Descrição
               </label>
               <textarea
@@ -185,7 +202,7 @@ export default function EditProduct() {
                 value={formData.description}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                 placeholder="Descreva o produto..."
               />
             </div>
@@ -193,7 +210,7 @@ export default function EditProduct() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Preço */}
               <div>
-                <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Preço (R$) <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -205,14 +222,37 @@ export default function EditProduct() {
                   required
                   min="0"
                   step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                   placeholder="0.00"
                 />
               </div>
 
+              {/* Preço Promocional */}
+              <div>
+                <label htmlFor="promo_price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Preço Promocional (R$)
+                </label>
+                <input
+                  type="number"
+                  id="promo_price"
+                  name="promo_price"
+                  value={formData.promo_price}
+                  onChange={handleChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  placeholder="0.00 (opcional)"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Deixe vazio se não houver promoção. Deve ser menor que o preço normal.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Estoque */}
               <div>
-                <label htmlFor="stock" className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="stock" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Estoque
                 </label>
                 <input
@@ -222,7 +262,7 @@ export default function EditProduct() {
                   value={formData.stock}
                   onChange={handleChange}
                   min="0"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                   placeholder="0"
                 />
               </div>
@@ -230,7 +270,7 @@ export default function EditProduct() {
 
             {/* Categoria */}
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Categoria
               </label>
               <select
@@ -238,7 +278,7 @@ export default function EditProduct() {
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
               >
                 {categories.map(cat => (
                   <option key={cat.value} value={cat.value}>
@@ -250,7 +290,7 @@ export default function EditProduct() {
 
             {/* Imagem */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Imagem do Produto
               </label>
               <ImageUpload
@@ -263,7 +303,7 @@ export default function EditProduct() {
 
             {/* Composições */}
             <div>
-              <label htmlFor="compositions" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="compositions" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Composições
               </label>
               <textarea
@@ -272,14 +312,14 @@ export default function EditProduct() {
                 value={formData.compositions}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                 placeholder="Informe as composições do produto..."
               />
             </div>
 
             {/* Indicação */}
             <div>
-              <label htmlFor="indication" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="indication" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Indicação
               </label>
               <textarea
@@ -288,14 +328,14 @@ export default function EditProduct() {
                 value={formData.indication}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                 placeholder="Informe as indicações do produto..."
               />
             </div>
 
             {/* Contraindicação */}
             <div>
-              <label htmlFor="contraindication" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="contraindication" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Contraindicação
               </label>
               <textarea
@@ -304,9 +344,24 @@ export default function EditProduct() {
                 value={formData.contraindication}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                 placeholder="Informe as contraindicações do produto..."
               />
+            </div>
+
+            {/* Frete Grátis */}
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="free_shipping"
+                name="free_shipping"
+                checked={formData.free_shipping}
+                onChange={handleChange}
+                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 dark:border-[#0F828C]"
+              />
+              <label htmlFor="free_shipping" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                Oferecer frete grátis para este produto
+              </label>
             </div>
 
             {/* Ativo */}
@@ -317,18 +372,18 @@ export default function EditProduct() {
                   name="active"
                   checked={formData.active}
                   onChange={handleChange}
-                  className="mr-2"
+                  className="mr-2 dark:border-[#0F828C]"
                 />
-                <span className="text-sm font-medium text-gray-700">Produto ativo</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Produto ativo</span>
               </label>
             </div>
 
             {/* Botões */}
-            <div className="flex justify-end space-x-4 pt-4 border-t">
+            <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-[#0F828C]">
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                className="px-6 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#0F828C] transition-colors"
                 disabled={loading}
               >
                 Cancelar
@@ -336,7 +391,7 @@ export default function EditProduct() {
               <button
                 type="submit"
                 disabled={loading}
-                className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center"
+                className="px-6 py-2 bg-primary-600 dark:bg-[#0F828C] text-white rounded-lg hover:bg-primary-700 dark:hover:bg-[#78B9B5] transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center"
               >
                 {loading ? (
                   <>

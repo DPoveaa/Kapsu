@@ -415,18 +415,18 @@ export default function Cart() {
 
   if (items.length === 0) {
     return (
-      <div className="bg-gray-50 dark:bg-gray-900 min-h-[60vh] flex items-center justify-center py-12">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-[60vh] flex items-center justify-center py-8 sm:py-12">
         <div className="max-w-md mx-auto text-center px-4">
-          <ShoppingCart size={64} className="mx-auto text-gray-300 dark:text-gray-400 mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Seu carrinho está vazio</h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">
+          <ShoppingCart size={48} className="mx-auto text-gray-300 dark:text-gray-400 mb-3 sm:mb-4" />
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">Seu carrinho está vazio</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-4 sm:mb-6 text-xs sm:text-sm px-2">
             Adicione produtos ou personalize um medicamento para começar
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link to="/produtos" className="btn-primary text-sm px-6 py-2">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center px-4">
+            <Link to="/produtos" className="btn-primary text-xs sm:text-sm px-4 sm:px-6 py-2">
               Explorar Produtos
             </Link>
-            <Link to="/personalizar" className="btn-secondary text-sm px-6 py-2">
+            <Link to="/personalizar" className="btn-secondary text-xs sm:text-sm px-4 sm:px-6 py-2">
               Personalizar Medicamento
             </Link>
           </div>
@@ -437,33 +437,33 @@ export default function Cart() {
 
   return (
     <div className="bg-gradient-to-b from-gray-50 dark:from-gray-900 to-white dark:to-gray-900 min-h-screen pb-12">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Carrinho de Compras</h1>
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 max-w-7xl">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-8">Carrinho de Compras</h1>
 
         {/* Mensagem de vinculação do carrinho WhatsApp */}
         {linkMessage && (
-          <div className={`mb-4 p-4 rounded-lg flex items-center gap-3 ${
-            linkMessage.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' :
-            linkMessage.type === 'error' ? 'bg-red-50 text-red-800 border border-red-200' :
-            'bg-blue-50 text-blue-800 border border-blue-200'
+          <div className={`mb-3 sm:mb-4 p-3 sm:p-4 rounded-lg flex items-center gap-2 sm:gap-3 text-sm sm:text-base ${
+            linkMessage.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-700' :
+            linkMessage.type === 'error' ? 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-700' :
+            'bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-700'
           }`}>
-            {linkMessage.type === 'success' && <CheckCircle size={20} />}
-            {linkMessage.type === 'info' && <Loader2 className="animate-spin" size={20} />}
-            <span>{linkMessage.text}</span>
+            {linkMessage.type === 'success' && <CheckCircle size={18} className="flex-shrink-0" />}
+            {linkMessage.type === 'info' && <Loader2 className="animate-spin flex-shrink-0" size={18} />}
+            <span className="flex-1 min-w-0">{linkMessage.text}</span>
           </div>
         )}
 
         {/* Loading enquanto vincula o carrinho */}
         {linkingCart && (
-          <div className="mb-4 p-4 bg-blue-50 rounded-lg flex items-center gap-3 text-blue-800">
-            <Loader2 className="animate-spin" size={20} />
+          <div className="mb-3 sm:mb-4 p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center gap-2 sm:gap-3 text-sm sm:text-base text-blue-800 dark:text-blue-300">
+            <Loader2 className="animate-spin flex-shrink-0" size={18} />
             <span>Vinculando carrinho do WhatsApp à sua conta...</span>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Cart Items - Layout expandido e moderno */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* 
               ⚠️ IMPORTANTE: Esta seção de assinatura deve aparecer APENAS UMA VEZ no topo do carrinho.
               NÃO deve ser renderizada dentro do loop de produtos (items.map).
@@ -471,95 +471,95 @@ export default function Cart() {
             */}
             {/* Seção Global de Escolha de Tipo de Compra - APLICA PARA TODO O CARRINHO */}
             {items.length > 0 && (
-              <div className="bg-gradient-to-br from-white dark:from-[#065084] via-primary-50/30 dark:via-[#065084] to-gray-50 dark:to-[#065084] rounded-2xl shadow-xl dark:shadow-lg border-2 border-primary-200 dark:border-[#0F828C] p-6 mb-6">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles size={24} className="text-primary-600" />
-                <h4 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Forma de Compra do Carrinho
-                </h4>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                A opção selecionada será aplicada para <strong>todos os produtos</strong> do seu carrinho
-              </p>
+              <div className="bg-gradient-to-br from-white dark:from-[#065084] via-primary-50/30 dark:via-[#065084] to-gray-50 dark:to-[#065084] rounded-xl sm:rounded-2xl shadow-xl dark:shadow-lg border-2 border-primary-200 dark:border-[#0F828C] p-4 sm:p-6 mb-4 sm:mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles size={20} className="text-primary-600 flex-shrink-0" />
+                  <h4 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+                    Forma de Compra do Carrinho
+                  </h4>
+                </div>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3 sm:mb-4">
+                  A opção selecionada será aplicada para <strong>todos os produtos</strong> do seu carrinho
+                </p>
 
-              {/* Botões de tipo de compra */}
-              <div className="flex gap-4 mb-6">
-                <button
-                  onClick={() => handlePurchaseTypeChange('subscription')}
-                  className={`flex-1 py-4 px-6 rounded-xl font-bold text-base transition-all duration-200 ${
-                    isSubscription
-                      ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white scale-105'
-                      : 'bg-white dark:bg-[#065084] text-gray-700 dark:text-white border-2 border-gray-200 dark:border-[#0F828C] hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
-                  }`}
-                >
-                  <div className="flex items-center justify-center gap-3">
-                    <Repeat size={20} />
-                    <span>Assinatura</span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => handlePurchaseTypeChange('one-time')}
-                  className={`flex-1 py-4 px-6 rounded-xl font-bold text-base transition-all duration-200 ${
-                    !isSubscription
-                      ? 'bg-gradient-to-r from-gray-800 to-gray-900 text-white scale-105'
-                      : 'bg-white dark:bg-[#065084] text-gray-700 dark:text-white border-2 border-gray-200 dark:border-[#0F828C] hover:border-gray-300 dark:hover:border-[#0F828C] hover:shadow-md'
-                  }`}
-                >
-                  Compra Única
-                </button>
-              </div>
+                {/* Botões de tipo de compra */}
+                <div className="flex gap-2 sm:gap-4 mb-4 sm:mb-6">
+                  <button
+                    onClick={() => handlePurchaseTypeChange('subscription')}
+                    className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 rounded-xl font-bold text-sm sm:text-base transition-all duration-200 ${
+                      isSubscription
+                        ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white scale-105'
+                        : 'bg-white dark:bg-[#065084] text-gray-700 dark:text-white border-2 border-gray-200 dark:border-[#0F828C] hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-2 sm:gap-3">
+                      <Repeat size={18} />
+                      <span>Assinatura</span>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => handlePurchaseTypeChange('one-time')}
+                    className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 rounded-xl font-bold text-sm sm:text-base transition-all duration-200 ${
+                      !isSubscription
+                        ? 'bg-gradient-to-r from-gray-800 to-gray-900 text-white scale-105'
+                        : 'bg-white dark:bg-[#065084] text-gray-700 dark:text-white border-2 border-gray-200 dark:border-[#0F828C] hover:border-gray-300 dark:hover:border-[#0F828C] hover:shadow-md'
+                    }`}
+                  >
+                    Compra Única
+                  </button>
+                </div>
 
               {/* Conteúdo da assinatura */}
               {isSubscription && (
-                <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
                   {/* Planos de assinatura */}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-3">
+                    <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-2 sm:mb-3">
                       Escolha seu Plano:
                     </label>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-2 sm:gap-4">
                       <button
                         onClick={() => setSubscriptionPlan('monthly')}
-                        className={`relative p-5 rounded-xl transition-all ${
+                        className={`relative p-3 sm:p-5 rounded-xl transition-all ${
                           subscriptionPlan === 'monthly'
                             ? 'bg-white dark:bg-[#065084] border-2 border-primary-500 dark:border-[#0F828C] shadow-lg dark:shadow-xl'
                             : 'bg-white dark:bg-[#065084] border-2 border-gray-200 dark:border-[#0F828C] hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
                         }`}
                       >
                         <div className="text-left">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-base font-bold text-gray-900 dark:text-white">Mensal</span>
+                          <div className="flex items-center justify-between mb-1 sm:mb-2">
+                            <span className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">Mensal</span>
                             {subscriptionPlan === 'monthly' && (
-                              <Check size={18} className="text-primary-600" />
+                              <Check size={16} className="text-primary-600 flex-shrink-0" />
                             )}
                           </div>
-                          <p className="text-xl font-bold text-primary-600 dark:text-primary-400">
+                          <p className="text-base sm:text-lg md:text-xl font-bold text-primary-600 dark:text-primary-400">
                             R$ {monthlySubscriptionPrice.toFixed(2).replace('.', ',')}
-                            <span className="text-sm text-gray-500 dark:text-gray-300 font-normal">/mês</span>
+                            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 font-normal">/mês</span>
                           </p>
                         </div>
                       </button>
                       <button
                         onClick={() => setSubscriptionPlan('quarterly')}
-                        className={`relative p-5 rounded-xl transition-all ${
+                        className={`relative p-3 sm:p-5 rounded-xl transition-all ${
                           subscriptionPlan === 'quarterly'
                             ? 'bg-white dark:bg-[#065084] border-2 border-primary-500 dark:border-[#0F828C] shadow-lg dark:shadow-xl'
                             : 'bg-white dark:bg-[#065084] border-2 border-gray-200 dark:border-[#0F828C] hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
                         }`}
                       >
                         <div className="text-left">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-base font-bold text-gray-900 dark:text-white">Trimestral</span>
+                          <div className="flex items-center justify-between mb-1 sm:mb-2">
+                            <span className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">Trimestral</span>
                             {subscriptionPlan === 'quarterly' && (
-                              <Check size={18} className="text-primary-600" />
+                              <Check size={16} className="text-primary-600 flex-shrink-0" />
                             )}
-                            <span className="absolute top-3 right-3 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-bold">
+                            <span className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-green-500 text-white text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-bold">
                               Mais pedido
                             </span>
                           </div>
-                          <p className="text-xl font-bold text-primary-600 dark:text-primary-400">
+                          <p className="text-base sm:text-lg md:text-xl font-bold text-primary-600 dark:text-primary-400">
                             R$ {quarterlySubscriptionPrice.toFixed(2).replace('.', ',')}
-                            <span className="text-sm text-gray-500 dark:text-gray-300 font-normal">/mês</span>
+                            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 font-normal">/mês</span>
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">Economia de 15%</p>
                         </div>
@@ -568,24 +568,24 @@ export default function Cart() {
                   </div>
 
                   {/* Benefícios da assinatura */}
-                  <div className="bg-gradient-to-r from-primary-50 dark:from-[#065084] to-purple-50 dark:to-[#065084] rounded-xl p-5 border border-primary-100 dark:border-[#0F828C]">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Você receberá:</p>
-                    <ul className="space-y-3">
-                      <li className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
-                        <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
-                          <Check size={14} className="text-white" />
+                  <div className="bg-gradient-to-r from-primary-50 dark:from-[#065084] to-purple-50 dark:to-[#065084] rounded-xl p-3 sm:p-5 border border-primary-100 dark:border-[#0F828C]">
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">Você receberá:</p>
+                    <ul className="space-y-2 sm:space-y-3">
+                      <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
+                          <Check size={12} className="text-white" />
                         </div>
                         <span>Seus produtos a cada 30 dias</span>
                       </li>
-                      <li className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
-                        <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
-                          <Check size={14} className="text-white" />
+                      <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
+                          <Check size={12} className="text-white" />
                         </div>
                         <span>{subscriptionPlan === 'quarterly' ? '15%' : '10%'} de desconto automático</span>
                       </li>
-                      <li className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
-                        <div className="w-6 h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
-                          <Check size={14} className="text-white" />
+                      <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
+                          <Check size={12} className="text-white" />
                         </div>
                         <span>Frete grátis em todas as entregas</span>
                       </li>
@@ -609,7 +609,7 @@ export default function Cart() {
             {/* Banner de economia com cupons (similar ao Mercado Livre) */}
 
             {/* Lista de Produtos */}
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {items.map(item => {
                 const price = item.product?.price || item.customMedication?.price || 0
                 const itemTotal = price * item.quantity
@@ -619,39 +619,39 @@ export default function Cart() {
 
                 return (
                   <div key={item.id} className="bg-white dark:bg-[#065084] rounded-xl shadow-sm dark:shadow-lg border border-gray-100 dark:border-[#0F828C] overflow-hidden hover:shadow-md dark:hover:shadow-xl transition-all duration-200">
-                    <div className="p-5">
-                      <div className="flex gap-5">
+                    <div className="p-3 sm:p-5">
+                      <div className="flex gap-3 sm:gap-5">
                         {/* Imagem do produto */}
                         {item.type === 'product' && item.product ? (
                           <img
                             src={item.product.image}
                             alt={item.product.name}
-                            className="w-24 h-24 object-cover rounded-lg border-2 border-gray-100 flex-shrink-0"
+                            className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border-2 border-gray-100 flex-shrink-0"
                             onError={handleProductImageError}
                           />
                         ) : (
-                          <div className="w-24 h-24 bg-gradient-to-br from-primary-100 via-primary-50 to-accent-100 rounded-lg border-2 border-gray-100 flex items-center justify-center flex-shrink-0">
-                            <FileText className="text-primary-600" size={32} />
+                          <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-primary-100 via-primary-50 to-accent-100 rounded-lg border-2 border-gray-100 flex items-center justify-center flex-shrink-0">
+                            <FileText className="text-primary-600" size={24} />
                           </div>
                         )}
 
                         {/* Informações do produto */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+                          <div className="flex items-start justify-between mb-2 sm:mb-3">
+                            <div className="flex-1 min-w-0 pr-2">
+                              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-1 line-clamp-2">
                                 {item.product?.name || item.customMedication?.name}
                               </h3>
                               {item.product && (
-                                <p className="text-sm text-gray-500 dark:text-gray-300 line-clamp-1">{item.product.description}</p>
+                                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 line-clamp-1">{item.product.description}</p>
                               )}
                               {item.customMedication && (
-                                <div className="text-sm text-gray-600 dark:text-gray-300">
+                                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                                   <p className="line-clamp-1">
                                     <strong>Ativos:</strong> {item.customMedication.activeIngredients.map(i => i.name).join(', ')}
                                   </p>
                                   {item.customMedication.prescriptionRequired && (
-                                    <span className="inline-block mt-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs px-2 py-1 rounded-full font-medium">
+                                    <span className="inline-block mt-1.5 sm:mt-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs px-2 py-0.5 sm:py-1 rounded-full font-medium">
                                       Receita necessária
                                     </span>
                                   )}
@@ -660,40 +660,40 @@ export default function Cart() {
                             </div>
                             <button
                               onClick={() => removeItem(item.id)}
-                              className="text-gray-400 hover:text-red-600 transition-colors p-2 hover:bg-red-50 rounded-lg ml-4"
+                              className="text-gray-400 hover:text-red-600 transition-colors p-1.5 sm:p-2 hover:bg-red-50 rounded-lg flex-shrink-0"
                               title="Excluir"
                             >
-                              <Trash2 size={18} />
+                              <Trash2 size={16} />
                             </button>
                           </div>
 
                           {/* Controles de quantidade e preço */}
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between gap-2 sm:gap-4">
                             <div className="flex items-center border-2 border-gray-200 dark:border-[#0F828C] rounded-lg overflow-hidden">
                               <button
                                 onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                className="p-2 hover:bg-gray-50 dark:hover:bg-[#0F828C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="p-1.5 sm:p-2 hover:bg-gray-50 dark:hover:bg-[#0F828C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 disabled={item.quantity <= 1}
                               >
-                                <Minus size={16} />
+                                <Minus size={14} />
                               </button>
-                              <span className="px-4 py-1.5 text-sm font-semibold min-w-[2.5rem] text-center bg-gray-50 dark:bg-[#0F828C] dark:text-white">
+                              <span className="px-3 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm font-semibold min-w-[2rem] sm:min-w-[2.5rem] text-center bg-gray-50 dark:bg-[#0F828C] dark:text-white">
                                 {item.quantity}
                               </span>
                               <button
                                 onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                className="p-2 hover:bg-gray-50 dark:hover:bg-[#0F828C] transition-colors"
+                                className="p-1.5 sm:p-2 hover:bg-gray-50 dark:hover:bg-[#0F828C] transition-colors"
                               >
-                                <Plus size={16} />
+                                <Plus size={14} />
                               </button>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right flex-shrink-0">
                               {isSubscription && itemTotal !== itemDiscountedPrice && (
-                                <p className="text-xs text-gray-400 line-through mb-1">
+                                <p className="text-xs text-gray-400 dark:text-gray-500 line-through mb-0.5 sm:mb-1">
                                   R$ {itemTotal.toFixed(2).replace('.', ',')}
                                 </p>
                               )}
-                              <p className="text-xl font-bold text-primary-600">
+                              <p className="text-lg sm:text-xl font-bold text-primary-600 dark:text-primary-400">
                                 R$ {itemDiscountedPrice.toFixed(2).replace('.', ',')}
                               </p>
                             </div>
@@ -708,31 +708,31 @@ export default function Cart() {
 
             {/* Recomendações */}
             {recommendedProducts.length > 0 && (
-              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-[#0F828C]">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
+              <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200 dark:border-[#0F828C]">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
                   Produtos que você pode gostar
                 </h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                   {recommendedProducts.map(product => (
                     <div
                       key={product.id}
-                      className="bg-white dark:bg-[#065084] rounded-xl border border-gray-200 dark:border-[#0F828C] p-4 hover:shadow-lg dark:hover:shadow-xl transition-all cursor-pointer group"
+                      className="bg-white dark:bg-[#065084] rounded-xl border border-gray-200 dark:border-[#0F828C] p-3 sm:p-4 hover:shadow-lg dark:hover:shadow-xl transition-all cursor-pointer group"
                       onClick={() => navigate(`/produtos/${product.id}`)}
                     >
                       <img
                         src={product.image}
                         alt={product.name}
-                        className="w-full h-32 object-cover rounded-lg mb-3 group-hover:scale-105 transition-transform"
-                        onError={handleImageError}
+                        className="w-full h-24 sm:h-32 object-cover rounded-lg mb-2 sm:mb-3 group-hover:scale-105 transition-transform"
+                        onError={handleProductImageError}
                       />
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">
+                      <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">
                         {product.name}
                       </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-300 mb-3 line-clamp-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-300 mb-2 sm:mb-3 line-clamp-1">
                         {product.description}
                       </p>
-                      <div className="flex items-center justify-between">
-                        <p className="text-base font-bold text-primary-600">
+                      <div className="flex items-center justify-between gap-1 sm:gap-2">
+                        <p className="text-sm sm:text-base font-bold text-primary-600 dark:text-primary-400">
                           R$ {product.price.toFixed(2).replace('.', ',')}
                         </p>
                         <button
@@ -746,10 +746,10 @@ export default function Cart() {
                               console.error('Erro ao adicionar produto:', error)
                             }
                           }}
-                          className="bg-primary-600 hover:bg-primary-700 text-white p-2 rounded-lg transition-colors shadow-sm"
+                          className="bg-primary-600 hover:bg-primary-700 text-white p-1.5 sm:p-2 rounded-lg transition-colors shadow-sm flex-shrink-0"
                           title="Adicionar ao carrinho"
                         >
-                          <Plus size={16} />
+                          <Plus size={14} />
                         </button>
                       </div>
                     </div>
@@ -769,11 +769,11 @@ export default function Cart() {
 
           {/* Summary - Sidebar moderno */}
           <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-[#065084] rounded-2xl shadow-lg dark:shadow-xl border border-gray-100 dark:border-[#0F828C] p-6 sticky top-24">
+            <div className="bg-white dark:bg-[#065084] rounded-xl sm:rounded-2xl shadow-lg dark:shadow-xl border border-gray-100 dark:border-[#0F828C] p-4 sm:p-6 sticky top-20 sm:top-24">
               {/* Seção de Cupons Promocionais */}
-              <div className="mb-6 pb-6 border-b border-gray-200 dark:border-[#0F828C]">
-                <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3 flex items-center">
-                  <Tag className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-300" />
+              <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-gray-200 dark:border-[#0F828C]">
+                <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3 flex items-center">
+                  <Tag className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-300 flex-shrink-0" />
                   Cupons Promocionais
                 </h3>
                 
@@ -785,7 +785,7 @@ export default function Cart() {
                         value={promoCode}
                         onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                         placeholder="Digite o código"
-                        className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault()
@@ -796,20 +796,20 @@ export default function Cart() {
                       <button
                         onClick={handleValidatePromoCode}
                         disabled={validatingPromoCode || !promoCode.trim()}
-                        className="px-3 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                       >
                         {validatingPromoCode ? (
-                          <Loader2 className="animate-spin" size={14} />
+                          <Loader2 className="animate-spin" size={12} />
                         ) : (
                           'Aplicar'
                         )}
                       </button>
                     </div>
                     {promoCodeError && (
-                      <p className="text-xs text-red-600">{promoCodeError}</p>
+                      <p className="text-xs text-red-600 dark:text-red-400">{promoCodeError}</p>
                     )}
                     {!promoCodeError && (
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
                         Possui um código promocional? Insira acima.
                       </p>
                     )}
@@ -831,14 +831,14 @@ export default function Cart() {
                               
                               return (
                                 <div key={promoCode.id} className="min-w-full flex-shrink-0">
-                                  <div className="bg-green-50 dark:bg-[#065084] border border-green-200 dark:border-[#0F828C] rounded-md px-3 py-2 flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                                      <Check className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+                                  <div className="bg-green-50 dark:bg-[#065084] border border-green-200 dark:border-[#0F828C] rounded-md px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                                      <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-green-600 dark:text-green-400 flex-shrink-0" />
                                       <div className="flex-1 min-w-0">
                                         <p className="text-xs font-semibold text-green-900 dark:text-green-300 truncate">
                                           {promoCode.name}
                                         </p>
-                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                        <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 flex-wrap">
                                           <span className="text-xs text-green-700 dark:text-green-300">
                                             {promoCode.code}
                                           </span>
@@ -867,7 +867,7 @@ export default function Cart() {
                                       title="Remover código"
                                       disabled={validatingPromoCode}
                                     >
-                                      <X className="w-4 h-4" />
+                                      <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                     </button>
                                   </div>
                                 </div>
@@ -883,15 +883,15 @@ export default function Cart() {
                             className="p-1 text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 disabled:opacity-30"
                             disabled={validatingPromoCode}
                           >
-                            <ChevronLeft className="w-4 h-4" />
+                            <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </button>
                           <div className="flex gap-1">
                             {promoCodesValidation.promoCodes.map((_, index) => (
                               <button
                                 key={index}
                                 onClick={() => setCurrentCouponIndex(index)}
-                                className={`w-1.5 h-1.5 rounded-full transition-all ${
-                                  index === currentCouponIndex ? 'bg-primary-600 dark:bg-primary-400 w-4' : 'bg-gray-300 dark:bg-gray-600'
+                                className={`h-1.5 rounded-full transition-all ${
+                                  index === currentCouponIndex ? 'bg-primary-600 dark:bg-primary-400 w-4' : 'bg-gray-300 dark:bg-gray-600 w-1.5'
                                 }`}
                                 disabled={validatingPromoCode}
                               />
@@ -902,14 +902,14 @@ export default function Cart() {
                             className="p-1 text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-100 disabled:opacity-30"
                             disabled={validatingPromoCode}
                           >
-                            <ChevronRight className="w-4 h-4" />
+                            <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </button>
                         </div>
                       </div>
                     ) : (
                       /* Cupom único - sem carrossel */
                       appliedPromoCodes.length === 1 && promoCodesValidation && (
-                        <div className="bg-green-50 dark:bg-[#065084] border border-green-200 dark:border-[#0F828C] rounded-md px-3 py-2">
+                        <div className="bg-green-50 dark:bg-[#065084] border border-green-200 dark:border-[#0F828C] rounded-md px-2 sm:px-3 py-1.5 sm:py-2">
                           {promoCodesValidation.promoCodes.map((promoCode) => {
                             const appliedDiscount = promoCodesValidation.appliedDiscounts.percentage?.code === promoCode.code
                               ? promoCodesValidation.appliedDiscounts.percentage
@@ -917,13 +917,13 @@ export default function Cart() {
                             
                             return (
                               <div key={promoCode.id} className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                                <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
+                                  <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-green-600 dark:text-green-400 flex-shrink-0" />
                                   <div className="flex-1 min-w-0">
                                     <p className="text-xs font-semibold text-green-900 dark:text-green-300 truncate">
                                       {promoCode.name}
                                     </p>
-                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                    <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 flex-wrap">
                                       <span className="text-xs text-green-700 dark:text-green-300">
                                         {promoCode.code}
                                       </span>
@@ -952,7 +952,7 @@ export default function Cart() {
                                   title="Remover código"
                                   disabled={validatingPromoCode}
                                 >
-                                  <X className="w-4 h-4" />
+                                  <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                 </button>
                               </div>
                             )
@@ -969,7 +969,7 @@ export default function Cart() {
                           value={promoCode}
                           onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                           placeholder="Digite um código"
-                          className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault()
@@ -981,38 +981,38 @@ export default function Cart() {
                         <button
                           onClick={handleValidatePromoCode}
                           disabled={validatingPromoCode || !promoCode.trim()}
-                          className="px-3 py-2 text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                         >
                           {validatingPromoCode ? (
-                            <Loader2 className="animate-spin" size={14} />
+                            <Loader2 className="animate-spin" size={12} />
                           ) : (
                             'Aplicar'
                           )}
                         </button>
                       </div>
                       {promoCodeError && (
-                        <p className="text-xs text-red-600">{promoCodeError}</p>
+                        <p className="text-xs text-red-600 dark:text-red-400">{promoCodeError}</p>
                       )}
                     </div>
                   </div>
                 )}
               </div>
 
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 pb-4 border-b border-gray-200 dark:border-[#0F828C]">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-200 dark:border-[#0F828C]">
                 Resumo do Pedido
               </h2>
 
-              <div className="space-y-4 mb-6">
-                <div className="flex justify-between text-sm">
+              <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
+                <div className="flex justify-between text-xs sm:text-sm">
                   <span className="text-gray-600 dark:text-gray-300">Subtotal</span>
                   <span className="font-semibold text-gray-900 dark:text-white">R$ {baseTotal.toFixed(2).replace('.', ',')}</span>
                 </div>
 
                 {isSubscription && (
-                  <div className="bg-primary-50 dark:bg-[#065084] rounded-lg p-3 border border-primary-100 dark:border-[#0F828C]">
+                  <div className="bg-primary-50 dark:bg-[#065084] rounded-lg p-2.5 sm:p-3 border border-primary-100 dark:border-[#0F828C]">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-semibold text-primary-700 dark:text-primary-400">Desconto Assinatura</span>
-                      <span className="text-sm font-bold text-primary-600 dark:text-primary-400">
+                      <span className="text-xs sm:text-sm font-semibold text-primary-700 dark:text-primary-400">Desconto Assinatura</span>
+                      <span className="text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400">
                         -{subscriptionDiscount * 100}%
                       </span>
                     </div>
@@ -1024,7 +1024,7 @@ export default function Cart() {
 
                 {/* Cupons Aplicados */}
                 {promoCodesValidation && promoCodesValidation.totalDiscount > 0 && (
-                  <div className="flex justify-between items-center text-sm">
+                  <div className="flex justify-between items-center text-xs sm:text-sm">
                     <span className="text-gray-600 dark:text-gray-300">
                       {promoCodesValidation.promoCodes.length > 1 
                         ? `Cupom (${promoCodesValidation.promoCodes.length})`
@@ -1038,10 +1038,10 @@ export default function Cart() {
 
                 {/* Promoções Aplicadas */}
                 {applicablePromotions.length > 0 && (
-                  <div className="border-t border-gray-200 dark:border-[#0F828C] pt-4">
+                  <div className="border-t border-gray-200 dark:border-[#0F828C] pt-3 sm:pt-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <Gift className="w-4 h-4 text-pink-600 dark:text-pink-400" />
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">Promoções Aplicadas</span>
+                      <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-600 dark:text-pink-400 flex-shrink-0" />
+                      <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">Promoções Aplicadas</span>
                     </div>
                     {loadingPromotions ? (
                       <div className="text-xs text-gray-500 dark:text-gray-300">Verificando promoções...</div>
@@ -1060,8 +1060,8 @@ export default function Cart() {
                           return (
                             <div key={promo.id} className="bg-pink-50 dark:bg-[#065084] border border-pink-200 dark:border-[#0F828C] rounded-lg p-2">
                               <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <p className="text-xs font-semibold text-pink-900 dark:text-pink-300">{promo.name}</p>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold text-pink-900 dark:text-pink-300 truncate">{promo.name}</p>
                                   {discountText && (
                                     <p className="text-xs text-pink-700 dark:text-pink-300 mt-1">{discountText}</p>
                                   )}
@@ -1071,8 +1071,8 @@ export default function Cart() {
                           )
                         })}
                         {promotionDiscount > 0 && (
-                          <div className="flex justify-between items-center text-pink-600 dark:text-pink-400 pt-2 border-t border-pink-200 dark:border-[#0F828C]">
-                            <span className="text-sm font-semibold">Desconto Total</span>
+                          <div className="flex justify-between items-center text-xs sm:text-sm text-pink-600 dark:text-pink-400 pt-2 border-t border-pink-200 dark:border-[#0F828C]">
+                            <span className="font-semibold">Desconto Total</span>
                             <span className="font-bold">
                               - R$ {promotionDiscount.toFixed(2).replace('.', ',')}
                             </span>
@@ -1085,11 +1085,11 @@ export default function Cart() {
 
 
                 {isSubscription && (
-                  <div className="bg-gradient-to-r from-primary-50 dark:from-[#065084] to-purple-50 dark:to-[#065084] rounded-xl p-4 border border-primary-100 dark:border-[#0F828C]">
+                  <div className="bg-gradient-to-r from-primary-50 dark:from-[#065084] to-purple-50 dark:to-[#065084] rounded-xl p-3 sm:p-4 border border-primary-100 dark:border-[#0F828C]">
                     <div className="flex items-start gap-2">
-                      <Repeat size={18} className="text-primary-600 dark:text-primary-400 mt-0.5" />
+                      <Repeat size={16} className="text-primary-600 dark:text-primary-400 mt-0.5 flex-shrink-0" />
                       <div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+                        <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-1">
                           Assinatura Ativa
                         </p>
                         <p className="text-xs text-gray-600 dark:text-gray-300">
@@ -1102,7 +1102,7 @@ export default function Cart() {
 
                 {/* Frete */}
                 {hasFreeShipping && (
-                  <div className="flex justify-between items-center text-sm">
+                  <div className="flex justify-between items-center text-xs sm:text-sm">
                     <span className="text-gray-600 dark:text-gray-300">Frete</span>
                     <div className="text-right">
                       <span className="text-green-600 dark:text-green-400 font-medium">
@@ -1117,10 +1117,10 @@ export default function Cart() {
                   </div>
                 )}
 
-                <div className="border-t border-gray-200 dark:border-[#0F828C] pt-4">
+                <div className="border-t border-gray-200 dark:border-[#0F828C] pt-3 sm:pt-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-bold text-gray-900 dark:text-white">Total</span>
-                    <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+                    <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Total</span>
+                    <span className="text-xl sm:text-2xl font-bold text-primary-600 dark:text-primary-400">
                       R$ {currentTotal.toFixed(2).replace('.', ',')}
                     </span>
                   </div>
@@ -1142,15 +1142,15 @@ export default function Cart() {
                   }
                   navigate('/checkout')
                 }}
-                className="w-full bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 mb-4 flex items-center justify-center gap-2"
+                className="w-full bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-xl transition-all duration-200 mb-3 sm:mb-4 flex items-center justify-center gap-2 text-sm sm:text-base"
               >
                 Finalizar Compra
-                <ArrowRight size={20} />
+                <ArrowRight size={18} />
               </button>
 
               <Link
                 to="/produtos"
-                className="block text-center text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors"
+                className="block text-center text-xs sm:text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors"
               >
                 Continuar Comprando
               </Link>

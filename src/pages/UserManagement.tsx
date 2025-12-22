@@ -245,43 +245,49 @@ export default function UserManagement() {
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-                          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+                          <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                             <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
                               <UserIcon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white truncate">
+                              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1">
+                                <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white break-words">
                                   {user.name}
                                 </h3>
                                 {getRoleBadge(user.role)}
                               </div>
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-1">
-                                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate flex items-center">
-                                  <Mail className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
-                                  {user.email}
+                              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+                                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 break-words flex items-start sm:items-center">
+                                  <Mail className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0 mt-0.5 sm:mt-0" />
+                                  <span className="break-all">{user.email}</span>
                                 </p>
                                 {user.phone && (
-                                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate flex items-center">
+                                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 break-words flex items-center">
                                     <Phone className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
                                     {formatPhone(user.phone)}
                                   </p>
                                 )}
                               </div>
+                              {user.last_login && (
+                                <div className="flex sm:hidden items-center text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  {formatDate(user.last_login)}
+                                </div>
+                              )}
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+                          <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0 self-start sm:self-center">
                             {user.last_login && (
                               <div className="hidden sm:flex items-center text-xs text-gray-500 dark:text-gray-400">
                                 <Clock className="w-3 h-3 mr-1" />
-                                {formatDate(user.last_login)}
+                                <span className="whitespace-nowrap">{formatDate(user.last_login)}</span>
                               </div>
                             )}
-                            <button className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
+                            <button className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0">
                               {isExpanded ? (
-                                <ChevronUp className="w-5 h-5" />
+                                <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5" />
                               ) : (
-                                <ChevronDown className="w-5 h-5" />
+                                <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
                               )}
                             </button>
                           </div>
@@ -323,11 +329,11 @@ export default function UserManagement() {
                         {userDetails.statistics && (
                           <div>
                             <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2">Estatísticas</h4>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-                              <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-2 sm:p-3 border border-blue-200 dark:border-blue-800">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                              <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-2.5 sm:p-3 border border-blue-200 dark:border-blue-800">
                                 <div className="flex items-center space-x-2">
-                                  <Package className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400" />
-                                  <div>
+                                  <Package className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                                  <div className="min-w-0 flex-1">
                                     <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300">Pedidos</p>
                                     <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
                                       {userDetails.statistics.totalOrders}
@@ -335,24 +341,24 @@ export default function UserManagement() {
                                   </div>
                                 </div>
                               </div>
-                              <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-2 sm:p-3 border border-green-200 dark:border-green-800">
+                              <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-2.5 sm:p-3 border border-green-200 dark:border-green-800">
                                 <div className="flex items-center space-x-2">
-                                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400" />
-                                  <div>
+                                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                                  <div className="min-w-0 flex-1">
                                     <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300">Total Gasto</p>
-                                    <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
-                                      R$ {userDetails.statistics.totalSpent.toFixed(2)}
+                                    <p className="text-sm sm:text-base lg:text-lg font-bold text-gray-900 dark:text-white break-words">
+                                      R$ {userDetails.statistics.totalSpent.toFixed(2).replace('.', ',')}
                                     </p>
                                   </div>
                                 </div>
                               </div>
                               {userDetails.statistics.lastOrder && (
-                                <div className="bg-purple-50 dark:bg-purple-900/30 rounded-lg p-2 sm:p-3 col-span-2 sm:col-span-1 border border-purple-200 dark:border-purple-800">
+                                <div className="bg-purple-50 dark:bg-purple-900/30 rounded-lg p-2.5 sm:p-3 sm:col-span-2 lg:col-span-1 border border-purple-200 dark:border-purple-800">
                                   <div className="flex items-center space-x-2">
-                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
-                                    <div>
+                                    <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                                    <div className="min-w-0 flex-1">
                                       <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-300">Último Pedido</p>
-                                      <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+                                      <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white break-words">
                                         {formatDateOnly(userDetails.statistics.lastOrder.created_at)}
                                       </p>
                                     </div>
@@ -366,7 +372,7 @@ export default function UserManagement() {
                         {/* Alterar Cargo */}
                         <div>
                           <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2">Alterar Cargo</h4>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
                             {(['user', 'pharmacist', 'admin'] as const).map((role) => (
                               <button
                                 key={role}
@@ -375,7 +381,7 @@ export default function UserManagement() {
                                   handleUpdateRole(user.id, role)
                                 }}
                                 disabled={updatingRole === user.id || user.role === role}
-                                className={`flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                                className={`flex items-center justify-center px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                                   user.role === role
                                     ? 'bg-blue-600 text-white cursor-default'
                                     : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -383,18 +389,18 @@ export default function UserManagement() {
                               >
                                 {updatingRole === user.id ? (
                                   <>
-                                    <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-current mr-2"></div>
-                                    Atualizando...
+                                    <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-current mr-1.5 sm:mr-2"></div>
+                                    <span>Atualizando...</span>
                                   </>
                                 ) : user.role === role ? (
                                   <>
                                     <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                                    {role === 'admin' ? 'Administrador' : role === 'pharmacist' ? 'Farmacêutico' : 'Usuário'}
+                                    <span>{role === 'admin' ? 'Administrador' : role === 'pharmacist' ? 'Farmacêutico' : 'Usuário'}</span>
                                   </>
                                 ) : (
                                   <>
                                     <Edit2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                                    {role === 'admin' ? 'Tornar Admin' : role === 'pharmacist' ? 'Tornar Farmacêutico' : 'Tornar Usuário'}
+                                    <span>{role === 'admin' ? 'Tornar Admin' : role === 'pharmacist' ? 'Tornar Farmacêutico' : 'Tornar Usuário'}</span>
                                   </>
                                 )}
                               </button>

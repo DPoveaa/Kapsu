@@ -12,7 +12,7 @@ import { MultiplePromoCodesValidation } from '../services/promo-codes.service'
 export default function Checkout() {
   const navigate = useNavigate()
   const { items, getTotal } = useCart()
-  const { user, isAuthenticated, isAdmin } = useAuth()
+  const { user, isAuthenticated, isAdmin, loading: authLoading } = useAuth()
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [creatingOrderWithoutPayment, setCreatingOrderWithoutPayment] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
@@ -43,6 +43,7 @@ export default function Checkout() {
   const [calculatingShipping, setCalculatingShipping] = useState(false)
   const [shippingMessage, setShippingMessage] = useState<string | null>(null)
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(0)
+  const [shippingCalculationFailed, setShippingCalculationFailed] = useState(false)
   
   // Estados para códigos promocionais (aplicados no carrinho)
   const [promoCodesValidation, setPromoCodesValidation] = useState<MultiplePromoCodesValidation | null>(null)
@@ -56,10 +57,12 @@ export default function Checkout() {
         const validation = JSON.parse(savedPromoCodesValidation)
         setPromoCodesValidation(validation)
         
-        // Aplica frete grátis se o código promocional oferecer
+        // IMPORTANTE: NÃO seta shippingFee aqui para não interferir na validação de CEP
+        // O frete grátis por cupom será aplicado apenas no cálculo do custo final
+        // Mas o cálculo de frete ainda precisa ser feito para validar se entregamos no CEP
         if (validation.freeShipping) {
           setIsFreeShipping(true)
-          setShippingFee(0)
+          // NÃO seta setShippingFee(0) aqui - deixa o cálculo de frete validar o CEP primeiro
         }
       } catch (error) {
         console.error('Erro ao carregar códigos promocionais:', error)
@@ -91,11 +94,17 @@ export default function Checkout() {
   const currentTotal = subtotalAfterPromo + shippingCost
 
   // Redireciona se não estiver autenticado
+  // IMPORTANTE: Só redireciona após o AuthContext terminar de carregar
+  // Isso evita logout incorreto ao dar F5 na página
   useEffect(() => {
+    // Não redireciona enquanto está verificando autenticação
+    if (authLoading) return
+    
+    // Só redireciona se realmente não estiver autenticado após verificação
     if (!isAuthenticated) {
       navigate('/login')
     }
-  }, [isAuthenticated, navigate])
+  }, [isAuthenticated, authLoading, navigate])
 
   // Carrega endereços salvos
   const loadAddresses = async () => {
@@ -152,6 +161,7 @@ export default function Checkout() {
         try {
           setCalculatingShipping(true)
           setShippingMessage(null)
+          setShippingCalculationFailed(false) // Reset do estado de falha antes de tentar
           
           // Prepara itens do carrinho para envio
           const cartItems = items
@@ -167,15 +177,54 @@ export default function Checkout() {
             cartItems
           )
           
-          setShippingFee(result.shippingFee)
-          setIsFreeShipping(result.isFreeShipping)
-          setFreeShippingThreshold(result.freeShippingThreshold || 0)
-          setShippingMessage(result.message)
+          // IMPORTANTE: O backend retorna shippingFee: null quando não entregamos para o CEP
+          // Mesmo com cupom de frete grátis, precisamos validar se entregamos no CEP
+          if (result.shippingFee === null) {
+            // CEP não atendido - marca como inválido mesmo com cupom de frete grátis
+            setShippingFee(null)
+            setIsFreeShipping(false)
+            setShippingMessage(result.message || 'Não entregamos para este CEP no momento. Em breve estaremos por aí!')
+            setShippingCalculationFailed(true)
+            setFreeShippingThreshold(0)
+          } else {
+            // CEP válido - seta o shippingFee do resultado
+            setShippingFee(result.shippingFee)
+            
+            // Se houver cupom de frete grátis, mantém isFreeShipping como true
+            // Caso contrário, usa o resultado do cálculo
+            if (promoCodesValidation?.freeShipping) {
+              setIsFreeShipping(true)
+            } else {
+              setIsFreeShipping(result.isFreeShipping)
+            }
+            
+            setFreeShippingThreshold(result.freeShippingThreshold || 0)
+            setShippingMessage(result.message)
+            setShippingCalculationFailed(false) // Sucesso, não falhou - CEP é válido
+          }
         } catch (error: any) {
           console.error('Erro ao calcular frete:', error)
           setShippingFee(null)
           setIsFreeShipping(false)
-          setShippingMessage('Erro ao calcular frete. Tente novamente.')
+          
+          // Verifica se o erro indica que não entregamos para o CEP
+          const errorMessage = (error.message || error.toString() || '').toLowerCase()
+          const isCepNotServed = errorMessage.includes('não atendemos') || 
+                                 errorMessage.includes('não entregamos') ||
+                                 errorMessage.includes('cep inválido') ||
+                                 errorMessage.includes('não atendido') ||
+                                 errorMessage.includes('não temos entrega') ||
+                                 errorMessage.includes('região não atendida') ||
+                                 (error.response?.status === 400 && (errorMessage.includes('cep') || errorMessage.includes('entrega')))
+          
+          if (isCepNotServed) {
+            setShippingMessage('Não entregamos para este CEP no momento. Em breve estaremos por aí!')
+            setShippingCalculationFailed(true)
+          } else {
+            // Erro genérico (rede, servidor, etc.) - não marca como CEP inválido
+            setShippingMessage('Erro ao calcular frete. Tente novamente.')
+            setShippingCalculationFailed(false)
+          }
         } finally {
           setCalculatingShipping(false)
         }
@@ -184,6 +233,7 @@ export default function Checkout() {
         setShippingFee(null)
         setIsFreeShipping(false)
         setShippingMessage(null)
+        setShippingCalculationFailed(false) // Reset quando CEP não está completo
       }
     }
 
@@ -203,6 +253,9 @@ export default function Checkout() {
           ? `${cleanValue.substring(0, 5)}-${cleanValue.substring(5)}`
           : cleanValue
         setFormData(prev => ({ ...prev, [name]: formatted }))
+        // Reset do estado de falha quando o CEP é alterado
+        // O cálculo será feito automaticamente pelo useEffect
+        setShippingCalculationFailed(false)
       }
     } else {
       setFormData(prev => ({ ...prev, [name]: value }))
@@ -338,16 +391,22 @@ export default function Checkout() {
   }
 
   // Verifica se o CEP não tem entrega disponível
+  // Só retorna true se o cálculo foi realmente tentado e falhou
+  // IMPORTANTE: CEPs inválidos são inválidos independentemente de cupons de frete grátis
   const hasInvalidCep = () => {
     const cleanCep = formData.cep.replace(/\D/g, '')
     const hasCompleteCep = cleanCep.length === 8
-    const hasFreeShippingByCoupon = promoCodesValidation?.freeShipping || false
     
+    // Só considera inválido se:
+    // 1. CEP está completo
+    // 2. Não está calculando
+    // 3. O cálculo foi tentado e falhou (shippingCalculationFailed)
+    // NOTA: Não verifica cupom de frete grátis - CEPs inválidos são sempre inválidos
+    // NOTA: shippingFee pode ser 0 (frete grátis válido) ou null (CEP inválido)
+    // Por isso verificamos shippingCalculationFailed para distinguir entre os casos
     return hasCompleteCep && 
            !calculatingShipping && 
-           shippingFee === null && 
-           !isFreeShipping && 
-           !hasFreeShippingByCoupon
+           shippingCalculationFailed
   }
 
   // Valida se o endereço está completo e se há entrega disponível
@@ -357,7 +416,7 @@ export default function Checkout() {
     const hasRequiredFields = formData.address && formData.number && formData.city && formData.state && formData.cep
     
     // Se o CEP está completo mas não há frete disponível (e não está calculando), não é válido
-    // Exceto se houver frete grátis por cupom promocional
+    // IMPORTANTE: CEPs inválidos são sempre inválidos, mesmo com cupom de frete grátis
     if (hasInvalidCep()) {
       return false
     }
@@ -391,9 +450,8 @@ export default function Checkout() {
     }
 
     // Valida se há entrega disponível
-    const cleanCep = formData.cep.replace(/\D/g, '')
-    const hasFreeShippingByCoupon = promoCodesValidation?.freeShipping || false
-    if (cleanCep.length === 8 && shippingFee === null && !isFreeShipping && !hasFreeShippingByCoupon) {
+    // IMPORTANTE: CEPs inválidos são sempre inválidos, mesmo com cupom de frete grátis
+    if (hasInvalidCep()) {
       alert('Infelizmente, não estamos enviando para este CEP no momento. Por favor, verifique o endereço ou entre em contato conosco.')
       return
     }
@@ -450,9 +508,8 @@ export default function Checkout() {
     }
 
     // Valida se há entrega disponível
-    const cleanCep = formData.cep.replace(/\D/g, '')
-    const hasFreeShippingByCoupon = promoCodesValidation?.freeShipping || false
-    if (cleanCep.length === 8 && shippingFee === null && !isFreeShipping && !hasFreeShippingByCoupon) {
+    // IMPORTANTE: CEPs inválidos são sempre inválidos, mesmo com cupom de frete grátis
+    if (hasInvalidCep()) {
       alert('Infelizmente, não estamos enviando para este CEP no momento. Por favor, verifique o endereço ou entre em contato conosco.')
       return
     }
@@ -496,13 +553,25 @@ export default function Checkout() {
     )
   }
 
-  if (items.length === 0) {
+  // Mostra loading enquanto verifica autenticação
+  if (authLoading) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
-        <p className="text-gray-600 dark:text-gray-300 text-lg mb-4">Seu carrinho está vazio.</p>
-        <button onClick={() => navigate('/produtos')} className="btn-primary">
-          Ver Produtos
-        </button>
+        <Loader2 className="w-8 h-8 animate-spin text-primary-600 dark:text-primary-400 mx-auto mb-4" />
+        <p className="text-gray-600 dark:text-gray-300">Verificando autenticação...</p>
+      </div>
+    )
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className="container mx-auto px-3 sm:px-4 py-12 sm:py-16 min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600 dark:text-gray-300 text-base sm:text-lg mb-3 sm:mb-4">Seu carrinho está vazio.</p>
+          <button onClick={() => navigate('/produtos')} className="btn-primary cursor-pointer text-sm sm:text-base px-4 sm:px-6 py-2">
+            Ver Produtos
+          </button>
+        </div>
       </div>
     )
   }
@@ -511,24 +580,24 @@ export default function Checkout() {
   const isEditingSelected = editingAddressId === selectedAddressId
 
   return (
-    <div className="container mx-auto px-4 py-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-6"
+        className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-4 sm:mb-6 cursor-pointer text-sm sm:text-base"
       >
-        <ArrowLeft size={20} className="mr-2" />
+        <ArrowLeft size={18} className="mr-2" />
         Voltar
       </button>
 
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Finalizar Compra</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">Finalizar Compra</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
         {/* Form */}
         <div className="lg:col-span-2">
-          <div className="card p-6">
+          <div className="card p-4 sm:p-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-                <MapPin className="mr-2" size={24} />
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center">
+                <MapPin className="mr-2" size={20} />
                 Endereço de Entrega
               </h2>
               {checkoutError && (
@@ -546,9 +615,9 @@ export default function Checkout() {
               )}
 
               {!showNewAddressForm && !loadingAddresses && savedAddresses.length > 0 && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Endereços Salvos</h3>
+                <div className="mb-4 sm:mb-6">
+                  <div className="flex items-center justify-between mb-3 sm:mb-4 flex-wrap gap-2">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Endereços Salvos</h3>
                     <button
                       onClick={() => {
                         setShowNewAddressForm(true)
@@ -563,62 +632,62 @@ export default function Checkout() {
                           state: ''
                         })
                       }}
-                      className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center"
+                      className="text-xs sm:text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center cursor-pointer"
                     >
-                      <Plus className="w-4 h-4 mr-1" />
+                      <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
                       Novo Endereço
                     </button>
                   </div>
                   
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {savedAddresses.map((address) => (
                       <div
                         key={address.id}
                         onClick={() => selectAddress(address)}
-                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        className={`p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all ${
                           selectedAddressId === address.id
                             ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-[#065084]'
                             : 'border-gray-200 dark:border-[#0F828C] hover:border-primary-300 dark:hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-[#065084]'
                         }`}
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center mb-2">
-                              <span className="font-semibold text-gray-900 dark:text-white mr-2">{address.nickname}</span>
+                        <div className="flex items-start justify-between gap-2 sm:gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center mb-1.5 sm:mb-2 flex-wrap gap-1.5">
+                              <span className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">{address.nickname}</span>
                               {address.is_default && (
-                                <span className="text-xs bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 px-2 py-1 rounded">
+                                <span className="text-xs bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
                                   Padrão
                                 </span>
                               )}
                               {selectedAddressId === address.id && (
-                                <Check className="w-5 h-5 text-primary-600 dark:text-primary-400 ml-2" />
+                                <Check className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 dark:text-primary-400 flex-shrink-0" />
                               )}
                             </div>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 break-words">
                               {address.address}, {address.number}
                               {address.complement && ` - ${address.complement}`}
                             </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                               {address.city} - {address.state}, CEP: {address.cep}
                             </p>
                           </div>
-                          <div className="flex items-center space-x-2 ml-4">
+                          <div className="flex items-center space-x-1 sm:space-x-2 ml-2 sm:ml-4 flex-shrink-0">
                             <button
                               onClick={(e) => handleEditAddress(address, e)}
-                              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 p-1"
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 p-1 cursor-pointer"
                               title="Editar endereço"
                             >
-                              <Edit2 className="w-4 h-4" />
+                              <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setShowDeleteConfirmModal(address.id)
                               }}
-                              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1"
+                              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1 cursor-pointer"
                               title="Remover endereço"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                             </button>
                           </div>
 
@@ -631,7 +700,7 @@ export default function Checkout() {
 
               {/* Formulário de Endereço (Novo ou Editando) */}
               {(showNewAddressForm || savedAddresses.length === 0 || (selectedAddressId && isEditingSelected)) && (
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                   {savedAddresses.length > 0 && !isEditingSelected && (
                     <button
                       type="button"
@@ -648,16 +717,16 @@ export default function Checkout() {
                           state: ''
                         })
                       }}
-                      className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 mb-4 flex items-center"
+                      className="text-xs sm:text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 mb-3 sm:mb-4 flex items-center cursor-pointer"
                     >
-                      <ArrowLeft className="w-4 h-4 mr-1" />
+                      <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
                       Voltar para endereços salvos
                     </button>
                   )}
 
                   {isEditingSelected && selectedAddress && (
-                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-                      <p className="text-sm text-blue-800 dark:text-blue-300">
+                    <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-300">
                         <strong>Editando:</strong> {selectedAddress.nickname}
                       </p>
                       <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
@@ -667,7 +736,7 @@ export default function Checkout() {
                   )}
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+                    <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                       CEP *
                     </label>
                     <div className="relative">
@@ -679,30 +748,20 @@ export default function Checkout() {
                         required
                         placeholder="00000-000"
                         maxLength={9}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white ${
-                          formData.cep.replace(/\D/g, '').length === 8 && 
-                          !calculatingShipping && 
-                          shippingFee === null && 
-                          !isFreeShipping && 
-                          !promoCodesValidation?.freeShipping
+                        className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white ${
+                          hasInvalidCep()
                             ? 'border-red-500 dark:border-red-400 text-red-600 dark:text-red-400' 
                             : 'border-gray-300 dark:border-[#0F828C]'
                         }`}
                       />
                       {calculatingShipping && (
-                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                          <Loader2 className="animate-spin text-primary-600 dark:text-primary-400" size={20} />
+                        <div className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2">
+                          <Loader2 className="animate-spin text-primary-600 dark:text-primary-400" size={18} />
                         </div>
                       )}
                     </div>
                     {shippingMessage && isFreeShipping && !promoCodesValidation?.freeShipping && (
                       <div className="mt-2 text-sm flex items-center text-green-600 dark:text-green-400">
-                        <Truck className="w-4 h-4 mr-1" />
-                        {shippingMessage}
-                      </div>
-                    )}
-                    {shippingMessage && !isFreeShipping && shippingFee !== null && (
-                      <div className="mt-2 text-sm flex items-center text-gray-600 dark:text-gray-300">
                         <Truck className="w-4 h-4 mr-1" />
                         {shippingMessage}
                       </div>
@@ -714,7 +773,7 @@ export default function Checkout() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+                    <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                       Endereço *
                     </label>
                     <input
@@ -724,12 +783,12 @@ export default function Checkout() {
                       onChange={handleInputChange}
                       required
                       placeholder="Rua, Avenida, etc."
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+                      <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                         Número *
                       </label>
                       <input
@@ -739,11 +798,11 @@ export default function Checkout() {
                         onChange={handleInputChange}
                         required
                         placeholder="123"
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                         Complemento
                       </label>
                       <input
@@ -752,13 +811,13 @@ export default function Checkout() {
                         value={formData.complement}
                         onChange={handleInputChange}
                         placeholder="Apto, Bloco, etc."
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+                      <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                         Cidade *
                       </label>
                       <input
@@ -768,11 +827,11 @@ export default function Checkout() {
                         onChange={handleInputChange}
                         required
                         placeholder="São Paulo"
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+                      <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                         Estado *
                       </label>
                       <input
@@ -783,20 +842,20 @@ export default function Checkout() {
                         required
                         placeholder="SP"
                         maxLength={2}
-                        className="w-full px-4 py-3 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
                   </div>
 
                   {/* Botão para salvar endereço (apenas se for novo) */}
                   {!isEditingSelected && formData.cep && formData.address && formData.number && formData.city && formData.state && (
-                    <div className="pt-4 border-t">
+                    <div className="pt-3 sm:pt-4 border-t">
                       <button
                         type="button"
                         onClick={() => setShowSaveAddressModal(true)}
-                        className="text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center"
+                        className="text-xs sm:text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center cursor-pointer"
                       >
-                        <Save className="w-4 h-4 mr-1" />
+                        <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
                         Salvar este endereço para entregas futuras
                       </button>
                     </div>
@@ -804,8 +863,8 @@ export default function Checkout() {
 
                   {/* Mensagem de CEP não atendido */}
                   {hasInvalidCep() && (
-                    <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-lg">
-                      <p className="text-sm text-orange-800 dark:text-orange-300">
+                    <div className="mt-3 sm:mt-4 p-2.5 sm:p-3 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-lg">
+                      <p className="text-xs sm:text-sm text-orange-800 dark:text-orange-300">
                         ⚠️ Não entregamos para o CEP <strong>{formData.cep}</strong> no momento. Em breve estaremos por aí!
                       </p>
                     </div>
@@ -813,23 +872,23 @@ export default function Checkout() {
 
                   {/* Botão de continuar - só aparece se o CEP for válido */}
                   {!hasInvalidCep() && (
-                    <div className="flex justify-between items-center mt-6 gap-3">
+                    <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-4 sm:mt-6 gap-2 sm:gap-3">
                       {isAdmin && (
                         <button 
                           type="button"
                           onClick={handleCreateOrderWithoutPayment}
-                          className="text-xs px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-1.5"
+                          className="text-xs px-2.5 sm:px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                           disabled={!canProceedToPayment() || creatingOrderWithoutPayment}
                           title="Criar pedido sem pagamento (apenas para testes)"
                         >
                           {creatingOrderWithoutPayment ? (
                             <>
-                              <Loader2 className="animate-spin" size={14} />
+                              <Loader2 className="animate-spin" size={12} />
                               Criando...
                             </>
                           ) : (
                             <>
-                              <TestTube size={14} />
+                              <TestTube size={12} />
                               Teste (sem pagamento)
                             </>
                           )}
@@ -837,16 +896,20 @@ export default function Checkout() {
                       )}
                       <button 
                         type="submit" 
-                        className="btn-primary ml-auto flex items-center"
+                        className="btn-primary sm:ml-auto flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3"
                         disabled={!canProceedToPayment() || creatingOrderWithoutPayment}
                       >
                         {creatingOrder ? (
                           <>
-                            <Loader2 className="animate-spin mr-2" size={20} />
-                            Processando e redirecionando para o Mercado Pago...
+                            <Loader2 className="animate-spin mr-2" size={18} />
+                            <span className="hidden sm:inline">Processando e redirecionando para o Mercado Pago...</span>
+                            <span className="sm:hidden">Processando...</span>
                           </>
                         ) : (
-                          'Continuar para o Pagamento no Mercado Pago'
+                          <>
+                            <span className="hidden sm:inline">Continuar para o Pagamento no Mercado Pago</span>
+                            <span className="sm:hidden">Continuar para Pagamento</span>
+                          </>
                         )}
                       </button>
                     </div>
@@ -856,34 +919,34 @@ export default function Checkout() {
 
               {/* Botão de continuar quando endereço salvo está selecionado (sem edição) */}
               {!showNewAddressForm && selectedAddressId && !isEditingSelected && (
-                <div className="mt-6">
+                <div className="mt-4 sm:mt-6">
                   {/* Mensagem de CEP não atendido */}
                   {hasInvalidCep() && (
-                    <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-lg">
-                      <p className="text-sm text-orange-800 dark:text-orange-300">
+                    <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-lg">
+                      <p className="text-xs sm:text-sm text-orange-800 dark:text-orange-300">
                         ⚠️ Não entregamos para o CEP <strong>{formData.cep}</strong> no momento. Em breve estaremos por aí!
                       </p>
                     </div>
                   )}
                   {/* Botão de continuar - só aparece se o CEP for válido */}
                   {!hasInvalidCep() && (
-                    <div className="flex gap-3">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                       {isAdmin && (
                         <button 
                           type="button"
                           onClick={handleCreateOrderWithoutPayment}
-                          className="text-xs px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-1.5"
+                          className="text-xs px-2.5 sm:px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                           disabled={!canProceedToPayment() || creatingOrderWithoutPayment}
                           title="Criar pedido sem pagamento (apenas para testes)"
                         >
                           {creatingOrderWithoutPayment ? (
                             <>
-                              <Loader2 className="animate-spin" size={14} />
+                              <Loader2 className="animate-spin" size={12} />
                               Criando...
                             </>
                           ) : (
                             <>
-                              <TestTube size={14} />
+                              <TestTube size={12} />
                               Teste (sem pagamento)
                             </>
                           )}
@@ -891,16 +954,20 @@ export default function Checkout() {
                       )}
                       <button 
                         onClick={() => handleSubmit()}
-                        className="btn-primary flex-1 flex items-center justify-center"
+                        className="btn-primary flex-1 flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3"
                         disabled={!canProceedToPayment() || creatingOrderWithoutPayment}
                       >
                         {creatingOrder ? (
                           <>
-                            <Loader2 className="animate-spin mr-2" size={20} />
-                            Processando e redirecionando para o Mercado Pago...
+                            <Loader2 className="animate-spin mr-2" size={18} />
+                            <span className="hidden sm:inline">Processando e redirecionando para o Mercado Pago...</span>
+                            <span className="sm:hidden">Processando...</span>
                           </>
                         ) : (
-                          'Continuar para o Pagamento no Mercado Pago'
+                          <>
+                            <span className="hidden sm:inline">Continuar para o Pagamento no Mercado Pago</span>
+                            <span className="sm:hidden">Continuar para Pagamento</span>
+                          </>
                         )}
                       </button>
                     </div>
@@ -913,9 +980,9 @@ export default function Checkout() {
 
         {/* Order Summary */}
         <div className="lg:col-span-1">
-          <div className="card p-6 sticky top-24">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Resumo do Pedido</h2>
-            <div className="space-y-2 mb-4">
+          <div className="card p-4 sm:p-6 sticky top-20 sm:top-24">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">Resumo do Pedido</h2>
+            <div className="space-y-2 mb-3 sm:mb-4">
               {items.map(item => {
                 const price = item.product?.price || item.customMedication?.price || 0
                 const itemTotal = price * item.quantity
@@ -924,8 +991,8 @@ export default function Checkout() {
                   : itemTotal
                 
                 return (
-                  <div key={item.id} className="text-sm">
-                    <p className="font-medium dark:text-white">
+                  <div key={item.id} className="text-xs sm:text-sm">
+                    <p className="font-medium dark:text-white line-clamp-2">
                       {item.product?.name || item.customMedication?.name}
                     </p>
                     <p className="text-gray-600 dark:text-gray-300">
@@ -945,17 +1012,17 @@ export default function Checkout() {
                 )
               })}
             </div>
-            <div className="border-t border-gray-200 dark:border-[#0F828C] pt-4 space-y-3">
-              <div className="flex justify-between items-center text-sm">
+            <div className="border-t border-gray-200 dark:border-[#0F828C] pt-3 sm:pt-4 space-y-2 sm:space-y-3">
+              <div className="flex justify-between items-center text-xs sm:text-sm">
                 <span className="text-gray-600 dark:text-gray-300">Subtotal</span>
                 <span className="font-semibold text-gray-900 dark:text-white">R$ {subtotal.toFixed(2).replace('.', ',')}</span>
               </div>
 
               {isSubscription && (
-                <div className="bg-primary-50 dark:bg-[#065084] rounded-lg p-3 border border-primary-100 dark:border-[#0F828C]">
+                <div className="bg-primary-50 dark:bg-[#065084] rounded-lg p-2.5 sm:p-3 border border-primary-100 dark:border-[#0F828C]">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-sm font-semibold text-primary-700 dark:text-primary-400">Desconto Assinatura</span>
-                    <span className="text-sm font-bold text-primary-600 dark:text-primary-400">
+                    <span className="text-xs sm:text-sm font-semibold text-primary-700 dark:text-primary-400">Desconto Assinatura</span>
+                    <span className="text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400">
                       -{subscriptionDiscount * 100}%
                     </span>
                   </div>
@@ -966,7 +1033,7 @@ export default function Checkout() {
               )}
 
               {promoCodesValidation && promoCodesValidation.totalDiscount > 0 && (
-                <div className="flex justify-between items-center text-sm">
+                <div className="flex justify-between items-center text-xs sm:text-sm">
                   <span className="text-gray-600 dark:text-gray-300">
                     {promoCodesValidation.promoCodes.length > 1 
                       ? `Cupons (${promoCodesValidation.promoCodes.length})`
@@ -979,16 +1046,20 @@ export default function Checkout() {
               )}
               
               {/* Frete */}
-              <div className="flex justify-between items-center text-sm">
+              <div className="flex justify-between items-center text-xs sm:text-sm">
                 <span className="text-gray-600 dark:text-gray-300 flex items-center">
-                  <Truck className="w-4 h-4 mr-1" />
+                  <Truck className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
                   Frete
                 </span>
                 <div className="text-right">
                   {calculatingShipping ? (
-                    <Loader2 className="animate-spin text-gray-400 dark:text-gray-500" size={16} />
+                    <Loader2 className="animate-spin text-gray-400 dark:text-gray-500" size={14} />
+                  ) : hasInvalidCep() ? (
+                    // CEP inválido - mostra apenas "Inválido" mesmo com cupom de frete grátis
+                    <span className="text-red-600 dark:text-red-400 text-xs">Inválido</span>
                   ) : (promoCodesValidation?.freeShipping || isFreeShipping) ? (
-                    <span className="text-green-600 dark:text-green-400 font-semibold">
+                    // Frete grátis válido (CEP é válido)
+                    <span className="text-green-600 dark:text-green-400 font-semibold text-xs sm:text-sm">
                       {promoCodesValidation?.freeShipping ? 'Grátis (cupom)' : 'Grátis'}
                     </span>
                   ) : shippingFee !== null ? (
@@ -1002,14 +1073,14 @@ export default function Checkout() {
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold dark:text-white">Total</span>
+                <span className="text-base sm:text-lg font-semibold dark:text-white">Total</span>
                 <div className="text-right">
                   {isSubscription && baseTotal !== subtotal && (
                     <p className="text-xs text-gray-400 dark:text-gray-500 line-through mb-1">
                       R$ {baseTotal.toFixed(2).replace('.', ',')}
                     </p>
                   )}
-                  <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+                  <span className="text-xl sm:text-2xl font-bold text-primary-600 dark:text-primary-400">
                     R$ {currentTotal.toFixed(2).replace('.', ',')}
                   </span>
                 </div>
@@ -1026,22 +1097,22 @@ export default function Checkout() {
 
       {/* Modal para salvar endereço */}
       {showSaveAddressModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowSaveAddressModal(false)}>
-          <div className="bg-white dark:bg-[#065084] rounded-lg p-6 max-w-md w-full mx-4 border border-gray-200 dark:border-[#0F828C]" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Salvar Endereço</h3>
-              <button onClick={() => setShowSaveAddressModal(false)} className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white">
-                <X className="w-5 h-5" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 cursor-pointer p-3 sm:p-4" onClick={() => setShowSaveAddressModal(false)}>
+          <div className="bg-white dark:bg-[#065084] rounded-lg p-4 sm:p-6 max-w-md w-full border border-gray-200 dark:border-[#0F828C]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Salvar Endereço</h3>
+              <button onClick={() => setShowSaveAddressModal(false)} className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white cursor-pointer">
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3 sm:mb-4">
               Dê um apelido para este endereço para facilitar nas próximas compras (ex: Casa, Trabalho, etc.)
             </p>
             <input
               ref={nicknameInputRef}
               type="text"
               placeholder="Ex: Casa, Trabalho, Escritório..."
-              className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-4"
+              className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-3 sm:mb-4"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
@@ -1053,10 +1124,10 @@ export default function Checkout() {
               }}
               autoFocus
             />
-            <div className="flex justify-end space-x-3">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-3">
               <button
                 onClick={() => setShowSaveAddressModal(false)}
-                className="px-4 py-2 border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084]"
+                className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] cursor-pointer"
               >
                 Cancelar
               </button>
@@ -1069,7 +1140,7 @@ export default function Checkout() {
                     alert('Por favor, digite um apelido para o endereço')
                   }
                 }}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer"
               >
                 Salvar
               </button>
@@ -1080,23 +1151,23 @@ export default function Checkout() {
 
       {/* Modal de confirmação de exclusão */}
       {showDeleteConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowDeleteConfirmModal(null)}>
-          <div className="bg-white dark:bg-[#065084] rounded-lg p-6 max-w-md w-full mx-4 border border-gray-200 dark:border-[#0F828C]" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Confirmar Exclusão</h3>
-              <button onClick={() => setShowDeleteConfirmModal(null)} className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white">
-                <X className="w-5 h-5" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4" onClick={() => setShowDeleteConfirmModal(null)}>
+          <div className="bg-white dark:bg-[#065084] rounded-lg p-4 sm:p-6 max-w-md w-full border border-gray-200 dark:border-[#0F828C]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Confirmar Exclusão</h3>
+              <button onClick={() => setShowDeleteConfirmModal(null)} className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white cursor-pointer">
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3 sm:mb-4">
               Tem certeza que deseja remover este endereço? Esta ação não pode ser desfeita.
             </p>
             {showDeleteConfirmModal && (() => {
               const addressToDelete = savedAddresses.find(addr => addr.id === showDeleteConfirmModal)
               return addressToDelete && (
-                <div className="mb-4 p-3 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{addressToDelete.nickname}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]">
+                  <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">{addressToDelete.nickname}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 break-words">
                     {addressToDelete.address}, {addressToDelete.number}
                     {addressToDelete.complement && ` - ${addressToDelete.complement}`}
                   </p>
@@ -1106,16 +1177,16 @@ export default function Checkout() {
                 </div>
               )
             })()}
-            <div className="flex justify-end space-x-3">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-3">
               <button
                 onClick={() => setShowDeleteConfirmModal(null)}
-                className="px-4 py-2 border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084]"
+                className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => handleDeleteAddress(showDeleteConfirmModal)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-red-600 text-white rounded-lg hover:bg-red-700 cursor-pointer"
               >
                 Remover
               </button>
@@ -1126,31 +1197,31 @@ export default function Checkout() {
 
       {/* Modal para editar endereço */}
       {showEditAddressModal && editAddressData && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowEditAddressModal(false)}>
-          <div className="bg-white dark:bg-[#065084] rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-[#0F828C]" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Editar Endereço</h3>
-              <button onClick={() => setShowEditAddressModal(false)} className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white">
-                <X className="w-5 h-5" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 cursor-pointer p-3 sm:p-4" onClick={() => setShowEditAddressModal(false)}>
+          <div className="bg-white dark:bg-[#065084] rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-[#0F828C]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Editar Endereço</h3>
+              <button onClick={() => setShowEditAddressModal(false)} className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white cursor-pointer">
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+                <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                   Apelido *
                 </label>
                 <input
                   type="text"
                   value={editAddressData.nickname}
                   onChange={(e) => setEditAddressData({ ...editAddressData, nickname: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Ex: Casa, Trabalho..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+                <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                   CEP *
                 </label>
                 <input
@@ -1166,62 +1237,62 @@ export default function Checkout() {
                     }
                   }}
                   maxLength={9}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="00000-000"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+                <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                   Endereço *
                 </label>
                 <input
                   type="text"
                   value={editAddressData.address}
                   onChange={(e) => setEditAddressData({ ...editAddressData, address: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                     Número *
                   </label>
                   <input
                     type="text"
                     value={editAddressData.number}
                     onChange={(e) => setEditAddressData({ ...editAddressData, number: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+                <div className="sm:col-span-2">
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                     Complemento
                   </label>
                   <input
                     type="text"
                     value={editAddressData.complement || ''}
                     onChange={(e) => setEditAddressData({ ...editAddressData, complement: e.target.value || null })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                     Cidade *
                   </label>
                   <input
                     type="text"
                     value={editAddressData.city}
                     onChange={(e) => setEditAddressData({ ...editAddressData, city: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+                  <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                     Estado *
                   </label>
                   <input
@@ -1229,7 +1300,7 @@ export default function Checkout() {
                     value={editAddressData.state}
                     onChange={(e) => setEditAddressData({ ...editAddressData, state: e.target.value.toUpperCase().substring(0, 2) })}
                     maxLength={2}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -1242,22 +1313,22 @@ export default function Checkout() {
                   onChange={(e) => setEditAddressData({ ...editAddressData, is_default: e.target.checked })}
                   className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                 />
-                <label htmlFor="isDefault" className="ml-2 text-sm text-gray-700 dark:text-white">
+                <label htmlFor="isDefault" className="ml-2 text-xs sm:text-sm text-gray-700 dark:text-white">
                   Definir como endereço padrão
                 </label>
               </div>
             </div>
 
-            <div className="flex justify-end space-x-3 mt-6">
+            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-3 mt-4 sm:mt-6">
               <button
                 onClick={() => setShowEditAddressModal(false)}
-                className="px-4 py-2 border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084]"
+                className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 onClick={handleSaveEditAddress}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+                className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer"
               >
                 Salvar Alterações
               </button>

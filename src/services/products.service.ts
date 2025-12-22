@@ -10,6 +10,7 @@ interface BackendProduct {
   name: string
   description: string | null
   price: number
+  promo_price: number | null
   stock: number
   image: string | null
   category: string | null
@@ -17,6 +18,7 @@ interface BackendProduct {
   compositions: string | null
   indication: string | null
   contraindication: string | null
+  free_shipping?: boolean
   created_at: Date
   updated_at: Date
 }
@@ -91,10 +93,12 @@ class ProductsService {
       name: product.name,
       description: product.description || '',
       price: Number(product.price),
+      promo_price: product.promo_price ? Number(product.promo_price) : null,
       image: this.getImageUrl(product.image),
       category: (product.category as Product['category']) || 'outros',
       inStock: product.stock > 0,
       isCustomizable: true, // Por padrão, assumimos que todos são customizáveis
+      free_shipping: product.free_shipping ?? false,
     }
   }
 
@@ -233,12 +237,14 @@ class ProductsService {
     name: string
     description?: string
     price: number
+    promo_price?: number | null
     stock?: number
     image?: string
     category?: string
     compositions?: string
     indication?: string
     contraindication?: string
+    free_shipping?: boolean
   }): Promise<Product> {
     try {
       const response = await fetch(`${this.baseUrl}`, {
@@ -364,6 +370,7 @@ class ProductsService {
     name?: string
     description?: string
     price?: number
+    promo_price?: number | null
     stock?: number
     image?: string
     category?: string
@@ -371,6 +378,7 @@ class ProductsService {
     compositions?: string
     indication?: string
     contraindication?: string
+    free_shipping?: boolean
   }): Promise<Product> {
     try {
       const response = await fetch(`${this.baseUrl}/${id}`, {

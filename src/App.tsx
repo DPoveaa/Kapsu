@@ -25,9 +25,12 @@ import ManagePromotions from './pages/ManagePromotions'
 import ManagePromoCodes from './pages/ManagePromoCodes'
 import ManageCompostos from './pages/ManageCompostos'
 import ManageBanners from './pages/ManageBanners'
+import ManageReviews from './pages/ManageReviews'
+import ManageHomeSections from './pages/ManageHomeSections'
 import OrderDetail from './pages/OrderDetail'
 import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentFailure from './pages/PaymentFailure'
+import Profile from './pages/Profile'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
@@ -53,6 +56,14 @@ function AppContent() {
               <Route path="/payment-failure" element={<PaymentFailure />} />
               <Route path="/login" element={<Login />} />
               <Route path="/cadastro" element={<Register />} />
+              <Route
+                path="/perfil"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/admin"
                 element={
@@ -178,6 +189,22 @@ function AppContent() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <ManageBanners />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/reviews"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <ManageReviews />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/home-sections"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <ManageHomeSections />
                   </ProtectedRoute>
                 }
               />

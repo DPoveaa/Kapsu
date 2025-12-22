@@ -637,7 +637,7 @@ export default function WhatsAppSupport() {
                 <img 
                   src={imageSrc} 
                   alt={msg.isFromMe ? "Imagem enviada por você" : "Imagem recebida"} 
-                  className="w-full max-w-[280px] sm:max-w-[320px] h-auto rounded-lg hover:opacity-90 transition-opacity block pointer-events-none"
+                  className="w-full max-w-[240px] sm:max-w-[280px] lg:max-w-[320px] h-auto rounded-lg hover:opacity-90 transition-opacity block pointer-events-none"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement
                     
@@ -1115,7 +1115,7 @@ export default function WhatsAppSupport() {
                 <img 
                   src={imageSrc} 
                   alt={msg.isFromMe ? "Imagem enviada por você" : "Imagem recebida"} 
-                  className="w-full max-w-[280px] sm:max-w-[320px] h-auto rounded-lg hover:opacity-90 transition-opacity block pointer-events-none"
+                  className="w-full max-w-[240px] sm:max-w-[280px] lg:max-w-[320px] h-auto rounded-lg hover:opacity-90 transition-opacity block pointer-events-none"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement
                     target.style.display = 'none'
@@ -1254,20 +1254,20 @@ export default function WhatsAppSupport() {
   return (
     <div className="fixed inset-0 h-screen flex flex-col bg-gray-100 dark:bg-gray-900 z-50" style={{ marginTop: 0, marginLeft: 0, marginRight: 0 }}>
       {/* Header */}
-      <div className="bg-green-600 text-white px-3 sm:px-4 lg:px-6 py-3 sm:py-4 shadow-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+      <div className="bg-green-600 text-white px-2 sm:px-3 lg:px-6 py-2 sm:py-3 lg:py-4 shadow-lg">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4 flex-1 min-w-0">
             {/* Botão voltar para o site */}
             <button
               onClick={() => navigate('/admin')}
               className="p-1.5 sm:p-2 hover:bg-green-700 rounded-lg transition-colors flex-shrink-0"
               title="Voltar ao painel admin"
             >
-              <ArrowLeft size={20} className="sm:w-6 sm:h-6" />
+              <ArrowLeft size={18} className="sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
             </button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold truncate">Atendimento WhatsApp</h1>
-              <p className="text-green-100 text-xs sm:text-sm mt-1">
+              <h1 className="text-base sm:text-lg lg:text-xl xl:text-2xl font-semibold truncate">Atendimento WhatsApp</h1>
+              <p className="text-green-100 text-[10px] sm:text-xs lg:text-sm mt-0.5 sm:mt-1">
                 {conversations.length} conversa{conversations.length !== 1 ? 's' : ''} total{conversations.length !== 1 ? 'is' : ''}
               </p>
             </div>
@@ -1276,9 +1276,9 @@ export default function WhatsAppSupport() {
           {selectedConversation && !showConversationList && (
             <button
               onClick={handleBackToConversations}
-              className="lg:hidden ml-3 p-2 hover:bg-green-700 rounded-lg transition-colors flex-shrink-0"
+              className="lg:hidden ml-2 p-1.5 sm:p-2 hover:bg-green-700 rounded-lg transition-colors flex-shrink-0"
             >
-              <ChevronLeft size={24} />
+              <ChevronLeft size={20} className="sm:w-6 sm:h-6" />
             </button>
           )}
         </div>
@@ -1288,30 +1288,30 @@ export default function WhatsAppSupport() {
         {/* Lista de Conversas - Estilo WhatsApp Web */}
         <div className={`${showConversationList ? 'flex' : 'hidden'} lg:flex w-full lg:w-1/3 bg-white dark:bg-[#065084] border-r border-gray-300 dark:border-[#0F828C] flex-col`}>
           {/* Busca e Filtros */}
-          <div className="p-2 sm:p-3 bg-gray-50 dark:bg-[#065084] border-b border-gray-200 dark:border-[#0F828C] space-y-2">
+          <div className="p-2 sm:p-3 bg-gray-50 dark:bg-[#065084] border-b border-gray-200 dark:border-[#0F828C] space-y-1.5 sm:space-y-2">
             {/* Campo de Busca */}
             <div className="relative">
-              <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 sm:w-5 sm:h-5" />
+              <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
               <input
                 type="text"
                 placeholder="Buscar conversas..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-1.5 sm:py-2 text-sm sm:text-base bg-white dark:bg-[#065084] dark:text-white border border-gray-300 dark:border-[#0F828C] rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full pl-7 sm:pl-8 lg:pl-10 pr-2 sm:pr-3 lg:pr-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base bg-white dark:bg-[#065084] dark:text-white border border-gray-300 dark:border-[#0F828C] rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               />
               {searchTerm && (
                 <button
                   onClick={() => setSearchTerm('')}
-                  className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="absolute right-1.5 sm:right-2 lg:right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 p-0.5"
                   type="button"
                 >
-                  <X size={16} className="sm:w-5 sm:h-5" />
+                  <X size={14} className="sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
                 </button>
               )}
             </div>
             
             {/* Filtros por Tags */}
-            <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            <div className="flex flex-wrap gap-1 sm:gap-1.5 lg:gap-2">
               <button
                 onClick={() => {
                   setSelectedFilters({
@@ -1321,7 +1321,7 @@ export default function WhatsAppSupport() {
                     controlado: false
                   })
                 }}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors ${
+                className={`px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 text-[9px] sm:text-[10px] lg:text-xs rounded-full font-medium transition-colors ${
                   !selectedFilters.cliente && !selectedFilters.farmaceutico && !selectedFilters.assumida && !selectedFilters.controlado
                     ? 'bg-gray-700 dark:bg-gray-600 text-white'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
@@ -1331,7 +1331,7 @@ export default function WhatsAppSupport() {
               </button>
               <button
                 onClick={() => setSelectedFilters({ ...selectedFilters, cliente: !selectedFilters.cliente })}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
+                className={`px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 text-[9px] sm:text-[10px] lg:text-xs rounded-full font-medium transition-colors flex items-center space-x-0.5 sm:space-x-1 ${
                   selectedFilters.cliente
                     ? 'bg-blue-600 dark:bg-blue-500 text-white'
                     : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50'
@@ -1342,18 +1342,19 @@ export default function WhatsAppSupport() {
               </button>
               <button
                 onClick={() => setSelectedFilters({ ...selectedFilters, farmaceutico: !selectedFilters.farmaceutico })}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
+                className={`px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 text-[9px] sm:text-[10px] lg:text-xs rounded-full font-medium transition-colors flex items-center space-x-0.5 sm:space-x-1 ${
                   selectedFilters.farmaceutico
                     ? 'bg-red-600 dark:bg-red-500 text-white'
                     : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
                 }`}
               >
                 <span>👨‍⚕️</span>
-                <span>Farmacêutico</span>
+                <span className="hidden xs:inline">Farmacêutico</span>
+                <span className="xs:hidden">Farm.</span>
               </button>
               <button
                 onClick={() => setSelectedFilters({ ...selectedFilters, assumida: !selectedFilters.assumida })}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
+                className={`px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 text-[9px] sm:text-[10px] lg:text-xs rounded-full font-medium transition-colors flex items-center space-x-0.5 sm:space-x-1 ${
                   selectedFilters.assumida
                     ? 'bg-yellow-600 dark:bg-yellow-500 text-white'
                     : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50'
@@ -1364,7 +1365,7 @@ export default function WhatsAppSupport() {
               </button>
               <button
                 onClick={() => setSelectedFilters({ ...selectedFilters, controlado: !selectedFilters.controlado })}
-                className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs rounded-full font-medium transition-colors flex items-center space-x-1 ${
+                className={`px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 text-[9px] sm:text-[10px] lg:text-xs rounded-full font-medium transition-colors flex items-center space-x-0.5 sm:space-x-1 ${
                   selectedFilters.controlado
                     ? 'bg-orange-600 dark:bg-orange-500 text-white'
                     : 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/50'
@@ -1446,35 +1447,35 @@ export default function WhatsAppSupport() {
           {selectedConversation && selectedConv ? (
             <>
               {/* Header da Conversa */}
-              <div className="border-b border-gray-200 dark:border-[#0F828C] p-3 sm:p-4 bg-gray-50 dark:bg-[#065084]">
-                <div className="flex items-center justify-between space-x-3">
-                  <div className="flex items-center space-x-3 min-w-0 flex-1">
+              <div className="border-b border-gray-200 dark:border-[#0F828C] p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-[#065084]">
+                <div className="flex items-center justify-between gap-2 sm:gap-3">
+                  <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                     {/* Botão voltar (apenas mobile) */}
                   <button
                     onClick={handleBackToConversations}
                       className="lg:hidden flex-shrink-0 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
                   >
-                      <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                      <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300" />
                   </button>
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
-                      <User className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-6 lg:h-6 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 dark:text-white text-sm sm:text-base truncate">
+                      <p className="font-medium text-gray-900 dark:text-white text-xs sm:text-sm lg:text-base truncate">
                         {selectedConv.contactName || formatPhone(selectedConv.phone)}
                       </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{formatPhone(selectedConv.phone)}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">{formatPhone(selectedConv.phone)}</p>
                   </div>
                 </div>
                   {/* Badges e botões de ação */}
-                  <div className="flex items-center space-x-2 flex-shrink-0">
+                  <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 flex-wrap">
                   {selectedConv.needsPharmacist && (
-                    <span className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
+                    <span className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-[9px] sm:text-[10px] lg:text-xs px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
                         Farmacêutico
                     </span>
                   )}
                   {selectedConv.isAssumed && (
-                    <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-[10px] sm:text-xs px-2 sm:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap">
+                    <span className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 text-[9px] sm:text-[10px] lg:text-xs px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 rounded-full font-medium whitespace-nowrap truncate max-w-[120px] sm:max-w-none">
                       {selectedConv.assumedBy ? `Assumido por ${selectedConv.assumedBy}` : 'Assumida'}
                     </span>
                   )}
@@ -1482,19 +1483,19 @@ export default function WhatsAppSupport() {
                   {selectedConv.isAssumed || selectedConv.needsPharmacist ? (
                     <button
                       onClick={handleUnblockConversation}
-                      className="flex items-center space-x-1 bg-green-600 hover:bg-green-700 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
+                      className="flex items-center space-x-0.5 sm:space-x-1 bg-green-600 hover:bg-green-700 text-white text-[9px] sm:text-[10px] lg:text-xs px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
                       title="Desbloquear conversa (IA voltará a responder)"
                     >
-                      <Unlock size={14} className="sm:w-4 sm:h-4" />
+                      <Unlock size={12} className="sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4" />
                       <span className="hidden sm:inline">Desbloquear</span>
                     </button>
                   ) : (
                     <button
                       onClick={handleBlockConversation}
-                      className="flex items-center space-x-1 bg-yellow-600 hover:bg-yellow-700 text-white text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
+                      className="flex items-center space-x-0.5 sm:space-x-1 bg-yellow-600 hover:bg-yellow-700 text-white text-[9px] sm:text-[10px] lg:text-xs px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap"
                       title="Assumir conversa (bloquear IA)"
                     >
-                      <Lock size={14} className="sm:w-4 sm:h-4" />
+                      <Lock size={12} className="sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4" />
                       <span className="hidden sm:inline">Assumir</span>
                     </button>
                   )}
@@ -1505,34 +1506,34 @@ export default function WhatsAppSupport() {
               {/* Mensagens */}
               <div
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50 dark:bg-gray-900"
+                className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-gray-900"
                 style={{ scrollBehavior: 'auto' }}
               >
                 {messages.length === 0 ? (
                   <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">Nenhuma mensagem ainda</p>
+                    <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm lg:text-base">Nenhuma mensagem ainda</p>
                   </div>
                 ) : (
-                  <div className="space-y-3 sm:space-y-4">
+                  <div className="space-y-2 sm:space-y-3 lg:space-y-4">
                     {messages.map((message) => (
                   <div
                         key={message.id}
                         className={`flex ${message.isFromMe ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                          className={`max-w-[85%] sm:max-w-xs lg:max-w-md rounded-lg shadow-sm overflow-hidden ${
+                          className={`max-w-[90%] sm:max-w-[85%] lg:max-w-xs xl:max-w-md rounded-lg shadow-sm overflow-hidden ${
                             message.isFromMe
                               ? 'bg-blue-600 dark:bg-blue-500 text-white'
                           : 'bg-white dark:bg-[#065084] text-gray-900 dark:text-white border border-gray-200 dark:border-[#0F828C]'
-                          } ${message.type === 'image' && message.mediaUrl ? 'p-0' : 'px-3 sm:px-4 py-2'}`}
+                          } ${message.type === 'image' && message.mediaUrl ? 'p-0' : 'px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2'}`}
                     >
                           {message.type === 'image' && message.mediaUrl ? (
                         <>
                               {renderMessageContent(message)}
-                              <div className="px-3 sm:px-4 pb-2">
+                              <div className="px-2 sm:px-3 lg:px-4 pb-1.5 sm:pb-2">
                             <p
-                              className={`text-[10px] sm:text-xs mt-1 ${
-                                    message.isFromMe ? 'text-blue-100' : 'text-gray-400'
+                              className={`text-[9px] sm:text-[10px] lg:text-xs mt-0.5 sm:mt-1 ${
+                                    message.isFromMe ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'
                               }`}
                             >
                                   {formatTime(message.timestamp)}
@@ -1543,7 +1544,7 @@ export default function WhatsAppSupport() {
                         <>
                               {renderMessageContent(message)}
                           <p
-                            className={`text-[10px] sm:text-xs mt-1 ${
+                            className={`text-[9px] sm:text-[10px] lg:text-xs mt-0.5 sm:mt-1 ${
                                   message.isFromMe ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'
                             }`}
                           >
@@ -1559,32 +1560,32 @@ export default function WhatsAppSupport() {
               </div>
 
               {/* Input de Mensagem */}
-              <div className="bg-white dark:bg-[#065084] border-t border-gray-300 dark:border-[#0F828C] px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+              <div className="bg-white dark:bg-[#065084] border-t border-gray-300 dark:border-[#0F828C] px-2 sm:px-3 lg:px-6 py-2 sm:py-3 lg:py-4">
                 {/* Preview do arquivo selecionado */}
                 {selectedFile && (
-                  <div className="mb-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center space-x-2 flex-1 min-w-0">
+                  <div className="mb-1.5 sm:mb-2 p-1.5 sm:p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex items-center justify-between gap-2">
+                    <div className="flex items-center space-x-1.5 sm:space-x-2 flex-1 min-w-0">
                       {filePreview ? (
-                        <img src={filePreview} alt="Preview" className="w-12 h-12 object-cover rounded" />
+                        <img src={filePreview} alt="Preview" className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded flex-shrink-0" />
                       ) : (
-                        <Paperclip className="w-5 h-5 text-gray-600 dark:text-gray-300 flex-shrink-0" />
+                        <Paperclip className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300 flex-shrink-0" />
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate">{selectedFile.name}</p>
-                        <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-[10px] sm:text-xs lg:text-sm font-medium text-gray-900 dark:text-white truncate">{selectedFile.name}</p>
+                        <p className="text-[9px] sm:text-[10px] lg:text-xs text-gray-500 dark:text-gray-400">
                           {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                         </p>
                       </div>
                     </div>
                     <button
                       onClick={removeFile}
-                      className="ml-2 p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors flex-shrink-0"
+                      className="ml-1 p-0.5 sm:p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors flex-shrink-0"
                     >
-                      <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                      <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-300" />
                     </button>
                   </div>
                 )}
-                <div className="flex items-center space-x-2 sm:space-x-3 lg:space-x-4">
+                <div className="flex items-center space-x-1.5 sm:space-x-2 lg:space-x-3 xl:space-x-4">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -1595,29 +1596,29 @@ export default function WhatsAppSupport() {
                   />
                   <label
                     htmlFor="file-input"
-                    className="p-2 sm:p-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors cursor-pointer flex-shrink-0"
+                    className="p-1.5 sm:p-2 lg:p-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors cursor-pointer flex-shrink-0"
                     title="Anexar arquivo"
                   >
-                    <Paperclip className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <Paperclip className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
                   </label>
                   <input
                     type="text"
                     value={messageText}
                     onChange={handleMessageChange}
                     onKeyPress={handleKeyPress}
-                    placeholder={selectedFile ? "Adicione uma legenda (opcional)..." : "Digite uma mensagem..."}
-                    className="flex-1 px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder={selectedFile ? "Legenda (opcional)..." : "Digite uma mensagem..."}
+                    className="flex-1 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 lg:py-3 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
                     disabled={sending}
                   />
                   <button
                     onClick={sendMessage}
                     disabled={(!messageText.trim() && !selectedFile) || sending}
-                    className="bg-green-600 text-white p-2 sm:p-3 rounded-full hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex-shrink-0"
+                    className="bg-green-600 text-white p-1.5 sm:p-2 lg:p-3 rounded-full hover:bg-green-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex-shrink-0"
                   >
                     {sending ? (
-                      <Clock className="animate-spin w-5 h-5 sm:w-6 sm:h-6" />
+                      <Clock className="animate-spin w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
                     ) : (
-                      <Send className="w-5 h-5 sm:w-6 sm:h-6" />
+                      <Send className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
                     )}
                   </button>
                 </div>
@@ -1625,10 +1626,10 @@ export default function WhatsAppSupport() {
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-              <div className="text-center text-gray-500 dark:text-gray-400 px-4">
-                <MessageSquare size={48} className="sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-gray-300 dark:text-gray-600" />
-                <p className="text-base sm:text-lg font-medium">Selecione uma conversa para começar</p>
-                <p className="text-xs sm:text-sm mt-2">Escolha uma conversa da lista ao lado</p>
+              <div className="text-center text-gray-500 dark:text-gray-400 px-3 sm:px-4">
+                <MessageSquare size={40} className="sm:w-12 sm:h-12 lg:w-16 lg:h-16 mx-auto mb-2 sm:mb-3 lg:mb-4 text-gray-300 dark:text-gray-600" />
+                <p className="text-sm sm:text-base lg:text-lg font-medium">Selecione uma conversa para começar</p>
+                <p className="text-xs sm:text-sm mt-1.5 sm:mt-2">Escolha uma conversa da lista ao lado</p>
               </div>
             </div>
           )}
@@ -1638,16 +1639,16 @@ export default function WhatsAppSupport() {
       {/* Modal de Preview de Imagem */}
       {imagePreview && (
         <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-2 sm:p-4"
           onClick={() => setImagePreview(null)}
         >
           <div className="relative max-w-7xl max-h-full w-full h-full flex items-center justify-center">
             <button
               onClick={() => setImagePreview(null)}
-              className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors z-10 bg-black bg-opacity-50 rounded-full p-2"
+              className="absolute top-2 right-2 sm:top-4 sm:right-4 text-white hover:text-gray-300 transition-colors z-10 bg-black bg-opacity-50 rounded-full p-1.5 sm:p-2"
               title="Fechar (ESC)"
             >
-              <X size={24} />
+              <X size={18} className="sm:w-6 sm:h-6" />
             </button>
             <img 
               src={imagePreview} 
@@ -1699,10 +1700,10 @@ export default function WhatsAppSupport() {
                   window.open(imagePreview, '_blank')
                 }
               }}
-              className="absolute bottom-4 right-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center space-x-2 z-10"
+              className="absolute bottom-2 right-2 sm:bottom-4 sm:right-4 bg-green-600 hover:bg-green-700 text-white px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg transition-colors flex items-center space-x-1 sm:space-x-2 z-10 text-xs sm:text-sm"
               title="Baixar imagem"
             >
-              <Download size={18} />
+              <Download size={14} className="sm:w-4 sm:h-4 lg:w-[18px] lg:h-[18px]" />
               <span className="hidden sm:inline">Baixar</span>
             </button>
           </div>

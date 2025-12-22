@@ -23,42 +23,84 @@ export default function ProductCard({ product }: ProductCardProps) {
     : PRODUCT_IMAGE_FALLBACK
 
   return (
-    <Link to={`/produtos/${product.id}`} className="card p-6 block">
-      <div className="relative mb-4">
-        <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
-          <img
-            src={imageUrl}
-            alt={product.name}
-            className="w-full h-full object-cover"
-            onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
-          />
+    <Link to={`/produtos/${product.id}`} className="block">
+      {/* Mobile Layout - Horizontal (Mercado Livre style) */}
+      <div className="flex sm:flex-col bg-white dark:bg-[#065084] border-b sm:border sm:border-gray-200 dark:border-[#0F828C] sm:rounded-lg overflow-hidden sm:shadow-sm dark:sm:shadow-lg transition-all hover:bg-gray-50 dark:hover:bg-[#0F828C] sm:hover:shadow-md dark:sm:hover:shadow-xl">
+        {/* Image Container */}
+        <div className="relative flex-shrink-0 sm:w-full p-2 sm:p-0 sm:mb-0">
+          <div className="w-24 h-24 sm:w-full sm:h-40 lg:h-48 bg-gray-100 dark:bg-gray-700 rounded-lg sm:rounded-none sm:rounded-t-lg overflow-hidden flex items-center justify-center">
+            <img
+              src={imageUrl}
+              alt={product.name}
+              className="w-full h-full object-cover"
+              onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
+            />
+          </div>
+          {product.isCustomizable && (
+            <div className="absolute top-2 right-2 sm:top-2 sm:right-2 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs flex items-center" style={{ backgroundColor: '#67C090' }}>
+              <Sparkles size={8} className="sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
+              <span className="hidden sm:inline">Personalizável</span>
+            </div>
+          )}
+          {!product.inStock && (
+            <div className="absolute inset-0 bg-gray-900 bg-opacity-50 rounded-lg sm:rounded-none sm:rounded-t-lg flex items-center justify-center">
+              <span className="text-white font-semibold text-xs sm:text-sm lg:text-base">Fora de Estoque</span>
+            </div>
+          )}
         </div>
-        {product.isCustomizable && (
-          <div className="absolute top-2 right-2 text-white px-2 py-1 rounded-full text-xs flex items-center" style={{ backgroundColor: '#67C090' }}>
-            <Sparkles size={12} className="mr-1" />
-            Personalizável
+
+        {/* Content Container */}
+        <div className="flex-1 min-w-0 sm:w-full flex flex-col justify-between p-3 sm:p-4 lg:p-6">
+          {/* Product Info */}
+          <div className="flex-1 mb-2 sm:mb-0">
+            <h3 className="text-sm sm:text-base lg:text-lg xl:text-xl font-semibold text-gray-900 dark:text-white mb-1 sm:mb-2 line-clamp-2 sm:line-clamp-3">{product.name}</h3>
+            <p className="text-[10px] sm:text-xs lg:text-sm text-gray-600 dark:text-gray-300 mb-2 sm:mb-3 lg:mb-4 line-clamp-2 hidden sm:block">{product.description}</p>
+            
+            {/* Frete grátis badge - Mobile */}
+            {product.free_shipping && (
+              <div className="sm:hidden mb-2">
+                <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">Frete grátis</span>
+              </div>
+            )}
           </div>
-        )}
-        {!product.inStock && (
-          <div className="absolute inset-0 bg-gray-900 bg-opacity-50 rounded-lg flex items-center justify-center">
-            <span className="text-white font-semibold">Fora de Estoque</span>
+
+          {/* Price and Action */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+              {product.promo_price ? (
+                <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-red-600 dark:text-red-400">
+                      R$ {Number(product.promo_price || 0).toFixed(2).replace('.', ',')}
+                    </span>
+                    <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 line-through">
+                      R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                  <span className="text-[10px] sm:text-xs text-red-600 dark:text-red-400 font-medium">
+                    {Math.round(((Number(product.price) - Number(product.promo_price)) / Number(product.price)) * 100)}% OFF
+                  </span>
+                </div>
+              ) : (
+                <span className="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold text-primary-600 dark:text-primary-400">
+                  R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
+                </span>
+              )}
+              {/* Frete grátis badge - Desktop */}
+              {product.free_shipping && (
+                <span className="hidden sm:inline text-xs text-green-600 dark:text-green-400 font-medium">Frete grátis</span>
+              )}
+            </div>
+            <button
+              onClick={handleAddToCart}
+              disabled={!product.inStock}
+              className="disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-2 sm:p-2.5 rounded-lg transition-colors hover:opacity-90 flex-shrink-0"
+              style={{ backgroundColor: product.inStock ? '#67C090' : undefined }}
+            >
+              <ShoppingCart size={16} className="sm:w-5 sm:h-5" />
+            </button>
           </div>
-        )}
-      </div>
-      <h3 className="text-xl font-semibold text-gray-900 mb-2">{product.name}</h3>
-      <p className="text-gray-600 text-sm mb-4 line-clamp-2">{product.description}</p>
-      <div className="flex items-center justify-between">
-        <span className="text-2xl font-bold text-primary-600">
-          R$ {product.price.toFixed(2).replace('.', ',')}
-        </span>
-        <button
-          onClick={handleAddToCart}
-          disabled={!product.inStock}
-          className="disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-2 rounded-lg transition-colors hover:opacity-90"
-          style={{ backgroundColor: product.inStock ? '#67C090' : undefined }}
-        >
-          <ShoppingCart size={20} />
-        </button>
+        </div>
       </div>
     </Link>
   )

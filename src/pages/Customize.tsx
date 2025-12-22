@@ -160,11 +160,11 @@ export default function Customize() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto flex justify-center items-center min-h-[400px]">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <div className="max-w-4xl mx-auto flex justify-center items-center min-h-[300px] sm:min-h-[400px]">
           <div className="text-center">
-            <Loader2 className="w-12 h-12 animate-spin text-primary-600 mx-auto mb-4" />
-            <p className="text-gray-600">Carregando compostos disponíveis...</p>
+            <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 animate-spin text-primary-600 mx-auto mb-4" />
+            <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">Carregando compostos disponíveis...</p>
           </div>
         </div>
       </div>
@@ -173,15 +173,15 @@ export default function Customize() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-            <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-red-900 mb-2">Erro ao carregar compostos</h2>
-            <p className="text-red-700 mb-4">{error}</p>
+          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 rounded-lg p-4 sm:p-6 text-center">
+            <AlertCircle className="w-10 h-10 sm:w-12 sm:h-12 text-red-600 dark:text-red-400 mx-auto mb-4" />
+            <h2 className="text-lg sm:text-xl font-semibold text-red-900 dark:text-red-300 mb-2">Erro ao carregar compostos</h2>
+            <p className="text-sm sm:text-base text-red-700 dark:text-red-400 mb-4">{error}</p>
             <button
               onClick={() => window.location.reload()}
-              className="btn-primary"
+              className="btn-primary text-sm sm:text-base px-4 py-2"
             >
               Tentar novamente
             </button>
@@ -192,37 +192,37 @@ export default function Customize() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Personalizar Medicamento</h1>
-        <p className="text-gray-600 mb-8">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">Personalizar Medicamento</h1>
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 mb-4 sm:mb-8">
           Crie seu medicamento manipulado personalizado com os ativos e dosagens que você precisa
         </p>
 
         {showPrescriptionWarning && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start">
-            <AlertCircle className="text-yellow-600 mr-3 mt-0.5" size={20} />
-            <div className="flex-1">
-              <p className="text-yellow-800 font-semibold mb-1">Receita Médica Necessária</p>
-              <p className="text-yellow-700 text-sm">
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg flex items-start">
+            <AlertCircle className="text-yellow-600 dark:text-yellow-400 mr-2 sm:mr-3 mt-0.5 flex-shrink-0" size={18} />
+            <div className="flex-1 min-w-0">
+              <p className="text-yellow-800 dark:text-yellow-300 font-semibold mb-1 text-sm sm:text-base">Receita Médica Necessária</p>
+              <p className="text-yellow-700 dark:text-yellow-400 text-xs sm:text-sm">
                 Este medicamento requer receita médica. Você precisará enviar a receita durante o checkout.
               </p>
             </div>
             <button
               onClick={() => setShowPrescriptionWarning(false)}
-              className="text-yellow-600 hover:text-yellow-800"
+              className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-300 flex-shrink-0 ml-2"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {/* Form */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Medication Name */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                 Nome do Medicamento *
               </label>
               <input
@@ -230,18 +230,18 @@ export default function Customize() {
                 value={medicationName}
                 onChange={(e) => setMedicationName(e.target.value)}
                 placeholder="Ex: Complexo Multivitamínico Personalizado"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-[#065084] text-black dark:text-white"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-[#065084] text-black dark:text-white"
               />
             </div>
 
             {/* Active Ingredients */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                 Ativos Farmacêuticos *
               </label>
-              <div className="card border border-gray-300 dark:border-[#0F828C] rounded-lg p-4 min-h-[200px] dark:bg-[#065084]">
+              <div className="card border border-gray-300 dark:border-[#0F828C] rounded-lg p-3 sm:p-4 min-h-[150px] sm:min-h-[200px] dark:bg-[#065084]">
                 {selectedIngredients.length === 0 ? (
-                  <p className="text-gray-400 dark:text-gray-500 text-sm">Nenhum ativo selecionado</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-xs sm:text-sm">Nenhum ativo selecionado</p>
                 ) : (
                   <div className="space-y-2">
                     {selectedIngredients.map(ingredient => {
@@ -251,40 +251,40 @@ export default function Customize() {
                       return (
                         <div
                           key={ingredient.id}
-                          className={`bg-primary-50 dark:bg-primary-900/30 p-3 rounded-lg ${validationError ? 'border border-red-300 dark:border-red-500' : ''}`}
+                          className={`bg-primary-50 dark:bg-primary-900/30 p-2.5 sm:p-3 rounded-lg ${validationError ? 'border border-red-300 dark:border-red-500' : ''}`}
                         >
-                          <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <span className="font-medium dark:text-white">{ingredient.name}</span>
+                          <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+                            <div className="flex-1 min-w-0">
+                              <span className="font-medium dark:text-white text-sm sm:text-base break-words">{ingredient.name}</span>
                             </div>
                             <button
                               onClick={() => handleRemoveIngredient(ingredient.id)}
-                              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+                              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 flex-shrink-0 ml-2"
                             >
-                              <X size={18} />
+                              <X size={16} />
                             </button>
                           </div>
                           <div className="space-y-1">
-                            <div className="flex items-center space-x-2">
-                              <label className="text-sm text-gray-600 dark:text-gray-300">Concentração:</label>
+                            <div className="flex items-center space-x-2 flex-wrap">
+                              <label className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Concentração:</label>
                               <input
                                 type="text"
                                 value={ingredient.concentration}
                                 onChange={(e) => handleUpdateConcentration(ingredient.id, e.target.value)}
-                                className={`w-24 px-2 py-1 border rounded text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white dark:border-[#0F828C] ${
+                                className={`w-20 sm:w-24 px-2 py-1 border rounded text-xs sm:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white dark:border-[#0F828C] ${
                                   validationError ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-[#0F828C]'
                                 }`}
                                 placeholder={composto?.concentration || ''}
                               />
-                              <span className="text-sm text-gray-600 dark:text-gray-300">{ingredient.unit}</span>
+                              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">{ingredient.unit}</span>
                             </div>
                             {hasRange && (
                               <div className="text-xs text-gray-500 dark:text-gray-400">
-                                Faixa permitida: {composto.min_concentration || 'sem mínimo'} - {composto.max_concentration || 'sem máximo'} {composto.unit}
+                                Faixa: {composto.min_concentration || 'sem mínimo'} - {composto.max_concentration || 'sem máximo'} {composto.unit}
                               </div>
                             )}
                             {validationError && (
-                              <div className="text-xs text-red-600 mt-1">
+                              <div className="text-xs text-red-600 dark:text-red-400 mt-1">
                                 {validationError}
                               </div>
                             )}
@@ -296,17 +296,17 @@ export default function Customize() {
                 )}
               </div>
               <div className="mt-3">
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">Adicionar ativo:</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2">Adicionar ativo:</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                   {availableCompostos
                     .filter(composto => !selectedIngredients.find(si => si.id === composto.id))
                     .map(composto => (
                       <button
                         key={composto.id}
                         onClick={() => handleAddIngredient(composto)}
-                        className="card text-left p-3 border border-gray-300 dark:border-[#0F828C] rounded-lg hover:border-primary-500 dark:hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors text-sm min-h-[80px] flex flex-col justify-between dark:bg-[#065084] dark:text-white"
+                        className="card text-left p-2.5 sm:p-3 border border-gray-300 dark:border-[#0F828C] rounded-lg hover:border-primary-500 dark:hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors text-xs sm:text-sm min-h-[70px] sm:min-h-[80px] flex flex-col justify-between dark:bg-[#065084] dark:text-white"
                       >
-                        <div className="font-medium break-words mb-2 dark:text-white">{composto.name}</div>
+                        <div className="font-medium break-words mb-1.5 sm:mb-2 dark:text-white">{composto.name}</div>
                         <div className="text-primary-600 dark:text-primary-400 font-semibold text-xs">
                           + R$ {getCompostoPrice().toFixed(2).replace('.', ',')}
                         </div>
@@ -318,7 +318,7 @@ export default function Customize() {
 
             {/* Dosage */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                 Dosagem *
               </label>
               <input
@@ -326,46 +326,46 @@ export default function Customize() {
                 value={dosage}
                 onChange={(e) => setDosage(e.target.value)}
                 placeholder="Ex: 1 cápsula ao dia, após o almoço"
-                className="w-full px-4 py-3 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-[#065084] text-black dark:text-white"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-[#065084] text-black dark:text-white"
               />
             </div>
 
             {/* Quantity */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                 Quantidade
               </label>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3 sm:space-x-4">
                 <div className="card flex items-center border border-gray-300 dark:border-[#0F828C] rounded-lg dark:bg-[#065084]">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
+                    className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
                   >
-                    <Minus size={20} />
+                    <Minus size={18} />
                   </button>
-                  <span className="px-4 py-2 font-semibold dark:text-white">{quantity}</span>
+                  <span className="px-3 sm:px-4 py-1.5 sm:py-2 font-semibold dark:text-white text-sm sm:text-base">{quantity}</span>
                   <button
                     onClick={() => setQuantity(quantity + 1)}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
+                    className="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-900 dark:text-white"
                   >
-                    <Plus size={20} />
+                    <Plus size={18} />
                   </button>
                 </div>
-                <span className="text-gray-600 dark:text-gray-300">unidades</span>
+                <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">unidades</span>
               </div>
             </div>
 
             {/* Instructions */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                 Instruções de Uso
               </label>
               <textarea
                 value={instructions}
                 onChange={(e) => setInstructions(e.target.value)}
                 placeholder="Instruções adicionais (opcional)"
-                rows={4}
-                className="w-full px-4 py-3 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-[#065084] text-black dark:text-white"
+                rows={3}
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-[#065084] text-black dark:text-white"
               />
             </div>
 
@@ -378,7 +378,7 @@ export default function Customize() {
                 onChange={(e) => setPrescriptionRequired(e.target.checked)}
                 className="w-4 h-4 text-primary-600 dark:text-primary-400 border-gray-300 dark:border-[#0F828C] rounded focus:ring-primary-500 dark:bg-[#065084]"
               />
-              <label htmlFor="prescription" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+              <label htmlFor="prescription" className="ml-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
                 Este medicamento requer receita médica
               </label>
             </div>
@@ -386,43 +386,43 @@ export default function Customize() {
 
           {/* Summary */}
           <div className="lg:col-span-1">
-            <div className="card p-6 sticky top-24 dark:bg-[#065084] dark:border-[#0F828C]">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Resumo</h2>
+            <div className="card p-4 sm:p-6 sticky top-20 sm:top-24 dark:bg-[#065084] dark:border-[#0F828C]">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">Resumo</h2>
               
-              <div className="space-y-4 mb-6">
+              <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">Ativos selecionados:</p>
-                  <p className="font-semibold dark:text-white">{selectedIngredients.length}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Ativos selecionados:</p>
+                  <p className="font-semibold dark:text-white text-sm sm:text-base">{selectedIngredients.length}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">Quantidade:</p>
-                  <p className="font-semibold dark:text-white">{quantity} unidades</p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Quantidade:</p>
+                  <p className="font-semibold dark:text-white text-sm sm:text-base">{quantity} unidades</p>
                 </div>
                 {prescriptionRequired && (
-                  <div className="p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg">
-                    <p className="text-sm text-yellow-800 dark:text-yellow-300 font-semibold">
-                      <FileText size={16} className="inline mr-1" />
+                  <div className="p-2.5 sm:p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg">
+                    <p className="text-xs sm:text-sm text-yellow-800 dark:text-yellow-300 font-semibold">
+                      <FileText size={14} className="inline mr-1" />
                       Receita necessária
                     </p>
                   </div>
                 )}
               </div>
 
-              <div className="border-t dark:border-[#0F828C] pt-4 mb-6">
+              <div className="border-t dark:border-[#0F828C] pt-3 sm:pt-4 mb-4 sm:mb-6">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-gray-600 dark:text-gray-300">Preço estimado:</span>
-                  <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+                  <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Preço estimado:</span>
+                  <span className="text-xl sm:text-2xl font-bold text-primary-600 dark:text-primary-400">
                     R$ {calculatePrice().toFixed(2).replace('.', ',')}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   * Preço final pode variar após análise farmacêutica
                 </p>
               </div>
 
               <button
                 onClick={handleSubmit}
-                className="w-full btn-primary"
+                className="w-full btn-primary text-sm sm:text-base py-2.5 sm:py-3"
               >
                 Adicionar ao Carrinho
               </button>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { MessageSquare, X, Send, Loader2, CheckCircle, XCircle } from 'lucide-react'
 import { whatsappService } from '../services/whatsapp.service'
 import { useAuth } from '../context/AuthContext'
@@ -30,8 +30,9 @@ const FloatingChat: React.FC = () => {
   
   // Posições pré-definidas para as 4 quinas
   const getCornerPosition = (corner: CornerPosition) => {
-    const buttonSize = 64 // 16 * 4 (w-16 h-16)
-    const padding = 24 // 6 * 4 (p-6)
+    const isMobile = window.innerWidth < 640
+    const buttonSize = isMobile ? 56 : 64 // w-14 (56px) no mobile, w-16 (64px) no desktop
+    const padding = isMobile ? 12 : 24 // Menos padding no mobile
     
     switch (corner) {
       case 'bottom-right':
@@ -47,12 +48,21 @@ const FloatingChat: React.FC = () => {
     }
   }
   
-  const getChatPosition = (corner: CornerPosition) => {
-    const chatWidth = 380
-    const chatHeight = 600
-    const padding = 24
+  const getChatPosition = (corner: CornerPosition, buttonPos?: { x: number; y: number }) => {
+    // Em mobile, o chat tem tamanho reduzido (não ocupa a tela toda)
+    const isMobile = window.innerWidth < 640
+    const chatWidth = isMobile ? Math.min(340, window.innerWidth - 32) : 380
+    const chatHeight = isMobile ? Math.min(500, window.innerHeight - 100) : 600
+    const padding = isMobile ? 16 : 24
     
-    switch (corner) {
+    // Se uma posição do botão foi fornecida, detecta a quina baseada nessa posição
+    let cornerToUse = corner
+    if (buttonPos) {
+      cornerToUse = detectNearestCorner(buttonPos.x, buttonPos.y)
+    }
+    
+    // Posiciona o chat na mesma quina (tanto mobile quanto desktop)
+    switch (cornerToUse) {
       case 'bottom-right':
         return { x: window.innerWidth - chatWidth - padding, y: window.innerHeight - chatHeight - padding }
       case 'bottom-left':
@@ -75,8 +85,34 @@ const FloatingChat: React.FC = () => {
     return 'bottom-right' // Padrão: canto inferior direito
   })
   
-  // Posições calculadas baseadas na quina selecionada
-  const [buttonPosition, setButtonPosition] = useState(() => getCornerPosition(selectedCorner))
+  // Carrega a posição do botão salva no localStorage, ou usa a posição da quina
+  const loadSavedButtonPosition = (): { x: number; y: number } => {
+    try {
+      // Primeiro tenta carregar a posição salva quando o chat foi aberto (prioridade)
+      const savedOnOpen = localStorage.getItem('floatingChat_buttonPosition_onOpen')
+      if (savedOnOpen) {
+        const parsed = JSON.parse(savedOnOpen)
+        if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return { x: parsed.x, y: parsed.y }
+        }
+      }
+      // Se não encontrar, tenta a posição normal
+      const saved = localStorage.getItem('floatingChat_buttonPosition')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return { x: parsed.x, y: parsed.y }
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao carregar posição do botão:', error)
+    }
+    const cornerPos = getCornerPosition(selectedCorner)
+    return cornerPos
+  }
+
+  // Posições calculadas baseadas na quina selecionada ou posição salva
+  const [buttonPosition, setButtonPosition] = useState(() => loadSavedButtonPosition())
   const [chatPosition, setChatPosition] = useState(() => getChatPosition(selectedCorner))
   
   const [isDraggingButton, setIsDraggingButton] = useState(false)
@@ -85,20 +121,54 @@ const FloatingChat: React.FC = () => {
   const buttonRef = useRef<HTMLButtonElement>(null)
   const chatContainerRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  // Ref para rastrear a última posição real do botão (para evitar problemas de state assíncrono)
+  const lastButtonPositionRef = useRef<{ x: number; y: number }>(buttonPosition)
   
   // Atualiza posições quando a quina muda ou a janela redimensiona
   useEffect(() => {
     const updatePositions = () => {
-      setButtonPosition(getCornerPosition(selectedCorner))
+      // Atualiza posição do chat quando selectedCorner muda e o chat está aberto
+      // Usa a posição atual do botão para calcular a quina correta
       if (isOpen) {
-        setChatPosition(getChatPosition(selectedCorner))
+        setChatPosition(getChatPosition(selectedCorner, lastButtonPositionRef.current))
       }
+      // Não atualiza a posição do botão aqui - isso é feito em toggleChat e changeCorner
     }
     
+    // Só atualiza quando selectedCorner muda, não quando isOpen muda
     updatePositions()
+    
     window.addEventListener('resize', updatePositions)
     return () => window.removeEventListener('resize', updatePositions)
-  }, [selectedCorner, isOpen])
+  }, [selectedCorner, isOpen]) // Incluído isOpen para atualizar chat quando necessário
+
+  // Garante que quando o chat fecha, a posição do botão seja restaurada corretamente
+  // Usa um timeout para garantir que roda DEPOIS do toggleChat
+  useEffect(() => {
+    if (!isOpen) {
+      // Usa setTimeout para garantir que roda DEPOIS do toggleChat ter terminado
+      const timeoutId = setTimeout(() => {
+        // Verifica se ainda existe a chave temporária (se não existe, toggleChat já restaurou)
+        const savedOnOpen = localStorage.getItem('floatingChat_buttonPosition_onOpen')
+        if (savedOnOpen) {
+          // Quando o chat fecha, restaura a posição salva
+          // Isso garante que mesmo se outros useEffects rodarem, a posição correta seja mantida
+          const savedPosition = loadSavedButtonPosition()
+          setButtonPosition(savedPosition)
+          // Atualiza o ref com a posição restaurada
+          lastButtonPositionRef.current = savedPosition
+          // Remove a chave temporária APÓS restaurar
+          try {
+            localStorage.removeItem('floatingChat_buttonPosition_onOpen')
+          } catch (error) {
+            console.error('Erro ao remover posição temporária:', error)
+          }
+        }
+      }, 0) // Roda no próximo tick do event loop, após toggleChat
+      
+      return () => clearTimeout(timeoutId)
+    }
+  }, [isOpen]) // Roda quando isOpen muda
 
   // Scroll para a última mensagem
   useEffect(() => {
@@ -629,95 +699,206 @@ const FloatingChat: React.FC = () => {
   const changeCorner = (corner: CornerPosition) => {
     setSelectedCorner(corner)
     localStorage.setItem('floatingChat_corner', corner)
-    setButtonPosition(getCornerPosition(corner))
+    const cornerPos = getCornerPosition(corner)
+    
+    // Só atualiza a posição do botão se o chat estiver FECHADO
+    // Se o chat estiver aberto, não devemos sobrescrever a posição do botão
+    if (!isOpen) {
+      setButtonPosition(cornerPos)
+      // Atualiza o ref com a posição real
+      lastButtonPositionRef.current = cornerPos
+      // Salva a posição da quina no localStorage para restaurar quando fechar o chat
+      try {
+        localStorage.setItem('floatingChat_buttonPosition', JSON.stringify(cornerPos))
+      } catch (error) {
+        console.error('Erro ao salvar posição do botão:', error)
+      }
+    }
+    
     if (isOpen) {
-      setChatPosition(getChatPosition(corner))
+      // Atualiza a posição do chat baseada na nova quina e na posição atual do botão
+      setChatPosition(getChatPosition(corner, lastButtonPositionRef.current))
     }
   }
   
-  // Funções de arrastar o botão (para mudar de quina)
+  // Funções de arrastar o botão (para mudar de quina) - funciona para mouse e touch
+  const startButtonDrag = useCallback((clientX: number, clientY: number) => {
+    if (!buttonRef.current) return
+
+    const rect = buttonRef.current.getBoundingClientRect()
+    const startX = clientX
+    const startY = clientY
+    
+    // Calcula o offset do toque/clique dentro do botão
+    const offsetX = clientX - rect.left
+    const offsetY = clientY - rect.top
+    
+    let hasMoved = false
+    
+    const handleMove = (moveX: number, moveY: number) => {
+      const deltaX = Math.abs(moveX - startX)
+      const deltaY = Math.abs(moveY - startY)
+      
+      // Se moveu mais de 5px, considera arrasto
+      if (deltaX > 5 || deltaY > 5) {
+        hasMoved = true
+        setIsDraggingButton(true)
+        
+        // Faz o botão seguir o toque/clique
+        const newX = moveX - offsetX
+        const newY = moveY - offsetY
+        
+        // Limita dentro da tela
+        const buttonSize = window.innerWidth < 640 ? 56 : 64 // w-14 (56px) no mobile, w-16 (64px) no desktop
+        const maxX = window.innerWidth - buttonSize
+        const maxY = window.innerHeight - buttonSize
+        
+        const constrainedX = Math.max(0, Math.min(newX, maxX))
+        const constrainedY = Math.max(0, Math.min(newY, maxY))
+        
+        const newPos = { x: constrainedX, y: constrainedY }
+        setButtonPosition(newPos)
+        // Atualiza o ref com a posição real durante o arrasto
+        lastButtonPositionRef.current = newPos
+      }
+    }
+    
+    const handleEnd = (endX: number, endY: number) => {
+      setIsDraggingButton(false)
+      
+      if (hasMoved) {
+        // Detecta a quina mais próxima e move o botão suavemente para lá
+        const nearestCorner = detectNearestCorner(endX, endY)
+        // changeCorner vai mover o botão para a posição da quina com animação suave
+        // e salvar a posição correta no localStorage
+        changeCorner(nearestCorner)
+      } else {
+        // Se não moveu, abre o chat
+        toggleChat()
+      }
+    }
+
+    // Handlers para mouse
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      handleMove(moveEvent.clientX, moveEvent.clientY)
+    }
+    
+    const handleMouseUp = (upEvent: MouseEvent) => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      handleEnd(upEvent.clientX, upEvent.clientY)
+    }
+
+    // Handlers para touch
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.touches.length > 0) {
+        moveEvent.preventDefault() // Previne scroll durante o drag
+        handleMove(moveEvent.touches[0].clientX, moveEvent.touches[0].clientY)
+      }
+    }
+    
+    const handleTouchEnd = (endEvent: TouchEvent) => {
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', handleTouchEnd)
+      const endX = endEvent.changedTouches.length > 0 ? endEvent.changedTouches[0].clientX : startX
+      const endY = endEvent.changedTouches.length > 0 ? endEvent.changedTouches[0].clientY : startY
+      handleEnd(endX, endY)
+    }
+    
+    // Adiciona listeners para mouse
+    document.addEventListener('mousemove', handleMouseMove)
+    document.addEventListener('mouseup', handleMouseUp)
+    
+    // Adiciona listeners para touch
+    document.addEventListener('touchmove', handleTouchMove, { passive: false })
+    document.addEventListener('touchend', handleTouchEnd)
+  }, [])
+
   const handleButtonMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect()
-      const startX = e.clientX
-      const startY = e.clientY
-      
-      // Calcula o offset do clique dentro do botão
-      const offsetX = e.clientX - rect.left
-      const offsetY = e.clientY - rect.top
-      
-      let hasMoved = false
-      
-      const handleMouseMove = (moveEvent: MouseEvent) => {
-        const deltaX = Math.abs(moveEvent.clientX - startX)
-        const deltaY = Math.abs(moveEvent.clientY - startY)
-        
-        // Se moveu mais de 5px, considera arrasto
-        if (deltaX > 5 || deltaY > 5) {
-          hasMoved = true
-          setIsDraggingButton(true)
-          
-          // Faz o botão seguir o mouse
-          const newX = moveEvent.clientX - offsetX
-          const newY = moveEvent.clientY - offsetY
-          
-          // Limita dentro da tela
-          const maxX = window.innerWidth - 64
-          const maxY = window.innerHeight - 64
-          
-          const constrainedX = Math.max(0, Math.min(newX, maxX))
-          const constrainedY = Math.max(0, Math.min(newY, maxY))
-          
-          setButtonPosition({ x: constrainedX, y: constrainedY })
-        }
-      }
-      
-      const handleMouseUp = (upEvent: MouseEvent) => {
-        document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleMouseUp)
-        
-        setIsDraggingButton(false)
-        
-        if (hasMoved) {
-          // Ao soltar, detecta a quina mais próxima e "prende" o botão lá
-          const nearestCorner = detectNearestCorner(upEvent.clientX, upEvent.clientY)
-          changeCorner(nearestCorner)
-        } else {
-          // Se não moveu, abre o chat
-          toggleChat()
-        }
-      }
-      
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
+    startButtonDrag(e.clientX, e.clientY)
+  }
+
+  const handleButtonTouchStart = (e: React.TouchEvent) => {
+    // Não usa preventDefault aqui - será feito no listener direto
+    e.stopPropagation()
+    if (e.touches.length > 0) {
+      startButtonDrag(e.touches[0].clientX, e.touches[0].clientY)
     }
   }
 
-  // Funções de arrastar o chat
-  const handleChatMouseDown = (e: React.MouseEvent) => {
+  // Adiciona listener de touch diretamente no botão para evitar erro de preventDefault
+  useEffect(() => {
+    // Só adiciona o listener quando o botão estiver visível (chat fechado)
+    if (isOpen) return
+
+    const button = buttonRef.current
+    if (!button) return
+
+    const handleTouchStartDirect = (e: TouchEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.touches.length > 0) {
+        startButtonDrag(e.touches[0].clientX, e.touches[0].clientY)
+      }
+    }
+
+    button.addEventListener('touchstart', handleTouchStartDirect, { passive: false })
+    
+    return () => {
+      button.removeEventListener('touchstart', handleTouchStartDirect)
+    }
+  }, [startButtonDrag, isOpen])
+
+  // Salva a posição do botão no localStorage sempre que ela mudar (exceto durante o arrasto)
+  useEffect(() => {
+    // Só salva se o chat estiver fechado e não estiver arrastando
+    if (!isOpen && !isDraggingButton) {
+      try {
+        localStorage.setItem('floatingChat_buttonPosition', JSON.stringify(buttonPosition))
+      } catch (error) {
+        console.error('Erro ao salvar posição do botão:', error)
+      }
+    }
+  }, [buttonPosition, isOpen, isDraggingButton])
+
+  // Funções de arrastar o chat (mouse e touch)
+  const startChatDrag = (clientX: number, clientY: number) => {
     if (chatContainerRef.current) {
       const rect = chatContainerRef.current.getBoundingClientRect()
       setDragOffset({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
+        x: clientX - rect.left,
+        y: clientY - rect.top,
       })
       setIsDraggingChat(true)
     }
   }
 
-  // Efeito para arrastar o chat
+  const handleChatMouseDown = (e: React.MouseEvent) => {
+    startChatDrag(e.clientX, e.clientY)
+  }
+
+  const handleChatTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation()
+    if (e.touches.length > 0) {
+      startChatDrag(e.touches[0].clientX, e.touches[0].clientY)
+    }
+  }
+
+  // Efeito para arrastar o chat (mouse e touch)
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMove = (clientX: number, clientY: number) => {
       if (isDraggingChat) {
-        const newX = e.clientX - dragOffset.x
-        const newY = e.clientY - dragOffset.y
+        const newX = clientX - dragOffset.x
+        const newY = clientY - dragOffset.y
         
         // Limita dentro da tela
-        const maxX = window.innerWidth - 380
-        const maxY = window.innerHeight - 600
+        const isMobile = window.innerWidth < 640
+        const chatWidth = isMobile ? Math.min(340, window.innerWidth - 32) : 380
+        const chatHeight = isMobile ? Math.min(500, window.innerHeight - 100) : 600
+        const maxX = window.innerWidth - chatWidth
+        const maxY = window.innerHeight - chatHeight
         
         const constrainedX = Math.max(0, Math.min(newX, maxX))
         const constrainedY = Math.max(0, Math.min(newY, maxY))
@@ -726,37 +907,112 @@ const FloatingChat: React.FC = () => {
       }
     }
 
-    const handleMouseUp = () => {
+    const handleMouseMove = (e: MouseEvent) => {
+      handleMove(e.clientX, e.clientY)
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        e.preventDefault() // Previne scroll durante o drag
+        handleMove(e.touches[0].clientX, e.touches[0].clientY)
+      }
+    }
+
+    const handleEnd = (endX: number, endY: number) => {
       if (isDraggingChat) {
         setIsDraggingChat(false)
-        // Detecta a quina mais próxima e atualiza
-        const nearestCorner = detectNearestCorner(chatPosition.x + 190, chatPosition.y + 300) // Centro do chat
-        if (nearestCorner !== selectedCorner) {
-          changeCorner(nearestCorner)
+        // Detecta a quina mais próxima e atualiza (apenas no desktop)
+        if (window.innerWidth >= 640) {
+          const chatWidth = 380
+          const chatHeight = 600
+          const nearestCorner = detectNearestCorner(endX, endY)
+          if (nearestCorner !== selectedCorner) {
+            changeCorner(nearestCorner)
+          }
         }
       }
+    }
+
+    const handleMouseUp = () => {
+      handleEnd(0, 0) // Não precisa das coordenadas para mouse
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const endX = e.changedTouches.length > 0 ? e.changedTouches[0].clientX : 0
+      const endY = e.changedTouches.length > 0 ? e.changedTouches[0].clientY : 0
+      handleEnd(endX, endY)
     }
 
     if (isDraggingChat) {
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
+      document.addEventListener('touchmove', handleTouchMove, { passive: false })
+      document.addEventListener('touchend', handleTouchEnd)
     }
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', handleTouchEnd)
     }
   }, [isDraggingChat, dragOffset, chatPosition, selectedCorner])
 
   const toggleChat = () => {
     if (isOpen) {
-      // Ao fechar, reposiciona o chat na quina selecionada para a próxima abertura
+      // Ao fechar, restaura a posição do botão que estava salva quando o chat foi aberto
+      const savedPosition = loadSavedButtonPosition()
+      setButtonPosition(savedPosition)
+      // Atualiza o ref com a posição restaurada
+      lastButtonPositionRef.current = savedPosition
+      // NÃO remove a chave temporária aqui - será removida pelo useEffect
       setChatPosition(getChatPosition(selectedCorner))
     } else {
-      // Ao abrir, posiciona o chat na quina selecionada
-      setChatPosition(getChatPosition(selectedCorner))
+      // Ao abrir, salva a posição REAL do botão usando o ref (que sempre tem o valor atualizado)
+      // O ref é atualizado tanto durante o arrasto quanto quando changeCorner é chamado
+      const positionToSave = lastButtonPositionRef.current
+      try {
+        // Salva em uma chave separada para não ser sobrescrita por changeCorner
+        localStorage.setItem('floatingChat_buttonPosition_onOpen', JSON.stringify(positionToSave))
+        // Também salva na chave normal para compatibilidade
+        localStorage.setItem('floatingChat_buttonPosition', JSON.stringify(positionToSave))
+      } catch (error) {
+        console.error('Erro ao salvar posição do botão:', error)
+      }
+      // Posiciona o chat na mesma quina onde o botão está
+      // Passa a posição do botão para calcular a quina correta
+      setChatPosition(getChatPosition(selectedCorner, positionToSave))
     }
     setIsOpen(!isOpen)
+  }
+
+  // Função para processar formatação de texto (converter *texto* em negrito)
+  const formatMessage = (text: string): React.ReactNode => {
+    if (!text) return text
+
+    // Regex para encontrar *texto* (negrito)
+    // Não captura asteriscos que estão no início/fim da linha ou seguidos de espaço
+    const parts: React.ReactNode[] = []
+    let lastIndex = 0
+    const regex = /\*([^*]+)\*/g
+    let match
+
+    while ((match = regex.exec(text)) !== null) {
+      // Adiciona texto antes do match
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index))
+      }
+      // Adiciona o texto em negrito
+      parts.push(<strong key={match.index}>{match[1]}</strong>)
+      lastIndex = regex.lastIndex
+    }
+
+    // Adiciona o restante do texto
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex))
+    }
+
+    return parts.length > 0 ? parts : text
   }
 
   return (
@@ -766,7 +1022,7 @@ const FloatingChat: React.FC = () => {
         <button
           ref={buttonRef}
           onMouseDown={handleButtonMouseDown}
-          className="fixed w-16 h-16 text-white rounded-full shadow-lg flex items-center justify-center z-50 transition-all duration-300 hover:scale-110 cursor-pointer select-none"
+          className="fixed w-14 h-14 sm:w-16 sm:h-16 text-white rounded-full shadow-lg flex items-center justify-center z-50 transition-all duration-300 hover:scale-110 cursor-pointer select-none touch-none"
           style={{
             left: `${buttonPosition.x}px`,
             top: `${buttonPosition.y}px`,
@@ -782,7 +1038,7 @@ const FloatingChat: React.FC = () => {
           aria-label="Pergunte a Kaia"
           title="Pergunte a Kaia - Arraste para mudar de posição ou clique para abrir"
         >
-          <MessageSquare className="w-6 h-6 pointer-events-none" />
+          <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 pointer-events-none" />
         </button>
       )}
 
@@ -790,26 +1046,29 @@ const FloatingChat: React.FC = () => {
       {isOpen && (
         <div
           ref={chatContainerRef}
-          className="fixed z-50 bg-white dark:bg-[#065084] rounded-lg shadow-2xl dark:shadow-2xl flex flex-col transition-colors duration-300"
+          className="fixed z-50 bg-white dark:bg-[#065084] rounded-lg sm:rounded-lg shadow-2xl dark:shadow-2xl flex flex-col transition-colors duration-300"
           style={{
             left: `${chatPosition.x}px`,
             top: `${chatPosition.y}px`,
-            width: '380px',
-            height: '600px',
+            width: window.innerWidth < 640 ? `${Math.min(340, window.innerWidth - 32)}px` : '380px',
+            height: window.innerWidth < 640 ? `${Math.min(500, window.innerHeight - 100)}px` : '600px',
+            maxWidth: window.innerWidth < 640 ? `${Math.min(340, window.innerWidth - 32)}px` : '380px',
+            maxHeight: window.innerWidth < 640 ? `${Math.min(500, window.innerHeight - 100)}px` : '600px',
             transition: isDraggingChat ? 'none' : 'all 0.3s ease',
           }}
         >
           {/* Cabeçalho (arrastável) */}
           <div
             onMouseDown={handleChatMouseDown}
-            className="text-white p-4 rounded-t-lg cursor-move flex items-center justify-between select-none"
+            onTouchStart={handleChatTouchStart}
+            className="text-white p-3 sm:p-4 rounded-t-lg cursor-move flex items-center justify-between select-none touch-none"
             style={{ backgroundColor: '#67C090' }}
           >
-            <div className="flex items-center space-x-2">
-              <MessageSquare className="w-5 h-5" />
-              <h3 className="font-semibold">Kaia</h3>
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
+              <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
+              <h3 className="font-semibold text-sm sm:text-base">Kaia</h3>
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1.5 sm:space-x-2">
               <button
                 onClick={toggleChat}
                 className="p-1 rounded transition-colors"
@@ -824,7 +1083,7 @@ const FloatingChat: React.FC = () => {
                 }}
                 aria-label="Fechar chat"
               >
-                <X className="w-4 h-4" />
+                <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
           </div>
@@ -832,17 +1091,17 @@ const FloatingChat: React.FC = () => {
           {/* Conteúdo do chat */}
           <>
               {/* Mensagens */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-[#065084]">
+              <div className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 space-y-2 sm:space-y-3 lg:space-y-4 bg-gray-50 dark:bg-[#065084]">
                 {messages.length === 0 ? (
-                  <div className="text-center text-gray-500 dark:text-gray-400 mt-8">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p className="font-medium text-gray-700 dark:text-gray-200 mb-2">
+                  <div className="text-center text-gray-500 dark:text-gray-400 mt-4 sm:mt-6 lg:mt-8 px-2">
+                    <MessageSquare className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 opacity-50" />
+                    <p className="font-medium text-sm sm:text-base text-gray-700 dark:text-gray-200 mb-1.5 sm:mb-2">
                       Olá{user ? `, ${user.name}` : ''}! Eu sou a Kaia 👋
                     </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2 sm:mb-3">
                       Como posso ajudar você hoje?
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
                       {isAuthenticated
                         ? 'Posso ajudar você a encontrar produtos, adicionar ao carrinho e finalizar sua compra.'
                         : 'Posso ajudar você a encontrar produtos e informações. Faça login para adicionar produtos ao carrinho.'}
@@ -853,26 +1112,26 @@ const FloatingChat: React.FC = () => {
                     <div key={index}>
                       {/* Mensagem de ação (feedback de adicionar/remover) */}
                       {msg.actionResult && (
-                        <div className="flex justify-center my-2">
+                        <div className="flex justify-center my-1.5 sm:my-2">
                           <div
-                            className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm ${
+                            className={`flex items-center space-x-1.5 sm:space-x-2 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm ${
                               msg.actionResult.type === 'added'
-                                ? 'bg-green-100 text-green-800 border border-green-300'
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-300 dark:border-green-700'
                                 : msg.actionResult.type === 'removed'
-                                ? 'bg-orange-100 text-orange-800 border border-orange-300'
-                                : 'bg-red-100 text-red-800 border border-red-300'
+                                ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-300 dark:border-orange-700'
+                                : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-700'
                             }`}
                           >
                             {msg.actionResult.type === 'added' && (
-                              <CheckCircle className="w-4 h-4" />
+                              <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
                             )}
                             {msg.actionResult.type === 'removed' && (
-                              <XCircle className="w-4 h-4" />
+                              <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
                             )}
                             {msg.actionResult.type === 'error' && (
-                              <XCircle className="w-4 h-4" />
+                              <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
                             )}
-                            <span>{msg.actionResult.message}</span>
+                            <span className="break-words">{formatMessage(msg.actionResult.message || '')}</span>
                           </div>
                         </div>
                       )}
@@ -882,13 +1141,13 @@ const FloatingChat: React.FC = () => {
                           className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
-                            className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                            className={`max-w-[85%] sm:max-w-[80%] rounded-lg px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 ${
                               msg.role === 'user'
                                 ? 'bg-green-600 dark:bg-[#78B9B5] text-white'
                                 : 'bg-white dark:bg-[#0F828C] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#0F828C]'
                             }`}
                           >
-                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                            <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{formatMessage(msg.content)}</p>
                           </div>
                         </div>
                       )}
@@ -897,8 +1156,8 @@ const FloatingChat: React.FC = () => {
                 )}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-white dark:bg-[#0F828C] border border-gray-200 dark:border-[#0F828C] rounded-lg px-4 py-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-green-600 dark:text-primary-400" />
+                    <div className="bg-white dark:bg-[#0F828C] border border-gray-200 dark:border-[#0F828C] rounded-lg px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2">
+                      <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-green-600 dark:text-primary-400" />
                     </div>
                   </div>
                 )}
@@ -906,25 +1165,25 @@ const FloatingChat: React.FC = () => {
               </div>
 
               {/* Input */}
-              <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200 dark:border-[#0F828C] bg-white dark:bg-[#065084]">
-                <div className="flex space-x-2">
+              <form onSubmit={handleSendMessage} className="p-2 sm:p-3 lg:p-4 border-t border-gray-200 dark:border-[#0F828C] bg-white dark:bg-[#065084]">
+                <div className="flex space-x-1.5 sm:space-x-2">
                   <input
                     type="text"
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
                     placeholder="Digite sua mensagem..."
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-[#0F828C] bg-white dark:bg-[#065084] text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-[#78B9B5] focus:border-transparent outline-none"
+                    className="flex-1 px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-[#0F828C] bg-white dark:bg-[#065084] text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-[#78B9B5] focus:border-transparent outline-none"
                     disabled={isLoading}
                   />
                   <button
                     type="submit"
                     disabled={isLoading || !inputMessage.trim()}
-                    className="px-4 py-2 bg-green-600 dark:bg-[#78B9B5] text-white rounded-lg hover:bg-green-700 dark:hover:bg-[#78B9B5] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
+                    className="px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 bg-green-600 dark:bg-[#78B9B5] text-white rounded-lg hover:bg-green-700 dark:hover:bg-[#78B9B5] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
                   >
                     {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                     ) : (
-                      <Send className="w-5 h-5" />
+                      <Send className="w-4 h-4 sm:w-5 sm:h-5" />
                     )}
                   </button>
                 </div>

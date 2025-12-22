@@ -20,12 +20,14 @@ export default function CreateProduct() {
     name: '',
     description: '',
     price: '',
+    promo_price: '',
     stock: '',
     image: '',
     category: 'outros',
     compositions: '',
     indication: '',
     contraindication: '',
+    free_shipping: false,
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -51,18 +53,31 @@ export default function CreateProduct() {
       return
     }
 
+    // Validação de preço promocional
+    if (formData.promo_price && (isNaN(Number(formData.promo_price)) || Number(formData.promo_price) <= 0)) {
+      setError('O preço promocional deve ser um número positivo')
+      return
+    }
+
+    if (formData.promo_price && Number(formData.promo_price) >= Number(formData.price)) {
+      setError('O preço promocional deve ser menor que o preço normal')
+      return
+    }
+
     try {
       setLoading(true)
       await productsService.create({
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         price: Number(formData.price),
+        promo_price: formData.promo_price ? Number(formData.promo_price) : null,
         stock: formData.stock ? Number(formData.stock) : undefined,
         image: formData.image.trim() || undefined,
         category: formData.category || undefined,
         compositions: formData.compositions.trim() || undefined,
         indication: formData.indication.trim() || undefined,
         contraindication: formData.contraindication.trim() || undefined,
+        free_shipping: formData.free_shipping,
       })
 
       // Redireciona para a lista de produtos após criar
@@ -153,6 +168,27 @@ export default function CreateProduct() {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                   placeholder="0.00"
                 />
+              </div>
+
+              {/* Preço Promocional */}
+              <div>
+                <label htmlFor="promo_price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Preço Promocional (R$)
+                </label>
+                <input
+                  type="number"
+                  id="promo_price"
+                  name="promo_price"
+                  value={formData.promo_price}
+                  onChange={handleChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  placeholder="0.00 (opcional)"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Deixe vazio se não houver promoção. Deve ser menor que o preço normal.
+                </p>
               </div>
 
               {/* Estoque */}
@@ -252,6 +288,21 @@ export default function CreateProduct() {
                 className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
                 placeholder="Informe as contraindicações do produto..."
               />
+            </div>
+
+            {/* Frete Grátis */}
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="free_shipping"
+                name="free_shipping"
+                checked={formData.free_shipping}
+                onChange={(e) => setFormData(prev => ({ ...prev, free_shipping: e.target.checked }))}
+                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+              />
+              <label htmlFor="free_shipping" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                Oferecer frete grátis para este produto
+              </label>
             </div>
 
             {/* Botões */}
