@@ -326,7 +326,7 @@ export default function ManagePromoCodes() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#111827] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
           <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300">Carregando códigos promocionais...</p>
@@ -336,7 +336,7 @@ export default function ManagePromoCodes() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 sm:py-6 lg:py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#111827] py-4 sm:py-6 lg:py-8">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
         <div className="mb-4 sm:mb-6 lg:mb-8">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Códigos Promocionais</h1>
@@ -833,7 +833,7 @@ export default function ManagePromoCodes() {
                                   status.color.includes('bg-blue-100') ? 'dark:bg-blue-900/30 dark:text-blue-300' :
                                   status.color.includes('bg-green-100') ? 'dark:bg-green-900/30 dark:text-green-300' :
                                   status.color.includes('bg-red-100') ? 'dark:bg-red-900/30 dark:text-red-300' :
-                                  status.color.includes('bg-gray-100') ? 'dark:bg-gray-900/30 dark:text-gray-300' :
+                                  status.color.includes('bg-gray-100') ? 'dark:bg-[#111827]/30 dark:text-gray-300' :
                                   status.color.includes('bg-orange-100') ? 'dark:bg-orange-900/30 dark:text-orange-300' : ''
                                 }`}>
                                   {status.label}

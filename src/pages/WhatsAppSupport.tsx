@@ -1252,7 +1252,7 @@ export default function WhatsAppSupport() {
   const selectedConv = conversations.find(c => c.phone === selectedConversation)
 
   return (
-    <div className="fixed inset-0 h-screen flex flex-col bg-gray-100 dark:bg-gray-900 z-50" style={{ marginTop: 0, marginLeft: 0, marginRight: 0 }}>
+    <div className="fixed inset-0 h-screen flex flex-col bg-gray-100 dark:bg-[#111827] z-50" style={{ marginTop: 0, marginLeft: 0, marginRight: 0 }}>
       {/* Header */}
       <div className="bg-green-600 text-white px-2 sm:px-3 lg:px-6 py-2 sm:py-3 lg:py-4 shadow-lg">
         <div className="flex items-center justify-between gap-2">
@@ -1443,7 +1443,7 @@ export default function WhatsAppSupport() {
         </div>
 
         {/* Área de Conversa */}
-        <div className={`${!showConversationList ? 'flex' : 'hidden'} lg:flex flex-1 flex-col bg-gray-100 dark:bg-gray-900`}>
+        <div className={`${!showConversationList ? 'flex' : 'hidden'} lg:flex flex-1 flex-col bg-gray-100 dark:bg-[#111827]`}>
           {selectedConversation && selectedConv ? (
             <>
               {/* Header da Conversa */}
@@ -1506,7 +1506,7 @@ export default function WhatsAppSupport() {
               {/* Mensagens */}
               <div
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-gray-900"
+                className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-[#111827]"
                 style={{ scrollBehavior: 'auto' }}
               >
                 {messages.length === 0 ? (
@@ -1625,7 +1625,7 @@ export default function WhatsAppSupport() {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-[#111827]">
               <div className="text-center text-gray-500 dark:text-gray-400 px-3 sm:px-4">
                 <MessageSquare size={40} className="sm:w-12 sm:h-12 lg:w-16 lg:h-16 mx-auto mb-2 sm:mb-3 lg:mb-4 text-gray-300 dark:text-gray-600" />
                 <p className="text-sm sm:text-base lg:text-lg font-medium">Selecione uma conversa para começar</p>

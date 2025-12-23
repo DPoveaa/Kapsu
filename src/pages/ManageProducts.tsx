@@ -62,7 +62,7 @@ export default function ManageProducts() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#111827]">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
           <button
@@ -96,7 +96,7 @@ export default function ManageProducts() {
               }}
               className={`${
                 activeTab === 'products'
-                  ? 'border-primary-500 dark:border-primary-400 text-primary-600 dark:text-primary-400'
+                  ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
                   : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
               } whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center`}
             >
@@ -111,7 +111,7 @@ export default function ManageProducts() {
               }}
               className={`${
                 activeTab === 'compostos'
-                  ? 'border-primary-500 dark:border-primary-400 text-primary-600 dark:text-primary-400'
+                  ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
                   : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
               } whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center`}
             >
@@ -130,7 +130,7 @@ export default function ManageProducts() {
               placeholder="Buscar produtos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
         </div>

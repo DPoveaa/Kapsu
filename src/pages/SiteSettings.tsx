@@ -129,7 +129,7 @@ export default function SiteSettings() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#111827] flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-300">Carregando configurações...</p>
@@ -139,7 +139,7 @@ export default function SiteSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#111827] py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
           <div className="mb-6">
@@ -189,7 +189,7 @@ export default function SiteSettings() {
                   Enviar Nova Logo
                 </label>
                 <div className="flex items-center space-x-4">
-                  <label className="cursor-pointer inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                  <label className="cursor-pointer inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
                     <Upload className="w-4 h-4 mr-2" />
                     {uploading ? 'Enviando...' : 'Selecionar Logo'}
                     <input
@@ -224,7 +224,7 @@ export default function SiteSettings() {
                   type="text"
                   value={settings.site_name || ''}
                   onChange={(e) => handleInputChange('site_name', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="Ex: Kapsu Farmácia"
                 />
               </div>
@@ -237,7 +237,7 @@ export default function SiteSettings() {
                   value={settings.site_description || ''}
                   onChange={(e) => handleInputChange('site_description', e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="Descrição breve do site"
                 />
               </div>
@@ -261,7 +261,7 @@ export default function SiteSettings() {
                   type="email"
                   value={settings.contact_email || ''}
                   onChange={(e) => handleInputChange('contact_email', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="contato@kapsu.com"
                 />
               </div>
@@ -275,7 +275,7 @@ export default function SiteSettings() {
                   type="tel"
                   value={settings.contact_phone || ''}
                   onChange={(e) => handleInputChange('contact_phone', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="(11) 99999-9999"
                 />
               </div>
@@ -289,7 +289,7 @@ export default function SiteSettings() {
                   value={settings.address || ''}
                   onChange={(e) => handleInputChange('address', e.target.value)}
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="Endereço completo"
                 />
               </div>
@@ -312,7 +312,7 @@ export default function SiteSettings() {
                   type="url"
                   value={settings.social_media?.facebook || ''}
                   onChange={(e) => handleSocialMediaChange('facebook', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="https://facebook.com/kapsu"
                 />
               </div>
@@ -325,7 +325,7 @@ export default function SiteSettings() {
                   type="url"
                   value={settings.social_media?.instagram || ''}
                   onChange={(e) => handleSocialMediaChange('instagram', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="https://instagram.com/kapsu"
                 />
               </div>
@@ -338,7 +338,7 @@ export default function SiteSettings() {
                   type="url"
                   value={settings.social_media?.twitter || ''}
                   onChange={(e) => handleSocialMediaChange('twitter', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="https://twitter.com/kapsu"
                 />
               </div>
@@ -351,7 +351,7 @@ export default function SiteSettings() {
                   type="url"
                   value={settings.social_media?.linkedin || ''}
                   onChange={(e) => handleSocialMediaChange('linkedin', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="https://linkedin.com/company/kapsu"
                 />
               </div>
@@ -381,7 +381,7 @@ export default function SiteSettings() {
                     type="text"
                     value={settings.theme_colors?.primary || '#3B82F6'}
                     onChange={(e) => handleThemeColorChange('primary', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                     placeholder="#3B82F6"
                   />
                 </div>
@@ -402,7 +402,7 @@ export default function SiteSettings() {
                     type="text"
                     value={settings.theme_colors?.secondary || '#10B981'}
                     onChange={(e) => handleThemeColorChange('secondary', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                     placeholder="#10B981"
                   />
                 </div>
@@ -423,7 +423,7 @@ export default function SiteSettings() {
                     type="text"
                     value={settings.theme_colors?.accent || '#F59E0B'}
                     onChange={(e) => handleThemeColorChange('accent', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                     placeholder="#F59E0B"
                   />
                 </div>
@@ -436,7 +436,7 @@ export default function SiteSettings() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-600 dark:hover:bg-blue-700"
+              className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-600 dark:hover:bg-green-700"
             >
               <Save className="w-5 h-5 mr-2" />
               {saving ? 'Salvando...' : 'Salvar Configurações'}

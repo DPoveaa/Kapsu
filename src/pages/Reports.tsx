@@ -323,7 +323,7 @@ export default function Reports() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#111827]">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         <div className="mb-4 sm:mb-6 lg:mb-8">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Relatórios</h1>
@@ -341,7 +341,7 @@ export default function Reports() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-2.5 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-2.5 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
@@ -352,7 +352,7 @@ export default function Reports() {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-2.5 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-2.5 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
@@ -362,7 +362,7 @@ export default function Reports() {
               <select
                 value={groupBy}
                 onChange={(e) => setGroupBy(e.target.value as 'hour' | 'day' | 'week' | 'month')}
-                className="w-full px-2.5 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-2.5 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="hour">Hora</option>
                 <option value="day">Dia</option>
@@ -376,7 +376,7 @@ export default function Reports() {
                   fetchData()
                   fetchBehaviorData()
                 }}
-                className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 Atualizar
               </button>
@@ -392,7 +392,7 @@ export default function Reports() {
                 onClick={() => setActiveTab('overview')}
                 className={`py-2.5 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'overview'
-                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
                     : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
@@ -402,7 +402,7 @@ export default function Reports() {
                 onClick={() => setActiveTab('behavior')}
                 className={`py-2.5 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'behavior'
-                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
                     : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
@@ -412,7 +412,7 @@ export default function Reports() {
                 onClick={() => setActiveTab('orders')}
                 className={`py-2.5 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'orders'
-                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
                     : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
@@ -422,7 +422,7 @@ export default function Reports() {
                 onClick={() => setActiveTab('shipping')}
                 className={`py-2.5 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'shipping'
-                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
                     : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
@@ -432,7 +432,7 @@ export default function Reports() {
                 onClick={() => setActiveTab('promoCodes')}
                 className={`py-2.5 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'promoCodes'
-                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
                     : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
@@ -442,7 +442,7 @@ export default function Reports() {
                 onClick={() => setActiveTab('promotions')}
                 className={`py-2.5 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'promotions'
-                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
                     : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
@@ -452,7 +452,7 @@ export default function Reports() {
                 onClick={() => setActiveTab('users')}
                 className={`py-2.5 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'users'
-                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
                     : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
@@ -462,7 +462,7 @@ export default function Reports() {
                 onClick={() => setActiveTab('products')}
                 className={`py-2.5 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'products'
-                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
                     : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
@@ -472,7 +472,7 @@ export default function Reports() {
                 onClick={() => setActiveTab('whatsapp')}
                 className={`py-2.5 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'whatsapp'
-                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
                     : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
@@ -482,7 +482,7 @@ export default function Reports() {
                 onClick={() => setActiveTab('chat')}
                 className={`py-2.5 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'chat'
-                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
                     : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >
@@ -492,7 +492,7 @@ export default function Reports() {
                 onClick={() => setActiveTab('whatsappHumanSupport')}
                 className={`py-2.5 sm:py-3 lg:py-4 px-3 sm:px-4 lg:px-6 text-xs sm:text-sm font-medium border-b-2 whitespace-nowrap ${
                   activeTab === 'whatsappHumanSupport'
-                    ? 'border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400'
+                    ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
                     : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
                 }`}
               >

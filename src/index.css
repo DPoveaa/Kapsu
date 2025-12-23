@@ -29,7 +29,7 @@
   }
   
   html.dark body {
-    background-color: #111827;
+    background-color: #111827 !important;
     color: #FFFFFF !important;
     text-shadow: 0.5px 0.5px 0.5px rgba(255, 255, 255, 0.1);
   }
@@ -97,7 +97,7 @@
   }
   
   html.dark {
-    background-color: #111827;
+    background-color: #111827 !important;
   }
 
   #root {
@@ -105,10 +105,20 @@
     padding: 0;
     background-color: #DDF4E7;
     transition: background-color 0.3s ease;
+    min-height: 100vh;
   }
 
   html.dark #root {
-    background-color: #111827;
+    background-color: #111827 !important;
+  }
+  
+  /* Garante que todas as páginas tenham o fundo #111827 no tema escuro */
+  html.dark .min-h-screen,
+  html.dark main,
+  html.dark [class*="bg-gray-900"],
+  html.dark [class*="bg-gray-800"],
+  html.dark [class*="bg-gray-950"] {
+    background-color: #111827 !important;
   }
 }
 

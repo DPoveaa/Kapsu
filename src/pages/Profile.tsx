@@ -389,7 +389,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6 xl:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#111827] py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6 xl:px-8">
       <div className="max-w-4xl mx-auto">
         <div className="bg-white dark:bg-[#065084] rounded-xl shadow-lg dark:shadow-2xl border border-gray-100 dark:border-[#0F828C] overflow-hidden">
           {/* Header */}

@@ -410,7 +410,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-palette-light dark:bg-gray-900 transition-colors duration-300">
+    <div className="min-h-screen bg-palette-light dark:bg-[#111827] transition-colors duration-300">
       {/* Banner Hero - Carrossel de Imagens */}
       <section 
         className="relative overflow-hidden mb-4"

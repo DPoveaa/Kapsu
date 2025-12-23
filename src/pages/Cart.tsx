@@ -415,7 +415,7 @@ export default function Cart() {
 
   if (items.length === 0) {
     return (
-      <div className="bg-gray-50 dark:bg-gray-900 min-h-[60vh] flex items-center justify-center py-8 sm:py-12">
+      <div className="bg-gray-50 dark:bg-[#111827] min-h-[60vh] flex items-center justify-center py-8 sm:py-12">
         <div className="max-w-md mx-auto text-center px-4">
           <ShoppingCart size={48} className="mx-auto text-gray-300 dark:text-gray-400 mb-3 sm:mb-4" />
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">Seu carrinho está vazio</h2>
@@ -488,8 +488,8 @@ export default function Cart() {
                     onClick={() => handlePurchaseTypeChange('subscription')}
                     className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 rounded-xl font-bold text-sm sm:text-base transition-all duration-200 ${
                       isSubscription
-                        ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white scale-105'
-                        : 'bg-white dark:bg-[#065084] text-gray-700 dark:text-white border-2 border-gray-200 dark:border-[#0F828C] hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white scale-105'
+                        : 'bg-gradient-to-r from-gray-800 to-gray-900 text-white'
                     }`}
                   >
                     <div className="flex items-center justify-center gap-2 sm:gap-3">
@@ -501,8 +501,8 @@ export default function Cart() {
                     onClick={() => handlePurchaseTypeChange('one-time')}
                     className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 rounded-xl font-bold text-sm sm:text-base transition-all duration-200 ${
                       !isSubscription
-                        ? 'bg-gradient-to-r from-gray-800 to-gray-900 text-white scale-105'
-                        : 'bg-white dark:bg-[#065084] text-gray-700 dark:text-white border-2 border-gray-200 dark:border-[#0F828C] hover:border-gray-300 dark:hover:border-[#0F828C] hover:shadow-md'
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white scale-105'
+                        : 'bg-gradient-to-r from-gray-800 to-gray-900 text-white'
                     }`}
                   >
                     Compra Única
@@ -522,7 +522,7 @@ export default function Cart() {
                         onClick={() => setSubscriptionPlan('monthly')}
                         className={`relative p-3 sm:p-5 rounded-xl transition-all ${
                           subscriptionPlan === 'monthly'
-                            ? 'bg-white dark:bg-[#065084] border-2 border-primary-500 dark:border-[#0F828C] shadow-lg dark:shadow-xl'
+                            ? 'bg-white dark:bg-[#065084] border-2 border-green-500 dark:border-green-500 shadow-lg dark:shadow-xl'
                             : 'bg-white dark:bg-[#065084] border-2 border-gray-200 dark:border-[#0F828C] hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
                         }`}
                       >
@@ -543,7 +543,7 @@ export default function Cart() {
                         onClick={() => setSubscriptionPlan('quarterly')}
                         className={`relative p-3 sm:p-5 rounded-xl transition-all ${
                           subscriptionPlan === 'quarterly'
-                            ? 'bg-white dark:bg-[#065084] border-2 border-primary-500 dark:border-[#0F828C] shadow-lg dark:shadow-xl'
+                            ? 'bg-white dark:bg-[#065084] border-2 border-green-500 dark:border-green-500 shadow-lg dark:shadow-xl'
                             : 'bg-white dark:bg-[#065084] border-2 border-gray-200 dark:border-[#0F828C] hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
                         }`}
                       >
@@ -785,7 +785,7 @@ export default function Cart() {
                         value={promoCode}
                         onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                         placeholder="Digite o código"
-                        className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
                             e.preventDefault()
@@ -969,7 +969,7 @@ export default function Cart() {
                           value={promoCode}
                           onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                           placeholder="Digite um código"
-                          className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          className="flex-1 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault()
@@ -1142,7 +1142,7 @@ export default function Cart() {
                   }
                   navigate('/checkout')
                 }}
-                className="w-full bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-xl transition-all duration-200 mb-3 sm:mb-4 flex items-center justify-center gap-2 text-sm sm:text-base"
+                className="w-full bg-primary-600 hover:bg-primary-700 dark:bg-primary-400 dark:hover:bg-primary-500 text-white font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-xl transition-all duration-200 mb-3 sm:mb-4 flex items-center justify-center gap-2 text-sm sm:text-base"
               >
                 Finalizar Compra
                 <ArrowRight size={18} />

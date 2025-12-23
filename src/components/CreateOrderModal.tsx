@@ -247,7 +247,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                   setShowUserDropdown(true)
                 }}
                 onFocus={() => setShowUserDropdown(true)}
-                className="w-full pl-8 sm:pl-10 pr-8 sm:pr-10 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                className="w-full pl-8 sm:pl-10 pr-8 sm:pr-10 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
               />
               {selectedUserId && (
                 <button
@@ -318,13 +318,13 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                   placeholder="Buscar produto..."
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
-                  className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                 />
               </div>
               <select
                 value={selectedProductId}
                 onChange={(e) => setSelectedProductId(e.target.value)}
-                className="flex-1 border border-gray-300 dark:border-[#0F828C] rounded-lg px-2 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                className="flex-1 border border-gray-300 dark:border-gray-400 rounded-lg px-2 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
               >
                 <option value="">Selecione um produto</option>
                 {filteredProducts.map(product => (
@@ -336,7 +336,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
               <button
                 type="button"
                 onClick={addProduct}
-                className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-primary-600 text-white rounded-lg hover:bg-primary-700 flex items-center justify-center gap-1.5 sm:gap-2"
+                className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-1.5 sm:gap-2"
               >
                 <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
                 Adicionar
@@ -406,7 +406,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full border border-gray-300 dark:border-[#0F828C] rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
             >
               <option value="">Selecione um método</option>
               {paymentMethods.map(method => (
@@ -426,7 +426,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
               value={shippingAddress}
               onChange={(e) => setShippingAddress(e.target.value)}
               rows={3}
-              className="w-full border border-gray-300 dark:border-[#0F828C] rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white resize-none"
+              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black resize-none"
               placeholder="Rua, número, complemento, cidade - estado, CEP"
             />
           </div>
@@ -439,7 +439,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full border border-gray-300 dark:border-[#0F828C] rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
             >
               {orderStatuses.map(statusOption => (
                 <option key={statusOption.value} value={statusOption.value}>
@@ -461,7 +461,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
             <button
               type="submit"
               disabled={loading}
-              className="px-4 sm:px-6 py-2 text-sm sm:text-base bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:gap-2"
+              className="px-4 sm:px-6 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 sm:gap-2"
             >
               {loading ? (
                 <>

@@ -78,7 +78,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Lado Esquerdo - Formulário de Login */}
-      <div className="w-full lg:w-1/2 bg-white dark:bg-gray-900 flex items-center justify-center p-4 sm:p-6 lg:p-8 xl:p-12">
+      <div className="w-full lg:w-1/2 bg-white dark:bg-[#111827] flex items-center justify-center p-4 sm:p-6 lg:p-8 xl:p-12">
         <div className="w-full max-w-md">
           {/* Ilustração/Logo acima do título */}
           <div className="mb-4 sm:mb-6 lg:mb-8 flex justify-center">

@@ -2147,7 +2147,7 @@ export default function WhatsAppConnection() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#111827]">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4 lg:py-6 xl:py-8">
         {/* Header */}
         <div className="mb-4 sm:mb-6 lg:mb-8">
@@ -2966,7 +2966,7 @@ export default function WhatsAppConnection() {
                       value={testMessage.phone}
                       onChange={(e) => setTestMessage({ ...testMessage, phone: e.target.value })}
                       placeholder="5511999999999"
-                      className="w-full px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Formato: 55 + DDD + Número</p>
@@ -2981,7 +2981,7 @@ export default function WhatsAppConnection() {
                       onChange={(e) => setTestMessage({ ...testMessage, message: e.target.value })}
                       placeholder="Digite sua mensagem..."
                       rows={4}
-                      className="w-full px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                      className="w-full px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                       required
                     />
                   </div>
@@ -3071,7 +3071,7 @@ export default function WhatsAppConnection() {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         placeholder="Buscar por nome ou número..."
-                        className="w-full px-3 sm:px-4 py-1.5 sm:py-2 pl-8 sm:pl-10 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-3 sm:px-4 py-1.5 sm:py-2 pl-8 sm:pl-10 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                       <svg
                         className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500"
@@ -3388,7 +3388,7 @@ export default function WhatsAppConnection() {
                           {/* Mensagens */}
                           <div 
                             ref={messagesContainerRef}
-                            className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-gray-900"
+                            className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-[#111827]"
                             style={{ scrollBehavior: 'auto' }}
                           >
                             {messages.length === 0 ? (
@@ -3547,7 +3547,7 @@ export default function WhatsAppConnection() {
                     <select
                       value={newPharmacistUserId || ''}
                       onChange={(e) => handleUserSelect(e.target.value)}
-                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       disabled={loadingUsers}
                     >
                       <option value="">Selecione um usuário (opcional)</option>
@@ -3577,7 +3577,7 @@ export default function WhatsAppConnection() {
                         setNewPharmacistUserId(null) // Limpa seleção de usuário quando digita
                       }}
                       placeholder="5511999999999"
-                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Formato: 55 + DDD + Número</p>
                   </div>
@@ -3592,7 +3592,7 @@ export default function WhatsAppConnection() {
                       value={newPharmacistName}
                       onChange={(e) => setNewPharmacistName(e.target.value)}
                       placeholder="Nome do farmacêutico"
-                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
@@ -3758,7 +3758,7 @@ export default function WhatsAppConnection() {
                         setNewDistributorUserId(null) // Limpa seleção de usuário quando digita
                       }}
                       placeholder="5511999999999"
-                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Formato: 55 + DDD + Número</p>
                   </div>
@@ -3773,7 +3773,7 @@ export default function WhatsAppConnection() {
                       value={newDistributorName}
                       onChange={(e) => setNewDistributorName(e.target.value)}
                       placeholder="Nome da distribuidora"
-                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
                   </div>
                 </div>

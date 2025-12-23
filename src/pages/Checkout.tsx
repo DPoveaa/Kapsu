@@ -580,7 +580,7 @@ export default function Checkout() {
   const isEditingSelected = editingAddressId === selectedAddressId
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 bg-gray-50 dark:bg-[#111827] min-h-screen">
       <button
         onClick={() => navigate(-1)}
         className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-4 sm:mb-6 cursor-pointer text-sm sm:text-base"
