@@ -337,7 +337,7 @@ export default function ManageBanners() {
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="Título do banner"
                 />
               </div>
@@ -350,7 +350,7 @@ export default function ManageBanners() {
                   type="text"
                   value={formData.subtitle}
                   onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="Subtítulo do banner"
                 />
               </div>
@@ -363,7 +363,7 @@ export default function ManageBanners() {
                   type="url"
                   value={formData.link}
                   onChange={(e) => setFormData(prev => ({ ...prev, link: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="https://exemplo.com"
                 />
               </div>
@@ -391,7 +391,7 @@ export default function ManageBanners() {
                 <button
                   onClick={editingBanner ? handleUpdate : handleCreate}
                   disabled={uploading || !formData.image_url}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
                   {uploading ? (
                     <>

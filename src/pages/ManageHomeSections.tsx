@@ -473,7 +473,7 @@ export default function ManageHomeSections() {
                     type="text"
                     value={formData.key}
                     onChange={(e) => setFormData(prev => ({ ...prev, key: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                     placeholder="ex: top-vendidos, promocoes, vitaminas"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -490,7 +490,7 @@ export default function ManageHomeSections() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="Ex: Produtos em Destaque"
                 />
               </div>
@@ -502,7 +502,7 @@ export default function ManageHomeSections() {
                 <select
                   value={formData.display_type}
                   onChange={(e) => setFormData(prev => ({ ...prev, display_type: e.target.value as any }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                 >
                   <option value="category">Por Categoria (padrão)</option>
                   <option value="manual">Manual (Escolher Produtos)</option>
@@ -527,7 +527,7 @@ export default function ManageHomeSections() {
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   >
                     <option value="">Todas as categorias</option>
                     <option value="vitamina">Vitaminas</option>
@@ -548,7 +548,7 @@ export default function ManageHomeSections() {
                   max="20"
                   value={formData.limit}
                   onChange={(e) => setFormData(prev => ({ ...prev, limit: parseInt(e.target.value) || 8 }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Quantos produtos exibir (ex: 5 mais vendidos, 5 mais novos)
@@ -592,7 +592,7 @@ export default function ManageHomeSections() {
                   <button
                     onClick={handleCreate}
                     disabled={!formData.name || !formData.key}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
                     <Plus size={18} className="mr-2" />
                     Criar Seção
@@ -601,7 +601,7 @@ export default function ManageHomeSections() {
                   <button
                     onClick={handleUpdate}
                     disabled={!formData.name}
-                    className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                   >
                     <Save size={18} className="mr-2" />
                     Salvar

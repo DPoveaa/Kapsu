@@ -693,7 +693,7 @@ export default function ManagePromotions() {
                     <button
                       onClick={handleSavePromotion}
                       disabled={saving}
-                      className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {saving ? 'Salvando...' : 'Salvar'}
                     </button>

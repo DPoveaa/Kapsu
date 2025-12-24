@@ -260,7 +260,7 @@ export default function ManageReviews() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="Ex: Maria Silva"
                 />
               </div>
@@ -300,7 +300,7 @@ export default function ManageReviews() {
                 <textarea
                   value={formData.comment}
                   onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="Ex: Excelente qualidade! Os medicamentos manipulados são perfeitos..."
                   rows={4}
                 />
@@ -314,7 +314,7 @@ export default function ManageReviews() {
                   type="text"
                   value={formData.product}
                   onChange={(e) => setFormData(prev => ({ ...prev, product: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="Ex: Vitamina D3"
                 />
               </div>
@@ -327,7 +327,7 @@ export default function ManageReviews() {
                   type="text"
                   value={formData.date}
                   onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="Ex: Há 2 semanas, Há 1 mês, Há 3 dias"
                 />
               </div>
@@ -411,7 +411,7 @@ export default function ManageReviews() {
                 <button
                   onClick={editingReview ? handleUpdate : handleCreate}
                   disabled={!formData.comment || formData.rating === undefined || uploading}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
                   {uploading ? (
                     <>

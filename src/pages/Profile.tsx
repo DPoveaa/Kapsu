@@ -572,7 +572,7 @@ export default function Profile() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg bg-white dark:bg-[#065084] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -585,7 +585,7 @@ export default function Profile() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="(00) 00000-0000"
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg bg-white dark:bg-[#065084] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
                   />
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -625,7 +625,7 @@ export default function Profile() {
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg bg-white dark:bg-[#065084] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -636,7 +636,7 @@ export default function Profile() {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg bg-white dark:bg-[#065084] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -647,7 +647,7 @@ export default function Profile() {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg bg-white dark:bg-[#065084] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
                   />
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
