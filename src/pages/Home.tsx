@@ -52,6 +52,18 @@ export default function Home() {
     loadBanners()
   }, [])
 
+  // Reseta o bannerIndex para 1 quando os banners são carregados
+  useEffect(() => {
+    if (banners.length > 0) {
+      // Garante que o índice está dentro dos limites válidos
+      setBannerIndex(1) // Sempre começa no primeiro banner após carregar (índice 1 = primeiro banner original)
+      setIsTransitioning(true)
+    } else {
+      // Se não houver banners, reseta o índice
+      setBannerIndex(1)
+    }
+  }, [banners.length])
+
   // Carrega reviews da API
   useEffect(() => {
     const loadReviews = async () => {
@@ -70,17 +82,16 @@ export default function Home() {
     loadReviews()
   }, [])
   
-  // Array de imagens do carrossel - usa banners da API ou fallback
-  const bannerImages = banners.length > 0 
-    ? banners.map(banner => banner.image_url)
-    : [banner1] // Fallback
+  // Array de imagens do carrossel - usa apenas banners da API (sem fallback durante carregamento)
+  const bannerImages = banners.map(banner => banner.image_url)
   
   // Cria array com clones para loop infinito: [última, ...originais, primeira]
+  // Só cria o array infinito se houver banners carregados
   const infiniteBannerImages = bannerImages.length > 0 ? [
     bannerImages[bannerImages.length - 1], // Clone da última no início
     ...bannerImages, // Imagens originais
     bannerImages[0] // Clone da primeira no final
-  ] : [banner1, banner1, banner1] // Fallback mínimo
+  ] : []
 
   // Carrega seções da home
   useEffect(() => {
@@ -412,6 +423,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-palette-light dark:bg-[#111827] transition-colors duration-300">
       {/* Banner Hero - Carrossel de Imagens */}
+      {infiniteBannerImages.length > 0 && (
       <section 
         className="relative overflow-hidden mb-4"
         onMouseEnter={() => {
@@ -426,15 +438,16 @@ export default function Home() {
             }, 1000)
           }
         }}
-        style={{ minHeight: '250px' }}
+        style={{ height: '500px' }}
       >
         {/* Container do carrossel com efeito de slide infinito */}
         <div 
           ref={bannerRef}
-          className={`flex cursor-grab active:cursor-grabbing ${isTransitioning && !isDragging ? 'transition-transform duration-500 ease-in-out' : ''}`}
+          className={`flex cursor-grab active:cursor-grabbing h-full ${isTransitioning && !isDragging ? 'transition-transform duration-500 ease-in-out' : ''}`}
           style={{ 
             transform: `translateX(calc(-${bannerIndex * 100}% + ${isDragging ? (currentX - startX) : 0}px))`,
-            userSelect: 'none'
+            userSelect: 'none',
+            height: '100%'
           }}
           onMouseDown={handleBannerMouseDown}
           onMouseMove={handleBannerMouseMove}
@@ -447,21 +460,21 @@ export default function Home() {
           {infiniteBannerImages.map((image, index) => (
             <div 
               key={index} 
-              className="flex-shrink-0 w-full relative flex items-center justify-center bg-gray-100 dark:bg-gray-800"
+              className="flex-shrink-0 w-full relative bg-gray-100 dark:bg-gray-800"
               style={{
-                width: '100%'
+                width: '100%',
+                height: '100%'
               }}
             >
               <img
                 src={image}
                 alt={`Banner ${index + 1}`}
-                className="w-full h-auto object-contain"
+                className="w-full h-full object-cover"
                 style={{
                   display: 'block',
-                  minHeight: '250px',
-                  maxHeight: '600px',
-                  objectFit: 'contain',
-                  width: '100%'
+                  objectFit: 'cover',
+                  width: '100%',
+                  height: '100%'
                 }}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement
@@ -511,6 +524,7 @@ export default function Home() {
           })}
         </div>
       </section>
+      )}
 
       {/* Produtos em Destaque - Scroll Horizontal */}
       {(() => {
