@@ -438,7 +438,6 @@ export default function Home() {
             }, 1000)
           }
         }}
-        style={{ height: '500px' }}
       >
         {/* Container do carrossel com efeito de slide infinito */}
         <div 
@@ -460,22 +459,12 @@ export default function Home() {
           {infiniteBannerImages.map((image, index) => (
             <div 
               key={index} 
-              className="flex-shrink-0 w-full relative bg-gray-100 dark:bg-gray-800"
-              style={{
-                width: '100%',
-                height: '100%'
-              }}
+              className="flex-shrink-0 w-full relative flex items-center justify-center bg-gray-100 dark:bg-gray-800 h-[300px] md:h-[500px]"
             >
               <img
                 src={image}
                 alt={`Banner ${index + 1}`}
                 className="w-full h-full object-cover"
-                style={{
-                  display: 'block',
-                  objectFit: 'cover',
-                  width: '100%',
-                  height: '100%'
-                }}
                 onError={(e) => {
                   const target = e.target as HTMLImageElement
                   target.style.display = 'none'
