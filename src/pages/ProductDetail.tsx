@@ -238,7 +238,7 @@ export default function ProductDetail() {
               {/* Status e Badges */}
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <span className="bg-green-100 dark:bg-[#065084] text-green-800 dark:text-white px-2 py-0.5 rounded text-xs font-medium border border-green-200 dark:border-[#0F828C]">
+                  <span className="bg-green-100 dark:bg-[#ff6400] text-green-800 dark:text-white px-2 py-0.5 rounded text-xs font-medium border border-green-200 dark:border-[#0F828C]">
                     Novo
                   </span>
                   <span className="text-gray-500 dark:text-gray-300 text-xs">+100 vendidos</span>
@@ -318,14 +318,14 @@ export default function ProductDetail() {
                 <button
                   onClick={handleBuyNow}
                   disabled={!product?.inStock}
-                  className="w-full bg-blue-600 dark:bg-[#0F828C] hover:bg-blue-700 dark:hover:bg-[#78B9B5] text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center text-base"
+                  className="w-full bg-blue-600 dark:bg-[#1eef69c2] hover:bg-blue-700 dark:hover:bg-[#78B9B5] text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center text-base"
                 >
                   Comprar agora
                 </button>
                 <button
                   onClick={handleAddToCart}
                   disabled={!product?.inStock}
-                  className="w-full bg-blue-600 dark:bg-[#0F828C] hover:bg-blue-700 dark:hover:bg-[#78B9B5] text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center text-base"
+                  className="w-full bg-blue-600 dark:bg-[#78B9B5] hover:bg-blue-700 dark:hover:bg-[#78b9b59c] text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center text-base"
                 >
                   <ShoppingCart size={18} className="mr-2" />
                   Adicionar ao carrinho

@@ -214,7 +214,7 @@ export default function ShippingSettings() {
                         free_shipping_threshold: isNaN(value) ? 0 : value,
                       });
                     }}
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                     placeholder="200.00"
                   />
                   <p className="mt-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 break-words">
@@ -271,7 +271,7 @@ export default function ShippingSettings() {
                         type="text"
                         value={formData.municipality}
                         onChange={(e) => setFormData({ ...formData, municipality: e.target.value })}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                         placeholder="Ex: São Paulo"
                       />
                     </div>
@@ -288,7 +288,7 @@ export default function ShippingSettings() {
                           setFormData({ ...formData, cepFrom: formatted })
                         }}
                         maxLength={9}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                         placeholder="00000-000"
                       />
                     </div>
@@ -305,7 +305,7 @@ export default function ShippingSettings() {
                           setFormData({ ...formData, cepTo: formatted })
                         }}
                         maxLength={9}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                         placeholder="00000-000"
                       />
                     </div>
@@ -320,7 +320,7 @@ export default function ShippingSettings() {
                         step="0.01"
                         value={formData.shippingFee}
                         onChange={(e) => setFormData({ ...formData, shippingFee: e.target.value })}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                         placeholder="18.00"
                       />
                     </div>

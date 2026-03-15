@@ -247,7 +247,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                   setShowUserDropdown(true)
                 }}
                 onFocus={() => setShowUserDropdown(true)}
-                className="w-full pl-8 sm:pl-10 pr-8 sm:pr-10 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                className="w-full pl-8 sm:pl-10 pr-8 sm:pr-10 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
               />
               {selectedUserId && (
                 <button
@@ -318,13 +318,13 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                   placeholder="Buscar produto..."
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
-                  className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                  className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                 />
               </div>
               <select
                 value={selectedProductId}
                 onChange={(e) => setSelectedProductId(e.target.value)}
-                className="flex-1 border border-gray-300 dark:border-gray-400 rounded-lg px-2 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                className="flex-1 border border-gray-300 dark:border-gray-400 rounded-lg px-2 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
               >
                 <option value="">Selecione um produto</option>
                 {filteredProducts.map(product => (
@@ -406,7 +406,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
             >
               <option value="">Selecione um método</option>
               {paymentMethods.map(method => (
@@ -426,7 +426,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
               value={shippingAddress}
               onChange={(e) => setShippingAddress(e.target.value)}
               rows={3}
-              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black resize-none"
+              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white resize-none"
               placeholder="Rua, número, complemento, cidade - estado, CEP"
             />
           </div>
@@ -439,7 +439,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
             >
               {orderStatuses.map(statusOption => (
                 <option key={statusOption.value} value={statusOption.value}>

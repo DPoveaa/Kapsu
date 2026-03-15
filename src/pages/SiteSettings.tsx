@@ -224,7 +224,7 @@ export default function SiteSettings() {
                   type="text"
                   value={settings.site_name || ''}
                   onChange={(e) => handleInputChange('site_name', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                   placeholder="Ex: Kapsu Farmácia"
                 />
               </div>
@@ -237,7 +237,7 @@ export default function SiteSettings() {
                   value={settings.site_description || ''}
                   onChange={(e) => handleInputChange('site_description', e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                   placeholder="Descrição breve do site"
                 />
               </div>
@@ -261,7 +261,7 @@ export default function SiteSettings() {
                   type="email"
                   value={settings.contact_email || ''}
                   onChange={(e) => handleInputChange('contact_email', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                   placeholder="contato@kapsu.com"
                 />
               </div>
@@ -275,7 +275,7 @@ export default function SiteSettings() {
                   type="tel"
                   value={settings.contact_phone || ''}
                   onChange={(e) => handleInputChange('contact_phone', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                   placeholder="(11) 99999-9999"
                 />
               </div>
@@ -289,7 +289,7 @@ export default function SiteSettings() {
                   value={settings.address || ''}
                   onChange={(e) => handleInputChange('address', e.target.value)}
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                   placeholder="Endereço completo"
                 />
               </div>
@@ -312,7 +312,7 @@ export default function SiteSettings() {
                   type="url"
                   value={settings.social_media?.facebook || ''}
                   onChange={(e) => handleSocialMediaChange('facebook', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                   placeholder="https://facebook.com/kapsu"
                 />
               </div>
@@ -325,7 +325,7 @@ export default function SiteSettings() {
                   type="url"
                   value={settings.social_media?.instagram || ''}
                   onChange={(e) => handleSocialMediaChange('instagram', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                   placeholder="https://instagram.com/kapsu"
                 />
               </div>
@@ -338,7 +338,7 @@ export default function SiteSettings() {
                   type="url"
                   value={settings.social_media?.twitter || ''}
                   onChange={(e) => handleSocialMediaChange('twitter', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                   placeholder="https://twitter.com/kapsu"
                 />
               </div>
@@ -351,7 +351,7 @@ export default function SiteSettings() {
                   type="url"
                   value={settings.social_media?.linkedin || ''}
                   onChange={(e) => handleSocialMediaChange('linkedin', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                   placeholder="https://linkedin.com/company/kapsu"
                 />
               </div>
@@ -381,7 +381,7 @@ export default function SiteSettings() {
                     type="text"
                     value={settings.theme_colors?.primary || '#3B82F6'}
                     onChange={(e) => handleThemeColorChange('primary', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                     placeholder="#3B82F6"
                   />
                 </div>
@@ -402,7 +402,7 @@ export default function SiteSettings() {
                     type="text"
                     value={settings.theme_colors?.secondary || '#10B981'}
                     onChange={(e) => handleThemeColorChange('secondary', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                     placeholder="#10B981"
                   />
                 </div>
@@ -423,7 +423,7 @@ export default function SiteSettings() {
                     type="text"
                     value={settings.theme_colors?.accent || '#F59E0B'}
                     onChange={(e) => handleThemeColorChange('accent', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                     placeholder="#F59E0B"
                   />
                 </div>

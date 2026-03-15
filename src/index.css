@@ -76,7 +76,7 @@
   
   /* Garante que text-black seja respeitado quando explicitamente usado */
   html.dark .text-black {
-    color: #000000 !important;
+    color: #000000;
   }
   
   * {

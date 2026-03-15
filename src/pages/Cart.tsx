@@ -423,7 +423,7 @@ export default function Cart() {
             Adicione produtos ou personalize um medicamento para começar
           </p>
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center px-4">
-            <Link to="/produtos" className="btn-primary text-xs sm:text-sm px-4 sm:px-6 py-2">
+            <Link to="/produtos" className="btn-primary text-xs sm:text-sm px-4 sm:px-6 py-2 content-center">
               Explorar Produtos
             </Link>
             <Link to="/personalizar" className="btn-secondary text-xs sm:text-sm px-4 sm:px-6 py-2">

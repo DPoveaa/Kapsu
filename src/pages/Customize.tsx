@@ -61,14 +61,14 @@ export default function Customize() {
   const handleUpdateConcentration = (id: string, newConcentration: string) => {
     // Permite valores vazios durante a digitação
     if (newConcentration === '') {
-      setSelectedIngredients(selectedIngredients.map(ing => 
+      setSelectedIngredients(selectedIngredients.map(ing =>
         ing.id === id ? { ...ing, concentration: '' } : ing
       ))
       return
     }
 
     // Atualiza a concentração (validação será feita no submit)
-    setSelectedIngredients(selectedIngredients.map(ing => 
+    setSelectedIngredients(selectedIngredients.map(ing =>
       ing.id === id ? { ...ing, concentration: newConcentration } : ing
     ))
   }
@@ -222,7 +222,7 @@ export default function Customize() {
           <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Medication Name */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
                 Nome do Medicamento *
               </label>
               <input
@@ -230,7 +230,7 @@ export default function Customize() {
                 value={medicationName}
                 onChange={(e) => setMedicationName(e.target.value)}
                 placeholder="Ex: Complexo Multivitamínico Personalizado"
-                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-200 text-black dark:text-black"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-[#111827] dark:text-white"
               />
             </div>
 
@@ -239,7 +239,7 @@ export default function Customize() {
               <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
                 Ativos Farmacêuticos *
               </label>
-              <div className="card border border-gray-300 dark:border-gray-400 rounded-lg p-3 sm:p-4 min-h-[150px] sm:min-h-[200px] dark:bg-gray-200">
+              <div className="card border border-gray-300 dark:border-gray-400 rounded-lg p-3 sm:p-4 min-h-[150px] sm:min-h-[200px] dark:bg-[#111827]">
                 {selectedIngredients.length === 0 ? (
                   <p className="text-gray-400 dark:text-black dark:opacity-75 text-xs sm:text-sm">Nenhum ativo selecionado</p>
                 ) : (
@@ -251,7 +251,7 @@ export default function Customize() {
                       return (
                         <div
                           key={ingredient.id}
-                          className={`bg-primary-50 dark:bg-primary-900/30 p-2.5 sm:p-3 rounded-lg ${validationError ? 'border border-red-300 dark:border-red-500' : ''}`}
+                          className={`bg-primary-50 dark:bg-[#065084] p-2.5 sm:p-3 rounded-lg ${validationError ? 'border border-red-300 dark:border-red-500' : ''}`}
                         >
                           <div className="flex items-center justify-between mb-1.5 sm:mb-2">
                             <div className="flex-1 min-w-0">
@@ -271,9 +271,8 @@ export default function Customize() {
                                 type="text"
                                 value={ingredient.concentration}
                                 onChange={(e) => handleUpdateConcentration(ingredient.id, e.target.value)}
-                                className={`w-20 sm:w-24 px-2 py-1 border rounded text-xs sm:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black dark:border-gray-400 ${
-                                  validationError ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-400'
-                                }`}
+                                className={`w-20 sm:w-24 px-2 py-1 border rounded text-xs sm:text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black dark:border-gray-400 ${validationError ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-400'
+                                  }`}
                                 placeholder={composto?.concentration || ''}
                               />
                               <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">{ingredient.unit}</span>
@@ -326,7 +325,7 @@ export default function Customize() {
                 value={dosage}
                 onChange={(e) => setDosage(e.target.value)}
                 placeholder="Ex: 1 cápsula ao dia, após o almoço"
-                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-200 text-black dark:text-black"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-[#111827] text-black dark:text-black"
               />
             </div>
 
@@ -365,7 +364,7 @@ export default function Customize() {
                 onChange={(e) => setInstructions(e.target.value)}
                 placeholder="Instruções adicionais (opcional)"
                 rows={3}
-                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-200 text-black dark:text-black"
+                className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-[#111827] text-black dark:text-black"
               />
             </div>
 
@@ -388,7 +387,7 @@ export default function Customize() {
           <div className="lg:col-span-1">
             <div className="card p-4 sm:p-6 sticky top-20 sm:top-24 dark:bg-[#065084] dark:border-[#0F828C]">
               <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">Resumo</h2>
-              
+
               <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Ativos selecionados:</p>

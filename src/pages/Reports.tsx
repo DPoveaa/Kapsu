@@ -341,7 +341,7 @@ export default function Reports() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-2.5 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-2.5 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-[#111827] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
@@ -352,7 +352,7 @@ export default function Reports() {
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-2.5 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-2.5 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-[#111827] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
             <div>
@@ -362,7 +362,7 @@ export default function Reports() {
               <select
                 value={groupBy}
                 onChange={(e) => setGroupBy(e.target.value as 'hour' | 'day' | 'week' | 'month')}
-                className="w-full px-2.5 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-2.5 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-[#111827] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="hour">Hora</option>
                 <option value="day">Dia</option>
