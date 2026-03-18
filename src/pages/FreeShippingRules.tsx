@@ -249,7 +249,7 @@ export default function FreeShippingRules() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Lista de Regras */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center">
                   <Gift className="w-5 h-5 text-gray-600 mr-2" />
@@ -271,7 +271,7 @@ export default function FreeShippingRules() {
 
               {/* Formulário de Nova/Edição */}
               {showForm && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200 dark:bg-[#065084]">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">
                       {editingRule ? 'Editar Regra' : 'Nova Regra'}
@@ -474,7 +474,7 @@ export default function FreeShippingRules() {
                   <div className="flex justify-end space-x-3 mt-4">
                     <button
                       onClick={resetForm}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg dark:hover:bg-red-500 hover:bg-red-500 transition-colors"
                     >
                       Cancelar
                     </button>
@@ -492,7 +492,7 @@ export default function FreeShippingRules() {
               {/* Lista de Regras */}
               <div className="space-y-3">
                 {rules.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
+                  <div className="text-center py-8">
                     Nenhuma regra cadastrada. Clique em "Nova Regra" para adicionar.
                   </div>
                 ) : (
@@ -501,7 +501,7 @@ export default function FreeShippingRules() {
                       key={rule.id}
                       className={`p-4 border-2 rounded-lg ${
                         rule.active
-                          ? 'border-green-200 bg-green-50'
+                          ? 'border-green-200 bg-green'
                           : 'border-gray-200 bg-gray-50'
                       }`}
                     >
@@ -521,14 +521,14 @@ export default function FreeShippingRules() {
                               )}
                             </div>
                           </div>
-                          <p className="text-sm text-gray-600 mb-1">
+                          <p className="text-sm mb-1">
                             {formatRuleDescription(rule)}
                           </p>
                           {rule.description && (
-                            <p className="text-xs text-gray-500">{rule.description}</p>
+                            <p className="text-xs">{rule.description}</p>
                           )}
                           {(rule.start_date || rule.end_date) && (
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs mt-1">
                               {rule.start_date && `De: ${new Date(rule.start_date).toLocaleDateString('pt-BR')}`}
                               {rule.start_date && rule.end_date && ' | '}
                               {rule.end_date && `Até: ${new Date(rule.end_date).toLocaleDateString('pt-BR')}`}
@@ -568,7 +568,7 @@ export default function FreeShippingRules() {
 
           {/* Informações */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="bg-white rounded-lg shadow-md p-6 dark:bg-[#065084]">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Sobre as Regras</h2>
               
               <div className="space-y-4 text-sm text-gray-600">

@@ -386,7 +386,7 @@ export default function ManagePromotions() {
                         type="text"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                         placeholder="Ex: Black Friday, Promoção Verão..."
                       />
                     </div>
@@ -399,7 +399,7 @@ export default function ManagePromotions() {
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         rows={2}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black resize-none"
+                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white resize-none"
                         placeholder="Descrição da promoção..."
                       />
                     </div>
@@ -411,7 +411,7 @@ export default function ManagePromotions() {
                       <select
                         value={formData.type}
                         onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                       >
                         <option value="discount_percentage">Desconto Percentual</option>
                         <option value="discount_fixed">Desconto Fixo (R$)</option>
@@ -433,7 +433,7 @@ export default function ManagePromotions() {
                           step={formData.type === 'discount_percentage' ? '1' : '0.01'}
                           value={formData.discount_value}
                           onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
-                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                           placeholder={formData.type === 'discount_percentage' ? '10' : '50.00'}
                         />
                       </div>
@@ -490,7 +490,7 @@ export default function ManagePromotions() {
                             step="0.01"
                             value={formData.min_order_value}
                             onChange={(e) => setFormData({ ...formData, min_order_value: e.target.value })}
-                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                             placeholder="200.00"
                           />
                         </div>
@@ -504,7 +504,7 @@ export default function ManagePromotions() {
                             min="1"
                             value={formData.min_product_quantity}
                             onChange={(e) => setFormData({ ...formData, min_product_quantity: e.target.value })}
-                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                             placeholder="5"
                           />
                         </div>
@@ -516,7 +516,7 @@ export default function ManagePromotions() {
                           <select
                             value={formData.required_operator}
                             onChange={(e) => setFormData({ ...formData, required_operator: e.target.value as 'all' | 'any' })}
-                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black mb-2"
+                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white mb-2"
                           >
                             <option value="all">Todos os produtos devem estar no carrinho</option>
                             <option value="any">Qualquer um dos produtos no carrinho</option>
@@ -583,13 +583,13 @@ export default function ManagePromotions() {
                             type="date"
                             value={formData.start_date}
                             onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black mb-2"
+                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white mb-2"
                           />
                           <input
                             type="time"
                             value={formData.start_time}
                             onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                           />
                         </div>
 
@@ -602,13 +602,13 @@ export default function ManagePromotions() {
                             type="date"
                             value={formData.end_date}
                             onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black mb-2"
+                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white mb-2"
                           />
                           <input
                             type="time"
                             value={formData.end_time}
                             onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                           />
                         </div>
                       </div>
@@ -624,7 +624,7 @@ export default function ManagePromotions() {
                             min="1"
                             value={formData.usage_limit}
                             onChange={(e) => setFormData({ ...formData, usage_limit: e.target.value })}
-                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                             placeholder="Ilimitado (deixe vazio)"
                           />
                           <p className="mt-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
@@ -642,7 +642,7 @@ export default function ManagePromotions() {
                             min="1"
                             value={formData.user_usage_limit}
                             onChange={(e) => setFormData({ ...formData, user_usage_limit: e.target.value })}
-                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                             placeholder="Ilimitado (deixe vazio)"
                           />
                           <p className="mt-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
@@ -660,7 +660,7 @@ export default function ManagePromotions() {
                           min="0"
                           value={formData.priority}
                           onChange={(e) => setFormData({ ...formData, priority: Number(e.target.value) })}
-                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
                           placeholder="0"
                         />
                         <p className="mt-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
@@ -686,7 +686,7 @@ export default function ManagePromotions() {
                   <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 mt-4 sm:mt-5 lg:mt-6">
                     <button
                       onClick={resetForm}
-                      className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                      className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-red-500 dark:hover:bg-red-500 transition-colors"
                     >
                       Cancelar
                     </button>
