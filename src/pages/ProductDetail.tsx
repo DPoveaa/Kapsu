@@ -12,7 +12,6 @@ interface ProductDetails {
   name: string
   description: string | null
   price: number
-  stock: number
   image: string | null
   category: string | null
   compositions: string | null
@@ -301,15 +300,12 @@ export default function ProductDetail() {
                     onChange={(e) => setQuantity(Number(e.target.value))}
                     className="border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg px-2 py-1.5 text-sm"
                   >
-                    {[...Array(Math.min(10, productDetails?.stock || 1))].map((_, i) => (
+                    {[...Array(10)].map((_, i) => (
                       <option key={i + 1} value={i + 1}>
                         {i + 1}
                       </option>
                     ))}
                   </select>
-                  {productDetails && productDetails.stock > 10 && (
-                    <span className="text-xs text-gray-500 dark:text-gray-300">(+{productDetails.stock - 10})</span>
-                  )}
                 </div>
               </div>
 
@@ -317,22 +313,22 @@ export default function ProductDetail() {
               <div className="space-y-2 mb-4">
                 <button
                   onClick={handleBuyNow}
-                  disabled={!product?.inStock}
+                  disabled={!product?.active}
                   className="w-full bg-blue-600 dark:bg-[#1eef69c2] hover:bg-blue-700 dark:hover:bg-primary-500 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center text-base"
                 >
                   Comprar agora
                 </button>
                 <button
                   onClick={handleAddToCart}
-                  disabled={!product?.inStock}
+                  disabled={!product?.active}
                   className="w-full bg-blue-600 dark:bg-primary-600 hover:bg-blue-700 dark:hover:bg-[#78b9b59c] text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center text-base"
                 >
                   <ShoppingCart size={18} className="mr-2" />
                   Adicionar ao carrinho
                 </button>
-                {!product?.inStock && (
+                {!product?.active && (
                   <p className="text-red-600 dark:text-red-400 text-xs text-center">
-                    Produto temporariamente fora de estoque
+                    Produto inativo
                   </p>
                 )}
               </div>

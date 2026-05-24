@@ -6,7 +6,7 @@ export interface Product {
   promo_price?: number | null;
   image: string;
   category: 'vitamina' | 'mineral' | 'fitoterapico' | 'outros';
-  inStock: boolean;
+  active: boolean;
   free_shipping?: boolean;
 }
 

@@ -11,7 +11,6 @@ interface BackendProduct {
   description: string | null
   price: number
   promo_price: number | null
-  stock: number
   image: string | null
   category: string | null
   active: boolean
@@ -96,7 +95,7 @@ class ProductsService {
       promo_price: product.promo_price ? Number(product.promo_price) : null,
       image: this.getImageUrl(product.image),
       category: (product.category as Product['category']) || 'outros',
-      inStock: product.stock > 0,
+      active: product.active,
       free_shipping: product.free_shipping ?? false,
     }
   }
@@ -237,9 +236,9 @@ class ProductsService {
     description?: string
     price: number
     promo_price?: number | null
-    stock?: number
     image?: string
     category?: string
+    active?: boolean
     compositions?: string
     indication?: string
     contraindication?: string
@@ -370,7 +369,6 @@ class ProductsService {
     description?: string
     price?: number
     promo_price?: number | null
-    stock?: number
     image?: string
     category?: string
     active?: boolean

@@ -47,7 +47,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           price: Number(item.product.price),
           image: item.product.image || '',
           category: (item.product.category as any) || 'outros',
-          inStock: ((item.product as any).stock || 0) > 0,
+          active: ((item.product as any).active ?? true),
         } : undefined,
         quantity: item.quantity,
         purchaseType: (item.purchase_type as 'one-time' | 'subscription' | undefined) || 'one-time',

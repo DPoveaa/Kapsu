@@ -26,7 +26,7 @@ export default function ManageReviews() {
     show_date: true,
     show_product: true,
   })
-  const [uploading, setUploading] = useState(false)
+  const [uploading] = useState(false)
 
   // Carrega reviews
   useEffect(() => {

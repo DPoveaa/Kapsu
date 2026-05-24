@@ -42,7 +42,6 @@ export default function ManageProducts() {
     price: '',
     description: '',
     category: '',
-    stock: '',
     promo_price: ''
   })
 
@@ -77,8 +76,6 @@ export default function ManageProducts() {
             newMapping.description = header
           } else if (headerStr.includes('cat')) {
             newMapping.category = header
-          } else if (headerStr.includes('est') || headerStr.includes('stock')) {
-            newMapping.stock = header
           } else if (headerStr.includes('promoc') || headerStr.includes('promo')) {
             newMapping.promo_price = header
           }
@@ -113,13 +110,11 @@ export default function ManageProducts() {
               let value = row[colIndex]
               
               // Tratamento especial para preços e estoque
-              if (field === 'price' || field === 'promo_price' || field === 'stock') {
+              if (field === 'price' || field === 'promo_price') {
                 if (value) {
                   // Remove R$ e converte para número
                   value = String(value).replace('R$', '').replace(/\s/g, '').replace(',', '.')
                   value = parseFloat(value)
-                } else if (field === 'stock') {
-                  value = 0
                 } else {
                   value = null
                 }
@@ -212,6 +207,19 @@ export default function ManageProducts() {
       alert(err.message || 'Erro ao excluir produto')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  const handleToggleActive = async (product: Product) => {
+    try {
+      // Atualização otimista
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, active: !p.active } : p))
+      await productsService.update(product.id, { active: !product.active })
+    } catch (err: any) {
+      console.error('Erro ao alternar status do produto:', err)
+      // Reverte a alteração em caso de erro
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, active: product.active } : p))
+      alert(err.message || 'Erro ao alternar status do produto')
     }
   }
 
@@ -357,7 +365,7 @@ export default function ManageProducts() {
                         Preço
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Estoque
+                        Status
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         Ações
@@ -413,13 +421,17 @@ export default function ManageProducts() {
                             R$ {product.price.toFixed(2).replace('.', ',')}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              product.inStock
-                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                                : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-                            }`}>
-                              {product.inStock ? 'Em estoque' : 'Sem estoque'}
-                            </span>
+                            <button
+                              onClick={() => handleToggleActive(product)}
+                              className={`px-2 py-1 text-xs font-medium rounded-full transition-colors ${
+                                product.active
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
+                                  : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
+                              }`}
+                              title={`Clique para ${product.active ? 'desativar' : 'ativar'}`}
+                            >
+                              {product.active ? 'Ativo' : 'Inativo'}
+                            </button>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div className="flex justify-end space-x-2">
@@ -492,13 +504,17 @@ export default function ManageProducts() {
                           <span className="px-2 py-0.5 text-[10px] sm:text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
                             {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
                           </span>
-                          <span className={`px-2 py-0.5 text-[10px] sm:text-xs font-medium rounded-full ${
-                            product.inStock
-                              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                              : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-                          }`}>
-                            {product.inStock ? 'Em estoque' : 'Sem estoque'}
-                          </span>
+                          <button
+                            onClick={() => handleToggleActive(product)}
+                            className={`px-2 py-0.5 text-[10px] sm:text-xs font-medium rounded-full transition-colors ${
+                              product.active
+                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50'
+                                : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50'
+                            }`}
+                            title={`Clique para ${product.active ? 'desativar' : 'ativar'}`}
+                          >
+                            {product.active ? 'Ativo' : 'Inativo'}
+                          </button>
                         </div>
                         <div className="flex items-center justify-between mt-2">
                           <span className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
@@ -583,8 +599,7 @@ export default function ManageProducts() {
                             {field === 'name' ? 'Nome *' :
                              field === 'price' ? 'Preço *' :
                              field === 'description' ? 'Descrição' :
-                             field === 'category' ? 'Categoria' :
-                             field === 'stock' ? 'Estoque' : 'Preço Promocional'}
+                             field === 'category' ? 'Categoria' : 'Preço Promocional'}
                           </label>
                           <select
                             value={columnMapping[field]}

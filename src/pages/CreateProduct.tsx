@@ -21,9 +21,9 @@ export default function CreateProduct() {
     description: '',
     price: '',
     promo_price: '',
-    stock: '',
     image: '',
     category: 'outros',
+    active: true,
     compositions: '',
     indication: '',
     contraindication: '',
@@ -31,10 +31,10 @@ export default function CreateProduct() {
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target
+    const { name, value, type } = e.target
     setFormData(prev => ({
       ...prev,
-      [name]: value,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
     }))
   }
 
@@ -71,7 +71,7 @@ export default function CreateProduct() {
         description: formData.description.trim() || undefined,
         price: Number(formData.price),
         promo_price: formData.promo_price ? Number(formData.promo_price) : null,
-        stock: formData.stock ? Number(formData.stock) : undefined,
+        active: formData.active,
         image: formData.image.trim() || undefined,
         category: formData.category || undefined,
         compositions: formData.compositions.trim() || undefined,
@@ -191,22 +191,7 @@ export default function CreateProduct() {
                 </p>
               </div>
 
-              {/* Estoque */}
-              <div>
-                <label htmlFor="stock" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Estoque
-                </label>
-                <input
-                  type="number"
-                  id="stock"
-                  name="stock"
-                  value={formData.stock}
-                  onChange={handleChange}
-                  min="0"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
-                  placeholder="0"
-                />
-              </div>
+
             </div>
 
             {/* Categoria */}
@@ -302,6 +287,20 @@ export default function CreateProduct() {
               />
               <label htmlFor="free_shipping" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
                 Oferecer frete grátis para este produto
+              </label>
+            </div>
+
+            {/* Ativo */}
+            <div>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="active"
+                  checked={formData.active}
+                  onChange={handleChange}
+                  className="mr-2 border-gray-300 dark:border-gray-700"
+                />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Produto ativo</span>
               </label>
             </div>
 

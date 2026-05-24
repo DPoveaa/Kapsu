@@ -37,9 +37,9 @@ export default function ProductCard({ product }: ProductCardProps) {
             />
           </div>
 
-          {!product.inStock && (
+          {!product.active && (
             <div className="absolute inset-0 bg-gray-900 bg-opacity-50 rounded-lg sm:rounded-none sm:rounded-t-lg flex items-center justify-center">
-              <span className="text-white font-semibold text-xs sm:text-sm lg:text-base">Fora de Estoque</span>
+              <span className="text-white font-semibold text-xs sm:text-sm lg:text-base">Inativo</span>
             </div>
           )}
         </div>
@@ -88,9 +88,9 @@ export default function ProductCard({ product }: ProductCardProps) {
             </div>
             <button
               onClick={handleAddToCart}
-              disabled={!product.inStock}
+              disabled={!product.active}
               className="disabled:bg-gray-300 disabled:cursor-not-allowed text-white p-2 sm:p-2.5 rounded-lg transition-colors hover:opacity-90 flex-shrink-0"
-              style={{ backgroundColor: product.inStock ? '#67C090' : undefined }}
+              style={{ backgroundColor: product.active ? '#67C090' : undefined }}
             >
               <ShoppingCart size={16} className="sm:w-5 sm:h-5" />
             </button>

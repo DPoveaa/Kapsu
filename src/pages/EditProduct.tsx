@@ -23,7 +23,6 @@ export default function EditProduct() {
     description: '',
     price: '',
     promo_price: '',
-    stock: '',
     image: '',
     category: 'outros',
     active: true,
@@ -53,7 +52,6 @@ export default function EditProduct() {
           description: product.description || '',
           price: product.price.toString(),
           promo_price: productRaw.promo_price ? productRaw.promo_price.toString() : '',
-          stock: productRaw.stock?.toString() || '0',
           image: product.image || '',
           category: product.category || 'outros',
           active: productRaw.active ?? true,
@@ -119,7 +117,6 @@ export default function EditProduct() {
         description: formData.description.trim() || undefined,
         price: Number(formData.price),
         promo_price: formData.promo_price ? Number(formData.promo_price) : null,
-        stock: formData.stock ? Number(formData.stock) : undefined,
         image: formData.image.trim() || undefined,
         category: formData.category || undefined,
         active: formData.active,
@@ -249,24 +246,7 @@ export default function EditProduct() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Estoque */}
-              <div>
-                <label htmlFor="stock" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Estoque
-                </label>
-                <input
-                  type="number"
-                  id="stock"
-                  name="stock"
-                  value={formData.stock}
-                  onChange={handleChange}
-                  min="0"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="0"
-                />
-              </div>
-            </div>
+
 
             {/* Categoria */}
             <div>

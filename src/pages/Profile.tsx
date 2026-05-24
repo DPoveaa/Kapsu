@@ -4,7 +4,7 @@ import { authService } from '../services/auth.service'
 import { uploadService } from '../services/upload.service'
 import { addressService, SavedAddress } from '../services/address.service'
 import { cepService } from '../services/cep.service'
-import { User, Camera, Lock, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Shield, AlertCircle } from 'lucide-react'
+import { User, Camera, Lock, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight } from 'lucide-react'
 import { env } from '../config/env'
 
 type ProfileSection = 'info' | 'password' | 'image' | 'addresses' | null
@@ -77,7 +77,7 @@ export default function Profile() {
       setImageFile(file)
       // Cria preview temporário apenas para visualização
       const reader = new FileReader()
-      reader.onload = (e) => {
+      reader.onload = () => {
         // Não atualiza o profileImage principal, apenas para preview na seção
         // O profileImage principal só será atualizado após salvar
       }
@@ -321,11 +321,7 @@ export default function Profile() {
     }
   }
 
-  const formatCEP = (cep: string) => {
-    const cleaned = cep.replace(/\D/g, '')
-    if (cleaned.length <= 5) return cleaned
-    return `${cleaned.substring(0, 5)}-${cleaned.substring(5, 8)}`
-  }
+
 
   const handleCEPChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '')
