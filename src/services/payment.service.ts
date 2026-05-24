@@ -2,6 +2,47 @@ import { env } from '../config/env'
 
 const API_URL = env.apiUrl
 
+export interface ShippingAddress {
+  cep: string
+  address: string
+  number: string
+  city: string
+  state: string
+  neighborhood?: string
+  complement?: string
+}
+
+export function buildShippingAddress(input: {
+  cep: string
+  address: string
+  number: string
+  city: string
+  state: string
+  complement?: string
+  bairro?: string
+  neighborhood?: string
+}): ShippingAddress {
+  const shippingAddress: ShippingAddress = {
+    cep: input.cep.replace(/\D/g, ''),
+    address: input.address.trim(),
+    number: input.number.trim(),
+    city: input.city.trim(),
+    state: input.state.trim(),
+  }
+
+  const neighborhood = (input.neighborhood || input.bairro)?.trim()
+  if (neighborhood) {
+    shippingAddress.neighborhood = neighborhood
+  }
+
+  const complement = input.complement?.trim()
+  if (complement) {
+    shippingAddress.complement = complement
+  }
+
+  return shippingAddress
+}
+
 interface CreatePreferenceResponse {
   success: boolean
   data: {
@@ -38,7 +79,7 @@ class PaymentService {
   /**
    * Cria uma preferência de pagamento no Mercado Pago
    */
-  async createPreference(shippingAddress: string, paymentMethod?: string, subscriptionPlan?: 'monthly' | 'quarterly', shippingFee?: number): Promise<CreatePreferenceResponse['data']> {
+  async createPreference(shippingAddress: ShippingAddress, paymentMethod?: string, subscriptionPlan?: 'monthly' | 'quarterly', shippingFee?: number): Promise<CreatePreferenceResponse['data']> {
     try {
       const response = await fetch(`${this.baseUrl}/create-preference`, {
         method: 'POST',

@@ -1,4 +1,5 @@
 import { env } from '../config/env'
+import type { ShippingAddress } from './payment.service'
 
 const API_URL = env.apiUrl
 
@@ -163,7 +164,7 @@ class OrderService {
    * Cria um pedido sem pagamento (apenas para admins em testes)
    */
   async createOrderWithoutPayment(
-    shippingAddress: string,
+    shippingAddress: ShippingAddress,
     subscriptionPlan?: 'monthly' | 'quarterly',
     shippingFee?: number
   ): Promise<Order> {

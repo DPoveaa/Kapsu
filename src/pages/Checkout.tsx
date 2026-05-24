@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, MapPin, Loader2, Truck, Plus, Save, Edit2, Trash2, Check, X, TestTube } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
-import { paymentService } from '../services/payment.service'
+import { paymentService, buildShippingAddress } from '../services/payment.service'
 import { shippingService } from '../services/shipping.service'
 import { addressService, SavedAddress } from '../services/address.service'
 import { orderService } from '../services/order.service'
@@ -35,6 +35,7 @@ export default function Checkout() {
     address: '',
     number: '',
     complement: '',
+    bairro: '',
     city: '',
     state: ''
   })
@@ -146,6 +147,7 @@ export default function Checkout() {
       address: address.address,
       number: address.number,
       complement: address.complement || '',
+      bairro: address.bairro || '',
       city: address.city,
       state: address.state
     })
@@ -380,6 +382,7 @@ export default function Checkout() {
           address: '',
           number: '',
           complement: '',
+          bairro: '',
           city: '',
           state: ''
         })
@@ -465,8 +468,7 @@ export default function Checkout() {
       setCreatingOrder(true)
       setCheckoutError(null)
 
-      // Monta endereço completo
-      const shippingAddress = `${formData.address}, ${formData.number}${formData.complement ? ` - ${formData.complement}` : ''}, ${formData.city} - ${formData.state}, CEP: ${formData.cep}`
+      const shippingAddress = buildShippingAddress(formData)
 
       // Cria preferência de pagamento ou assinatura no Mercado Pago
       const preference = await paymentService.createPreference(
@@ -523,8 +525,7 @@ export default function Checkout() {
       setCreatingOrderWithoutPayment(true)
       setCheckoutError(null)
 
-      // Monta endereço completo
-      const shippingAddress = `${formData.address}, ${formData.number}${formData.complement ? ` - ${formData.complement}` : ''}, ${formData.city} - ${formData.state}, CEP: ${formData.cep}`
+      const shippingAddress = buildShippingAddress(formData)
 
       // Cria pedido sem pagamento
       const order = await orderService.createOrderWithoutPayment(
@@ -628,6 +629,7 @@ export default function Checkout() {
                           address: '',
                           number: '',
                           complement: '',
+                          bairro: '',
                           city: '',
                           state: ''
                         })
@@ -713,6 +715,7 @@ export default function Checkout() {
                           address: '',
                           number: '',
                           complement: '',
+                          bairro: '',
                           city: '',
                           state: ''
                         })
@@ -902,12 +905,12 @@ export default function Checkout() {
                         {creatingOrder ? (
                           <>
                             <Loader2 className="animate-spin mr-2" size={18} />
-                            <span className="hidden sm:inline">Processando e redirecionando para o Mercado Pago...</span>
+                            <span className="hidden sm:inline">Processando...</span>
                             <span className="sm:hidden">Processando...</span>
                           </>
                         ) : (
                           <>
-                            <span className="hidden sm:inline">Continuar para o Pagamento no Mercado Pago</span>
+                            <span className="hidden sm:inline">Continuar Pagamento</span>
                             <span className="sm:hidden">Continuar para Pagamento</span>
                           </>
                         )}
@@ -960,12 +963,12 @@ export default function Checkout() {
                         {creatingOrder ? (
                           <>
                             <Loader2 className="animate-spin mr-2" size={18} />
-                            <span className="hidden sm:inline">Processando e redirecionando para o Mercado Pago...</span>
+                            <span className="hidden sm:inline">Processando...</span>
                             <span className="sm:hidden">Processando...</span>
                           </>
                         ) : (
                           <>
-                            <span className="hidden sm:inline">Continuar para o Pagamento no Mercado Pago</span>
+                            <span className="hidden sm:inline">Continuar Pagamento</span>
                             <span className="sm:hidden">Continuar para Pagamento</span>
                           </>
                         )}
