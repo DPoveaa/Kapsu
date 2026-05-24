@@ -178,7 +178,7 @@ export default function ManageReviews() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#111827] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="animate-spin text-primary-600 mx-auto mb-4" size={48} />
           <p className="text-gray-600 dark:text-gray-300">Carregando avaliações...</p>
@@ -188,7 +188,7 @@ export default function ManageReviews() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827]">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex items-center justify-between">
           <button
@@ -224,7 +224,7 @@ export default function ManageReviews() {
 
         {/* Formulário de criação/edição */}
         {(showCreateForm || editingReview) && (
-          <div className="mb-6 bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
+          <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                 {editingReview ? 'Editar Avaliação' : 'Nova Avaliação'}
@@ -260,7 +260,7 @@ export default function ManageReviews() {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="Ex: Maria Silva"
                 />
               </div>
@@ -300,7 +300,7 @@ export default function ManageReviews() {
                 <textarea
                   value={formData.comment}
                   onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="Ex: Excelente qualidade! Os medicamentos manipulados são perfeitos..."
                   rows={4}
                 />
@@ -314,7 +314,7 @@ export default function ManageReviews() {
                   type="text"
                   value={formData.product}
                   onChange={(e) => setFormData(prev => ({ ...prev, product: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="Ex: Vitamina D3"
                 />
               </div>
@@ -327,12 +327,12 @@ export default function ManageReviews() {
                   type="text"
                   value={formData.date}
                   onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="Ex: Há 2 semanas, Há 1 mês, Há 3 dias"
                 />
               </div>
 
-              <div className="border-t border-gray-200 dark:border-[#0F828C] pt-4">
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   O que exibir na página inicial:
                 </label>
@@ -404,7 +404,7 @@ export default function ManageReviews() {
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={handleCancel}
-                  className="px-4 py-2 border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                 >
                   Cancelar
                 </button>
@@ -431,14 +431,14 @@ export default function ManageReviews() {
         )}
 
         {/* Lista de reviews */}
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
           {reviews.length === 0 ? (
             <div className="p-8 text-center">
               <User className="mx-auto text-gray-400 dark:text-gray-500 mb-4" size={48} />
               <p className="text-gray-500 dark:text-gray-400">Nenhuma avaliação cadastrada</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200 dark:divide-[#0F828C]">
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {reviews.map((review, index) => (
                 <div
                   key={review.id}
@@ -473,7 +473,7 @@ export default function ManageReviews() {
                         <img
                           src={review.avatar}
                           alt={review.name}
-                          className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 dark:border-[#0F828C]"
+                          className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement
                             target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name)}&size=64&background=67C090&color=fff&bold=true`

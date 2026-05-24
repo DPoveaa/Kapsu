@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Search, Filter, Loader2 } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
 import { Product } from '../types'
@@ -19,6 +20,7 @@ export default function Products() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [showFilters, setShowFilters] = useState(false)
+  const [params] = useSearchParams()
 
   // Carrega produtos da API
   useEffect(() => {
@@ -39,15 +41,28 @@ export default function Products() {
     loadProducts()
   }, [])
 
+  const [isPromoOnly, setIsPromoOnly] = useState(false)
+
+  useEffect(() => {
+    const q = params.get('q') || ''
+    setSearchTerm(q)
+    
+    const promo = params.get('promocao') === 'true'
+    setIsPromoOnly(promo)
+  }, [params])
+
   // Filtra produtos localmente (pode ser otimizado para usar a API)
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
       const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         product.description.toLowerCase().includes(searchTerm.toLowerCase())
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory
-      return matchesSearch && matchesCategory
+      
+      const matchesPromo = !isPromoOnly || (product.promo_price !== null && product.promo_price !== undefined && product.promo_price < product.price)
+      
+      return matchesSearch && matchesCategory && matchesPromo
     })
-  }, [products, searchTerm, selectedCategory])
+  }, [products, searchTerm, selectedCategory, isPromoOnly])
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
@@ -71,7 +86,7 @@ export default function Products() {
               placeholder="Buscar produtos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-[#111827] text-white dark:text-white"
+              className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-900 text-white dark:text-white"
             />
           </div>
           <button
@@ -95,7 +110,7 @@ export default function Products() {
                 }}
                 className={`px-3 sm:px-4 py-1.5 sm:py-2 text-sm sm:text-base rounded-lg font-medium transition-colors ${selectedCategory === category.value
                   ? 'text-white'
-                  : 'bg-white dark:bg-[#111827] hover:bg-gray-100 dark:hover:bg-gray-300 border border-gray-300 dark:border-gray-400'
+                  : 'bg-white dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-300 border border-gray-300 dark:border-gray-400'
                   }`}
                 style={selectedCategory === category.value ? { backgroundColor: '#67C090' } : {}}
               >

@@ -36,6 +36,7 @@ export default function Profile() {
     complement: '',
     city: '',
     state: '',
+    bairro: '',
     isDefault: false,
   })
 
@@ -389,28 +390,28 @@ export default function Profile() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827] py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6 xl:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6 xl:px-8">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-white dark:bg-[#065084] rounded-xl shadow-lg dark:shadow-2xl border border-gray-100 dark:border-[#0F828C] overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg dark:shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-primary-50 to-primary-100 dark:from-[#065084] dark:to-[#0F828C] px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8 border-b border-gray-100 dark:border-[#0F828C]">
+          <div className="bg-gradient-to-r from-primary-50 to-primary-100 dark:from-gray-800 dark:to-[#0F828C] px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8 border-b border-gray-100 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-6">
               <div className="relative flex-shrink-0">
                 {profileImage ? (
                   <img
                     src={profileImage}
                     alt={user.name}
-                    className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full object-cover border-2 sm:border-4 border-white dark:border-[#065084] shadow-lg"
+                    className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full object-cover border-2 sm:border-4 border-white dark:border-gray-800 shadow-lg"
                   />
                 ) : (
                   <div
-                    className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full flex items-center justify-center text-white text-lg sm:text-xl lg:text-2xl font-bold border-2 sm:border-4 border-white dark:border-[#065084] shadow-lg"
+                    className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full flex items-center justify-center text-white text-lg sm:text-xl lg:text-2xl font-bold border-2 sm:border-4 border-white dark:border-gray-800 shadow-lg"
                     style={{ backgroundColor: '#67C090' }}
                   >
                     {getInitials(user.name)}
                   </div>
                 )}
-                <label className="absolute bottom-0 right-0 bg-primary-600 dark:bg-[#78B9B5] text-white p-1.5 sm:p-2 rounded-full cursor-pointer hover:bg-primary-700 dark:hover:bg-[#0F828C] transition-colors shadow-lg">
+                <label className="absolute bottom-0 right-0 bg-primary-600 dark:bg-primary-600 text-white p-1.5 sm:p-2 rounded-full cursor-pointer hover:bg-primary-700 dark:hover:bg-gray-600 transition-colors shadow-lg">
                   <Camera size={12} className="sm:w-4 sm:h-4" />
                   <input
                     type="file"
@@ -467,11 +468,11 @@ export default function Profile() {
                   {/* Card - Informações Pessoais */}
                   <button
                     onClick={() => setActiveSection('info')}
-                    className="bg-white dark:bg-[#065084] border border-gray-200 dark:border-[#0F828C] rounded-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg transition-all duration-200 text-left group relative overflow-hidden"
+                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg transition-all duration-200 text-left group relative overflow-hidden"
                   >
                     <div className="flex items-start justify-between mb-3 sm:mb-4">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary-100 dark:bg-[#0F828C] flex items-center justify-center group-hover:bg-primary-200 dark:group-hover:bg-[#78B9B5] transition-colors">
-                        <User size={20} className="sm:w-6 sm:h-6 text-primary-600 dark:text-[#78B9B5]" />
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary-100 dark:bg-gray-700 flex items-center justify-center group-hover:bg-primary-200 dark:group-hover:bg-[#78B9B5] transition-colors">
+                        <User size={20} className="sm:w-6 sm:h-6 text-primary-600 dark:text-primary-400" />
                       </div>
                       <ChevronRight size={18} className="sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500 group-hover:text-primary-600 dark:group-hover:text-[#78B9B5] transition-colors" />
                     </div>
@@ -486,7 +487,7 @@ export default function Profile() {
                   {/* Card - Segurança */}
                   <button
                     onClick={() => setActiveSection('password')}
-                    className="bg-white dark:bg-[#065084] border border-gray-200 dark:border-[#0F828C] rounded-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg transition-all duration-200 text-left group relative overflow-hidden"
+                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg transition-all duration-200 text-left group relative overflow-hidden"
                   >
                     <div className="flex items-start justify-between mb-3 sm:mb-4">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
@@ -505,7 +506,7 @@ export default function Profile() {
                   {/* Card - Foto de Perfil */}
                   <button
                     onClick={() => setActiveSection('image')}
-                    className="bg-white dark:bg-[#065084] border border-gray-200 dark:border-[#0F828C] rounded-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg transition-all duration-200 text-left group relative overflow-hidden"
+                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg transition-all duration-200 text-left group relative overflow-hidden"
                   >
                     <div className="flex items-start justify-between mb-3 sm:mb-4">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
@@ -527,7 +528,7 @@ export default function Profile() {
                       setActiveSection('addresses')
                       loadAddresses()
                     }}
-                    className="bg-white dark:bg-[#065084] border border-gray-200 dark:border-[#0F828C] rounded-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg transition-all duration-200 text-left group relative overflow-hidden"
+                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg transition-all duration-200 text-left group relative overflow-hidden"
                   >
                     <div className="flex items-start justify-between mb-3 sm:mb-4">
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
@@ -572,7 +573,7 @@ export default function Profile() {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -585,14 +586,14 @@ export default function Profile() {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="(00) 00000-0000"
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <button
                     onClick={handleSaveInfo}
                     disabled={loading}
-                    className="flex items-center justify-center space-x-1.5 sm:space-x-2 px-4 sm:px-6 py-2 text-sm sm:text-base bg-primary-600 dark:bg-[#78B9B5] text-white rounded-lg hover:bg-primary-700 dark:hover:bg-[#0F828C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center space-x-1.5 sm:space-x-2 px-4 sm:px-6 py-2 text-sm sm:text-base bg-primary-600 dark:bg-primary-600 text-white rounded-lg hover:bg-primary-700 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Save size={16} className="sm:w-[18px] sm:h-[18px]" />
                     <span>Salvar</span>
@@ -603,7 +604,7 @@ export default function Profile() {
                       setName(user.name || '')
                       setPhone(user.phone || '')
                     }}
-                    className="px-4 sm:px-6 py-2 text-sm sm:text-base bg-gray-200 dark:bg-[#065084] text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-[#0F828C] transition-colors"
+                    className="px-4 sm:px-6 py-2 text-sm sm:text-base bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   >
                     Cancelar
                   </button>
@@ -625,7 +626,7 @@ export default function Profile() {
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -636,7 +637,7 @@ export default function Profile() {
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -647,14 +648,14 @@ export default function Profile() {
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg bg-white dark:bg-gray-200 text-gray-900 dark:text-black focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <button
                     onClick={handleSavePassword}
                     disabled={loading}
-                    className="flex items-center justify-center space-x-1.5 sm:space-x-2 px-4 sm:px-6 py-2 text-sm sm:text-base bg-primary-600 dark:bg-[#78B9B5] text-white rounded-lg hover:bg-primary-700 dark:hover:bg-[#0F828C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center space-x-1.5 sm:space-x-2 px-4 sm:px-6 py-2 text-sm sm:text-base bg-primary-600 dark:bg-primary-600 text-white rounded-lg hover:bg-primary-700 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Save size={16} className="sm:w-[18px] sm:h-[18px]" />
                     <span>Salvar</span>
@@ -666,7 +667,7 @@ export default function Profile() {
                       setNewPassword('')
                       setConfirmPassword('')
                     }}
-                    className="px-4 sm:px-6 py-2 text-sm sm:text-base bg-gray-200 dark:bg-[#065084] text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-[#0F828C] transition-colors"
+                    className="px-4 sm:px-6 py-2 text-sm sm:text-base bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   >
                     Cancelar
                   </button>
@@ -687,7 +688,7 @@ export default function Profile() {
                       <img
                         src={URL.createObjectURL(imageFile)}
                         alt="Pré-visualização"
-                        className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-full object-cover border-2 sm:border-4 border-gray-200 dark:border-[#0F828C]"
+                        className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-full object-cover border-2 sm:border-4 border-gray-200 dark:border-gray-700"
                         onLoad={(e) => {
                           // Limpa o object URL após carregar para evitar memory leak
                           setTimeout(() => {
@@ -699,11 +700,11 @@ export default function Profile() {
                       <img
                         src={profileImage}
                         alt={user.name}
-                        className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-full object-cover border-2 sm:border-4 border-gray-200 dark:border-[#0F828C]"
+                        className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-full object-cover border-2 sm:border-4 border-gray-200 dark:border-gray-700"
                       />
                     ) : (
                       <div
-                        className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-full flex items-center justify-center text-white text-xl sm:text-2xl lg:text-3xl font-bold border-2 sm:border-4 border-gray-200 dark:border-[#0F828C]"
+                        className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 rounded-full flex items-center justify-center text-white text-xl sm:text-2xl lg:text-3xl font-bold border-2 sm:border-4 border-gray-200 dark:border-gray-700"
                         style={{ backgroundColor: '#67C090' }}
                       >
                         {getInitials(user.name)}
@@ -729,7 +730,7 @@ export default function Profile() {
                   <button
                     onClick={handleSaveImage}
                     disabled={loading || !imageFile}
-                    className="flex items-center justify-center space-x-1.5 sm:space-x-2 px-4 sm:px-6 py-2 text-sm sm:text-base bg-primary-600 dark:bg-[#78B9B5] text-white rounded-lg hover:bg-primary-700 dark:hover:bg-[#0F828C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center space-x-1.5 sm:space-x-2 px-4 sm:px-6 py-2 text-sm sm:text-base bg-primary-600 dark:bg-primary-600 text-white rounded-lg hover:bg-primary-700 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Save size={16} className="sm:w-[18px] sm:h-[18px]" />
                     <span>{loading ? 'Salvando...' : 'Salvar'}</span>
@@ -762,7 +763,7 @@ export default function Profile() {
                       setActiveSection(null)
                     }}
                     disabled={loading}
-                    className="px-4 sm:px-6 py-2 text-sm sm:text-base bg-gray-200 dark:bg-[#065084] text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-[#0F828C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-4 sm:px-6 py-2 text-sm sm:text-base bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Cancelar
                   </button>
@@ -792,7 +793,7 @@ export default function Profile() {
                               isDefault: false,
                             })
                           }}
-                          className="flex items-center justify-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 text-sm sm:text-base bg-primary-600 dark:bg-[#78B9B5] text-white rounded-lg hover:bg-primary-700 dark:hover:bg-[#0F828C] transition-colors cursor-pointer w-full sm:w-auto"
+                          className="flex items-center justify-center space-x-1.5 sm:space-x-2 px-3 sm:px-4 py-2 text-sm sm:text-base bg-primary-600 dark:bg-primary-600 text-white rounded-lg hover:bg-primary-700 dark:hover:bg-gray-600 transition-colors cursor-pointer w-full sm:w-auto"
                         >
                           <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
                           <span>Adicionar Endereço</span>
@@ -801,7 +802,7 @@ export default function Profile() {
 
                 {/* Formulário de Endereço */}
                 {(editingAddress || addressForm.nickname || addressForm.cep) && (
-                  <div className="bg-gray-50 dark:bg-[#065084] rounded-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
                     <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
                       {editingAddress ? 'Editar Endereço' : 'Novo Endereço'}
                     </h3>
@@ -815,7 +816,7 @@ export default function Profile() {
                           value={addressForm.nickname}
                           onChange={(e) => setAddressForm({ ...addressForm, nickname: e.target.value })}
                           placeholder="Ex: Casa, Trabalho"
-                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg bg-white dark:bg-[#065084] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-500 focus:border-transparent"
                         />
                       </div>
                       <div>
@@ -829,7 +830,7 @@ export default function Profile() {
                             onChange={handleCEPChange}
                             placeholder="00000-000"
                             maxLength={9}
-                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg bg-white dark:bg-[#065084] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-500 focus:border-transparent"
                           />
                           {searchingCep && (
                             <div className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2">
@@ -847,7 +848,7 @@ export default function Profile() {
                           value={addressForm.address}
                           onChange={(e) => setAddressForm({ ...addressForm, address: e.target.value })}
                           placeholder="Rua, Avenida, etc."
-                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg bg-white dark:bg-[#065084] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-500 focus:border-transparent"
                         />
                       </div>
                       <div>
@@ -859,7 +860,7 @@ export default function Profile() {
                           value={addressForm.number}
                           onChange={(e) => setAddressForm({ ...addressForm, number: e.target.value })}
                           placeholder="123"
-                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg bg-white dark:bg-[#065084] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-500 focus:border-transparent"
                         />
                       </div>
                       <div>
@@ -871,7 +872,7 @@ export default function Profile() {
                           value={addressForm.bairro}
                           onChange={(e) => setAddressForm({ ...addressForm, bairro: e.target.value })}
                           placeholder="Bairro"
-                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg bg-white dark:bg-[#065084] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-500 focus:border-transparent"
                         />
                       </div>
                       <div>
@@ -883,7 +884,7 @@ export default function Profile() {
                           value={addressForm.complement}
                           onChange={(e) => setAddressForm({ ...addressForm, complement: e.target.value })}
                           placeholder="Apto, Bloco, etc."
-                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg bg-white dark:bg-[#065084] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-500 focus:border-transparent"
                         />
                       </div>
                       <div>
@@ -895,7 +896,7 @@ export default function Profile() {
                           value={addressForm.city}
                           onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
                           placeholder="São Paulo"
-                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg bg-white dark:bg-[#065084] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-500 focus:border-transparent"
                         />
                       </div>
                       <div>
@@ -908,7 +909,7 @@ export default function Profile() {
                           onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value.toUpperCase().substring(0, 2) })}
                           placeholder="SP"
                           maxLength={2}
-                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg bg-white dark:bg-[#065084] text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-[#78B9B5] focus:border-transparent"
+                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-500 focus:border-transparent"
                         />
                       </div>
                       <div className="sm:col-span-2">
@@ -917,7 +918,7 @@ export default function Profile() {
                             type="checkbox"
                             checked={addressForm.isDefault}
                             onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })}
-                            className="w-4 h-4 text-primary-600 dark:text-[#78B9B5] border-gray-300 dark:border-[#0F828C] rounded focus:ring-primary-500 dark:focus:ring-[#78B9B5]"
+                            className="w-4 h-4 text-primary-600 dark:text-primary-400 border-gray-300 dark:border-gray-700 rounded focus:ring-primary-500 dark:focus:ring-primary-500"
                           />
                           <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">Marcar como endereço padrão</span>
                         </label>
@@ -927,7 +928,7 @@ export default function Profile() {
                       <button
                         onClick={handleSaveAddress}
                         disabled={loading}
-                        className="flex items-center justify-center space-x-1.5 sm:space-x-2 px-4 sm:px-6 py-2 text-sm sm:text-base bg-primary-600 dark:bg-[#78B9B5] text-white rounded-lg hover:bg-primary-700 dark:hover:bg-[#0F828C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center justify-center space-x-1.5 sm:space-x-2 px-4 sm:px-6 py-2 text-sm sm:text-base bg-primary-600 dark:bg-primary-600 text-white rounded-lg hover:bg-primary-700 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Save size={16} className="sm:w-[18px] sm:h-[18px]" />
                         <span>{loading ? 'Salvando...' : 'Salvar'}</span>
@@ -941,12 +942,13 @@ export default function Profile() {
                             address: '',
                             number: '',
                             complement: '',
+                            bairro: '',
                             city: '',
                             state: '',
                             isDefault: false,
                           })
                         }}
-                        className="px-4 sm:px-6 py-2 text-sm sm:text-base bg-gray-200 dark:bg-[#065084] text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-[#0F828C] transition-colors"
+                        className="px-4 sm:px-6 py-2 text-sm sm:text-base bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                       >
                         Cancelar
                       </button>
@@ -968,8 +970,8 @@ export default function Profile() {
                         key={address.id}
                         className={`p-3 sm:p-4 rounded-lg border-2 ${
                           address.is_default
-                            ? 'border-primary-500 dark:border-[#78B9B5] bg-primary-50 dark:bg-[#065084]'
-                            : 'border-gray-200 dark:border-[#0F828C] bg-white dark:bg-[#065084]'
+                            ? 'border-primary-500 dark:border-primary-500 bg-primary-50 dark:bg-gray-800'
+                            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
                         }`}
                       >
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
@@ -977,7 +979,7 @@ export default function Profile() {
                             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                               <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white break-words">{address.nickname}</h3>
                               {address.is_default && (
-                                <span className="inline-flex items-center space-x-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-primary-600 dark:bg-[#78B9B5] text-white text-[10px] sm:text-xs rounded-full">
+                                <span className="inline-flex items-center space-x-1 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-primary-600 dark:bg-primary-600 text-white text-[10px] sm:text-xs rounded-full">
                                   <Star size={10} className="sm:w-3 sm:h-3" fill="currentColor" />
                                   <span>Padrão</span>
                                 </span>
@@ -997,7 +999,7 @@ export default function Profile() {
                               <button
                                 onClick={() => handleSetDefaultAddress(address.id)}
                                 disabled={loading}
-                                className="p-1.5 sm:p-2 text-primary-600 dark:text-[#78B9B5] hover:bg-primary-100 dark:hover:bg-[#0F828C] rounded-lg transition-colors disabled:opacity-50"
+                                className="p-1.5 sm:p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-100 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50"
                                 title="Marcar como padrão"
                               >
                                 <Star size={16} className="sm:w-[18px] sm:h-[18px]" />

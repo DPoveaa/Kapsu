@@ -2147,7 +2147,7 @@ export default function WhatsAppConnection() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50 dark:bg-[#111827]">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4 lg:py-6 xl:py-8">
         {/* Header */}
         <div className="mb-4 sm:mb-6 lg:mb-8">
@@ -2163,7 +2163,7 @@ export default function WhatsAppConnection() {
         </div>
 
         {/* Status Card */}
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 border border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 gap-2 sm:gap-3">
             <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white">Status da Conexão</h2>
             <button
@@ -2259,7 +2259,7 @@ export default function WhatsAppConnection() {
 
         {/* QR Code Card - Mostra apenas quando há QR Code ou está gerando */}
         {!status?.connected && (qrCode || status?.status === 'QRCODE_GENERATED' || status?.status === 'CONNECTING') && (
-          <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 border border-gray-200 dark:border-[#0F828C]">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 border border-gray-200 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 gap-2 sm:gap-3">
               <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white">QR Code para Conectar</h2>
               <button
@@ -2318,7 +2318,7 @@ export default function WhatsAppConnection() {
         {/* Modal de Confirmação de Desconexão */}
         {showDisconnectModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-[#0F828C]">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-gray-700">
               <div className="p-3 sm:p-4 lg:p-6">
                 {!showFinalConfirm ? (
                   <>
@@ -2332,7 +2332,7 @@ export default function WhatsAppConnection() {
                     <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
                       <button
                         onClick={() => setShowDisconnectModal(false)}
-                        className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                        className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                       >
                         Cancelar
                       </button>
@@ -2362,7 +2362,7 @@ export default function WhatsAppConnection() {
                           setShowFinalConfirm(false)
                           setShowDisconnectModal(false)
                         }}
-                        className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                        className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                       >
                         Cancelar
                       </button>
@@ -2395,7 +2395,7 @@ export default function WhatsAppConnection() {
         {status?.connected && (
           <div className="space-y-3 sm:space-y-4 lg:space-y-6">
             {/* Painel de Teste de IA */}
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-3 sm:mb-4">
                 <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
                   <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2 text-yellow-600 dark:text-yellow-400" />
@@ -2412,7 +2412,7 @@ export default function WhatsAppConnection() {
               {showTestPanel && (
                 <div className="flex flex-col" style={{ height: '500px', maxHeight: '70vh' }}>
                   {/* Configuração do Telefone de Teste */}
-                  <div className="mb-2 sm:mb-3 p-2 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]">
+                  <div className="mb-2 sm:mb-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <label className="block text-xs font-medium text-gray-700 dark:text-white mb-1">
                       Telefone de Teste (opcional)
                     </label>
@@ -2422,7 +2422,7 @@ export default function WhatsAppConnection() {
                         value={testAIPhone}
                         onChange={(e) => setTestAIPhone(e.target.value)}
                         placeholder="TEST_PHONE (padrão)"
-                        className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       />
                       {testAIPhone && (
                         <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
@@ -2480,7 +2480,7 @@ export default function WhatsAppConnection() {
                   {/* Área de Mensagens */}
                   <div
                     ref={testChatContainerRef}
-                    className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 space-y-3 sm:space-y-4 bg-gray-50 dark:bg-[#065084]"
+                    className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 space-y-3 sm:space-y-4 bg-gray-50 dark:bg-gray-800"
                     style={{ minHeight: 0 }}
                   >
                     {testAIChatHistory.length === 0 ? (
@@ -2503,7 +2503,7 @@ export default function WhatsAppConnection() {
                             className={`max-w-[85%] sm:max-w-[80%] lg:max-w-[70%] rounded-lg px-2 sm:px-3 py-1.5 sm:py-2 ${
                               msg.role === 'user'
                                 ? 'bg-purple-600 text-white'
-                                : 'bg-white dark:bg-[#065084] text-gray-900 dark:text-white border border-gray-200 dark:border-[#0F828C]'
+                                : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700'
                             }`}
                           >
                             <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.content}</p>
@@ -2634,12 +2634,12 @@ export default function WhatsAppConnection() {
                                 
                                 {/* Prompt Final Enviado para a IA */}
                                 {msg.metadata?.processingDetails?.finalPrompt && (
-                                  <div className="bg-gray-50 dark:bg-[#065084] rounded p-3 border border-gray-200 dark:border-[#0F828C]">
+                                  <div className="bg-gray-50 dark:bg-gray-800 rounded p-3 border border-gray-200 dark:border-gray-700">
                                     <h4 className="text-xs font-semibold text-gray-900 dark:text-white mb-2 flex items-center">
                                       <span className="mr-1">📝</span>
                                       Prompt Final Enviado para a IA
                                     </h4>
-                                    <div className="bg-white dark:bg-[#065084] p-2 rounded border border-gray-100 dark:border-[#0F828C] max-h-96 overflow-auto">
+                                    <div className="bg-white dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700 max-h-96 overflow-auto">
                                       <pre className="text-xs text-gray-800 whitespace-pre-wrap break-words font-mono">
                                         {msg.metadata.processingDetails.finalPrompt}
                                       </pre>
@@ -2754,7 +2754,7 @@ export default function WhatsAppConnection() {
                   </div>
 
                   {/* Input de Mensagem */}
-                  <form onSubmit={handleTestAI} className="border-t bg-white dark:bg-[#065084] p-2 sm:p-3">
+                  <form onSubmit={handleTestAI} className="border-t bg-white dark:bg-gray-800 p-2 sm:p-3">
                     <div className="flex items-end space-x-1.5 sm:space-x-2">
                       <div className="flex-1">
                         <textarea
@@ -2763,7 +2763,7 @@ export default function WhatsAppConnection() {
                           onChange={(e) => setTestAIMessage(e.target.value)}
                           placeholder="Digite sua mensagem..."
                           rows={1}
-                          className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                          className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault()
@@ -2797,7 +2797,7 @@ export default function WhatsAppConnection() {
             </div>
 
             {/* Painel de Configuração de Números de Farmacêuticos */}
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-3 sm:mb-4">
                 <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
                   <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2 text-blue-600" />
@@ -2842,7 +2842,7 @@ export default function WhatsAppConnection() {
                       {pharmacistNumbers.map((pharmacist) => (
                         <div
                           key={pharmacist.id}
-                          className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C] gap-2"
+                          className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 gap-2"
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
@@ -2872,7 +2872,7 @@ export default function WhatsAppConnection() {
             </div>
 
             {/* Painel de Configuração de Números da Distribuidora */}
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-3 sm:mb-4">
                 <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
                   <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2 text-green-600" />
@@ -2917,7 +2917,7 @@ export default function WhatsAppConnection() {
                       {distributorNumbers.map((distributor) => (
                         <div
                           key={distributor.id}
-                          className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C] gap-2"
+                          className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 gap-2"
                         >
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
@@ -2950,7 +2950,7 @@ export default function WhatsAppConnection() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
               {/* Painel de Envio de Mensagem */}
               <div className="lg:col-span-1 order-2 lg:order-1">
-                <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
                   <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center">
                     <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2" />
                     Enviar Mensagem
@@ -3019,9 +3019,9 @@ export default function WhatsAppConnection() {
 
             {/* Painel de Conversas e Mensagens */}
             <div className="lg:col-span-2 order-1 lg:order-2">
-              <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg overflow-hidden flex flex-col border border-gray-200 dark:border-[#0F828C]" style={{ minHeight: '400px', height: 'calc(100vh - 200px)', maxHeight: '800px' }}>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden flex flex-col border border-gray-200 dark:border-gray-700" style={{ minHeight: '400px', height: 'calc(100vh - 200px)', maxHeight: '800px' }}>
                 {/* Lista de Conversas */}
-                <div className="border-b border-gray-200 dark:border-[#0F828C] p-2 sm:p-3 lg:p-4 bg-white dark:bg-[#065084]">
+                <div className="border-b border-gray-200 dark:border-gray-700 p-2 sm:p-3 lg:p-4 bg-white dark:bg-gray-800">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-3 gap-2">
                     <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
                       <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2" />
@@ -3223,7 +3223,7 @@ export default function WhatsAppConnection() {
                 ).length > 0 && (
                   <div className="flex flex-1 overflow-hidden">
                     {/* Lista de Conversas */}
-                    <div className={`${showMessagesOnMobile ? 'hidden' : 'flex'} lg:flex w-full lg:w-1/3 border-r border-gray-200 dark:border-[#0F828C] overflow-y-auto flex-col`}>
+                    <div className={`${showMessagesOnMobile ? 'hidden' : 'flex'} lg:flex w-full lg:w-1/3 border-r border-gray-200 dark:border-gray-700 overflow-y-auto flex-col`}>
                       {filterConversations(
                         showNeedingResponse ? conversationsNeedingResponse : conversations,
                         searchTerm
@@ -3242,7 +3242,7 @@ export default function WhatsAppConnection() {
                           onMouseDown={(e) => {
                             e.preventDefault()
                           }}
-                          className={`w-full p-2.5 sm:p-3 lg:p-4 text-left hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors border-b border-gray-100 dark:border-[#0F828C] focus:outline-none ${
+                          className={`w-full p-2.5 sm:p-3 lg:p-4 text-left hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors border-b border-gray-100 dark:border-gray-700 focus:outline-none ${
                             selectedConversation === conversation.phone ? 'bg-blue-50 dark:bg-blue-900/30 border-l-4 border-l-blue-600 dark:border-l-blue-400' : ''
                           } ${
                             conversation.needsResponse ? 'bg-orange-50 dark:bg-orange-900/30 border-l-4 border-l-orange-500 dark:border-l-orange-400' : ''
@@ -3290,7 +3290,7 @@ export default function WhatsAppConnection() {
                       {selectedConversation ? (
                         <>
                           {/* Header da Conversa */}
-                          <div className="border-b border-gray-200 dark:border-[#0F828C] p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-[#065084]">
+                          <div className="border-b border-gray-200 dark:border-gray-700 p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-gray-800">
                             <div className="flex items-center justify-between gap-2 sm:gap-3">
                               <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                                 {/* Botão voltar (apenas mobile) */}
@@ -3388,7 +3388,7 @@ export default function WhatsAppConnection() {
                           {/* Mensagens */}
                           <div 
                             ref={messagesContainerRef}
-                            className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-[#111827]"
+                            className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-gray-900"
                             style={{ scrollBehavior: 'auto' }}
                           >
                             {messages.length === 0 ? (
@@ -3406,7 +3406,7 @@ export default function WhatsAppConnection() {
                                       className={`max-w-[90%] sm:max-w-[85%] lg:max-w-xs xl:max-w-md rounded-lg shadow-sm overflow-hidden ${
                                         message.isFromMe
                                           ? 'bg-blue-600 text-white'
-                                          : 'bg-white dark:bg-[#065084] text-gray-900 dark:text-white border border-gray-200 dark:border-[#0F828C]'
+                                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700'
                                       } ${message.type === 'image' && message.mediaUrl ? 'p-0' : 'px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2'}`}
                                     >
                                       {message.type === 'image' && message.mediaUrl ? (
@@ -3442,10 +3442,10 @@ export default function WhatsAppConnection() {
                           </div>
 
                           {/* Campo de Envio de Mensagem */}
-                          <div className="border-t border-gray-200 dark:border-[#0F828C] p-2 sm:p-3 lg:p-4 bg-white dark:bg-[#065084]">
+                          <div className="border-t border-gray-200 dark:border-gray-700 p-2 sm:p-3 lg:p-4 bg-white dark:bg-gray-800">
                             {/* Preview do arquivo selecionado */}
                             {selectedFile && (
-                              <div className="mb-1.5 sm:mb-2 p-1.5 sm:p-2 bg-gray-50 dark:bg-[#065084] rounded-lg flex items-center justify-between border border-gray-200 dark:border-[#0F828C] gap-2">
+                              <div className="mb-1.5 sm:mb-2 p-1.5 sm:p-2 bg-gray-50 dark:bg-gray-800 rounded-lg flex items-center justify-between border border-gray-200 dark:border-gray-700 gap-2">
                                 <div className="flex items-center space-x-1.5 sm:space-x-2 flex-1 min-w-0">
                                   {filePreview ? (
                                     <img src={filePreview} alt="Preview" className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded flex-shrink-0" />
@@ -3488,7 +3488,7 @@ export default function WhatsAppConnection() {
                                 value={conversationMessage}
                                 onChange={(e) => setConversationMessage(e.target.value)}
                                 placeholder={selectedFile ? "Legenda (opcional)..." : "Digite uma mensagem..."}
-                                className="flex-1 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="flex-1 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                 disabled={sendingConversationMessage}
                               />
                               <button
@@ -3526,7 +3526,7 @@ export default function WhatsAppConnection() {
         {/* Modal para Adicionar Número de Farmacêutico */}
         {showAddPharmacistModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-[#0F828C] max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
               <div className="p-3 sm:p-4 lg:p-6">
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
                   <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Adicionar Número</h3>
@@ -3600,7 +3600,7 @@ export default function WhatsAppConnection() {
                 <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-4 sm:mt-6">
                   <button
                     onClick={() => setShowAddPharmacistModal(false)}
-                    className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                    className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                   >
                     Cancelar
                   </button>
@@ -3701,7 +3701,7 @@ export default function WhatsAppConnection() {
         {/* Modal para Adicionar Número da Distribuidora */}
         {showAddDistributorModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-[#0F828C] max-h-[90vh] overflow-y-auto">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
               <div className="p-3 sm:p-4 lg:p-6">
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
                   <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Adicionar Número da Distribuidora</h3>
@@ -3731,7 +3731,7 @@ export default function WhatsAppConnection() {
                           setNewDistributorName('')
                         }
                       }}
-                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     >
                       <option value="">Selecione um usuário...</option>
                       {usersWithPhone.map((user) => (
@@ -3781,7 +3781,7 @@ export default function WhatsAppConnection() {
                 <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-4 sm:mt-6">
                   <button
                     onClick={() => setShowAddDistributorModal(false)}
-                    className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                    className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                   >
                     Cancelar
                   </button>
@@ -3815,7 +3815,7 @@ export default function WhatsAppConnection() {
             }}
           >
             <div 
-              className="bg-white dark:bg-[#065084] rounded-lg shadow-xl max-w-md w-full p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700"
               onClick={(e) => e.stopPropagation()}
             >
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center">

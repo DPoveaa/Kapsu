@@ -326,7 +326,7 @@ export default function ManagePromoCodes() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#111827] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
           <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300">Carregando códigos promocionais...</p>
@@ -336,7 +336,7 @@ export default function ManagePromoCodes() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827] py-4 sm:py-6 lg:py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 sm:py-6 lg:py-8">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
         <div className="mb-4 sm:mb-6 lg:mb-8">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Códigos Promocionais</h1>
@@ -358,7 +358,7 @@ export default function ManagePromoCodes() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
           {/* Lista de Códigos */}
           <div className="lg:col-span-2">
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-5 lg:mb-6">
                 <div className="flex items-center">
                   <Tag className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300 mr-1.5 sm:mr-2" />
@@ -380,7 +380,7 @@ export default function ManagePromoCodes() {
 
               {/* Formulário de Nova/Edição */}
               {showForm && (
-                <div className="mb-4 sm:mb-5 lg:mb-6 p-3 sm:p-4 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C] max-h-[85vh] sm:max-h-[80vh] overflow-y-auto">
+                <div className="mb-4 sm:mb-5 lg:mb-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 max-h-[85vh] sm:max-h-[80vh] overflow-y-auto">
                   <div className="flex items-center justify-between mb-3 sm:mb-4">
                     <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                       {editingCode ? 'Editar Código' : 'Novo Código'}
@@ -484,7 +484,7 @@ export default function ManagePromoCodes() {
                       <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                         Produtos que Recebem o Desconto (deixe vazio para todos)
                       </label>
-                      <div className="max-h-32 sm:max-h-40 overflow-y-auto border border-gray-300 dark:border-[#0F828C] rounded-lg p-2 sm:p-3 dark:bg-[#065084]">
+                      <div className="max-h-32 sm:max-h-40 overflow-y-auto border border-gray-300 dark:border-gray-700 rounded-lg p-2 sm:p-3 dark:bg-gray-800">
                         {products.length === 0 ? (
                           <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Nenhum produto disponível</p>
                         ) : (
@@ -514,7 +514,7 @@ export default function ManagePromoCodes() {
                     </div>
 
                     {/* Condições */}
-                    <div className="border-t border-gray-200 dark:border-[#0F828C] pt-3 sm:pt-4">
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4">
                       <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">Condições</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                         <div>
@@ -549,7 +549,7 @@ export default function ManagePromoCodes() {
                     </div>
 
                     {/* Frete Grátis */}
-                    <div className="border-t border-gray-200 dark:border-[#0F828C] pt-3 sm:pt-4">
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4">
                       <div className="flex items-center">
                         <input
                           type="checkbox"
@@ -566,7 +566,7 @@ export default function ManagePromoCodes() {
                     </div>
 
                     {/* Permite combinação com outros cupons */}
-                    <div className="border-t border-gray-200 dark:border-[#0F828C] pt-3 sm:pt-4">
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4">
                       <div className="flex items-start">
                         <input
                           type="checkbox"
@@ -586,7 +586,7 @@ export default function ManagePromoCodes() {
                     </div>
 
                     {/* Expiração por Tempo */}
-                    <div className="border-t border-gray-200 dark:border-[#0F828C] pt-3 sm:pt-4">
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4">
                       <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">Expiração por Tempo (Opcional)</h4>
                       <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2 sm:mb-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-2 break-words">
                         <strong>Escolha o tipo de expiração:</strong> Você pode definir quando o código expira (por data/hora ou apenas data) 
@@ -664,7 +664,7 @@ export default function ManagePromoCodes() {
                     </div>
 
                     {/* Limites de Uso */}
-                    <div className="border-t border-gray-200 dark:border-[#0F828C] pt-3 sm:pt-4">
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4">
                       <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">Limites de Uso (Opcional)</h4>
                       <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2 sm:mb-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-2 break-words">
                         <strong>Você pode combinar:</strong> Limite global (total de usos entre todos os clientes), 
@@ -762,7 +762,7 @@ export default function ManagePromoCodes() {
                       </div>
                     </div>
 
-                    <div className="flex items-center pt-3 sm:pt-4 border-t border-gray-200 dark:border-[#0F828C]">
+                    <div className="flex items-center pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
                       <input
                         type="checkbox"
                         id="active"
@@ -779,7 +779,7 @@ export default function ManagePromoCodes() {
                   <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 mt-4 sm:mt-5 lg:mt-6">
                     <button
                       onClick={resetForm}
-                      className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                      className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                     >
                       Cancelar
                     </button>
@@ -809,7 +809,7 @@ export default function ManagePromoCodes() {
                         className={`p-3 sm:p-4 border-2 rounded-lg ${
                           isCodeActive(code)
                             ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30'
-                            : 'border-gray-200 dark:border-[#0F828C] bg-gray-50 dark:bg-[#065084]'
+                            : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2 sm:gap-3">
@@ -833,7 +833,7 @@ export default function ManagePromoCodes() {
                                   status.color.includes('bg-blue-100') ? 'dark:bg-blue-900/30 dark:text-blue-300' :
                                   status.color.includes('bg-green-100') ? 'dark:bg-green-900/30 dark:text-green-300' :
                                   status.color.includes('bg-red-100') ? 'dark:bg-red-900/30 dark:text-red-300' :
-                                  status.color.includes('bg-gray-100') ? 'dark:bg-[#111827]/30 dark:text-gray-300' :
+                                  status.color.includes('bg-gray-100') ? 'dark:bg-gray-900/30 dark:text-gray-300' :
                                   status.color.includes('bg-orange-100') ? 'dark:bg-orange-900/30 dark:text-orange-300' : ''
                                 }`}>
                                   {status.label}
@@ -917,7 +917,7 @@ export default function ManagePromoCodes() {
 
           {/* Informações */}
           <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Sobre os Códigos</h2>
               
               <div className="space-y-3 sm:space-y-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300">

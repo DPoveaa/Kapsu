@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Edit, Trash2, Loader2, Image as ImageIcon, X, Save, ArrowUp, ArrowDown } from 'lucide-react'
 import { bannersService, Banner, CreateBannerData } from '../services/banners.service'
+import { siteSettingsService } from '../services/site-settings.service'
 import BannerImageUpload from '../components/BannerImageUpload'
 import { normalizeImagePath } from '../utils/imageUrl'
 
@@ -41,7 +42,7 @@ function BannerImagePreview({ banner }: { banner: Banner }) {
       const parent = target.parentElement
       if (parent) {
         parent.innerHTML = `
-          <div class="w-32 h-20 bg-gray-200 dark:bg-gray-700 flex items-center justify-center rounded-lg border border-gray-200 dark:border-[#0F828C]">
+          <div class="w-32 h-20 bg-gray-200 dark:bg-gray-700 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700">
             <div class="text-center p-2">
               <svg class="w-8 h-8 mx-auto text-gray-400 dark:text-gray-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -56,7 +57,7 @@ function BannerImagePreview({ banner }: { banner: Banner }) {
 
   if (hasError) {
     return (
-      <div className="w-32 h-20 bg-gray-200 dark:bg-gray-700 flex items-center justify-center rounded-lg border border-gray-200 dark:border-[#0F828C]">
+      <div className="w-32 h-20 bg-gray-200 dark:bg-gray-700 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="text-center p-2">
           <svg className="w-8 h-8 mx-auto text-gray-400 dark:text-gray-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -72,7 +73,7 @@ function BannerImagePreview({ banner }: { banner: Banner }) {
       <img
         src={imageUrl}
         alt={banner.title || 'Banner'}
-        className="w-32 h-20 object-cover rounded-lg border border-gray-200 dark:border-[#0F828C]"
+        className="w-32 h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
         onError={handleError}
         onLoad={() => {
           if (triedApiUrl) {
@@ -101,10 +102,30 @@ export default function ManageBanners() {
     order: 0,
     active: true,
   })
+  const [bannerHeightMobile, setBannerHeightMobile] = useState<number>(300)
+  const [bannerHeightDesktop, setBannerHeightDesktop] = useState<number>(500)
+  const [savingHeight, setSavingHeight] = useState(false)
 
   // Carrega banners
   useEffect(() => {
     loadBanners()
+  }, [])
+
+  useEffect(() => {
+    const loadHeights = async () => {
+      try {
+        const settings = await siteSettingsService.getSettings()
+        if (typeof settings.banner_height_mobile === 'number') {
+          setBannerHeightMobile(settings.banner_height_mobile)
+        }
+        if (typeof settings.banner_height_desktop === 'number') {
+          setBannerHeightDesktop(settings.banner_height_desktop)
+        }
+      } catch (err) {
+        console.warn('Não foi possível carregar altura dos banners', err)
+      }
+    }
+    loadHeights()
   }, [])
 
   const loadBanners = async () => {
@@ -252,10 +273,24 @@ export default function ManageBanners() {
     setShowCreateForm(false)
     setEditingBanner(null)
   }
+  
+  const handleSaveHeights = async () => {
+    try {
+      setSavingHeight(true)
+      await siteSettingsService.updateSettings({
+        banner_height_mobile: bannerHeightMobile,
+        banner_height_desktop: bannerHeightDesktop,
+      })
+    } catch (err: any) {
+      alert(err.message || 'Erro ao salvar altura dos banners')
+    } finally {
+      setSavingHeight(false)
+    }
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#111827] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="animate-spin text-primary-600 mx-auto mb-4" size={48} />
           <p className="text-gray-600 dark:text-gray-300">Carregando banners...</p>
@@ -265,7 +300,7 @@ export default function ManageBanners() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827]">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex items-center justify-between">
           <button
@@ -292,6 +327,50 @@ export default function ManageBanners() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Gerenciar Banners</h1>
           <p className="text-gray-600 dark:text-gray-300">Gerencie os banners exibidos na página inicial</p>
         </div>
+        
+        {/* Configuração de Altura Global */}
+        <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Altura dos Banners</h2>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            Defina a altura dos banners exibidos na página inicial. Os valores são em pixels.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Altura Mobile (px)</label>
+              <input
+                type="number"
+                min={200}
+                step={10}
+                value={bannerHeightMobile}
+                onChange={(e) => setBannerHeightMobile(Number(e.target.value))}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Altura Desktop (px)</label>
+              <input
+                type="number"
+                min={300}
+                step={10}
+                value={bannerHeightDesktop}
+                onChange={(e) => setBannerHeightDesktop(Number(e.target.value))}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+              />
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={handleSaveHeights}
+              disabled={savingHeight}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center"
+            >
+              {savingHeight ? <Loader2 className="animate-spin mr-2" size={18} /> : <Save size={18} className="mr-2" />}
+              Salvar Altura
+            </button>
+          </div>
+        </div>
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
@@ -301,7 +380,7 @@ export default function ManageBanners() {
 
         {/* Formulário de criação/edição */}
         {(showCreateForm || editingBanner) && (
-          <div className="mb-6 bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
+          <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                 {editingBanner ? 'Editar Banner' : 'Novo Banner'}
@@ -384,7 +463,7 @@ export default function ManageBanners() {
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={handleCancel}
-                  className="px-4 py-2 border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                 >
                   Cancelar
                 </button>
@@ -411,14 +490,14 @@ export default function ManageBanners() {
         )}
 
         {/* Lista de banners */}
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
           {banners.length === 0 ? (
             <div className="p-8 text-center">
               <ImageIcon className="mx-auto text-gray-400 dark:text-gray-500 mb-4" size={48} />
               <p className="text-gray-500 dark:text-gray-400">Nenhum banner cadastrado</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200 dark:divide-[#0F828C]">
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {banners.map((banner, index) => (
                 <div
                   key={banner.id}

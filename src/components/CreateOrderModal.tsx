@@ -212,8 +212,8 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-xl dark:shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-[#0F828C]">
-        <div className="sticky top-0 bg-white dark:bg-[#065084] border-b border-gray-200 dark:border-[#0F828C] px-3 sm:px-4 lg:px-6 py-3 sm:py-4 flex items-center justify-between">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl dark:shadow-2xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 flex items-center justify-between">
           <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white">Criar Pedido Manual</h2>
           <button
             onClick={handleClose}
@@ -247,7 +247,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                   setShowUserDropdown(true)
                 }}
                 onFocus={() => setShowUserDropdown(true)}
-                className="w-full pl-8 sm:pl-10 pr-8 sm:pr-10 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                className="w-full pl-8 sm:pl-10 pr-8 sm:pr-10 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
               />
               {selectedUserId && (
                 <button
@@ -265,7 +265,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
               
               {/* Dropdown de usuários */}
               {showUserDropdown && (
-                <div className="absolute z-20 w-full mt-1 bg-white dark:bg-[#065084] border border-gray-200 dark:border-[#0F828C] rounded-lg shadow-lg dark:shadow-xl max-h-48 sm:max-h-60 overflow-y-auto">
+                <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg dark:shadow-xl max-h-48 sm:max-h-60 overflow-y-auto">
                   {loadingUsers ? (
                     <div className="p-3 sm:p-4 text-center text-gray-500 dark:text-gray-400">
                       <Loader2 className="animate-spin mx-auto mb-2 w-4 h-4 sm:w-5 sm:h-5" />
@@ -283,7 +283,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                           setUserSearch(user.name)
                           setShowUserDropdown(false)
                         }}
-                        className={`w-full text-left px-3 sm:px-4 py-2 hover:bg-gray-50 dark:hover:bg-[#065084] border-b border-gray-100 dark:border-[#0F828C] last:border-b-0 ${
+                        className={`w-full text-left px-3 sm:px-4 py-2 hover:bg-gray-50 dark:hover:bg-[#065084] border-b border-gray-100 dark:border-gray-700 last:border-b-0 ${
                           selectedUserId === user.id ? 'bg-blue-50 dark:bg-blue-900/30' : ''
                         }`}
                       >
@@ -318,13 +318,13 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                   placeholder="Buscar produto..."
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
-                  className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                 />
               </div>
               <select
                 value={selectedProductId}
                 onChange={(e) => setSelectedProductId(e.target.value)}
-                className="flex-1 border border-gray-300 dark:border-gray-400 rounded-lg px-2 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                className="flex-1 border border-gray-300 dark:border-gray-400 rounded-lg px-2 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
               >
                 <option value="">Selecione um produto</option>
                 {filteredProducts.map(product => (
@@ -351,7 +351,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                   return (
                     <div
                       key={item.productId}
-                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C] gap-2 sm:gap-0"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 gap-2 sm:gap-0"
                     >
                       <div className="flex-1 min-w-0">
                         <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-words">{product?.name || 'Produto'}</div>
@@ -363,7 +363,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                          className="px-2 sm:px-2.5 py-1 text-sm sm:text-base bg-gray-200 dark:bg-[#065084] dark:border dark:border-[#0F828C] dark:text-white rounded hover:bg-gray-300 dark:hover:bg-[#065084]"
+                          className="px-2 sm:px-2.5 py-1 text-sm sm:text-base bg-gray-200 dark:bg-gray-800 dark:border dark:border-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-[#065084]"
                         >
                           -
                         </button>
@@ -371,7 +371,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                          className="px-2 sm:px-2.5 py-1 text-sm sm:text-base bg-gray-200 dark:bg-[#065084] dark:border dark:border-[#0F828C] dark:text-white rounded hover:bg-gray-300 dark:hover:bg-[#065084]"
+                          className="px-2 sm:px-2.5 py-1 text-sm sm:text-base bg-gray-200 dark:bg-gray-800 dark:border dark:border-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-[#065084]"
                         >
                           +
                         </button>
@@ -406,7 +406,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
             >
               <option value="">Selecione um método</option>
               {paymentMethods.map(method => (
@@ -426,7 +426,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
               value={shippingAddress}
               onChange={(e) => setShippingAddress(e.target.value)}
               rows={3}
-              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white resize-none"
+              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white resize-none"
               placeholder="Rua, número, complemento, cidade - estado, CEP"
             />
           </div>
@@ -439,7 +439,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
             >
               {orderStatuses.map(statusOption => (
                 <option key={statusOption.value} value={statusOption.value}>
@@ -450,11 +450,11 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
           </div>
 
           {/* Botões */}
-          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-[#0F828C]">
+          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 sm:px-6 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] rounded-lg text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+              className="px-4 sm:px-6 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
             >
               Cancelar
             </button>

@@ -141,14 +141,14 @@ export default function EditProduct() {
 
   if (loadingProduct) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#111827] flex items-center justify-center">
-        <Loader2 className="animate-spin text-primary-600 dark:text-[#78B9B5]" size={48} />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <Loader2 className="animate-spin text-primary-600 dark:text-primary-400" size={48} />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827]">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <button
           onClick={() => navigate(-1)}
@@ -158,7 +158,7 @@ export default function EditProduct() {
           Voltar
         </button>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-gray-700">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Editar Produto</h1>
 
           {error && (
@@ -186,7 +186,7 @@ export default function EditProduct() {
                 value={formData.name}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                 placeholder="Ex: Vitamina D3 2000UI"
               />
             </div>
@@ -202,7 +202,7 @@ export default function EditProduct() {
                 value={formData.description}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                 placeholder="Descreva o produto..."
               />
             </div>
@@ -222,7 +222,7 @@ export default function EditProduct() {
                   required
                   min="0"
                   step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="0.00"
                 />
               </div>
@@ -240,7 +240,7 @@ export default function EditProduct() {
                   onChange={handleChange}
                   min="0"
                   step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="0.00 (opcional)"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
@@ -262,7 +262,7 @@ export default function EditProduct() {
                   value={formData.stock}
                   onChange={handleChange}
                   min="0"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="0"
                 />
               </div>
@@ -278,7 +278,7 @@ export default function EditProduct() {
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
               >
                 {categories.map(cat => (
                   <option key={cat.value} value={cat.value}>
@@ -312,7 +312,7 @@ export default function EditProduct() {
                 value={formData.compositions}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                 placeholder="Informe as composições do produto..."
               />
             </div>
@@ -328,7 +328,7 @@ export default function EditProduct() {
                 value={formData.indication}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                 placeholder="Informe as indicações do produto..."
               />
             </div>
@@ -344,7 +344,7 @@ export default function EditProduct() {
                 value={formData.contraindication}
                 onChange={handleChange}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                 placeholder="Informe as contraindicações do produto..."
               />
             </div>
@@ -357,7 +357,7 @@ export default function EditProduct() {
                 name="free_shipping"
                 checked={formData.free_shipping}
                 onChange={handleChange}
-                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 dark:border-[#0F828C]"
+                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 dark:border-gray-700"
               />
               <label htmlFor="free_shipping" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
                 Oferecer frete grátis para este produto
@@ -372,18 +372,18 @@ export default function EditProduct() {
                   name="active"
                   checked={formData.active}
                   onChange={handleChange}
-                  className="mr-2 dark:border-[#0F828C]"
+                  className="mr-2 dark:border-gray-700"
                 />
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Produto ativo</span>
               </label>
             </div>
 
             {/* Botões */}
-            <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-[#0F828C]">
+            <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="button"
                 onClick={() => navigate(-1)}
-                className="px-6 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#0F828C] transition-colors"
+                className="px-6 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                 disabled={loading}
               >
                 Cancelar

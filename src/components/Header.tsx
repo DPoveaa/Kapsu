@@ -1,12 +1,16 @@
-import { Link } from 'react-router-dom'
-import { ShoppingCart, User, Menu, LogOut, Shield, MessageCircle, UserCircle } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ShoppingCart, User, Menu, LogOut, Shield, MessageCircle, UserCircle, Search, Loader2 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { whatsappService } from '../services/whatsapp.service'
 import AnimatedLogo from './AnimatedLogo'
 import ThemeToggle from './ThemeToggle'
+import HeaderCategories from './HeaderCategories'
 import { env } from '../config/env'
+import { productsService } from '../services/products.service'
+import { Product } from '../types'
+import { getImageUrl } from '../utils/imageUrl'
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -16,6 +20,12 @@ export default function Header() {
   const { user, logout, isAdmin, isPharmacist } = useAuth()
   const itemCount = getItemCount()
   const userMenuRef = useRef<HTMLDivElement>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [suggestions, setSuggestions] = useState<Product[]>([])
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const searchRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
 
   // Função para obter a URL da imagem de perfil
   const getProfileImageUrl = (profileImage?: string): string | null => {
@@ -35,7 +45,7 @@ export default function Header() {
       .toUpperCase()
       .substring(0, 2)
   }
-  
+
   // Busca contagem de intervenções para admin e farmacêutico
   useEffect(() => {
     if ((isAdmin || isPharmacist) && user) {
@@ -49,7 +59,7 @@ export default function Header() {
           console.error('Erro ao buscar contagem de intervenções:', error)
         }
       }
-      
+
       fetchInterventionCount()
       // Atualiza a cada 30 segundos
       const interval = setInterval(fetchInterventionCount, 30000)
@@ -63,6 +73,9 @@ export default function Header() {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false)
       }
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false)
+      }
     }
 
     if (userMenuOpen) {
@@ -74,56 +87,119 @@ export default function Header() {
     }
   }, [userMenuOpen])
 
+  useEffect(() => {
+    const q = searchTerm.trim()
+    if (q.length < 2) {
+      setSuggestions([])
+      setLoadingSuggestions(false)
+      return
+    }
+    setLoadingSuggestions(true)
+    const t = setTimeout(async () => {
+      try {
+        const results = await productsService.search(q)
+        setSuggestions(results.slice(0, 6))
+      } catch {
+        setSuggestions([])
+      } finally {
+        setLoadingSuggestions(false)
+      }
+    }, 300)
+    return () => {
+      clearTimeout(t)
+    }
+  }, [searchTerm])
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const q = searchTerm.trim()
+    if (!q) return
+    setShowSuggestions(false)
+    navigate(`/produtos?q=${encodeURIComponent(q)}`)
+  }
+
   return (
-    <header className="bg-white dark:bg-[#065084] border-b border-gray-100 dark:border-[#0F828C] sticky top-0 z-50 backdrop-blur-sm bg-white/95 dark:bg-[#065084]/95">
+    <header className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-50 backdrop-blur-sm bg-white/95 dark:bg-gray-800/95">
       {/* Barra superior verde */}
       <div className="h-1" style={{ backgroundColor: '#67C090' }}></div>
-      
+
       <nav className="container mx-auto px-6 md:px-8 lg:px-12">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3 group">
-            <AnimatedLogo 
+            <AnimatedLogo
               className="h-11 w-auto object-contain group-hover:opacity-90 transition-opacity duration-200"
               alt="Kapsu Logo"
             />
             <span className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Kapsu</span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
-            <Link 
-              to="/produtos" 
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-all duration-200"
-            >
-              Produtos
-            </Link>
-            <Link 
-              to="/personalizar" 
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-all duration-200"
-            >
-              Personalizar
-            </Link>
-            <Link 
-              to="/sobre" 
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-all duration-200"
-            >
-              Sobre
-            </Link>
-            <Link 
-              to="/contato" 
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-all duration-200"
-            >
-              Contato
-            </Link>
+          <div className="hidden md:flex items-center gap-3 flex-1 max-w-3xl" ref={searchRef}>
+            <div className="flex items-center gap-2 flex-shrink-0">
+            </div>
+            <form onSubmit={handleSearchSubmit} className="relative flex-1">
+              <input
+                type="text"
+                value={searchTerm}
+                onFocus={() => setShowSuggestions(true)}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar produtos"
+                className="w-full pl-4 pr-12 h-10 text-sm border border-gray-300 dark:border-gray-700 rounded-full bg-white dark:bg-gray-200 text-black dark:text-black shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+              <button
+                type="submit"
+                className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-full bg-primary-600 hover:bg-primary-700 text-white transition-colors"
+              >
+                <Search size={16} />
+              </button>
+              {showSuggestions && (loadingSuggestions || suggestions.length > 0) && (
+                <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+                  {loadingSuggestions && (
+                    <div className="flex items-center gap-2 px-4 py-3 text-gray-600 dark:text-gray-300">
+                      <Loader2 className="animate-spin" size={16} />
+                      <span>Buscando...</span>
+                    </div>
+                  )}
+                  {!loadingSuggestions && suggestions.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setShowSuggestions(false)
+                        setSearchTerm('')
+                        navigate(`/produtos/${p.id}`)
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-600 text-left"
+                    >
+                      <img
+                        src={getImageUrl(p.image)}
+                        alt={p.name}
+                        className="w-10 h-10 rounded object-cover border border-gray-200 dark:border-gray-700"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.style.display = 'none'
+                        }}
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">{p.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-300 line-clamp-1">{p.description}</p>
+                      </div>
+                    </button>
+                  ))}
+                  {!loadingSuggestions && suggestions.length === 0 && searchTerm.trim().length >= 2 && (
+                    <div className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">Nenhum produto encontrado</div>
+                  )}
+                </div>
+              )}
+            </form>
           </div>
 
           {/* Actions */}
           <div className="flex items-center space-x-2">
             <ThemeToggle />
-            <Link 
-              to="/carrinho" 
-              className="relative p-2.5 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-all duration-200"
+            <Link
+              to="/carrinho"
+              className="relative p-2.5 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-all duration-200"
             >
               <ShoppingCart size={22} />
               {itemCount > 0 && (
@@ -133,9 +209,9 @@ export default function Header() {
               )}
             </Link>
             {(isAdmin || isPharmacist) && (
-              <Link 
-                to="/admin/whatsapp/support" 
-                className="relative p-2.5 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-all duration-200"
+              <Link
+                to="/admin/whatsapp/support"
+                className="relative p-2.5 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-all duration-200"
                 title="Conversas que precisam de intervenção"
               >
                 <MessageCircle size={22} />
@@ -150,13 +226,13 @@ export default function Header() {
               <div className="hidden md:block relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-[#0F828C] transition-colors duration-200 group"
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 group"
                 >
                   {getProfileImageUrl(user.profile_image) ? (
                     <img
                       src={getProfileImageUrl(user.profile_image)!}
                       alt={user.name}
-                      className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-[#065084]"
+                      className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-gray-800"
                       onError={(e) => {
                         // Se a imagem falhar ao carregar, mostra a inicial
                         const target = e.target as HTMLImageElement
@@ -180,12 +256,12 @@ export default function Header() {
                   {isAdmin && <Shield size={14} className="text-yellow-500" />}
                 </button>
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#065084] rounded-xl shadow-xl dark:shadow-2xl border border-gray-100 dark:border-[#0F828C] py-2 z-50 overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl dark:shadow-2xl border border-gray-100 dark:border-gray-700 py-2 z-50 overflow-hidden">
                     {isAdmin && (
                       <Link
                         to="/admin"
                         onClick={() => setUserMenuOpen(false)}
-                        className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-[#0F828C] hover:text-primary-600 dark:hover:text-[#78B9B5] flex items-center space-x-2 transition-colors"
+                        className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-gray-600 hover:text-primary-600 dark:hover:text-primary-300 flex items-center space-x-2 transition-colors"
                       >
                         <Shield size={16} />
                         <span>Painel Admin</span>
@@ -194,7 +270,7 @@ export default function Header() {
                     <Link
                       to="/perfil"
                       onClick={() => setUserMenuOpen(false)}
-                      className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-[#0F828C] hover:text-primary-600 dark:hover:text-[#78B9B5] flex items-center space-x-2 transition-colors"
+                      className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-gray-600 hover:text-primary-600 dark:hover:text-primary-300 flex items-center space-x-2 transition-colors"
                     >
                       <UserCircle size={16} />
                       <span>Meu Perfil</span>
@@ -215,60 +291,111 @@ export default function Header() {
             ) : (
               <Link
                 to="/login"
-                className="hidden md:flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-all duration-200"
+                className="hidden md:flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-all duration-200"
               >
                 <User size={20} />
                 <span>Entrar</span>
               </Link>
             )}
             <button
-              className="md:hidden p-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#0F828C] rounded-lg transition-colors"
+              className="md:hidden p-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-600 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               <Menu size={22} />
             </button>
           </div>
         </div>
+        <div className="md:hidden px-3 pb-3" ref={searchRef}>
+          <form onSubmit={handleSearchSubmit} className="relative">
+            <input
+              type="text"
+              value={searchTerm}
+              onFocus={() => setShowSuggestions(true)}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Buscar produtos"
+              className="w-full pl-4 pr-12 h-10 text-sm border border-gray-300 dark:border-gray-700 rounded-full bg-white dark:bg-gray-200 text-black dark:text-black shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+            <button
+              type="submit"
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-full bg-primary-600 hover:bg-primary-700 text-white transition-colors"
+            >
+              <Search size={16} />
+            </button>
+            {showSuggestions && (loadingSuggestions || suggestions.length > 0) && (
+              <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
+                {loadingSuggestions && (
+                  <div className="flex items-center gap-2 px-4 py-3 text-gray-600 dark:text-gray-300">
+                    <Loader2 className="animate-spin" size={16} />
+                    <span>Buscando...</span>
+                  </div>
+                )}
+                {!loadingSuggestions && suggestions.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      setShowSuggestions(false)
+                      setSearchTerm('')
+                      navigate(`/produtos/${p.id}`)
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-600 text-left"
+                  >
+                    <img
+                      src={getImageUrl(p.image)}
+                      alt={p.name}
+                      className="w-10 h-10 rounded object-cover border border-gray-200 dark:border-gray-700"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        target.style.display = 'none'
+                      }}
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{p.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-300 line-clamp-1">{p.description}</p>
+                    </div>
+                  </button>
+                ))}
+                {!loadingSuggestions && suggestions.length === 0 && searchTerm.trim().length >= 2 && (
+                  <div className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">Nenhum produto encontrado</div>
+                )}
+              </div>
+            )}
+          </form>
+        </div>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-100 dark:border-[#0F828C] pt-4 pb-4 space-y-1">
+          <div className="md:hidden border-t border-gray-100 dark:border-gray-700 pt-4 pb-4 space-y-1">
             <Link
               to="/produtos"
-              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-colors"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Produtos
             </Link>
-            <Link
-              to="/personalizar"
-              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Personalizar
-            </Link>
+
             <Link
               to="/sobre"
-              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-colors"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Sobre
             </Link>
             <Link
               to="/contato"
-              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-colors"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Contato
             </Link>
             {user ? (
-              <div className="pt-2 border-t border-gray-100 dark:border-[#0F828C] mt-2 space-y-1">
+              <div className="pt-2 border-t border-gray-100 dark:border-gray-700 mt-2 space-y-1">
                 <div className="flex items-center space-x-2 px-4 py-2.5 mb-2">
                   {getProfileImageUrl(user.profile_image) ? (
                     <img
                       src={getProfileImageUrl(user.profile_image)!}
                       alt={user.name}
-                      className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-[#065084]"
+                      className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-gray-800"
                       onError={(e) => {
                         // Se a imagem falhar ao carregar, mostra a inicial
                         const target = e.target as HTMLImageElement
@@ -299,7 +426,7 @@ export default function Header() {
                     <Link
                       to="/admin"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-colors"
+                      className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-colors"
                     >
                       <Shield size={16} />
                       <span>Painel Admin</span>
@@ -322,7 +449,7 @@ export default function Header() {
                 <Link
                   to="/perfil"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-[#78B9B5] hover:bg-primary-50 dark:hover:bg-[#0F828C] rounded-lg transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-colors"
                 >
                   <UserCircle size={16} />
                   <span>Meu Perfil</span>
@@ -351,6 +478,9 @@ export default function Header() {
           </div>
         )}
       </nav>
+      
+      {/* Faixa de Categorias */}
+      <HeaderCategories />
     </header>
   )
 }

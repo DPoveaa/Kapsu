@@ -147,7 +147,7 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827]">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         {/* Header */}
         <div className="mb-4 sm:mb-6 lg:mb-8">
@@ -165,7 +165,7 @@ export default function UserManagement() {
         {/* Estatísticas */}
         {statistics && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-[#0F828C]">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Total de Usuários</p>
@@ -174,7 +174,7 @@ export default function UserManagement() {
                 <UserIcon className="w-8 h-8 sm:w-10 sm:h-10 text-blue-600 dark:text-blue-400" />
               </div>
             </div>
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-[#0F828C]">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Administradores</p>
@@ -183,7 +183,7 @@ export default function UserManagement() {
                 <Shield className="w-8 h-8 sm:w-10 sm:h-10 text-red-600 dark:text-red-400" />
               </div>
             </div>
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-[#0F828C]">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Farmacêuticos</p>
@@ -196,7 +196,7 @@ export default function UserManagement() {
         )}
 
         {/* Busca e Filtros */}
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 mb-4 sm:mb-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 mb-4 sm:mb-6 border border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-4 h-4 sm:w-5 sm:h-5" />
@@ -208,14 +208,14 @@ export default function UserManagement() {
                   setPage(1)
                 }}
                 placeholder="Buscar por nome, email, telefone ou CPF..."
-                className="w-full pl-9 sm:pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-[#111827] dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-9 sm:pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
           </div>
         </div>
 
         {/* Lista de Usuários */}
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
@@ -231,7 +231,7 @@ export default function UserManagement() {
               </div>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200 dark:divide-[#0F828C]">
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {users.map((user) => {
                 const isExpanded = expandedUsers.has(user.id)
                 const userDetails = selectedUser && selectedUser.id === user.id ? selectedUser : null
@@ -297,7 +297,7 @@ export default function UserManagement() {
 
                     {/* Detalhes Expandidos */}
                     {isExpanded && userDetails && (
-                      <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-[#0F828C] space-y-3 sm:space-y-4">
+                      <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3 sm:space-y-4">
                         {/* Informações Pessoais */}
                         <div>
                           <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2">Informações Pessoais</h4>
@@ -417,7 +417,7 @@ export default function UserManagement() {
 
           {/* Paginação */}
           {totalPages > 1 && (
-            <div className="px-3 sm:px-4 py-3 sm:py-4 border-t border-gray-200 dark:border-[#0F828C] flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="px-3 sm:px-4 py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-3">
               <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                 Página {page} de {totalPages}
               </p>
@@ -425,14 +425,14 @@ export default function UserManagement() {
                 <button
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Anterior
                 </button>
                 <button
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Próxima
                 </button>

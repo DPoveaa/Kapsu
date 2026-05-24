@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ShoppingCart, Sparkles } from 'lucide-react'
+import { ShoppingCart } from 'lucide-react'
 import { Product } from '../types'
 import { useCart } from '../context/CartContext'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
@@ -25,7 +25,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <Link to={`/produtos/${product.id}`} className="block">
       {/* Mobile Layout - Horizontal (Mercado Livre style) */}
-      <div className="flex sm:flex-col bg-white dark:bg-[#065084] border-b sm:border sm:border-gray-200 dark:border-[#0F828C] sm:rounded-lg overflow-hidden sm:shadow-sm dark:sm:shadow-lg transition-all hover:bg-gray-50 dark:hover:bg-[#0F828C] sm:hover:shadow-md dark:sm:hover:shadow-xl">
+      <div className="flex sm:flex-col bg-white dark:bg-gray-800 border-b sm:border sm:border-gray-200 dark:border-gray-700 sm:rounded-lg overflow-hidden sm:shadow-sm dark:sm:shadow-lg transition-all hover:bg-gray-50 dark:hover:bg-gray-600 sm:hover:shadow-md dark:sm:hover:shadow-xl">
         {/* Image Container */}
         <div className="relative flex-shrink-0 sm:w-full p-2 sm:p-0 sm:mb-0">
           <div className="w-24 h-24 sm:w-full sm:h-40 lg:h-48 bg-gray-100 dark:bg-gray-700 rounded-lg sm:rounded-none sm:rounded-t-lg overflow-hidden flex items-center justify-center">
@@ -36,12 +36,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
             />
           </div>
-          {product.isCustomizable && (
-            <div className="absolute top-2 right-2 sm:top-2 sm:right-2 text-white px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs flex items-center" style={{ backgroundColor: '#67C090' }}>
-              <Sparkles size={8} className="sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
-              <span className="hidden sm:inline">Personalizável</span>
-            </div>
-          )}
+
           {!product.inStock && (
             <div className="absolute inset-0 bg-gray-900 bg-opacity-50 rounded-lg sm:rounded-none sm:rounded-t-lg flex items-center justify-center">
               <span className="text-white font-semibold text-xs sm:text-sm lg:text-base">Fora de Estoque</span>

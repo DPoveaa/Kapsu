@@ -27,16 +27,16 @@ export default function PaymentSuccess() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#111827] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <Loader2 className="animate-spin text-primary-600 dark:text-primary-400" size={48} />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827] flex items-center justify-center py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-8">
       <div className="max-w-lg w-full mx-auto px-4 sm:px-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-lg dark:shadow-xl border border-gray-100 dark:border-[#0F828C] p-6 text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-xl border border-gray-100 dark:border-gray-700 p-6 text-center">
           <CheckCircle className="mx-auto text-green-600 dark:text-green-400 mb-4" size={48} />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
             Pagamento Aprovado!
@@ -50,7 +50,7 @@ export default function PaymentSuccess() {
             </p>
           )}
           
-          <div className="bg-green-50 dark:bg-[#065084] border border-green-200 dark:border-[#0F828C] rounded-lg p-4 mb-6">
+          <div className="bg-green-50 dark:bg-gray-800 border border-green-200 dark:border-gray-700 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-center mb-2">
               <Package className="text-green-600 dark:text-green-400 mr-2" size={20} />
               <p className="text-green-800 dark:text-green-300 font-semibold text-sm">
@@ -72,7 +72,7 @@ export default function PaymentSuccess() {
             </button>
             <button
               onClick={() => navigate('/produtos')}
-              className="px-5 py-2.5 border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors text-sm"
+              className="px-5 py-2.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors text-sm"
             >
               Continuar Comprando
             </button>

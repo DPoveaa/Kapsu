@@ -62,7 +62,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
     <>
       {/* Cards de Estatísticas Gerais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total de Usos</p>
@@ -79,7 +79,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total Descontado</p>
@@ -96,7 +96,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Desconto Médio</p>
@@ -113,7 +113,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total Histórico</p>
@@ -132,7 +132,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
       </div>
 
       {/* Gráfico de Evolução */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Evolução de Uso de Cupons
         </h2>
@@ -191,7 +191,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
       </div>
 
       {/* Cupons Mais Usados */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Cupons Mais Usados no Período
         </h2>
@@ -199,8 +199,8 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Código
@@ -228,7 +228,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {promoCodesStats.usagesByCode.map((code: any, index: number) => (
                     <tr key={index} className={index < 3 ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-words">
@@ -269,7 +269,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {promoCodesStats.usagesByCode.map((code: any, index: number) => (
-                <div key={index} className={`rounded-lg p-3 border ${index < 3 ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-[#065084] border-gray-200 dark:border-[#0F828C]'}`}>
+                <div key={index} className={`rounded-lg p-3 border ${index < 3 ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Código</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">{code.code}</p>
@@ -327,7 +327,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
       </div>
 
       {/* Usos Detalhados */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3 lg:mb-4">
           Histórico Detalhado de Usos
         </h2>
@@ -338,8 +338,8 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Data/Hora
@@ -367,7 +367,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {promoCodesStats.detailedUsages.map((usage: any, index: number) => (
                     <tr key={index}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-300">
@@ -417,7 +417,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {promoCodesStats.detailedUsages.map((usage: any, index: number) => (
-                <div key={index} className="bg-gray-50 dark:bg-[#065084] rounded-lg p-3 border border-gray-200 dark:border-[#0F828C]">
+                <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Data/Hora</p>
                     <p className="text-xs sm:text-sm text-gray-900 dark:text-white">{formatDate(usage.usedAt)}</p>
@@ -477,7 +477,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
       </div>
 
       {/* Top Clientes que Mais Usaram Cupons */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Clientes que Mais Usaram Cupons
         </h2>
@@ -485,8 +485,8 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Cliente
@@ -505,7 +505,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {promoCodesStats.usagesByUser.map((user: any, index: number) => (
                     <tr key={index}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-words">
@@ -531,7 +531,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {promoCodesStats.usagesByUser.map((user: any, index: number) => (
-                <div key={index} className="bg-gray-50 dark:bg-[#065084] rounded-lg p-3 border border-gray-200 dark:border-[#0F828C]">
+                <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cliente</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">{user.userName}</p>
@@ -567,7 +567,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
 
       {/* Estatísticas por Tipo de Desconto */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             Distribuição por Tipo de Desconto
           </h2>
@@ -611,14 +611,14 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
           )}
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             Top 10 Cupons (Todos os Tempos)
           </h2>
           {promoCodesStats.topPromoCodes.length > 0 ? (
             <div className="space-y-2 sm:space-y-3 max-h-[400px] sm:max-h-[500px] overflow-y-auto">
               {promoCodesStats.topPromoCodes.map((code: any, index: number) => (
-                <div key={index} className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]">
+                <div key={index} className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                   <div className="flex-1 min-w-0">
                     <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-words">{code.code}</p>
                     <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 break-words">{code.name}</p>
@@ -650,7 +650,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
       </div>
 
       {/* Resumo Financeiro */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Resumo Financeiro do Período
         </h2>

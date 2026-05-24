@@ -1252,7 +1252,7 @@ export default function WhatsAppSupport() {
   const selectedConv = conversations.find(c => c.phone === selectedConversation)
 
   return (
-    <div className="fixed inset-0 h-screen flex flex-col bg-gray-100 dark:bg-[#111827] z-50" style={{ marginTop: 0, marginLeft: 0, marginRight: 0 }}>
+    <div className="fixed inset-0 h-screen flex flex-col bg-gray-100 dark:bg-gray-900 z-50" style={{ marginTop: 0, marginLeft: 0, marginRight: 0 }}>
       {/* Header */}
       <div className="bg-green-600 text-white px-2 sm:px-3 lg:px-6 py-2 sm:py-3 lg:py-4 shadow-lg">
         <div className="flex items-center justify-between gap-2">
@@ -1286,9 +1286,9 @@ export default function WhatsAppSupport() {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Lista de Conversas - Estilo WhatsApp Web */}
-        <div className={`${showConversationList ? 'flex' : 'hidden'} lg:flex w-full lg:w-1/3 bg-white dark:bg-[#065084] border-r border-gray-300 dark:border-[#0F828C] flex-col`}>
+        <div className={`${showConversationList ? 'flex' : 'hidden'} lg:flex w-full lg:w-1/3 bg-white dark:bg-gray-800 border-r border-gray-300 dark:border-gray-700 flex-col`}>
           {/* Busca e Filtros */}
-          <div className="p-2 sm:p-3 bg-gray-50 dark:bg-[#065084] border-b border-gray-200 dark:border-[#0F828C] space-y-1.5 sm:space-y-2">
+          <div className="p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 space-y-1.5 sm:space-y-2">
             {/* Campo de Busca */}
             <div className="relative">
               <Search className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5" />
@@ -1297,7 +1297,7 @@ export default function WhatsAppSupport() {
                 placeholder="Buscar conversas..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-7 sm:pl-8 lg:pl-10 pr-2 sm:pr-3 lg:pr-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base bg-white dark:bg-[#065084] dark:text-white border border-gray-300 dark:border-[#0F828C] rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="w-full pl-7 sm:pl-8 lg:pl-10 pr-2 sm:pr-3 lg:pr-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base bg-white dark:bg-gray-800 dark:text-white border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
               />
               {searchTerm && (
                 <button
@@ -1389,7 +1389,7 @@ export default function WhatsAppSupport() {
                 <div
                   key={conv.phone}
                   onClick={() => handleSelectConversation(conv.phone)}
-                  className={`p-3 sm:p-4 border-b border-gray-200 dark:border-[#0F828C] cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 active:bg-gray-100 dark:active:bg-gray-700 transition-colors ${
+                  className={`p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 active:bg-gray-100 dark:active:bg-gray-700 transition-colors ${
                     selectedConversation === conv.phone ? 'bg-green-50 dark:bg-green-900/30 border-l-4 border-l-green-600 dark:border-l-green-500' : ''
                   }`}
                 >
@@ -1443,11 +1443,11 @@ export default function WhatsAppSupport() {
         </div>
 
         {/* Área de Conversa */}
-        <div className={`${!showConversationList ? 'flex' : 'hidden'} lg:flex flex-1 flex-col bg-gray-100 dark:bg-[#111827]`}>
+        <div className={`${!showConversationList ? 'flex' : 'hidden'} lg:flex flex-1 flex-col bg-gray-100 dark:bg-gray-900`}>
           {selectedConversation && selectedConv ? (
             <>
               {/* Header da Conversa */}
-              <div className="border-b border-gray-200 dark:border-[#0F828C] p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-[#065084]">
+              <div className="border-b border-gray-200 dark:border-gray-700 p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-gray-800">
                 <div className="flex items-center justify-between gap-2 sm:gap-3">
                   <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
                     {/* Botão voltar (apenas mobile) */}
@@ -1506,7 +1506,7 @@ export default function WhatsAppSupport() {
               {/* Mensagens */}
               <div
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-[#111827]"
+                className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 bg-gray-50 dark:bg-gray-900"
                 style={{ scrollBehavior: 'auto' }}
               >
                 {messages.length === 0 ? (
@@ -1524,7 +1524,7 @@ export default function WhatsAppSupport() {
                           className={`max-w-[90%] sm:max-w-[85%] lg:max-w-xs xl:max-w-md rounded-lg shadow-sm overflow-hidden ${
                             message.isFromMe
                               ? 'bg-blue-600 dark:bg-blue-500 text-white'
-                          : 'bg-white dark:bg-[#065084] text-gray-900 dark:text-white border border-gray-200 dark:border-[#0F828C]'
+                          : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700'
                           } ${message.type === 'image' && message.mediaUrl ? 'p-0' : 'px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2'}`}
                     >
                           {message.type === 'image' && message.mediaUrl ? (
@@ -1560,7 +1560,7 @@ export default function WhatsAppSupport() {
               </div>
 
               {/* Input de Mensagem */}
-              <div className="bg-white dark:bg-[#065084] border-t border-gray-300 dark:border-[#0F828C] px-2 sm:px-3 lg:px-6 py-2 sm:py-3 lg:py-4">
+              <div className="bg-white dark:bg-gray-800 border-t border-gray-300 dark:border-gray-700 px-2 sm:px-3 lg:px-6 py-2 sm:py-3 lg:py-4">
                 {/* Preview do arquivo selecionado */}
                 {selectedFile && (
                   <div className="mb-1.5 sm:mb-2 p-1.5 sm:p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex items-center justify-between gap-2">
@@ -1607,7 +1607,7 @@ export default function WhatsAppSupport() {
                     onChange={handleMessageChange}
                     onKeyPress={handleKeyPress}
                     placeholder={selectedFile ? "Legenda (opcional)..." : "Digite uma mensagem..."}
-                    className="flex-1 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 lg:py-3 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="flex-1 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 lg:py-3 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-full focus:outline-none focus:ring-2 focus:ring-green-500"
                     disabled={sending}
                   />
                   <button
@@ -1625,7 +1625,7 @@ export default function WhatsAppSupport() {
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-[#111827]">
+            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
               <div className="text-center text-gray-500 dark:text-gray-400 px-3 sm:px-4">
                 <MessageSquare size={40} className="sm:w-12 sm:h-12 lg:w-16 lg:h-16 mx-auto mb-2 sm:mb-3 lg:mb-4 text-gray-300 dark:text-gray-600" />
                 <p className="text-sm sm:text-base lg:text-lg font-medium">Selecione uma conversa para começar</p>

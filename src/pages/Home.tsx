@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Sparkles, Star, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowRight, Star, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Product } from '../types'
 import { productsService } from '../services/products.service'
 import { bannersService, Banner } from '../services/banners.service'
 import { reviewsService, Review } from '../services/reviews.service'
+import { siteSettingsService } from '../services/site-settings.service'
 import { homeSectionsService, HomeSection } from '../services/home-sections.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
-import banner1 from '../images/banner_1.webp'
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
   const [sections, setSections] = useState<HomeSection[]>([])
@@ -17,7 +17,6 @@ export default function Home() {
   const [bannerIndex, setBannerIndex] = useState(1) // Começa em 1 porque o índice 0 é um clone
   const [reviews, setReviews] = useState<Review[]>([])
   const [reviewIndex, setReviewIndex] = useState(0)
-  const [isBannerHovered, setIsBannerHovered] = useState(false)
   const [isTransitioning, setIsTransitioning] = useState(true)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640)
   const [isDragging, setIsDragging] = useState(false)
@@ -25,6 +24,8 @@ export default function Home() {
   const [currentX, setCurrentX] = useState(0)
   const [autoRotatePaused, setAutoRotatePaused] = useState(false)
   const bannerRef = useRef<HTMLDivElement>(null)
+  const [bannerHeightMobile, setBannerHeightMobile] = useState<number>(300)
+  const [bannerHeightDesktop, setBannerHeightDesktop] = useState<number>(500)
   
   // Carrega banners da API ou usa fallback
   useEffect(() => {
@@ -35,21 +36,33 @@ export default function Home() {
           // Ordena por order
           const sorted = apiBanners.sort((a, b) => a.order - b.order)
           setBanners(sorted)
-        } else {
-          // Fallback para banners padrão se não houver banners na API
-          setBanners([
-            { id: '1', image_url: banner1, order: 0, active: true, created_at: new Date(), updated_at: new Date() }
-          ])
+        } 
+        // Se não houver banners, não usa imagem local; deixa vazio para placeholder genérico
+        } catch (error) {
+          console.error('Erro ao carregar banners:', error)
+          // Em caso de erro, não usa imagem local; deixa vazio para placeholder genérico
+          setBanners([])
         }
-      } catch (error) {
-        console.error('Erro ao carregar banners:', error)
-        // Fallback para banners padrão em caso de erro
-        setBanners([
-          { id: '1', image_url: banner1, order: 0, active: true, created_at: new Date(), updated_at: new Date() }
-        ])
+      }
+      loadBanners()
+    }, [])
+  
+  // Carrega altura dos banners das configurações do site
+  useEffect(() => {
+    const loadBannerHeights = async () => {
+      try {
+        const settings = await siteSettingsService.getSettings()
+        if (typeof settings.banner_height_mobile === 'number') {
+          setBannerHeightMobile(settings.banner_height_mobile)
+        }
+        if (typeof settings.banner_height_desktop === 'number') {
+          setBannerHeightDesktop(settings.banner_height_desktop)
+        }
+      } catch (err) {
+        console.warn('Não foi possível carregar altura dos banners', err)
       }
     }
-    loadBanners()
+    loadBannerHeights()
   }, [])
 
   // Reseta o bannerIndex para 1 quando os banners são carregados
@@ -421,98 +434,130 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-palette-light dark:bg-[#111827] transition-colors duration-300">
-      {/* Banner Hero - Carrossel de Imagens */}
-      {infiniteBannerImages.length > 0 && (
-      <section 
-        className="relative overflow-hidden mb-4"
-        onMouseEnter={() => {
-          setIsBannerHovered(true)
-          setAutoRotatePaused(true)
-        }}
-        onMouseLeave={() => {
-          setIsBannerHovered(false)
-          if (!isDragging) {
-            setTimeout(() => {
-              setAutoRotatePaused(false)
-            }, 1000)
-          }
-        }}
-      >
-        {/* Container do carrossel com efeito de slide infinito */}
-        <div 
-          ref={bannerRef}
-          className={`flex cursor-grab active:cursor-grabbing h-full ${isTransitioning && !isDragging ? 'transition-transform duration-500 ease-in-out' : ''}`}
-          style={{ 
-            transform: `translateX(calc(-${bannerIndex * 100}% + ${isDragging ? (currentX - startX) : 0}px))`,
-            userSelect: 'none',
-            height: '100%'
+    <div className="min-h-screen bg-palette-light dark:bg-gray-900 transition-colors duration-300">
+      {/* Banner Hero */}
+      {infiniteBannerImages.length > 0 ? (
+        <section 
+          className="relative overflow-hidden mb-4"
+          onMouseEnter={() => {
+            setAutoRotatePaused(true)
           }}
-          onMouseDown={handleBannerMouseDown}
-          onMouseMove={handleBannerMouseMove}
-          onMouseUp={handleBannerMouseUp}
-          onMouseLeave={handleBannerMouseLeave}
-          onTouchStart={handleBannerTouchStart}
-          onTouchMove={handleBannerTouchMove}
-          onTouchEnd={handleBannerTouchEnd}
+          onMouseLeave={() => {
+            if (!isDragging) {
+              setTimeout(() => {
+                setAutoRotatePaused(false)
+              }, 1000)
+            }
+          }}
+          style={{ height: `${isMobile ? bannerHeightMobile : bannerHeightDesktop}px` }}
         >
-          {infiniteBannerImages.map((image, index) => (
-            <div 
-              key={index} 
-              className="flex-shrink-0 w-full relative flex items-center justify-center bg-gray-100 dark:bg-gray-800 h-[300px] md:h-[500px]"
-            >
-              <img
-                src={image}
-                alt={`Banner ${index + 1}`}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement
-                  target.style.display = 'none'
-                }}
-              />
-              {/* Gradiente de baixo para cima, ocupando 1/5 da altura, seguindo a cor do fundo */}
+          <div 
+            ref={bannerRef}
+            className={`flex cursor-grab active:cursor-grabbing h-full ${isTransitioning && !isDragging ? 'transition-transform duration-500 ease-in-out' : ''}`}
+            style={{ 
+              transform: `translateX(calc(-${bannerIndex * 100}% + ${isDragging ? (currentX - startX) : 0}px))`,
+              userSelect: 'none',
+              height: '100%'
+            }}
+            onMouseDown={handleBannerMouseDown}
+            onMouseMove={handleBannerMouseMove}
+            onMouseUp={handleBannerMouseUp}
+            onMouseLeave={handleBannerMouseLeave}
+            onTouchStart={handleBannerTouchStart}
+            onTouchMove={handleBannerTouchMove}
+            onTouchEnd={handleBannerTouchEnd}
+          >
+            {infiniteBannerImages.map((image, index) => (
               <div 
-                className="absolute inset-0 z-10"
-                style={{
-                  background: 'linear-gradient(to top, #DDF4E7 0%, rgba(221, 244, 231, 0.5) 10%, transparent 20%, transparent 100%)'
-                }}
-              ></div>
-              {/* Gradiente para modo escuro - sobrepõe o gradiente claro quando dark mode está ativo */}
-              <div 
-                className="absolute inset-0 z-10 opacity-0 dark:opacity-100 transition-opacity duration-300"
-                style={{
-                  background: 'linear-gradient(to top, #124170 0%, rgba(18, 65, 112, 0.5) 10%, transparent 20%, transparent 100%)'
-                }}
-              ></div>
+                key={index} 
+                className="flex-shrink-0 w-full relative flex items-center justify-center bg-gray-100 dark:bg-gray-800"
+              >
+                <img
+                  src={image}
+                  alt={`Banner ${index + 1}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                  }}
+                />
+                <div 
+                  className="absolute inset-0 z-10"
+                  style={{
+                    background: 'linear-gradient(to top, #DDF4E7 0%, rgba(221, 244, 231, 0.5) 10%, transparent 20%, transparent 100%)'
+                  }}
+                ></div>
+                <div 
+                  className="absolute inset-0 z-10 opacity-0 dark:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: 'linear-gradient(to top, #124170 0%, rgba(18, 65, 112, 0.5) 10%, transparent 20%, transparent 100%)'
+                  }}
+                ></div>
+              </div>
+            ))}
+          </div>
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-center space-x-2 z-10">
+            {bannerImages.map((_, index) => {
+              const realIndex = bannerIndex === 0 ? bannerImages.length - 1 : 
+                               bannerIndex === infiniteBannerImages.length - 1 ? 0 : 
+                               bannerIndex - 1
+              return (
+                <button
+                  key={index}
+                  onClick={() => {
+                    setIsTransitioning(true)
+                    setBannerIndex(index + 1)
+                  }}
+                  className={`h-2 w-2 rounded-full transition-all ${
+                    index === realIndex
+                      ? 'bg-white'
+                      : 'bg-white/50'
+                  }`}
+                  aria-label={`Ir para imagem ${index + 1}`}
+                />
+              )
+            })}
+          </div>
+        </section>
+      ) : (
+        <section 
+          className="relative overflow-hidden mb-4"
+          style={{ height: `${isMobile ? bannerHeightMobile : bannerHeightDesktop}px` }}
+        >
+          <div className="absolute inset-0">
+            <div className="w-full h-full"
+              style={{
+                backgroundImage:
+                  'radial-gradient(1000px 300px at 10% 10%, rgba(103,192,144,0.25), transparent 60%), radial-gradient(800px 300px at 90% 20%, rgba(15,130,140,0.30), transparent 60%), linear-gradient(135deg, #DDF4E7 0%, #BFEAD4 50%, #AEE3CB 100%)'
+              }}
+            />
+            <div className="absolute inset-0 opacity-0 dark:opacity-100 transition-opacity"
+              style={{
+                backgroundImage:
+                  'radial-gradient(1000px 300px at 10% 10%, rgba(120,185,181,0.20), transparent 60%), radial-gradient(800px 300px at 90% 20%, rgba(15,130,140,0.35), transparent 60%), linear-gradient(135deg, #0B2E4F 0%, #0E3F6E 50%, #124170 100%)'
+              }}
+            />
+          </div>
+          <div className="relative z-10 h-full flex items-center justify-center text-center px-4">
+            <div className="max-w-3xl">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
+                Cuidados que combinam com você
+              </h1>
+              <p className="mt-2 sm:mt-3 text-sm sm:text-base text-gray-700 dark:text-gray-200">
+                Produtos manipulados e prontos, com qualidade e praticidade.
+              </p>
+              <div className="mt-4 sm:mt-6 flex items-center justify-center gap-3">
+                <Link
+                  to="/produtos"
+                  className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-white font-semibold"
+                  style={{ backgroundColor: '#67C090' }}
+                >
+                  Ver produtos
+                </Link>
+              </div>
             </div>
-          ))}
-        </div>
-        
-        {/* Indicadores (dots) - na parte inferior */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-center space-x-2 z-10">
-          {bannerImages.map((_, index) => {
-            // Calcula o índice real (considerando que começamos em 1 e temos clones)
-            const realIndex = bannerIndex === 0 ? bannerImages.length - 1 : 
-                             bannerIndex === infiniteBannerImages.length - 1 ? 0 : 
-                             bannerIndex - 1
-            return (
-              <button
-                key={index}
-                onClick={() => {
-                  setIsTransitioning(true)
-                  setBannerIndex(index + 1) // +1 porque o índice 0 é um clone
-                }}
-                className={`h-2 w-2 rounded-full transition-all ${
-                  index === realIndex
-                    ? 'bg-white'
-                    : 'bg-white/50'
-                }`}
-                aria-label={`Ir para imagem ${index + 1}`}
-              />
-            )
-          })}
-        </div>
-      </section>
+          </div>
+        </section>
       )}
 
       {/* Produtos em Destaque - Scroll Horizontal */}
@@ -521,7 +566,7 @@ export default function Home() {
         if (!featuredSection && featuredProducts.length === 0) return null
         
         return (
-          <section className="bg-white dark:bg-[#065084] py-4 sm:py-6 rounded-lg mb-4 shadow-sm dark:shadow-lg transition-colors duration-300 mx-2 sm:mx-4 md:mx-8 lg:mx-16 xl:mx-40">
+          <section className="bg-white dark:bg-gray-800 py-4 sm:py-6 rounded-lg mb-4 shadow-sm dark:shadow-lg transition-colors duration-300 mx-2 sm:mx-4 md:mx-8 lg:mx-16 xl:mx-40">
             <div className="px-2 sm:px-3 md:px-4">
               <div className="flex items-center justify-between mb-3 sm:mb-4 px-2">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
@@ -544,7 +589,7 @@ export default function Home() {
                 <Link
                   key={product.id}
                   to={`/produtos/${product.id}`}
-                  className="flex-shrink-0 w-40 sm:w-48 bg-white dark:bg-[#0F828C] rounded-lg p-2 sm:p-3 hover:shadow-md dark:hover:shadow-xl transition-all"
+                  className="flex-shrink-0 w-40 sm:w-48 bg-white dark:bg-gray-700 rounded-lg p-2 sm:p-3 hover:shadow-md dark:hover:shadow-xl transition-all"
                 >
                   <div className="relative mb-2">
                     <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
@@ -555,12 +600,6 @@ export default function Home() {
                         onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
                       />
                     </div>
-                    {product.isCustomizable && (
-                      <div className="absolute top-1 right-1 text-white px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: '#67C090' }}>
-                        <Sparkles size={10} className="inline mr-1" />
-                        Personalizável
-                      </div>
-                    )}
                   </div>
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">{product.name}</h3>
                   {product.promo_price ? (
@@ -609,7 +648,7 @@ export default function Home() {
           return (
             <section 
               key={section.id}
-              className="bg-white dark:bg-[#065084] py-4 sm:py-6 rounded-lg mb-4 shadow-sm dark:shadow-lg transition-colors duration-300 mx-2 sm:mx-4 md:mx-8 lg:mx-16 xl:mx-40"
+              className="bg-white dark:bg-gray-800 py-4 sm:py-6 rounded-lg mb-4 shadow-sm dark:shadow-lg transition-colors duration-300 mx-2 sm:mx-4 md:mx-8 lg:mx-16 xl:mx-40"
             >
               <div className="px-2 sm:px-3 md:px-4">
                 <div className="flex items-center justify-between mb-3 sm:mb-4 px-2">
@@ -631,7 +670,7 @@ export default function Home() {
                     <Link
                       key={product.id}
                       to={`/produtos/${product.id}`}
-                      className="flex-shrink-0 w-40 sm:w-48 bg-white dark:bg-[#0F828C] rounded-lg p-2 sm:p-3 hover:shadow-md dark:hover:shadow-xl transition-all"
+                      className="flex-shrink-0 w-40 sm:w-48 bg-white dark:bg-gray-700 rounded-lg p-2 sm:p-3 hover:shadow-md dark:hover:shadow-xl transition-all"
                     >
                       <div className="relative mb-2">
                         <div className="w-full h-32 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
@@ -641,15 +680,9 @@ export default function Home() {
                             className="w-full h-full object-cover"
                             onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
                           />
-                        </div>
-                        {product.isCustomizable && (
-                          <div className="absolute top-1 right-1 text-white px-1.5 py-0.5 rounded text-xs" style={{ backgroundColor: '#67C090' }}>
-                            <Sparkles size={10} className="inline mr-1" />
-                            Personalizável
-                          </div>
-                        )}
                       </div>
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">{product.name}</h3>
+                    </div>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">{product.name}</h3>
                       <p className="text-lg font-bold text-primary-600 dark:text-primary-400 mb-1">
                         R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
                       </p>
@@ -666,7 +699,7 @@ export default function Home() {
 
       {/* Reviews - Carrossel */}
       {reviews.length > 0 && (
-        <section className="bg-white dark:bg-[#065084] py-6 sm:py-8 rounded-lg mb-4 shadow-sm dark:shadow-lg transition-colors duration-300 mx-2 sm:mx-4 md:mx-8 lg:mx-16 xl:mx-40">
+        <section className="bg-white dark:bg-gray-800 py-6 sm:py-8 rounded-lg mb-4 shadow-sm dark:shadow-lg transition-colors duration-300 mx-2 sm:mx-4 md:mx-8 lg:mx-16 xl:mx-40">
           <div className="px-2 sm:px-3 md:px-4">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 text-center px-2">O que nossos clientes dizem</h2>
             
@@ -679,7 +712,7 @@ export default function Home() {
                 >
                   {reviews.map((review) => (
                     <div key={review.id} className="flex-shrink-0 w-full sm:w-1/2 px-2">
-                      <div className="bg-white dark:bg-[#0F828C] rounded-lg border border-gray-200 dark:border-[#0F828C] p-4 sm:p-6 hover:shadow-md dark:hover:shadow-xl transition-shadow h-full">
+                      <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 hover:shadow-md dark:hover:shadow-xl transition-shadow h-full">
                         <div className="flex items-center mb-2 sm:mb-3">
                           {[...Array(review.rating)].map((_, i) => (
                             <Star key={i} className="text-yellow-400 fill-current" size={16} />
@@ -694,7 +727,7 @@ export default function Home() {
                                 <img
                                   src={review.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name || 'Cliente')}&size=64&background=67C090&color=fff&bold=true`}
                                   alt={review.name || 'Cliente'}
-                                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-[#0F828C]"
+                                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement
                                     target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name || 'Cliente')}&size=64&background=67C090&color=fff&bold=true`
@@ -728,7 +761,7 @@ export default function Home() {
               <div className="flex items-center justify-center mt-6 space-x-4">
                 <button
                   onClick={prevReview}
-                  className="p-2 rounded-full bg-gray-100 dark:bg-[#0F828C] hover:bg-gray-200 dark:hover:bg-[#78B9B5] text-gray-700 dark:text-white transition-colors"
+                  className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-primary-500 text-gray-700 dark:text-white transition-colors"
                   aria-label="Review anterior"
                 >
                   <ChevronLeft size={20} />
@@ -745,7 +778,7 @@ export default function Home() {
                         className={`h-2 w-2 rounded-full transition-all ${
                           currentIndex === reviewIndex
                             ? ''
-                            : 'bg-gray-300 dark:bg-[#0F828C]'
+                            : 'bg-gray-300 dark:bg-gray-700'
                         }`}
                         style={currentIndex === reviewIndex ? { backgroundColor: '#67C090' } : {}}
                         aria-label={`Ir para reviews ${currentIndex + 1}-${currentIndex + 2}`}
@@ -756,7 +789,7 @@ export default function Home() {
                 
                 <button
                   onClick={nextReview}
-                  className="p-2 rounded-full bg-gray-100 dark:bg-[#0F828C] hover:bg-gray-200 dark:hover:bg-[#78B9B5] text-gray-700 dark:text-white transition-colors"
+                  className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-primary-500 text-gray-700 dark:text-white transition-colors"
                   aria-label="Próximo review"
                 >
                   <ChevronRight size={20} />

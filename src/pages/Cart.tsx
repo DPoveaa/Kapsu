@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, FileText, Loader2, CheckCircle, Repeat, Check, Sparkles, Truck, Gift, Tag, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, Loader2, CheckCircle, Repeat, Check, Sparkles, Truck, Gift, Tag, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
@@ -197,7 +197,7 @@ export default function Cart() {
   // Obtém categorias únicas dos produtos no carrinho
   const cartCategories = useMemo(() => {
     const categories = items
-      .filter(item => item.type === 'product' && item.product)
+      .filter(item => item.product)
       .map(item => item.product!.category)
       .filter((cat, index, self) => cat && self.indexOf(cat) === index)
     return categories as string[]
@@ -206,7 +206,7 @@ export default function Cart() {
   // IDs dos produtos já no carrinho
   const cartProductIds = useMemo(() => {
     return items
-      .filter(item => item.type === 'product' && item.product)
+      .filter(item => item.product)
       .map(item => item.product!.id)
   }, [items])
 
@@ -415,19 +415,16 @@ export default function Cart() {
 
   if (items.length === 0) {
     return (
-      <div className="bg-gray-50 dark:bg-[#111827] min-h-[60vh] flex items-center justify-center py-8 sm:py-12">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-[60vh] flex items-center justify-center py-8 sm:py-12">
         <div className="max-w-md mx-auto text-center px-4">
           <ShoppingCart size={48} className="mx-auto text-gray-300 dark:text-gray-400 mb-3 sm:mb-4" />
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">Seu carrinho está vazio</h2>
           <p className="text-gray-600 dark:text-gray-300 mb-4 sm:mb-6 text-xs sm:text-sm px-2">
-            Adicione produtos ou personalize um medicamento para começar
+            Adicione produtos para começar
           </p>
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center px-4">
             <Link to="/produtos" className="btn-primary text-xs sm:text-sm px-4 sm:px-6 py-2 content-center">
               Explorar Produtos
-            </Link>
-            <Link to="/personalizar" className="btn-secondary text-xs sm:text-sm px-4 sm:px-6 py-2">
-              Personalizar Medicamento
             </Link>
           </div>
         </div>
@@ -471,7 +468,7 @@ export default function Cart() {
             */}
             {/* Seção Global de Escolha de Tipo de Compra - APLICA PARA TODO O CARRINHO */}
             {items.length > 0 && (
-              <div className="bg-gradient-to-br from-white dark:from-[#065084] via-primary-50/30 dark:via-[#065084] to-gray-50 dark:to-[#065084] rounded-xl sm:rounded-2xl shadow-xl dark:shadow-lg border-2 border-primary-200 dark:border-[#0F828C] p-4 sm:p-6 mb-4 sm:mb-6">
+              <div className="bg-gradient-to-br from-white dark:from-gray-800 via-primary-50/30 dark:via-[#065084] to-gray-50 dark:to-[#065084] rounded-xl sm:rounded-2xl shadow-xl dark:shadow-lg border-2 border-primary-200 dark:border-gray-700 p-4 sm:p-6 mb-4 sm:mb-6">
                 <div className="flex items-center gap-2 mb-2">
                   <Sparkles size={20} className="text-primary-600 flex-shrink-0" />
                   <h4 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
@@ -522,8 +519,8 @@ export default function Cart() {
                         onClick={() => setSubscriptionPlan('monthly')}
                         className={`relative p-3 sm:p-5 rounded-xl transition-all ${
                           subscriptionPlan === 'monthly'
-                            ? 'bg-white dark:bg-[#065084] border-2 border-green-500 dark:border-green-500 shadow-lg dark:shadow-xl'
-                            : 'bg-white dark:bg-[#065084] border-2 border-gray-200 dark:border-[#0F828C] hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
+                            ? 'bg-white dark:bg-gray-800 border-2 border-green-500 dark:border-green-500 shadow-lg dark:shadow-xl'
+                            : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
                         }`}
                       >
                         <div className="text-left">
@@ -543,8 +540,8 @@ export default function Cart() {
                         onClick={() => setSubscriptionPlan('quarterly')}
                         className={`relative p-3 sm:p-5 rounded-xl transition-all ${
                           subscriptionPlan === 'quarterly'
-                            ? 'bg-white dark:bg-[#065084] border-2 border-green-500 dark:border-green-500 shadow-lg dark:shadow-xl'
-                            : 'bg-white dark:bg-[#065084] border-2 border-gray-200 dark:border-[#0F828C] hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
+                            ? 'bg-white dark:bg-gray-800 border-2 border-green-500 dark:border-green-500 shadow-lg dark:shadow-xl'
+                            : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
                         }`}
                       >
                         <div className="text-left">
@@ -568,7 +565,7 @@ export default function Cart() {
                   </div>
 
                   {/* Benefícios da assinatura */}
-                  <div className="bg-gradient-to-r from-primary-50 dark:from-[#065084] to-purple-50 dark:to-[#065084] rounded-xl p-3 sm:p-5 border border-primary-100 dark:border-[#0F828C]">
+                  <div className="bg-gradient-to-r from-primary-50 dark:from-gray-800 to-purple-50 dark:to-[#065084] rounded-xl p-3 sm:p-5 border border-primary-100 dark:border-gray-700">
                     <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">Você receberá:</p>
                     <ul className="space-y-2 sm:space-y-3">
                       <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
@@ -611,28 +608,24 @@ export default function Cart() {
             {/* Lista de Produtos */}
             <div className="space-y-3 sm:space-y-4">
               {items.map(item => {
-                const price = item.product?.price || item.customMedication?.price || 0
+                const price = item.product?.price || 0
                 const itemTotal = price * item.quantity
                 const itemDiscountedPrice = isSubscription 
                   ? itemTotal * (1 - subscriptionDiscount)
                   : itemTotal
 
                 return (
-                  <div key={item.id} className="bg-white dark:bg-[#065084] rounded-xl shadow-sm dark:shadow-lg border border-gray-100 dark:border-[#0F828C] overflow-hidden hover:shadow-md dark:hover:shadow-xl transition-all duration-200">
+                  <div key={item.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm dark:shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden hover:shadow-md dark:hover:shadow-xl transition-all duration-200">
                     <div className="p-3 sm:p-5">
                       <div className="flex gap-3 sm:gap-5">
                         {/* Imagem do produto */}
-                        {item.type === 'product' && item.product ? (
+                        {item.product && (
                           <img
                             src={item.product.image}
                             alt={item.product.name}
                             className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg border-2 border-gray-100 flex-shrink-0"
                             onError={handleProductImageError}
                           />
-                        ) : (
-                          <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-primary-100 via-primary-50 to-accent-100 rounded-lg border-2 border-gray-100 flex items-center justify-center flex-shrink-0">
-                            <FileText className="text-primary-600" size={24} />
-                          </div>
                         )}
 
                         {/* Informações do produto */}
@@ -640,22 +633,10 @@ export default function Cart() {
                           <div className="flex items-start justify-between mb-2 sm:mb-3">
                             <div className="flex-1 min-w-0 pr-2">
                               <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-1 line-clamp-2">
-                                {item.product?.name || item.customMedication?.name}
+                                {item.product?.name}
                               </h3>
                               {item.product && (
                                 <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 line-clamp-1">{item.product.description}</p>
-                              )}
-                              {item.customMedication && (
-                                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-                                  <p className="line-clamp-1">
-                                    <strong>Ativos:</strong> {item.customMedication.activeIngredients.map(i => i.name).join(', ')}
-                                  </p>
-                                  {item.customMedication.prescriptionRequired && (
-                                    <span className="inline-block mt-1.5 sm:mt-2 bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 text-xs px-2 py-0.5 sm:py-1 rounded-full font-medium">
-                                      Receita necessária
-                                    </span>
-                                  )}
-                                </div>
                               )}
                             </div>
                             <button
@@ -669,20 +650,20 @@ export default function Cart() {
 
                           {/* Controles de quantidade e preço */}
                           <div className="flex items-center justify-between gap-2 sm:gap-4">
-                            <div className="flex items-center border-2 border-gray-200 dark:border-[#0F828C] rounded-lg overflow-hidden">
+                            <div className="flex items-center border-2 border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                               <button
                                 onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                className="p-1.5 sm:p-2 hover:bg-gray-50 dark:hover:bg-[#0F828C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="p-1.5 sm:p-2 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 disabled={item.quantity <= 1}
                               >
                                 <Minus size={14} />
                               </button>
-                              <span className="px-3 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm font-semibold min-w-[2rem] sm:min-w-[2.5rem] text-center bg-gray-50 dark:bg-[#0F828C] dark:text-white">
+                              <span className="px-3 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm font-semibold min-w-[2rem] sm:min-w-[2.5rem] text-center bg-gray-50 dark:bg-gray-700 dark:text-white">
                                 {item.quantity}
                               </span>
                               <button
                                 onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                className="p-1.5 sm:p-2 hover:bg-gray-50 dark:hover:bg-[#0F828C] transition-colors"
+                                className="p-1.5 sm:p-2 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                               >
                                 <Plus size={14} />
                               </button>
@@ -708,7 +689,7 @@ export default function Cart() {
 
             {/* Recomendações */}
             {recommendedProducts.length > 0 && (
-              <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200 dark:border-[#0F828C]">
+              <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700">
                 <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
                   Produtos que você pode gostar
                 </h2>
@@ -716,7 +697,7 @@ export default function Cart() {
                   {recommendedProducts.map(product => (
                     <div
                       key={product.id}
-                      className="bg-white dark:bg-[#065084] rounded-xl border border-gray-200 dark:border-[#0F828C] p-3 sm:p-4 hover:shadow-lg dark:hover:shadow-xl transition-all cursor-pointer group"
+                      className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 sm:p-4 hover:shadow-lg dark:hover:shadow-xl transition-all cursor-pointer group"
                       onClick={() => navigate(`/produtos/${product.id}`)}
                     >
                       <img
@@ -759,7 +740,7 @@ export default function Cart() {
             )}
 
             {loadingRecommendations && (
-              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-[#0F828C]">
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex justify-center py-8">
                   <Loader2 className="animate-spin text-primary-600 dark:text-primary-400" size={32} />
                 </div>
@@ -769,9 +750,9 @@ export default function Cart() {
 
           {/* Summary - Sidebar moderno */}
           <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-[#065084] rounded-xl sm:rounded-2xl shadow-lg dark:shadow-xl border border-gray-100 dark:border-[#0F828C] p-4 sm:p-6 sticky top-20 sm:top-24">
+            <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-lg dark:shadow-xl border border-gray-100 dark:border-gray-700 p-4 sm:p-6 sticky top-20 sm:top-24">
               {/* Seção de Cupons Promocionais */}
-              <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-gray-200 dark:border-[#0F828C]">
+              <div className="mb-4 sm:mb-6 pb-4 sm:pb-6 border-b border-gray-200 dark:border-gray-700">
                 <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3 flex items-center">
                   <Tag className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-300 flex-shrink-0" />
                   Cupons Promocionais
@@ -831,7 +812,7 @@ export default function Cart() {
                               
                               return (
                                 <div key={promoCode.id} className="min-w-full flex-shrink-0">
-                                  <div className="bg-green-50 dark:bg-[#065084] border border-green-200 dark:border-[#0F828C] rounded-md px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between gap-2">
+                                  <div className="bg-green-50 dark:bg-gray-800 border border-green-200 dark:border-gray-700 rounded-md px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
                                       <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-green-600 dark:text-green-400 flex-shrink-0" />
                                       <div className="flex-1 min-w-0">
@@ -909,7 +890,7 @@ export default function Cart() {
                     ) : (
                       /* Cupom único - sem carrossel */
                       appliedPromoCodes.length === 1 && promoCodesValidation && (
-                        <div className="bg-green-50 dark:bg-[#065084] border border-green-200 dark:border-[#0F828C] rounded-md px-2 sm:px-3 py-1.5 sm:py-2">
+                        <div className="bg-green-50 dark:bg-gray-800 border border-green-200 dark:border-gray-700 rounded-md px-2 sm:px-3 py-1.5 sm:py-2">
                           {promoCodesValidation.promoCodes.map((promoCode) => {
                             const appliedDiscount = promoCodesValidation.appliedDiscounts.percentage?.code === promoCode.code
                               ? promoCodesValidation.appliedDiscounts.percentage
@@ -998,7 +979,7 @@ export default function Cart() {
                 )}
               </div>
 
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-200 dark:border-[#0F828C]">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-gray-200 dark:border-gray-700">
                 Resumo do Pedido
               </h2>
 
@@ -1009,7 +990,7 @@ export default function Cart() {
                 </div>
 
                 {isSubscription && (
-                  <div className="bg-primary-50 dark:bg-[#065084] rounded-lg p-2.5 sm:p-3 border border-primary-100 dark:border-[#0F828C]">
+                  <div className="bg-primary-50 dark:bg-gray-800 rounded-lg p-2.5 sm:p-3 border border-primary-100 dark:border-gray-700">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-xs sm:text-sm font-semibold text-primary-700 dark:text-primary-400">Desconto Assinatura</span>
                       <span className="text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400">
@@ -1038,7 +1019,7 @@ export default function Cart() {
 
                 {/* Promoções Aplicadas */}
                 {applicablePromotions.length > 0 && (
-                  <div className="border-t border-gray-200 dark:border-[#0F828C] pt-3 sm:pt-4">
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Gift className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-pink-600 dark:text-pink-400 flex-shrink-0" />
                       <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">Promoções Aplicadas</span>
@@ -1058,7 +1039,7 @@ export default function Cart() {
                             discountText += discountText ? ' + Frete Grátis' : 'Frete Grátis'
                           }
                           return (
-                            <div key={promo.id} className="bg-pink-50 dark:bg-[#065084] border border-pink-200 dark:border-[#0F828C] rounded-lg p-2">
+                            <div key={promo.id} className="bg-pink-50 dark:bg-gray-800 border border-pink-200 dark:border-gray-700 rounded-lg p-2">
                               <div className="flex items-start justify-between">
                                 <div className="flex-1 min-w-0">
                                   <p className="text-xs font-semibold text-pink-900 dark:text-pink-300 truncate">{promo.name}</p>
@@ -1071,7 +1052,7 @@ export default function Cart() {
                           )
                         })}
                         {promotionDiscount > 0 && (
-                          <div className="flex justify-between items-center text-xs sm:text-sm text-pink-600 dark:text-pink-400 pt-2 border-t border-pink-200 dark:border-[#0F828C]">
+                          <div className="flex justify-between items-center text-xs sm:text-sm text-pink-600 dark:text-pink-400 pt-2 border-t border-pink-200 dark:border-gray-700">
                             <span className="font-semibold">Desconto Total</span>
                             <span className="font-bold">
                               - R$ {promotionDiscount.toFixed(2).replace('.', ',')}
@@ -1085,7 +1066,7 @@ export default function Cart() {
 
 
                 {isSubscription && (
-                  <div className="bg-gradient-to-r from-primary-50 dark:from-[#065084] to-purple-50 dark:to-[#065084] rounded-xl p-3 sm:p-4 border border-primary-100 dark:border-[#0F828C]">
+                  <div className="bg-gradient-to-r from-primary-50 dark:from-gray-800 to-purple-50 dark:to-[#065084] rounded-xl p-3 sm:p-4 border border-primary-100 dark:border-gray-700">
                     <div className="flex items-start gap-2">
                       <Repeat size={16} className="text-primary-600 dark:text-primary-400 mt-0.5 flex-shrink-0" />
                       <div>
@@ -1117,7 +1098,7 @@ export default function Cart() {
                   </div>
                 )}
 
-                <div className="border-t border-gray-200 dark:border-[#0F828C] pt-3 sm:pt-4">
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4">
                   <div className="flex justify-between items-center">
                     <span className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">Total</span>
                     <span className="text-xl sm:text-2xl font-bold text-primary-600 dark:text-primary-400">

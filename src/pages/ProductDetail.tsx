@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { ShoppingCart, Sparkles, Loader2, Truck, CheckCircle, AlertCircle } from 'lucide-react'
+import { ShoppingCart, Loader2, Truck, CheckCircle, AlertCircle } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useCart } from '../context/CartContext'
 import { Product } from '../types'
@@ -75,7 +75,7 @@ export default function ProductDetail() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-center items-center py-12">
-          <Loader2 className="animate-spin text-primary-600 dark:text-[#78B9B5]" size={48} />
+          <Loader2 className="animate-spin text-primary-600 dark:text-primary-400" size={48} />
         </div>
       </div>
     )
@@ -141,7 +141,7 @@ export default function ProductDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827]">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Breadcrumbs */}
         <nav className="mb-4 text-sm">
@@ -152,7 +152,7 @@ export default function ProductDetail() {
                 {item.path ? (
                   <button
                     onClick={() => navigate(item.path)}
-                    className="hover:text-primary-600 dark:hover:text-[#78B9B5]"
+                    className="hover:text-primary-600 dark:hover:text-primary-300"
                   >
                     {item.label}
                   </button>
@@ -164,7 +164,7 @@ export default function ProductDetail() {
           </div>
         </nav>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-sm dark:shadow-lg p-4 lg:p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm dark:shadow-lg p-4 lg:p-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
             {/* Galeria de Imagens - Compacta */}
             <div>
@@ -172,7 +172,7 @@ export default function ProductDetail() {
                 <img
                   src={productImages[selectedImage] || product?.image || ''}
                   alt={product?.name}
-                  className="w-full h-64 lg:h-80 object-cover rounded-lg border border-gray-200 dark:border-[#0F828C]"
+                  className="w-full h-64 lg:h-80 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
                   onError={handleProductImageError}
                 />
               </div>
@@ -183,7 +183,7 @@ export default function ProductDetail() {
                       key={index}
                       onClick={() => setSelectedImage(index)}
                       className={`w-16 h-16 rounded-lg border-2 overflow-hidden ${
-                        selectedImage === index ? 'border-primary-600 dark:border-[#78B9B5]' : 'border-gray-200 dark:border-[#0F828C]'
+                        selectedImage === index ? 'border-primary-600 dark:border-primary-500' : 'border-gray-200 dark:border-gray-700'
                       }`}
                     >
                       <img
@@ -201,9 +201,9 @@ export default function ProductDetail() {
               {productDetails && (
                 <div className="mt-4 space-y-4">
                   {productDetails.compositions && (
-                    <div className="p-4 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]">
+                    <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                       <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm flex items-center">
-                        <CheckCircle size={16} className="text-green-600 dark:text-[#78B9B5] mr-2" />
+                        <CheckCircle size={16} className="text-green-600 dark:text-primary-400 mr-2" />
                         Composição
                       </h3>
                       <p className="text-sm text-gray-700 dark:text-white whitespace-pre-line">{productDetails.compositions}</p>
@@ -211,9 +211,9 @@ export default function ProductDetail() {
                   )}
                   
                   {productDetails.indication && (
-                    <div className="p-4 bg-blue-50 dark:bg-[#065084] rounded-lg border border-blue-200 dark:border-[#0F828C]">
+                    <div className="p-4 bg-blue-50 dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-gray-700">
                       <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm flex items-center">
-                        <CheckCircle size={16} className="text-blue-600 dark:text-[#78B9B5] mr-2" />
+                        <CheckCircle size={16} className="text-blue-600 dark:text-primary-400 mr-2" />
                         Indicações
                       </h3>
                       <p className="text-sm text-gray-700 dark:text-white whitespace-pre-line">{productDetails.indication}</p>
@@ -221,9 +221,9 @@ export default function ProductDetail() {
                   )}
                   
                   {productDetails.contraindication && (
-                    <div className="p-4 bg-orange-50 dark:bg-[#065084] rounded-lg border border-orange-200 dark:border-[#0F828C]">
+                    <div className="p-4 bg-orange-50 dark:bg-gray-800 rounded-lg border border-orange-200 dark:border-gray-700">
                       <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm flex items-center">
-                        <AlertCircle size={16} className="text-orange-600 dark:text-[#78B9B5] mr-2" />
+                        <AlertCircle size={16} className="text-orange-600 dark:text-primary-400 mr-2" />
                         Contraindicações
                       </h3>
                       <p className="text-sm text-gray-700 dark:text-white whitespace-pre-line">{productDetails.contraindication}</p>
@@ -238,7 +238,7 @@ export default function ProductDetail() {
               {/* Status e Badges */}
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <span className="bg-green-100 dark:bg-[#ff6400] text-green-800 dark:text-white px-2 py-0.5 rounded text-xs font-medium border border-green-200 dark:border-[#0F828C]">
+                  <span className="bg-green-100 dark:bg-[#ff6400] text-green-800 dark:text-white px-2 py-0.5 rounded text-xs font-medium border border-green-200 dark:border-gray-700">
                     Novo
                   </span>
                   <span className="text-gray-500 dark:text-gray-300 text-xs">+100 vendidos</span>
@@ -281,9 +281,9 @@ export default function ProductDetail() {
 
               {/* Frete - Compacto */}
               {product.free_shipping && (
-                <div className="mb-4 p-3 bg-blue-50 dark:bg-[#065084] rounded-lg border border-blue-200 dark:border-[#0F828C]">
+                <div className="mb-4 p-3 bg-blue-50 dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-gray-700">
                   <div className="flex items-center mb-1">
-                    <Truck size={16} className="text-blue-600 dark:text-[#78B9B5] mr-2" />
+                    <Truck size={16} className="text-blue-600 dark:text-primary-400 mr-2" />
                     <span className="font-semibold text-blue-900 dark:text-white text-sm">FRETE GRÁTIS</span>
                   </div>
                   <p className="text-xs text-blue-700 dark:text-gray-300">
@@ -299,7 +299,7 @@ export default function ProductDetail() {
                   <select
                     value={quantity}
                     onChange={(e) => setQuantity(Number(e.target.value))}
-                    className="border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg px-2 py-1.5 text-sm"
+                    className="border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg px-2 py-1.5 text-sm"
                   >
                     {[...Array(Math.min(10, productDetails?.stock || 1))].map((_, i) => (
                       <option key={i + 1} value={i + 1}>
@@ -318,14 +318,14 @@ export default function ProductDetail() {
                 <button
                   onClick={handleBuyNow}
                   disabled={!product?.inStock}
-                  className="w-full bg-blue-600 dark:bg-[#1eef69c2] hover:bg-blue-700 dark:hover:bg-[#78B9B5] text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center text-base"
+                  className="w-full bg-blue-600 dark:bg-[#1eef69c2] hover:bg-blue-700 dark:hover:bg-primary-500 text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center text-base"
                 >
                   Comprar agora
                 </button>
                 <button
                   onClick={handleAddToCart}
                   disabled={!product?.inStock}
-                  className="w-full bg-blue-600 dark:bg-[#78B9B5] hover:bg-blue-700 dark:hover:bg-[#78b9b59c] text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center text-base"
+                  className="w-full bg-blue-600 dark:bg-primary-600 hover:bg-blue-700 dark:hover:bg-[#78b9b59c] text-white font-semibold py-3 px-6 rounded-lg transition-colors disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center text-base"
                 >
                   <ShoppingCart size={18} className="mr-2" />
                   Adicionar ao carrinho
@@ -339,7 +339,7 @@ export default function ProductDetail() {
 
               {/* Descrição do Produto - Compacta */}
               {productDetails && productDetails.description && (
-                <div className="mb-4 p-3 bg-gray-50 dark:bg-[#065084] rounded-lg">
+                <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-2 text-sm">
                     O que você precisa saber
                   </h3>
@@ -347,23 +347,7 @@ export default function ProductDetail() {
                 </div>
               )}
 
-              {/* Personalizável - Compacto */}
-              {product?.isCustomizable && (
-                <div className="p-3 bg-primary-50 dark:bg-[#065084] rounded-lg border border-primary-200 dark:border-[#0F828C]">
-                  <div className="flex items-start">
-                    <Sparkles size={16} className="text-primary-600 dark:text-[#78B9B5] mr-2 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="font-semibold text-primary-900 dark:text-white mb-1 text-sm">Personalizável</p>
-                      <button
-                        onClick={() => navigate('/personalizar')}
-                        className="text-xs text-primary-600 dark:text-[#78B9B5] hover:text-primary-700 dark:hover:text-[#78B9B5] font-semibold underline"
-                      >
-                        Personalizar agora →
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+
             </div>
           </div>
 

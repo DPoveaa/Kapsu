@@ -27,13 +27,13 @@ const FloatingChat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  
+
   // Posições pré-definidas para as 4 quinas
   const getCornerPosition = (corner: CornerPosition) => {
     const isMobile = window.innerWidth < 640
     const buttonSize = isMobile ? 56 : 64 // w-14 (56px) no mobile, w-16 (64px) no desktop
     const padding = isMobile ? 12 : 24 // Menos padding no mobile
-    
+
     switch (corner) {
       case 'bottom-right':
         return { x: window.innerWidth - buttonSize - padding, y: window.innerHeight - buttonSize - padding }
@@ -47,20 +47,20 @@ const FloatingChat: React.FC = () => {
         return { x: window.innerWidth - buttonSize - padding, y: window.innerHeight - buttonSize - padding }
     }
   }
-  
+
   const getChatPosition = (corner: CornerPosition, buttonPos?: { x: number; y: number }) => {
     // Em mobile, o chat tem tamanho reduzido (não ocupa a tela toda)
     const isMobile = window.innerWidth < 640
     const chatWidth = isMobile ? Math.min(340, window.innerWidth - 32) : 380
     const chatHeight = isMobile ? Math.min(500, window.innerHeight - 100) : 600
     const padding = isMobile ? 16 : 24
-    
+
     // Se uma posição do botão foi fornecida, detecta a quina baseada nessa posição
     let cornerToUse = corner
     if (buttonPos) {
       cornerToUse = detectNearestCorner(buttonPos.x, buttonPos.y)
     }
-    
+
     // Posiciona o chat na mesma quina (tanto mobile quanto desktop)
     switch (cornerToUse) {
       case 'bottom-right':
@@ -75,7 +75,7 @@ const FloatingChat: React.FC = () => {
         return { x: window.innerWidth - chatWidth - padding, y: window.innerHeight - chatHeight - padding }
     }
   }
-  
+
   // Carrega a preferência de quina do usuário (salva em localStorage)
   const [selectedCorner, setSelectedCorner] = useState<CornerPosition>(() => {
     const saved = localStorage.getItem('floatingChat_corner')
@@ -84,7 +84,7 @@ const FloatingChat: React.FC = () => {
     }
     return 'bottom-right' // Padrão: canto inferior direito
   })
-  
+
   // Carrega a posição do botão salva no localStorage, ou usa a posição da quina
   const loadSavedButtonPosition = (): { x: number; y: number } => {
     try {
@@ -114,16 +114,15 @@ const FloatingChat: React.FC = () => {
   // Posições calculadas baseadas na quina selecionada ou posição salva
   const [buttonPosition, setButtonPosition] = useState(() => loadSavedButtonPosition())
   const [chatPosition, setChatPosition] = useState(() => getChatPosition(selectedCorner))
-  
+
   const [isDraggingButton, setIsDraggingButton] = useState(false)
   const [isDraggingChat, setIsDraggingChat] = useState(false)
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  const buttonRef = useRef<HTMLButtonElement>(null)
-  const chatContainerRef = useRef<HTMLDivElement>(null)
+  const buttonRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   // Ref para rastrear a última posição real do botão (para evitar problemas de state assíncrono)
   const lastButtonPositionRef = useRef<{ x: number; y: number }>(buttonPosition)
-  
+
   // Atualiza posições quando a quina muda ou a janela redimensiona
   useEffect(() => {
     const updatePositions = () => {
@@ -134,10 +133,10 @@ const FloatingChat: React.FC = () => {
       }
       // Não atualiza a posição do botão aqui - isso é feito em toggleChat e changeCorner
     }
-    
+
     // Só atualiza quando selectedCorner muda, não quando isOpen muda
     updatePositions()
-    
+
     window.addEventListener('resize', updatePositions)
     return () => window.removeEventListener('resize', updatePositions)
   }, [selectedCorner, isOpen]) // Incluído isOpen para atualizar chat quando necessário
@@ -165,7 +164,7 @@ const FloatingChat: React.FC = () => {
           }
         }
       }, 0) // Roda no próximo tick do event loop, após toggleChat
-      
+
       return () => clearTimeout(timeoutId)
     }
   }, [isOpen]) // Roda quando isOpen muda
@@ -191,7 +190,7 @@ const FloatingChat: React.FC = () => {
 
       const normalizedSearch = normalizeText(productName)
       const allProducts = await productsService.getAll()
-      
+
       // Busca produtos que correspondem ao nome
       const matchingProducts = allProducts.filter(product => {
         const normalizedName = normalizeText(product.name)
@@ -203,7 +202,7 @@ const FloatingChat: React.FC = () => {
         // Prioriza correspondência exata
         const exactMatch = matchingProducts.find(p => normalizeText(p.name) === normalizedSearch)
         if (exactMatch) return exactMatch
-        
+
         // Retorna o primeiro resultado
         return matchingProducts[0]
       }
@@ -218,7 +217,7 @@ const FloatingChat: React.FC = () => {
   // Função para processar ações da IA (adicionar/remover produtos)
   const processAIActions = async (aiData: any): Promise<ChatMessage[]> => {
     const actionMessages: ChatMessage[] = []
-    
+
     if (!isAuthenticated) {
       return actionMessages // Não processa ações se não estiver logado
     }
@@ -238,10 +237,10 @@ const FloatingChat: React.FC = () => {
       (intent === 'pedir_recomendacao' && produto) || // Se tem produto E pediu recomendação, adiciona o produto também
       (intent === 'pedido_de_orcamento' && produto) // Se tem produto E pediu orçamento, adiciona ao carrinho também
     );
-    
+
     if (shouldAddProduct) {
       const productsToAdd = Array.isArray(produto) ? produto : [produto]
-      
+
       // Extrai quantidade da mensagem ou usa padrão 1
       let quantity = 1
       if (entities.quantidade) {
@@ -389,7 +388,7 @@ const FloatingChat: React.FC = () => {
           const product = await findProductByName(productName)
           if (product) {
             const cartItem = items.find(item => item.product?.id === product.id)
-            
+
             if (cartItem) {
               await updateQuantity(cartItem.id, newQuantity)
               results.push(`${product.name} (${newQuantity}x)`)
@@ -554,7 +553,7 @@ const FloatingChat: React.FC = () => {
           if (product) {
             // Encontra o item no carrinho
             const cartItem = items.find(item => item.product?.id === product.id)
-            
+
             if (cartItem) {
               await removeItem(cartItem.id)
               results.push(product.name)
@@ -637,17 +636,17 @@ const FloatingChat: React.FC = () => {
         itemCount: getItemCount(),
         total: getTotal(),
         items: items.map(item => ({
-          name: item.product?.name || item.customMedication?.name || 'Produto',
+          name: item.product?.name || 'Produto',
           quantity: item.quantity,
-          price: item.product?.price || item.customMedication?.price || 0,
+          price: item.product?.price || 0,
         })),
       }
 
       // Chama a API do chat do site (passa informações de autenticação)
       const result = await whatsappService.siteChat(
-        userMessage, 
-        historyForAPI, 
-        cartInfoForAI, 
+        userMessage,
+        historyForAPI,
+        cartInfoForAI,
         user?.id,
         isAuthenticated,
         user ? { id: user.id, name: user.name, email: user.email, phone: user.phone } : undefined
@@ -688,19 +687,19 @@ const FloatingChat: React.FC = () => {
     const height = window.innerHeight
     const centerX = width / 2
     const centerY = height / 2
-    
+
     if (x < centerX && y < centerY) return 'top-left'
     if (x >= centerX && y < centerY) return 'top-right'
     if (x < centerX && y >= centerY) return 'bottom-left'
     return 'bottom-right'
   }
-  
+
   // Função para mudar a quina do botão
   const changeCorner = (corner: CornerPosition) => {
     setSelectedCorner(corner)
     localStorage.setItem('floatingChat_corner', corner)
     const cornerPos = getCornerPosition(corner)
-    
+
     // Só atualiza a posição do botão se o chat estiver FECHADO
     // Se o chat estiver aberto, não devemos sobrescrever a posição do botão
     if (!isOpen) {
@@ -714,13 +713,13 @@ const FloatingChat: React.FC = () => {
         console.error('Erro ao salvar posição do botão:', error)
       }
     }
-    
+
     if (isOpen) {
       // Atualiza a posição do chat baseada na nova quina e na posição atual do botão
       setChatPosition(getChatPosition(corner, lastButtonPositionRef.current))
     }
   }
-  
+
   // Funções de arrastar o botão (para mudar de quina) - funciona para mouse e touch
   const startButtonDrag = useCallback((clientX: number, clientY: number) => {
     if (!buttonRef.current) return
@@ -728,44 +727,44 @@ const FloatingChat: React.FC = () => {
     const rect = buttonRef.current.getBoundingClientRect()
     const startX = clientX
     const startY = clientY
-    
+
     // Calcula o offset do toque/clique dentro do botão
     const offsetX = clientX - rect.left
     const offsetY = clientY - rect.top
-    
+
     let hasMoved = false
-    
+
     const handleMove = (moveX: number, moveY: number) => {
       const deltaX = Math.abs(moveX - startX)
       const deltaY = Math.abs(moveY - startY)
-      
+
       // Se moveu mais de 5px, considera arrasto
       if (deltaX > 5 || deltaY > 5) {
         hasMoved = true
         setIsDraggingButton(true)
-        
+
         // Faz o botão seguir o toque/clique
         const newX = moveX - offsetX
         const newY = moveY - offsetY
-        
+
         // Limita dentro da tela
         const buttonSize = window.innerWidth < 640 ? 56 : 64 // w-14 (56px) no mobile, w-16 (64px) no desktop
         const maxX = window.innerWidth - buttonSize
         const maxY = window.innerHeight - buttonSize
-        
+
         const constrainedX = Math.max(0, Math.min(newX, maxX))
         const constrainedY = Math.max(0, Math.min(newY, maxY))
-        
+
         const newPos = { x: constrainedX, y: constrainedY }
         setButtonPosition(newPos)
         // Atualiza o ref com a posição real durante o arrasto
         lastButtonPositionRef.current = newPos
       }
     }
-    
+
     const handleEnd = (endX: number, endY: number) => {
       setIsDraggingButton(false)
-      
+
       if (hasMoved) {
         // Detecta a quina mais próxima e move o botão suavemente para lá
         const nearestCorner = detectNearestCorner(endX, endY)
@@ -782,7 +781,7 @@ const FloatingChat: React.FC = () => {
     const handleMouseMove = (moveEvent: MouseEvent) => {
       handleMove(moveEvent.clientX, moveEvent.clientY)
     }
-    
+
     const handleMouseUp = (upEvent: MouseEvent) => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
@@ -796,7 +795,7 @@ const FloatingChat: React.FC = () => {
         handleMove(moveEvent.touches[0].clientX, moveEvent.touches[0].clientY)
       }
     }
-    
+
     const handleTouchEnd = (endEvent: TouchEvent) => {
       document.removeEventListener('touchmove', handleTouchMove)
       document.removeEventListener('touchend', handleTouchEnd)
@@ -804,11 +803,11 @@ const FloatingChat: React.FC = () => {
       const endY = endEvent.changedTouches.length > 0 ? endEvent.changedTouches[0].clientY : startY
       handleEnd(endX, endY)
     }
-    
+
     // Adiciona listeners para mouse
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
-    
+
     // Adiciona listeners para touch
     document.addEventListener('touchmove', handleTouchMove, { passive: false })
     document.addEventListener('touchend', handleTouchEnd)
@@ -818,14 +817,6 @@ const FloatingChat: React.FC = () => {
     e.preventDefault()
     e.stopPropagation()
     startButtonDrag(e.clientX, e.clientY)
-  }
-
-  const handleButtonTouchStart = (e: React.TouchEvent) => {
-    // Não usa preventDefault aqui - será feito no listener direto
-    e.stopPropagation()
-    if (e.touches.length > 0) {
-      startButtonDrag(e.touches[0].clientX, e.touches[0].clientY)
-    }
   }
 
   // Adiciona listener de touch diretamente no botão para evitar erro de preventDefault
@@ -845,7 +836,7 @@ const FloatingChat: React.FC = () => {
     }
 
     button.addEventListener('touchstart', handleTouchStartDirect, { passive: false })
-    
+
     return () => {
       button.removeEventListener('touchstart', handleTouchStartDirect)
     }
@@ -865,8 +856,8 @@ const FloatingChat: React.FC = () => {
 
   // Funções de arrastar o chat (mouse e touch)
   const startChatDrag = (clientX: number, clientY: number) => {
-    if (chatContainerRef.current) {
-      const rect = chatContainerRef.current.getBoundingClientRect()
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect()
       setDragOffset({
         x: clientX - rect.left,
         y: clientY - rect.top,
@@ -892,17 +883,17 @@ const FloatingChat: React.FC = () => {
       if (isDraggingChat) {
         const newX = clientX - dragOffset.x
         const newY = clientY - dragOffset.y
-        
+
         // Limita dentro da tela
         const isMobile = window.innerWidth < 640
         const chatWidth = isMobile ? Math.min(340, window.innerWidth - 32) : 380
         const chatHeight = isMobile ? Math.min(500, window.innerHeight - 100) : 600
         const maxX = window.innerWidth - chatWidth
         const maxY = window.innerHeight - chatHeight
-        
+
         const constrainedX = Math.max(0, Math.min(newX, maxX))
         const constrainedY = Math.max(0, Math.min(newY, maxY))
-        
+
         setChatPosition({ x: constrainedX, y: constrainedY })
       }
     }
@@ -923,8 +914,6 @@ const FloatingChat: React.FC = () => {
         setIsDraggingChat(false)
         // Detecta a quina mais próxima e atualiza (apenas no desktop)
         if (window.innerWidth >= 640) {
-          const chatWidth = 380
-          const chatHeight = 600
           const nearestCorner = detectNearestCorner(endX, endY)
           if (nearestCorner !== selectedCorner) {
             changeCorner(nearestCorner)
@@ -1017,51 +1006,41 @@ const FloatingChat: React.FC = () => {
 
   return (
     <>
-      {/* Botão flutuante (pode ser arrastado para mudar de quina) */}
-      {!isOpen && (
-        <button
-          ref={buttonRef}
-          onMouseDown={handleButtonMouseDown}
-          className="fixed w-14 h-14 sm:w-16 sm:h-16 text-white rounded-full shadow-lg flex items-center justify-center z-50 transition-all duration-300 hover:scale-110 cursor-pointer select-none touch-none"
-          style={{
-            left: `${buttonPosition.x}px`,
-            top: `${buttonPosition.y}px`,
-            backgroundColor: '#67C090',
-            transition: isDraggingButton ? 'none' : 'all 0.3s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#5aad7d'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#67C090'
-          }}
-          aria-label="Pergunte a Kaia"
-          title="Pergunte a Kaia - Arraste para mudar de posição ou clique para abrir"
-        >
+      {/* Container do Chat / Botão com animação de transformação */}
+      <div
+        ref={buttonRef}
+        onMouseDown={!isOpen ? handleButtonMouseDown : undefined}
+        className={`fixed z-50 flex flex-col transition-all duration-500 ease-in-out ${isOpen
+          ? 'bg-white dark:bg-gray-800 shadow-2xl overflow-hidden'
+          : 'bg-[#67C090] hover:bg-[#5aad7d] text-white shadow-lg flex items-center justify-center cursor-pointer select-none touch-none hover:scale-110'
+          }`}
+        style={{
+          left: isOpen ? `${chatPosition.x}px` : `${buttonPosition.x}px`,
+          top: isOpen ? `${chatPosition.y}px` : `${buttonPosition.y}px`,
+          width: isOpen
+            ? (window.innerWidth < 640 ? `${Math.min(340, window.innerWidth - 32)}px` : '380px')
+            : (window.innerWidth < 640 ? '56px' : '64px'),
+          height: isOpen
+            ? (window.innerWidth < 640 ? `${Math.min(500, window.innerHeight - 100)}px` : '600px')
+            : (window.innerWidth < 640 ? '56px' : '64px'),
+          borderRadius: isOpen ? '12px' : '50%',
+          transition: (isDraggingChat || isDraggingButton) ? 'none' : 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+        }}
+        title={!isOpen ? "Pergunte a Kaia - Arraste para mudar de posição ou clique para abrir" : undefined}
+        aria-label={!isOpen ? "Pergunte a Kaia" : undefined}
+      >
+        {/* Estado Botão: Ícone */}
+        <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${isOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 pointer-events-none" />
-        </button>
-      )}
+        </div>
 
-      {/* Chat flutuante */}
-      {isOpen && (
-        <div
-          ref={chatContainerRef}
-          className="fixed z-50 bg-white dark:bg-[#065084] rounded-lg sm:rounded-lg shadow-2xl dark:shadow-2xl flex flex-col transition-colors duration-300"
-          style={{
-            left: `${chatPosition.x}px`,
-            top: `${chatPosition.y}px`,
-            width: window.innerWidth < 640 ? `${Math.min(340, window.innerWidth - 32)}px` : '380px',
-            height: window.innerWidth < 640 ? `${Math.min(500, window.innerHeight - 100)}px` : '600px',
-            maxWidth: window.innerWidth < 640 ? `${Math.min(340, window.innerWidth - 32)}px` : '380px',
-            maxHeight: window.innerWidth < 640 ? `${Math.min(500, window.innerHeight - 100)}px` : '600px',
-            transition: isDraggingChat ? 'none' : 'all 0.3s ease',
-          }}
-        >
+        {/* Estado Chat: Conteúdo */}
+        <div className={`flex flex-col h-full w-full transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           {/* Cabeçalho (arrastável) */}
           <div
             onMouseDown={handleChatMouseDown}
             onTouchStart={handleChatTouchStart}
-            className="text-white p-3 sm:p-4 rounded-t-lg cursor-move flex items-center justify-between select-none touch-none"
+            className="text-white p-3 sm:p-4 cursor-move flex items-center justify-between select-none touch-none flex-shrink-0"
             style={{ backgroundColor: '#67C090' }}
           >
             <div className="flex items-center space-x-1.5 sm:space-x-2">
@@ -1072,7 +1051,7 @@ const FloatingChat: React.FC = () => {
               <button
                 onClick={toggleChat}
                 className="p-1 rounded transition-colors"
-                style={{ 
+                style={{
                   backgroundColor: 'transparent',
                 }}
                 onMouseEnter={(e) => {
@@ -1089,108 +1068,101 @@ const FloatingChat: React.FC = () => {
           </div>
 
           {/* Conteúdo do chat */}
-          <>
-              {/* Mensagens */}
-              <div className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 space-y-2 sm:space-y-3 lg:space-y-4 bg-gray-50 dark:bg-[#065084]">
-                {messages.length === 0 ? (
-                  <div className="text-center text-gray-500 dark:text-gray-400 mt-4 sm:mt-6 lg:mt-8 px-2">
-                    <MessageSquare className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 opacity-50" />
-                    <p className="font-medium text-sm sm:text-base text-gray-700 dark:text-gray-200 mb-1.5 sm:mb-2">
-                      Olá{user ? `, ${user.name}` : ''}! Eu sou a Kaia 👋
-                    </p>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2 sm:mb-3">
-                      Como posso ajudar você hoje?
-                    </p>
-                    <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-                      {isAuthenticated
-                        ? 'Posso ajudar você a encontrar produtos, adicionar ao carrinho e finalizar sua compra.'
-                        : 'Posso ajudar você a encontrar produtos e informações. Faça login para adicionar produtos ao carrinho.'}
-                    </p>
-                  </div>
-                ) : (
-                  messages.map((msg, index) => (
-                    <div key={index}>
-                      {/* Mensagem de ação (feedback de adicionar/remover) */}
-                      {msg.actionResult && (
-                        <div className="flex justify-center my-1.5 sm:my-2">
-                          <div
-                            className={`flex items-center space-x-1.5 sm:space-x-2 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm ${
-                              msg.actionResult.type === 'added'
-                                ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-300 dark:border-green-700'
-                                : msg.actionResult.type === 'removed'
-                                ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-300 dark:border-orange-700'
-                                : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-700'
-                            }`}
-                          >
-                            {msg.actionResult.type === 'added' && (
-                              <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                            )}
-                            {msg.actionResult.type === 'removed' && (
-                              <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                            )}
-                            {msg.actionResult.type === 'error' && (
-                              <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                            )}
-                            <span className="break-words">{formatMessage(msg.actionResult.message || '')}</span>
-                          </div>
-                        </div>
-                      )}
-                      {/* Mensagem normal */}
-                      {msg.content && (
-                        <div
-                          className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                        >
-                          <div
-                            className={`max-w-[85%] sm:max-w-[80%] rounded-lg px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 ${
-                              msg.role === 'user'
-                                ? 'bg-green-600 dark:bg-[#78B9B5] text-white'
-                                : 'bg-white dark:bg-[#0F828C] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-[#0F828C]'
-                            }`}
-                          >
-                            <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{formatMessage(msg.content)}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-                {isLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-white dark:bg-[#0F828C] border border-gray-200 dark:border-[#0F828C] rounded-lg px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2">
-                      <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-green-600 dark:text-primary-400" />
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Input */}
-              <form onSubmit={handleSendMessage} className="p-2 sm:p-3 lg:p-4 border-t border-gray-200 dark:border-[#0F828C] bg-white dark:bg-[#065084]">
-                <div className="flex space-x-1.5 sm:space-x-2">
-                  <input
-                    type="text"
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    placeholder="Digite sua mensagem..."
-                    className="flex-1 px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-[#0F828C] bg-white dark:bg-[#065084] text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-[#78B9B5] focus:border-transparent outline-none"
-                    disabled={isLoading}
-                  />
-                  <button
-                    type="submit"
-                    disabled={isLoading || !inputMessage.trim()}
-                    className="px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 bg-green-600 dark:bg-[#78B9B5] text-white rounded-lg hover:bg-green-700 dark:hover:bg-[#78B9B5] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4 sm:w-5 sm:h-5" />
-                    )}
-                  </button>
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Mensagens */}
+            <div className="flex-1 overflow-y-auto p-2 sm:p-3 lg:p-4 space-y-2 sm:space-y-3 lg:space-y-4 bg-gray-50 dark:bg-gray-800">
+              {messages.length === 0 ? (
+                <div className="text-center text-gray-500 dark:text-gray-400 mt-4 sm:mt-6 lg:mt-8 px-2">
+                  <MessageSquare className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 opacity-50" />
+                  <p className="font-medium text-sm sm:text-base text-gray-700 dark:text-gray-200 mb-1.5 sm:mb-2">
+                    Olá{user ? `, ${user.name}` : ''}! Eu sou a Kaia 👋
+                  </p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-2 sm:mb-3">
+                    Como posso ajudar você hoje?
+                  </p>
                 </div>
-              </form>
-          </>
+              ) : (
+                messages.map((msg, index) => (
+                  <div key={index}>
+                    {/* Mensagem de ação (feedback de adicionar/remover) */}
+                    {msg.actionResult && (
+                      <div className="flex justify-center my-1.5 sm:my-2">
+                        <div
+                          className={`flex items-center space-x-1.5 sm:space-x-2 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm ${msg.actionResult.type === 'added'
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-300 dark:border-green-700'
+                            : msg.actionResult.type === 'removed'
+                              ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-300 dark:border-orange-700'
+                              : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-700'
+                            }`}
+                        >
+                          {msg.actionResult.type === 'added' && (
+                            <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                          )}
+                          {msg.actionResult.type === 'removed' && (
+                            <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                          )}
+                          {msg.actionResult.type === 'error' && (
+                            <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                          )}
+                          <span className="break-words">{formatMessage(msg.actionResult.message || '')}</span>
+                        </div>
+                      </div>
+                    )}
+                    {/* Mensagem normal */}
+                    {msg.content && (
+                      <div
+                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-[85%] sm:max-w-[80%] rounded-lg px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 ${msg.role === 'user'
+                            ? 'bg-green-600 dark:bg-primary-600 text-white'
+                            : 'bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700'
+                            }`}
+                        >
+                          <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{formatMessage(msg.content)}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2">
+                    <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin text-green-600 dark:text-primary-400" />
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input */}
+            <form onSubmit={handleSendMessage} className="p-2 sm:p-3 lg:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+              <div className="flex space-x-1.5 sm:space-x-2">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  placeholder="Digite sua mensagem..."
+                  className="flex-1 px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-primary-500 focus:border-transparent outline-none"
+                  disabled={isLoading}
+                />
+                <button
+                  type="submit"
+                  disabled={isLoading || !inputMessage.trim()}
+                  className="px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 bg-green-600 dark:bg-primary-600 text-white rounded-lg hover:bg-green-700 dark:hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
+                >
+                  {isLoading ? (
+                    <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      )}
+      </div>
     </>
   )
 }

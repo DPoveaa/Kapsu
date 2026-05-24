@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
-import { CartItem, Product, CustomMedication } from '../types'
+import { CartItem, Product } from '../types'
 import { cartService } from '../services/cart.service'
 import { useAuth } from './AuthContext'
 
@@ -7,7 +7,6 @@ interface CartContextType {
   items: CartItem[]
   loading: boolean
   addProduct: (product: Product, quantity: number) => Promise<void>
-  addCustomMedication: (medication: CustomMedication, quantity: number) => void
   removeItem: (id: string) => Promise<void>
   updateQuantity: (id: string, quantity: number) => Promise<void>
   updateAllPurchaseType: (purchaseType: 'one-time' | 'subscription') => Promise<void>
@@ -49,22 +48,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
           image: item.product.image || '',
           category: (item.product.category as any) || 'outros',
           inStock: ((item.product as any).stock || 0) > 0,
-          isCustomizable: true,
         } : undefined,
         quantity: item.quantity,
-        type: 'product' as const,
         purchaseType: (item.purchase_type as 'one-time' | 'subscription' | undefined) || 'one-time',
       }))
 
-      // Preserva custom medications (formulações) que são armazenados apenas localmente
-      setItems(prevItems => {
-        const customItems = prevItems.filter(item => item.type === 'custom')
-        return [...cartItems, ...customItems]
-      })
+      setItems(cartItems)
     } catch (error) {
       console.error('Erro ao carregar carrinho:', error)
-      // Em caso de erro, preserva apenas custom medications locais
-      setItems(prevItems => prevItems.filter(item => item.type === 'custom'))
+      setItems([])
     } finally {
       setLoading(false)
     }
@@ -77,7 +69,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!isAuthenticated) {
       // Fallback para modo offline/local
       setItems(prev => {
-        const existing = prev.find(item => item.product?.id === product.id && item.type === 'product')
+        const existing = prev.find(item => item.product?.id === product.id)
         if (existing) {
           return prev.map(item =>
             item.id === existing.id
@@ -85,7 +77,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
               : item
           )
         }
-        return [...prev, { id: Date.now().toString(), product, quantity, type: 'product', purchaseType }]
+        return [...prev, { id: Date.now().toString(), product, quantity, purchaseType }]
       })
       return
     }
@@ -99,29 +91,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const addCustomMedication = (medication: CustomMedication, quantity: number) => {
-    // SEMPRE adiciona como 'one-time' - assinatura só pode ser definida globalmente no carrinho
-    const purchaseType: 'one-time' = 'one-time'
-    
-    // CustomMedication ainda não está no banco, mantém local
-    setItems(prev => [...prev, {
-      id: medication.id,
-      customMedication: medication,
-      quantity,
-      type: 'custom',
-      purchaseType
-    }])
-  }
-
   const removeItem = async (id: string) => {
-    const item = items.find(i => i.id === id)
-    
-    // Se for custom medication, remove localmente
-    if (item?.type === 'custom') {
-      setItems(prev => prev.filter(item => item.id !== id))
-      return
-    }
-
     if (!isAuthenticated) {
       setItems(prev => prev.filter(item => item.id !== id))
       return
@@ -139,16 +109,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const updateQuantity = async (id: string, quantity: number) => {
     if (quantity <= 0) {
       await removeItem(id)
-      return
-    }
-
-    const item = items.find(i => i.id === id)
-    
-    // Se for custom medication, atualiza localmente
-    if (item?.type === 'custom') {
-      setItems(prev => prev.map(item =>
-        item.id === id ? { ...item, quantity } : item
-      ))
       return
     }
 
@@ -183,7 +143,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       const currentItems = items // Captura os itens atuais antes de atualizar
       const updatePromises = currentItems
-        .filter(item => item.type === 'product') // Apenas produtos do backend
         .map(item => cartService.updateItem(item.id, undefined, purchaseType))
       
       await Promise.all(updatePromises)
@@ -214,7 +173,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const getTotal = () => {
     return items.reduce((total, item) => {
-      const price = item.product?.price || item.customMedication?.price || 0
+      const price = item.product?.price || 0
       return total + (price * item.quantity)
     }, 0)
   }
@@ -228,7 +187,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       items,
       loading,
       addProduct,
-      addCustomMedication,
       removeItem,
       updateQuantity,
       updateAllPurchaseType,
@@ -249,10 +207,3 @@ export function useCart() {
   }
   return context
 }
-
-
-
-
-
-
-

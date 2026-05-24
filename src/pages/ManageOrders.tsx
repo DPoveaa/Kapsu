@@ -94,7 +94,7 @@ export default function ManageOrders() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827]">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         <div className="mb-4 sm:mb-6 flex items-center justify-between">
           <button
@@ -129,7 +129,7 @@ export default function ManageOrders() {
               placeholder="Buscar pedidos por ID, cliente, email ou status..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-[#111827] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -137,7 +137,7 @@ export default function ManageOrders() {
         {/* Estatísticas */}
         {!loading && !error && orders.length > 0 && (
           <div className="mb-4 sm:mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-[#0F828C]">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center">
                 <Package className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 dark:text-blue-400 mr-2 sm:mr-3 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -146,7 +146,7 @@ export default function ManageOrders() {
                 </div>
               </div>
             </div>
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-[#0F828C]">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center">
                 <Package className="w-6 h-6 sm:w-8 sm:h-8 text-green-600 dark:text-green-400 mr-2 sm:mr-3 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -157,7 +157,7 @@ export default function ManageOrders() {
                 </div>
               </div>
             </div>
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-[#0F828C] sm:col-span-2 lg:col-span-1">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700 sm:col-span-2 lg:col-span-1">
               <div className="flex items-center">
                 <Package className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600 dark:text-yellow-400 mr-2 sm:mr-3 flex-shrink-0" />
                 <div className="min-w-0 flex-1">
@@ -195,10 +195,10 @@ export default function ManageOrders() {
         {!loading && !error && (
           <>
             {/* Desktop: Tabela */}
-            <div className="hidden lg:block bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-[#0F828C]">
+            <div className="hidden lg:block bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                  <thead className="bg-gray-50 dark:bg-[#065084]">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         ID do Pedido
@@ -223,7 +223,7 @@ export default function ManageOrders() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {filteredOrders.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
@@ -290,7 +290,7 @@ export default function ManageOrders() {
             {/* Mobile: Cards */}
             <div className="lg:hidden space-y-3">
               {filteredOrders.length === 0 ? (
-                <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg border border-gray-200 dark:border-[#0F828C] p-6 text-center">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg border border-gray-200 dark:border-gray-700 p-6 text-center">
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {orders.length === 0 ? 'Nenhum pedido encontrado' : 'Nenhum pedido corresponde à busca'}
                   </p>
@@ -299,7 +299,7 @@ export default function ManageOrders() {
                 filteredOrders.map((order) => (
                   <div
                     key={order.id}
-                    className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg border border-gray-200 dark:border-[#0F828C] p-3 sm:p-4"
+                    className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-4"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1 min-w-0">
@@ -323,7 +323,7 @@ export default function ManageOrders() {
                         {getStatusBadge(order.status)}
                       </div>
                     </div>
-                    <div className="space-y-1.5 sm:space-y-2 mb-3 pt-2 border-t border-gray-200 dark:border-[#0F828C]">
+                    <div className="space-y-1.5 sm:space-y-2 mb-3 pt-2 border-t border-gray-200 dark:border-gray-700">
                       <div className="flex items-center justify-between text-xs sm:text-sm">
                         <span className="text-gray-500 dark:text-gray-400">Total:</span>
                         <span className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
@@ -343,7 +343,7 @@ export default function ManageOrders() {
                         </span>
                       </div>
                     </div>
-                    <div className="pt-2 border-t border-gray-200 dark:border-[#0F828C]">
+                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
                       <button
                         onClick={() => navigate(`/admin/orders/${order.id}`)}
                         className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"

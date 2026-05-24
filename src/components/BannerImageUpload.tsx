@@ -105,7 +105,7 @@ export default function BannerImageUpload({
       <div className="flex items-center gap-4">
         {/* Preview da imagem */}
         {preview && (
-          <div className="relative w-32 h-32 border-2 border-gray-200 dark:border-[#0F828C] rounded-lg overflow-hidden bg-gray-50 dark:bg-[#065084]">
+          <div className="relative w-32 h-32 border-2 border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-800">
             <img
               src={preview}
               alt="Preview"
@@ -148,8 +148,8 @@ export default function BannerImageUpload({
             className={`
               flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed transition-colors
               ${disabled || uploading
-                ? 'border-gray-300 dark:border-[#0F828C] bg-gray-100 dark:bg-[#065084] text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                : 'border-primary-300 dark:border-[#0F828C] bg-primary-50 dark:bg-[#065084] text-primary-700 dark:text-white hover:border-primary-500 dark:hover:border-[#0F828C] hover:bg-primary-100 dark:hover:bg-[#065084] cursor-pointer'
+                ? 'border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                : 'border-primary-300 dark:border-gray-700 bg-primary-50 dark:bg-gray-800 text-primary-700 dark:text-white hover:border-primary-500 dark:hover:border-[#0F828C] hover:bg-primary-100 dark:hover:bg-[#065084] cursor-pointer'
               }
             `}
           >

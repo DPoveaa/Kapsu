@@ -28,7 +28,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
     <>
       {/* Cards de Estatísticas Gerais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total de Cálculos</p>
@@ -45,7 +45,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Taxa de Sucesso</p>
@@ -59,7 +59,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Taxa de Recusa</p>
@@ -76,7 +76,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Frete Médio</p>
@@ -96,7 +96,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
 
       {/* Cards Adicionais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Fretes Grátis</p>
@@ -110,7 +110,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Fretes Pagos</p>
@@ -124,7 +124,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total Arrecadado em Frete</p>
@@ -138,7 +138,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Ticket Médio Recusado</p>
@@ -155,7 +155,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
       </div>
 
       {/* Detalhamento de Fretes Grátis por Motivo */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3 lg:mb-4">
           Fretes Grátis por Motivo
         </h2>
@@ -175,7 +175,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
               const Icon = config.icon;
 
               return (
-                <div key={index} className="bg-gray-50 dark:bg-[#065084] rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-[#0F828C]">
+                <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700">
                   <div className="flex items-center justify-between mb-1.5 sm:mb-2">
                     <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${config.text} ${config.darkText}`} />
                     <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full ${config.bg} ${config.text} ${config.darkBg} ${config.darkText} break-words`}>
@@ -202,7 +202,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
 
       {/* Gráfico de Fretes Grátis por Motivo */}
       {shippingStats.freeShippingByReason && shippingStats.freeShippingByReason.length > 0 && (
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             Distribuição de Fretes Grátis por Motivo
           </h2>
@@ -231,7 +231,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
       )}
 
       {/* Gráfico de Evolução */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Evolução de Cálculos de Frete
         </h2>
@@ -297,7 +297,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
       </div>
 
       {/* Top Regiões Mais Usadas */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Top 20 Regiões Mais Usadas
         </h2>
@@ -305,8 +305,8 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Município
@@ -322,7 +322,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {shippingStats.topRegions.map((region: any, index: number) => (
                     <tr key={index}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-words">
@@ -345,7 +345,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {shippingStats.topRegions.map((region: any, index: number) => (
-                <div key={index} className="bg-gray-50 dark:bg-[#065084] rounded-lg p-3 border border-gray-200 dark:border-[#0F828C]">
+                <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Município</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">{region.municipality}</p>
@@ -376,7 +376,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
       </div>
 
       {/* CEPs Recusados - Detalhado */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3 lg:mb-4">
           CEPs Recusados (Regiões Não Atendidas)
         </h2>
@@ -388,8 +388,8 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       CEP
@@ -405,7 +405,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {shippingStats.rejectedCeps.map((rejected: any, index: number) => (
                     <tr key={index} className={index < 10 ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
@@ -428,7 +428,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {shippingStats.rejectedCeps.map((rejected: any, index: number) => (
-                <div key={index} className={`rounded-lg p-3 border ${index < 10 ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-[#065084] border-gray-200 dark:border-[#0F828C]'}`}>
+                <div key={index} className={`rounded-lg p-3 border ${index < 10 ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">CEP</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{rejected.cep}</p>
@@ -464,7 +464,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
       </div>
 
       {/* Regiões Recusadas por Prefixo */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3 lg:mb-4">
           Regiões Recusadas Agrupadas por Prefixo de CEP
         </h2>
@@ -475,8 +475,8 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Prefixo CEP
@@ -495,7 +495,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {shippingStats.rejectedByPrefix.map((prefix: any, index: number) => (
                     <tr key={index} className={index < 5 ? 'bg-red-50 dark:bg-red-900/30' : ''}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
@@ -521,7 +521,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {shippingStats.rejectedByPrefix.map((prefix: any, index: number) => (
-                <div key={index} className={`rounded-lg p-3 border ${index < 5 ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800' : 'bg-gray-50 dark:bg-[#065084] border-gray-200 dark:border-[#0F828C]'}`}>
+                <div key={index} className={`rounded-lg p-3 border ${index < 5 ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Prefixo CEP</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">{prefix.cepPrefix}XX-XXX</p>
@@ -561,7 +561,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
       </div>
 
       {/* Top Usuários com CEPs Recusados */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3 lg:mb-4">
           Clientes que Mais Tentaram CEPs Recusados
         </h2>
@@ -572,8 +572,8 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Cliente
@@ -589,7 +589,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {shippingStats.topUsersWithRejected.map((user: any, index: number) => (
                     <tr key={index}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-words">
@@ -612,7 +612,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {shippingStats.topUsersWithRejected.map((user: any, index: number) => (
-                <div key={index} className="bg-gray-50 dark:bg-[#065084] rounded-lg p-3 border border-gray-200 dark:border-[#0F828C]">
+                <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cliente</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">{user.userName}</p>
@@ -644,7 +644,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
 
       {/* Gráfico de Distribuição */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             Distribuição: Sucesso vs Recusa
           </h2>
@@ -680,7 +680,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
           )}
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             Distribuição: Grátis vs Pago
           </h2>

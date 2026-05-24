@@ -32,7 +32,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
     <>
       {/* Cards de Estatísticas Gerais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total de Produtos</p>
@@ -49,7 +49,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Vendidos no Período</p>
@@ -66,7 +66,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Receita no Período</p>
@@ -83,7 +83,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Vendidos Hoje</p>
@@ -103,7 +103,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
 
       {/* Cards Adicionais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Vendidos na Semana</p>
@@ -120,7 +120,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Estoque Baixo</p>
@@ -137,7 +137,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C] sm:col-span-2 lg:col-span-1">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700 sm:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Produtos Inativos</p>
@@ -156,7 +156,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
       </div>
 
       {/* Gráfico de Evolução Diária */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Evolução de Vendas (Diária)
         </h2>
@@ -215,7 +215,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
       </div>
 
       {/* Gráfico de Evolução Mensal */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Evolução de Vendas (Mensal - Últimos 12 Meses)
         </h2>
@@ -265,7 +265,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
       </div>
 
       {/* Top Produtos por Quantidade */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Top 20 Produtos Mais Vendidos (por Quantidade)
         </h2>
@@ -273,8 +273,8 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Produto
@@ -299,7 +299,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {productsStats.topProductsByQuantity.map((product: any, index: number) => (
                     <tr key={product.id} className={index < 3 ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
@@ -352,7 +352,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {productsStats.topProductsByQuantity.map((product: any, index: number) => (
-                <div key={product.id} className={`rounded-lg p-3 border ${index < 3 ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-[#065084] border-gray-200 dark:border-[#0F828C]'}`}>
+                <div key={product.id} className={`rounded-lg p-3 border ${index < 3 ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Produto</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">{product.name}</p>
@@ -421,7 +421,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
       </div>
 
       {/* Top Produtos por Receita */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Top 20 Produtos por Receita
         </h2>
@@ -429,8 +429,8 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Produto
@@ -452,7 +452,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {productsStats.topProductsByRevenue.map((product: any, index: number) => (
                     <tr key={product.id} className={index < 3 ? 'bg-green-50 dark:bg-green-900/30' : ''}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
@@ -494,7 +494,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {productsStats.topProductsByRevenue.map((product: any, index: number) => (
-                <div key={product.id} className={`rounded-lg p-3 border ${index < 3 ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800' : 'bg-gray-50 dark:bg-[#065084] border-gray-200 dark:border-[#0F828C]'}`}>
+                <div key={product.id} className={`rounded-lg p-3 border ${index < 3 ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Produto</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">{product.name}</p>
@@ -553,7 +553,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
       {/* Distribuições */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
         {/* Distribuição por Hora do Dia */}
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             Vendas por Hora do Dia
           </h2>
@@ -591,7 +591,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
         </div>
 
         {/* Distribuição por Dia da Semana */}
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             Vendas por Dia da Semana
           </h2>
@@ -633,15 +633,15 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
 
       {/* Produtos com Estoque Baixo */}
       {productsStats.lowStockProducts && productsStats.lowStockProducts.length > 0 && (
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             ⚠️ Produtos com Estoque Baixo (Menos de 10 unidades)
           </h2>
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Produto
@@ -654,7 +654,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {productsStats.lowStockProducts.map((product: any) => (
                     <tr key={product.id} className="bg-red-50 dark:bg-red-900/30">
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
@@ -706,15 +706,15 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
 
       {/* Produtos Nunca Vendidos */}
       {productsStats.neverSoldProducts && productsStats.neverSoldProducts.length > 0 && (
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             Produtos Nunca Vendidos
           </h2>
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Produto
@@ -730,7 +730,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {productsStats.neverSoldProducts.map((product: any) => (
                     <tr key={product.id}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
@@ -766,7 +766,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {productsStats.neverSoldProducts.map((product: any) => (
-                <div key={product.id} className="bg-gray-50 dark:bg-[#065084] rounded-lg p-3 border border-gray-200 dark:border-[#0F828C]">
+                <div key={product.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Produto</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">{product.name}</p>

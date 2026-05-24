@@ -64,7 +64,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
     <>
       {/* Cards de Estatísticas Gerais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total de Mensagens</p>
@@ -81,7 +81,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Mensagens Recebidas</p>
@@ -98,7 +98,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Mensagens Enviadas</p>
@@ -115,7 +115,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Taxa de Resposta</p>
@@ -135,7 +135,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
 
       {/* Cards de Tempo de Resposta */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Tempo Médio de Resposta</p>
@@ -152,7 +152,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Tempo Mais Longo</p>
@@ -169,7 +169,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Tempo Mais Rápido</p>
@@ -186,7 +186,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Sem Resposta</p>
@@ -206,7 +206,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
 
       {/* Cards Adicionais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total de Conversas</p>
@@ -223,7 +223,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Precisam de Resposta</p>
@@ -242,7 +242,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
       </div>
 
       {/* Distribuição de Tempo de Resposta */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Distribuição de Tempo de Resposta
         </h2>
@@ -292,7 +292,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
       </div>
 
       {/* Gráfico de Evolução Diária */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Evolução de Mensagens (Diária)
         </h2>
@@ -358,7 +358,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
       {/* Distribuições */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
         {/* Distribuição por Hora do Dia */}
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             Mensagens por Hora do Dia
           </h2>
@@ -388,7 +388,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
         </div>
 
         {/* Distribuição por Dia da Semana */}
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             Mensagens por Dia da Semana
           </h2>
@@ -421,7 +421,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
       </div>
 
       {/* Mensagens por Tipo */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Mensagens por Tipo
         </h2>
@@ -437,7 +437,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
                 'other': 'Outro',
               }
               return (
-                <div key={index} className="bg-gray-50 dark:bg-[#065084] rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-[#0F828C]">
+                <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 sm:p-4 border border-gray-200 dark:border-gray-700">
                   <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">{typeLabels[type.type] || type.type}</p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1 break-words">{Number(type.count).toLocaleString('pt-BR')}</p>
                 </div>
@@ -452,7 +452,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
       </div>
 
       {/* Top Conversas */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Top 20 Conversas (por Número de Mensagens)
         </h2>
@@ -460,8 +460,8 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Contato
@@ -480,7 +480,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {whatsappStats.topConversations.map((conv: any, index: number) => (
                     <tr key={index} className={index < 3 ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-words">
@@ -506,7 +506,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {whatsappStats.topConversations.map((conv: any, index: number) => (
-                <div key={index} className={`rounded-lg p-3 border ${index < 3 ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-[#065084] border-gray-200 dark:border-[#0F828C]'}`}>
+                <div key={index} className={`rounded-lg p-3 border ${index < 3 ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Contato</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">{conv.contactName}</p>

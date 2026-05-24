@@ -165,7 +165,7 @@ export default function Checkout() {
           
           // Prepara itens do carrinho para envio
           const cartItems = items
-            .filter(item => item.product) // Apenas produtos (não customMedication)
+            .filter(item => item.product) // Apenas produtos
             .map(item => ({
               product_id: item.product!.id,
               quantity: item.quantity,
@@ -580,7 +580,7 @@ export default function Checkout() {
   const isEditingSelected = editingAddressId === selectedAddressId
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 bg-gray-50 dark:bg-[#111827] min-h-screen">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <button
         onClick={() => navigate(-1)}
         className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-4 sm:mb-6 cursor-pointer text-sm sm:text-base"
@@ -646,8 +646,8 @@ export default function Checkout() {
                         onClick={() => selectAddress(address)}
                         className={`p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all ${
                           selectedAddressId === address.id
-                            ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-[#065084]'
-                            : 'border-gray-200 dark:border-[#0F828C] hover:border-primary-300 dark:hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-[#065084]'
+                            ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-gray-800'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-[#065084]'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2 sm:gap-4">
@@ -748,10 +748,10 @@ export default function Checkout() {
                         required
                         placeholder="00000-000"
                         maxLength={9}
-                        className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white ${
+                        className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-white ${
                           hasInvalidCep()
                             ? 'border-red-500 dark:border-red-400 text-red-600 dark:text-red-400' 
-                            : 'border-gray-300 dark:border-[#0F828C]'
+                            : 'border-gray-300 dark:border-gray-700'
                         }`}
                       />
                       {calculatingShipping && (
@@ -783,7 +783,7 @@ export default function Checkout() {
                       onChange={handleInputChange}
                       required
                       placeholder="Rua, Avenida, etc."
-                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
@@ -798,7 +798,7 @@ export default function Checkout() {
                         onChange={handleInputChange}
                         required
                         placeholder="123"
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
                     <div className="sm:col-span-2">
@@ -811,7 +811,7 @@ export default function Checkout() {
                         value={formData.complement}
                         onChange={handleInputChange}
                         placeholder="Apto, Bloco, etc."
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
                   </div>
@@ -827,7 +827,7 @@ export default function Checkout() {
                         onChange={handleInputChange}
                         required
                         placeholder="São Paulo"
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
                     <div>
@@ -842,7 +842,7 @@ export default function Checkout() {
                         required
                         placeholder="SP"
                         maxLength={2}
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                       />
                     </div>
                   </div>
@@ -984,7 +984,7 @@ export default function Checkout() {
             <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">Resumo do Pedido</h2>
             <div className="space-y-2 mb-3 sm:mb-4">
               {items.map(item => {
-                const price = item.product?.price || item.customMedication?.price || 0
+                const price = item.product?.price || 0
                 const itemTotal = price * item.quantity
                 const itemDiscountedPrice = isSubscription 
                   ? itemTotal * (1 - subscriptionDiscount)
@@ -993,7 +993,7 @@ export default function Checkout() {
                 return (
                   <div key={item.id} className="text-xs sm:text-sm">
                     <p className="font-medium dark:text-white line-clamp-2">
-                      {item.product?.name || item.customMedication?.name}
+                      {item.product?.name}
                     </p>
                     <p className="text-gray-600 dark:text-gray-300">
                       Qtd: {item.quantity} × R$ {price.toFixed(2).replace('.', ',')}
@@ -1012,14 +1012,14 @@ export default function Checkout() {
                 )
               })}
             </div>
-            <div className="border-t border-gray-200 dark:border-[#0F828C] pt-3 sm:pt-4 space-y-2 sm:space-y-3">
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4 space-y-2 sm:space-y-3">
               <div className="flex justify-between items-center text-xs sm:text-sm">
                 <span className="text-gray-600 dark:text-gray-300">Subtotal</span>
                 <span className="font-semibold text-gray-900 dark:text-white">R$ {subtotal.toFixed(2).replace('.', ',')}</span>
               </div>
 
               {isSubscription && (
-                <div className="bg-primary-50 dark:bg-[#065084] rounded-lg p-2.5 sm:p-3 border border-primary-100 dark:border-[#0F828C]">
+                <div className="bg-primary-50 dark:bg-gray-800 rounded-lg p-2.5 sm:p-3 border border-primary-100 dark:border-gray-700">
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-xs sm:text-sm font-semibold text-primary-700 dark:text-primary-400">Desconto Assinatura</span>
                     <span className="text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400">
@@ -1098,7 +1098,7 @@ export default function Checkout() {
       {/* Modal para salvar endereço */}
       {showSaveAddressModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 cursor-pointer p-3 sm:p-4" onClick={() => setShowSaveAddressModal(false)}>
-          <div className="bg-white dark:bg-[#065084] rounded-lg p-4 sm:p-6 max-w-md w-full border border-gray-200 dark:border-[#0F828C]" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 max-w-md w-full border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Salvar Endereço</h3>
               <button onClick={() => setShowSaveAddressModal(false)} className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white cursor-pointer">
@@ -1112,7 +1112,7 @@ export default function Checkout() {
               ref={nicknameInputRef}
               type="text"
               placeholder="Ex: Casa, Trabalho, Escritório..."
-              className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-3 sm:mb-4"
+              className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-3 sm:mb-4"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
@@ -1127,7 +1127,7 @@ export default function Checkout() {
             <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-3">
               <button
                 onClick={() => setShowSaveAddressModal(false)}
-                className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] cursor-pointer"
+                className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] cursor-pointer"
               >
                 Cancelar
               </button>
@@ -1152,7 +1152,7 @@ export default function Checkout() {
       {/* Modal de confirmação de exclusão */}
       {showDeleteConfirmModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4" onClick={() => setShowDeleteConfirmModal(null)}>
-          <div className="bg-white dark:bg-[#065084] rounded-lg p-4 sm:p-6 max-w-md w-full border border-gray-200 dark:border-[#0F828C]" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 max-w-md w-full border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Confirmar Exclusão</h3>
               <button onClick={() => setShowDeleteConfirmModal(null)} className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white cursor-pointer">
@@ -1165,7 +1165,7 @@ export default function Checkout() {
             {showDeleteConfirmModal && (() => {
               const addressToDelete = savedAddresses.find(addr => addr.id === showDeleteConfirmModal)
               return addressToDelete && (
-                <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]">
+                <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                   <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">{addressToDelete.nickname}</p>
                   <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 break-words">
                     {addressToDelete.address}, {addressToDelete.number}
@@ -1180,7 +1180,7 @@ export default function Checkout() {
             <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-3">
               <button
                 onClick={() => setShowDeleteConfirmModal(null)}
-                className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] cursor-pointer"
+                className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] cursor-pointer"
               >
                 Cancelar
               </button>
@@ -1198,7 +1198,7 @@ export default function Checkout() {
       {/* Modal para editar endereço */}
       {showEditAddressModal && editAddressData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 cursor-pointer p-3 sm:p-4" onClick={() => setShowEditAddressModal(false)}>
-          <div className="bg-white dark:bg-[#065084] rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-[#0F828C]" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-3 sm:mb-4">
               <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Editar Endereço</h3>
               <button onClick={() => setShowEditAddressModal(false)} className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white cursor-pointer">
@@ -1215,7 +1215,7 @@ export default function Checkout() {
                   type="text"
                   value={editAddressData.nickname}
                   onChange={(e) => setEditAddressData({ ...editAddressData, nickname: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="Ex: Casa, Trabalho..."
                 />
               </div>
@@ -1237,7 +1237,7 @@ export default function Checkout() {
                     }
                   }}
                   maxLength={9}
-                  className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   placeholder="00000-000"
                 />
               </div>
@@ -1250,7 +1250,7 @@ export default function Checkout() {
                   type="text"
                   value={editAddressData.address}
                   onChange={(e) => setEditAddressData({ ...editAddressData, address: e.target.value })}
-                  className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
 
@@ -1263,7 +1263,7 @@ export default function Checkout() {
                     type="text"
                     value={editAddressData.number}
                     onChange={(e) => setEditAddressData({ ...editAddressData, number: e.target.value })}
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
                 <div className="sm:col-span-2">
@@ -1274,7 +1274,7 @@ export default function Checkout() {
                     type="text"
                     value={editAddressData.complement || ''}
                     onChange={(e) => setEditAddressData({ ...editAddressData, complement: e.target.value || null })}
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -1288,7 +1288,7 @@ export default function Checkout() {
                     type="text"
                     value={editAddressData.city}
                     onChange={(e) => setEditAddressData({ ...editAddressData, city: e.target.value })}
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
                 <div>
@@ -1300,7 +1300,7 @@ export default function Checkout() {
                     value={editAddressData.state}
                     onChange={(e) => setEditAddressData({ ...editAddressData, state: e.target.value.toUpperCase().substring(0, 2) })}
                     maxLength={2}
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] dark:bg-[#065084] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -1322,7 +1322,7 @@ export default function Checkout() {
             <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-3 mt-4 sm:mt-6">
               <button
                 onClick={() => setShowEditAddressModal(false)}
-                className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] cursor-pointer"
+                className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] cursor-pointer"
               >
                 Cancelar
               </button>

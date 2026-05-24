@@ -146,7 +146,7 @@ export default function ShippingSettings() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#111827] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
           <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300">Carregando configurações de frete...</p>
@@ -156,7 +156,7 @@ export default function ShippingSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827] py-4 sm:py-6 lg:py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 sm:py-6 lg:py-8">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
         <div className="mb-4 sm:mb-6 lg:mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
@@ -189,7 +189,7 @@ export default function ShippingSettings() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
           {/* Configurações Gerais */}
           <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center mb-3 sm:mb-4">
                 <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300 mr-1.5 sm:mr-2" />
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Configurações Gerais</h2>
@@ -214,7 +214,7 @@ export default function ShippingSettings() {
                         free_shipping_threshold: isNaN(value) ? 0 : value,
                       });
                     }}
-                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                     placeholder="200.00"
                   />
                   <p className="mt-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 break-words">
@@ -238,7 +238,7 @@ export default function ShippingSettings() {
 
           {/* Lista de Regiões e Formulário */}
           <div className="lg:col-span-2">
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0 mb-4 sm:mb-5 lg:mb-6">
                 <div className="flex items-center">
                   <Truck className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300 mr-1.5 sm:mr-2" />
@@ -257,7 +257,7 @@ export default function ShippingSettings() {
 
               {/* Formulário de Nova/Edição */}
               {(editingRegion !== null) && (
-                <div className="mb-4 sm:mb-5 lg:mb-6 p-3 sm:p-4 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]">
+                <div className="mb-4 sm:mb-5 lg:mb-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                   <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
                     {editingRegion.id ? 'Editar Região' : 'Nova Região'}
                   </h3>
@@ -271,7 +271,7 @@ export default function ShippingSettings() {
                         type="text"
                         value={formData.municipality}
                         onChange={(e) => setFormData({ ...formData, municipality: e.target.value })}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                         placeholder="Ex: São Paulo"
                       />
                     </div>
@@ -288,7 +288,7 @@ export default function ShippingSettings() {
                           setFormData({ ...formData, cepFrom: formatted })
                         }}
                         maxLength={9}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                         placeholder="00000-000"
                       />
                     </div>
@@ -305,7 +305,7 @@ export default function ShippingSettings() {
                           setFormData({ ...formData, cepTo: formatted })
                         }}
                         maxLength={9}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                         placeholder="00000-000"
                       />
                     </div>
@@ -320,7 +320,7 @@ export default function ShippingSettings() {
                         step="0.01"
                         value={formData.shippingFee}
                         onChange={(e) => setFormData({ ...formData, shippingFee: e.target.value })}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                         placeholder="18.00"
                       />
                     </div>
@@ -342,7 +342,7 @@ export default function ShippingSettings() {
                   <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 mt-3 sm:mt-4">
                     <button
                       onClick={handleCancelEdit}
-                      className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                      className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                     >
                       Cancelar
                     </button>
@@ -361,8 +361,8 @@ export default function ShippingSettings() {
               <>
                 {/* Desktop: Tabela */}
                 <div className="hidden lg:block overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                    <thead className="bg-gray-50 dark:bg-[#065084]">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <thead className="bg-gray-50 dark:bg-gray-800">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Município
@@ -384,7 +384,7 @@ export default function ShippingSettings() {
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {regions.length === 0 ? (
                         <tr>
                           <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
@@ -439,7 +439,7 @@ export default function ShippingSettings() {
                 {/* Mobile: Cards */}
                 <div className="lg:hidden space-y-3">
                   {regions.length === 0 ? (
-                    <div className="bg-white dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C] p-6 text-center">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 text-center">
                       <p className="text-sm text-gray-500 dark:text-gray-400">
                         Nenhuma região cadastrada. Clique em "Nova Região" para adicionar.
                       </p>
@@ -448,7 +448,7 @@ export default function ShippingSettings() {
                     regions.map((region) => (
                       <div
                         key={region.id}
-                        className="bg-white dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C] p-3 sm:p-4"
+                        className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-4"
                       >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0">
@@ -464,7 +464,7 @@ export default function ShippingSettings() {
                             </span>
                           </div>
                         </div>
-                        <div className="space-y-1.5 sm:space-y-2 mb-3 pt-2 border-t border-gray-200 dark:border-[#0F828C]">
+                        <div className="space-y-1.5 sm:space-y-2 mb-3 pt-2 border-t border-gray-200 dark:border-gray-700">
                           <div className="flex items-center justify-between text-xs sm:text-sm">
                             <span className="text-gray-500 dark:text-gray-400">CEP Inicial:</span>
                             <span className="text-gray-900 dark:text-white font-medium">{region.cep_from}</span>
@@ -480,7 +480,7 @@ export default function ShippingSettings() {
                             </span>
                           </div>
                         </div>
-                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-200 dark:border-[#0F828C]">
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                           <button
                             onClick={() => handleEditRegion(region)}
                             className="px-3 py-1.5 text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"

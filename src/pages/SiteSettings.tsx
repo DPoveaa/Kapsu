@@ -129,7 +129,7 @@ export default function SiteSettings() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#111827] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-300">Carregando configurações...</p>
@@ -139,9 +139,9 @@ export default function SiteSettings() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827] py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-gray-700">
           <div className="mb-6">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Configurações do Site</h1>
             <p className="mt-2 text-gray-600 dark:text-gray-300">Gerencie as configurações gerais do site</p>
@@ -160,7 +160,7 @@ export default function SiteSettings() {
           )}
 
           {/* Seção: Logo */}
-          <div className="mb-8 border-b border-gray-200 dark:border-[#0F828C] pb-6">
+          <div className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
             <div className="flex items-center mb-4">
               <ImageIcon className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Logo do Site</h2>
@@ -172,7 +172,7 @@ export default function SiteSettings() {
                   <img
                     src={logoPreview}
                     alt="Logo atual"
-                    className="max-h-32 max-w-full object-contain border border-gray-200 dark:border-[#0F828C] rounded p-2"
+                    className="max-h-32 max-w-full object-contain border border-gray-200 dark:border-gray-700 rounded p-2"
                   />
                   <button
                     onClick={handleDeleteLogo}
@@ -209,7 +209,7 @@ export default function SiteSettings() {
           </div>
 
           {/* Seção: Informações Básicas */}
-          <div className="mb-8 border-b border-gray-200 dark:border-[#0F828C] pb-6">
+          <div className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
             <div className="flex items-center mb-4">
               <Globe className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Informações Básicas</h2>
@@ -224,7 +224,7 @@ export default function SiteSettings() {
                   type="text"
                   value={settings.site_name || ''}
                   onChange={(e) => handleInputChange('site_name', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="Ex: Kapsu Farmácia"
                 />
               </div>
@@ -237,7 +237,7 @@ export default function SiteSettings() {
                   value={settings.site_description || ''}
                   onChange={(e) => handleInputChange('site_description', e.target.value)}
                   rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="Descrição breve do site"
                 />
               </div>
@@ -245,7 +245,7 @@ export default function SiteSettings() {
           </div>
 
           {/* Seção: Contato */}
-          <div className="mb-8 border-b border-gray-200 dark:border-[#0F828C] pb-6">
+          <div className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
             <div className="flex items-center mb-4">
               <Phone className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Informações de Contato</h2>
@@ -261,7 +261,7 @@ export default function SiteSettings() {
                   type="email"
                   value={settings.contact_email || ''}
                   onChange={(e) => handleInputChange('contact_email', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="contato@kapsu.com"
                 />
               </div>
@@ -275,7 +275,7 @@ export default function SiteSettings() {
                   type="tel"
                   value={settings.contact_phone || ''}
                   onChange={(e) => handleInputChange('contact_phone', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="(11) 99999-9999"
                 />
               </div>
@@ -289,7 +289,7 @@ export default function SiteSettings() {
                   value={settings.address || ''}
                   onChange={(e) => handleInputChange('address', e.target.value)}
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="Endereço completo"
                 />
               </div>
@@ -297,7 +297,7 @@ export default function SiteSettings() {
           </div>
 
           {/* Seção: Redes Sociais */}
-          <div className="mb-8 border-b border-gray-200 dark:border-[#0F828C] pb-6">
+          <div className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
             <div className="flex items-center mb-4">
               <Globe className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Redes Sociais</h2>
@@ -312,7 +312,7 @@ export default function SiteSettings() {
                   type="url"
                   value={settings.social_media?.facebook || ''}
                   onChange={(e) => handleSocialMediaChange('facebook', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="https://facebook.com/kapsu"
                 />
               </div>
@@ -325,7 +325,7 @@ export default function SiteSettings() {
                   type="url"
                   value={settings.social_media?.instagram || ''}
                   onChange={(e) => handleSocialMediaChange('instagram', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="https://instagram.com/kapsu"
                 />
               </div>
@@ -338,7 +338,7 @@ export default function SiteSettings() {
                   type="url"
                   value={settings.social_media?.twitter || ''}
                   onChange={(e) => handleSocialMediaChange('twitter', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="https://twitter.com/kapsu"
                 />
               </div>
@@ -351,7 +351,7 @@ export default function SiteSettings() {
                   type="url"
                   value={settings.social_media?.linkedin || ''}
                   onChange={(e) => handleSocialMediaChange('linkedin', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="https://linkedin.com/company/kapsu"
                 />
               </div>
@@ -375,13 +375,13 @@ export default function SiteSettings() {
                     type="color"
                     value={settings.theme_colors?.primary || '#3B82F6'}
                     onChange={(e) => handleThemeColorChange('primary', e.target.value)}
-                    className="h-10 w-20 border border-gray-300 dark:border-[#0F828C] rounded cursor-pointer"
+                    className="h-10 w-20 border border-gray-300 dark:border-gray-700 rounded cursor-pointer"
                   />
                   <input
                     type="text"
                     value={settings.theme_colors?.primary || '#3B82F6'}
                     onChange={(e) => handleThemeColorChange('primary', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                     placeholder="#3B82F6"
                   />
                 </div>
@@ -396,13 +396,13 @@ export default function SiteSettings() {
                     type="color"
                     value={settings.theme_colors?.secondary || '#10B981'}
                     onChange={(e) => handleThemeColorChange('secondary', e.target.value)}
-                    className="h-10 w-20 border border-gray-300 dark:border-[#0F828C] rounded cursor-pointer"
+                    className="h-10 w-20 border border-gray-300 dark:border-gray-700 rounded cursor-pointer"
                   />
                   <input
                     type="text"
                     value={settings.theme_colors?.secondary || '#10B981'}
                     onChange={(e) => handleThemeColorChange('secondary', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                     placeholder="#10B981"
                   />
                 </div>
@@ -417,13 +417,13 @@ export default function SiteSettings() {
                     type="color"
                     value={settings.theme_colors?.accent || '#F59E0B'}
                     onChange={(e) => handleThemeColorChange('accent', e.target.value)}
-                    className="h-10 w-20 border border-gray-300 dark:border-[#0F828C] rounded cursor-pointer"
+                    className="h-10 w-20 border border-gray-300 dark:border-gray-700 rounded cursor-pointer"
                   />
                   <input
                     type="text"
                     value={settings.theme_colors?.accent || '#F59E0B'}
                     onChange={(e) => handleThemeColorChange('accent', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-[#111827] dark:text-white"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                     placeholder="#F59E0B"
                   />
                 </div>

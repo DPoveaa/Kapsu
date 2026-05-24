@@ -97,7 +97,6 @@ class ProductsService {
       image: this.getImageUrl(product.image),
       category: (product.category as Product['category']) || 'outros',
       inStock: product.stock > 0,
-      isCustomizable: true, // Por padrão, assumimos que todos são customizáveis
       free_shipping: product.free_shipping ?? false,
     }
   }
@@ -426,6 +425,35 @@ class ProductsService {
 
       if (!response.ok) {
         throw new Error(data.message || 'Erro ao excluir produto')
+      }
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão. Verifique se o servidor está rodando.')
+    }
+  }
+
+  /**
+   * Deleta múltiplos produtos (bulk delete)
+   */
+  async deleteBulk(ids: string[]): Promise<void> {
+    try {
+      const response = await fetch(`${this.baseUrl}/bulk-delete`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ ids }),
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const data = JSON.parse(text)
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao excluir produtos em massa')
       }
     } catch (error: any) {
       if (error.message) {

@@ -379,7 +379,7 @@ export default function ManageHomeSections() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#111827] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="animate-spin text-primary-600 mx-auto mb-4" size={48} />
           <p className="text-gray-600 dark:text-gray-300">Carregando...</p>
@@ -389,7 +389,7 @@ export default function ManageHomeSections() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827]">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex items-center justify-between">
           <button
@@ -450,7 +450,7 @@ export default function ManageHomeSections() {
 
         {/* Formulário de criação/edição de seção */}
         {(editingSection || creatingSection) && (
-          <div className="mb-6 bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-[#0F828C]">
+          <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                 {creatingSection ? 'Criar Nova Seção' : `Editar Seção: ${editingSection?.key}`}
@@ -584,7 +584,7 @@ export default function ManageHomeSections() {
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={handleCancel}
-                  className="px-4 py-2 border border-gray-300 dark:border-[#0F828C] text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
                 >
                   Cancelar
                 </button>
@@ -613,8 +613,8 @@ export default function ManageHomeSections() {
         )}
 
         {/* Seções */}
-        <div className="mb-8 bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-[#0F828C]">
-          <div className="p-4 border-b border-gray-200 dark:border-[#0F828C]">
+        <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Seções da Página Inicial</h2>
             <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Gerencie os nomes e configurações das seções</p>
           </div>
@@ -624,7 +624,7 @@ export default function ManageHomeSections() {
               <p className="text-gray-500 dark:text-gray-400">Nenhuma seção cadastrada</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200 dark:divide-[#0F828C]">
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {sections.map((section, index) => (
                 <div
                   key={section.id}
@@ -715,13 +715,13 @@ export default function ManageHomeSections() {
 
                   {/* Lista de produtos manuais */}
                   {section.display_type === 'manual' && sectionProducts[section.id] && sectionProducts[section.id].length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-[#0F828C]">
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                       <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Produtos Manuais:</h4>
                       <div className="space-y-2">
                         {sectionProducts[section.id].map((product, productIndex) => (
                           <div
                             key={product.id}
-                            className="flex items-center space-x-3 p-2 bg-gray-50 dark:bg-[#065084] rounded"
+                            className="flex items-center space-x-3 p-2 bg-gray-50 dark:bg-gray-800 rounded"
                           >
                             <div className="flex flex-col space-y-1">
                               <button
@@ -744,7 +744,7 @@ export default function ManageHomeSections() {
                             <img
                               src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'}
                               alt={product.name}
-                              className="w-10 h-10 object-cover rounded border border-gray-200 dark:border-[#0F828C]"
+                              className="w-10 h-10 object-cover rounded border border-gray-200 dark:border-gray-700"
                               onError={(e) => {
                                 const target = e.target as HTMLImageElement
                                 target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
@@ -772,8 +772,8 @@ export default function ManageHomeSections() {
         </div>
 
         {/* Produtos em Destaque */}
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-[#0F828C]">
-          <div className="p-4 border-b border-gray-200 dark:border-[#0F828C] flex items-center justify-between">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Produtos em Destaque</h2>
               <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Gerencie quais produtos aparecem em destaque</p>
@@ -793,7 +793,7 @@ export default function ManageHomeSections() {
               <p className="text-gray-500 dark:text-gray-400">Nenhum produto em destaque</p>
             </div>
           ) : (
-            <div className="divide-y divide-gray-200 dark:divide-[#0F828C]">
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {featuredProducts.map((product, index) => (
                 <div
                   key={product.id}
@@ -823,7 +823,7 @@ export default function ManageHomeSections() {
                       <img
                         src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'}
                         alt={product.name}
-                        className="w-16 h-16 object-cover rounded-lg border border-gray-200 dark:border-[#0F828C]"
+                        className="w-16 h-16 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement
                           target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
@@ -857,8 +857,8 @@ export default function ManageHomeSections() {
         {/* Modal para adicionar produto */}
         {showAddProductModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-              <div className="p-4 border-b border-gray-200 dark:border-[#0F828C] flex items-center justify-between">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                   {selectedSectionForProducts 
                     ? `Adicionar Produto à Seção: ${sections.find(s => s.id === selectedSectionForProducts)?.name || ''}`
@@ -876,7 +876,7 @@ export default function ManageHomeSections() {
                 </button>
               </div>
 
-              <div className="p-4 border-b border-gray-200 dark:border-[#0F828C]">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                   <input
@@ -884,7 +884,7 @@ export default function ManageHomeSections() {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Buscar produtos..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-[#065084] dark:text-white"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
                   />
                 </div>
               </div>
@@ -905,7 +905,7 @@ export default function ManageHomeSections() {
                     {availableProducts.map(product => (
                       <div
                         key={product.id}
-                        className="flex items-center space-x-3 p-3 border border-gray-200 dark:border-[#0F828C] rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] cursor-pointer"
+                        className="flex items-center space-x-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] cursor-pointer"
                         onClick={() => {
                           if (selectedSectionForProducts) {
                             handleAddSectionProduct(selectedSectionForProducts, product.id)
@@ -917,7 +917,7 @@ export default function ManageHomeSections() {
                         <img
                           src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'}
                           alt={product.name}
-                          className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-[#0F828C]"
+                          className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-gray-700"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement
                             target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'

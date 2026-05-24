@@ -82,7 +82,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
     <>
       {/* Cards de Estatísticas Gerais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total de Usos</p>
@@ -104,7 +104,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total Descontado</p>
@@ -121,7 +121,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Frete Economizado</p>
@@ -138,7 +138,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total Economizado</p>
@@ -157,7 +157,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
       </div>
 
       {/* Gráfico de Evolução */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Evolução de Uso de Promoções
         </h2>
@@ -231,7 +231,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
       </div>
 
       {/* Promoções Mais Usadas */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Promoções Mais Usadas no Período
         </h2>
@@ -239,8 +239,8 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Promoção
@@ -268,7 +268,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {(promotionsStats?.usagesByPromotion || []).map((promo: any, index: number) => (
                     <tr key={index} className={index < 3 ? 'bg-yellow-50 dark:bg-yellow-900/30' : ''}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
@@ -318,7 +318,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {(promotionsStats?.usagesByPromotion || []).map((promo: any, index: number) => (
-                <div key={index} className={`rounded-lg p-3 border ${index < 3 ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-[#065084] border-gray-200 dark:border-[#0F828C]'}`}>
+                <div key={index} className={`rounded-lg p-3 border ${index < 3 ? 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800' : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Promoção</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">{promo.name}</p>
@@ -385,7 +385,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
       </div>
 
       {/* Usos Detalhados */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3 lg:mb-4">
           Histórico Detalhado de Usos
         </h2>
@@ -396,8 +396,8 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Data/Hora
@@ -434,7 +434,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {(promotionsStats?.detailedUsages || []).map((usage: any, index: number) => (
                     <tr key={index}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-300">
@@ -505,7 +505,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {(promotionsStats?.detailedUsages || []).map((usage: any, index: number) => (
-                <div key={index} className="bg-gray-50 dark:bg-[#065084] rounded-lg p-3 border border-gray-200 dark:border-[#0F828C]">
+                <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Data/Hora</p>
                     <p className="text-xs sm:text-sm text-gray-900 dark:text-white">{formatDate(usage.usedAt)}</p>
@@ -591,7 +591,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
       </div>
 
       {/* Top Clientes que Mais Usaram Promoções */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Clientes que Mais Usaram Promoções
         </h2>
@@ -599,8 +599,8 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Cliente
@@ -622,7 +622,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {(promotionsStats?.usagesByUser || []).map((user: any, index: number) => (
                     <tr key={index}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-words">
@@ -651,7 +651,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {(promotionsStats?.usagesByUser || []).map((user: any, index: number) => (
-                <div key={index} className="bg-gray-50 dark:bg-[#065084] rounded-lg p-3 border border-gray-200 dark:border-[#0F828C]">
+                <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cliente</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">{user.userName}</p>
@@ -691,7 +691,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
 
       {/* Estatísticas por Tipo */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             Distribuição por Tipo de Promoção
           </h2>
@@ -735,14 +735,14 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
           )}
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             Top 10 Promoções (Todos os Tempos)
           </h2>
           {promotionsStats?.topPromotions?.length > 0 ? (
             <div className="space-y-2 sm:space-y-3 max-h-[400px] sm:max-h-[500px] overflow-y-auto">
               {(promotionsStats?.topPromotions || []).map((promo: any, index: number) => (
-                <div key={index} className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C]">
+                <div key={index} className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                   <div className="flex-1 min-w-0">
                     <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-words">{promo.name}</p>
                     <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 break-words">{getTypeLabel(promo.type)}</p>
@@ -779,7 +779,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
       </div>
 
       {/* Resumo Financeiro */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Resumo Financeiro do Período
         </h2>

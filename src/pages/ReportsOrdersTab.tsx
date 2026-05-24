@@ -30,7 +30,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
     <>
       {/* Cards de Estatísticas Gerais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total de Pedidos</p>
@@ -44,7 +44,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Valor Total</p>
@@ -58,7 +58,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Ticket Médio</p>
@@ -72,7 +72,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Taxa de Conversão</p>
@@ -105,7 +105,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
           const Icon = config.icon
 
           return (
-            <div key={status} className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-2.5 sm:p-3 lg:p-4 border border-gray-200 dark:border-[#0F828C]">
+            <div key={status} className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-2.5 sm:p-3 lg:p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-1.5 sm:mb-2">
                 <Icon className={`w-3 h-3 sm:w-4 sm:h-5 lg:w-5 lg:h-5 ${config.color} ${config.darkColor}`} />
                 <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full ${config.bgColor} ${config.color} ${config.darkBgColor} ${config.darkColor} break-words`}>
@@ -122,7 +122,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
       </div>
 
       {/* Gráfico de Pedidos por Status */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Distribuição de Pedidos por Status
         </h2>
@@ -173,7 +173,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
       </div>
 
       {/* Gráfico de Evolução de Pedidos */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Evolução de Pedidos no Período
         </h2>
@@ -226,7 +226,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
       </div>
 
       {/* Gráfico de Valores por Status */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Valores por Status
         </h2>
@@ -275,7 +275,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
       </div>
 
       {/* Métodos de Pagamento */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Métodos de Pagamento Mais Usados
         </h2>
@@ -283,8 +283,8 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Método
@@ -300,7 +300,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {ordersStats.paymentMethods.map((method: any, index: number) => (
                     <tr key={index}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-words">
@@ -323,7 +323,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {ordersStats.paymentMethods.map((method: any, index: number) => (
-                <div key={index} className="bg-gray-50 dark:bg-[#065084] rounded-lg p-3 border border-gray-200 dark:border-[#0F828C]">
+                <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Método</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">{method.method || 'Não informado'}</p>
@@ -354,7 +354,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
       </div>
 
       {/* Top Clientes */}
-      <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-[#0F828C]">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
         <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
           Top 10 Clientes (por Valor Total)
         </h2>
@@ -362,8 +362,8 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
           <>
             {/* Desktop Table */}
             <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                <thead className="bg-gray-50 dark:bg-[#065084]">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-800">
                   <tr>
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Cliente
@@ -382,7 +382,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {ordersStats.topCustomers.map((customer: any, index: number) => (
                     <tr key={index}>
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-words">
@@ -408,7 +408,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
             {/* Mobile Cards */}
             <div className="lg:hidden space-y-3">
               {ordersStats.topCustomers.map((customer: any, index: number) => (
-                <div key={index} className="bg-gray-50 dark:bg-[#065084] rounded-lg p-3 border border-gray-200 dark:border-[#0F828C]">
+                <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                   <div className="mb-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cliente</p>
                     <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">{customer.userName}</p>
@@ -444,7 +444,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
 
       {/* Estatísticas Adicionais */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Taxa de Cancelamento</p>
@@ -458,7 +458,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Pedidos Recentes (7 dias)</p>
@@ -472,7 +472,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
           </div>
         </div>
 
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-[#0F828C] sm:col-span-2 lg:col-span-1">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700 sm:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Aguardando Pagamento (Antigos)</p>
@@ -490,7 +490,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
 
       {/* Gráfico de Pedidos por Mês */}
       {ordersStats.byMonth.length > 0 && (
-        <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mt-4 sm:mt-5 lg:mt-6 border border-gray-200 dark:border-[#0F828C]">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mt-4 sm:mt-5 lg:mt-6 border border-gray-200 dark:border-gray-700">
           <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
             Evolução Mensal (Últimos 12 Meses)
           </h2>

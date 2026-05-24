@@ -190,11 +190,11 @@
   }
   
   .btn-secondary {
-    @apply bg-white dark:bg-[#065084] hover:bg-primary-50 dark:hover:bg-[#0F828C] text-primary-600 dark:text-white font-semibold py-2 px-6 rounded-lg border-2 border-primary-600 dark:border-[#0F828C] transition-colors duration-200 cursor-pointer;
+    @apply bg-white dark:bg-gray-800 hover:bg-primary-50 dark:hover:bg-gray-600 text-primary-600 dark:text-white font-semibold py-2 px-6 rounded-lg border-2 border-primary-600 dark:border-gray-700 transition-colors duration-200 cursor-pointer;
   }
   
   .card {
-    @apply bg-white dark:bg-[#065084] rounded-xl shadow-md dark:shadow-lg hover:shadow-lg dark:hover:shadow-xl transition-shadow duration-200;
+    @apply bg-white dark:bg-gray-800 rounded-xl shadow-md dark:shadow-lg hover:shadow-lg dark:hover:shadow-xl transition-shadow duration-200;
   }
 
   .scrollbar-hide {
@@ -209,7 +209,7 @@
 
 /* Estilos personalizados para o checkout do Mercado Pago */
 .mercado-pago-checkout {
-  @apply bg-white dark:bg-[#065084] rounded-lg border border-gray-200 dark:border-[#0F828C] p-6;
+  @apply bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6;
 }
 
 .mercado-pago-checkout .mp-form-controls {
@@ -226,7 +226,7 @@
 
 .mercado-pago-checkout .mp-form-control input,
 .mercado-pago-checkout .mp-form-control select {
-  @apply w-full px-4 py-3 border border-gray-300 dark:border-[#0F828C] rounded-lg focus:ring-2 focus:ring-[#78B9B5] focus:border-transparent bg-white dark:bg-[#065084] text-gray-900 dark:text-white;
+  @apply w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white;
 }
 
 .mercado-pago-checkout .mp-form-control .mp-error-message {

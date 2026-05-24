@@ -217,7 +217,7 @@ export default function FreeShippingRules() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#111827] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-300">Carregando regras de frete grátis...</p>
@@ -227,7 +227,7 @@ export default function FreeShippingRules() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827] py-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Regras de Frete Grátis</h1>
@@ -249,7 +249,7 @@ export default function FreeShippingRules() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Lista de Regras */}
           <div className="lg:col-span-2">
-            <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center">
                   <Gift className="w-5 h-5 text-gray-600 mr-2" />
@@ -271,7 +271,7 @@ export default function FreeShippingRules() {
 
               {/* Formulário de Nova/Edição */}
               {showForm && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200 dark:bg-[#065084]">
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200 dark:bg-gray-800">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">
                       {editingRule ? 'Editar Regra' : 'Nova Regra'}
@@ -568,7 +568,7 @@ export default function FreeShippingRules() {
 
           {/* Informações */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6 dark:bg-[#065084]">
+            <div className="bg-white rounded-lg shadow-md p-6 dark:bg-gray-800">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Sobre as Regras</h2>
               
               <div className="space-y-4 text-sm text-gray-600">

@@ -1,18 +1,155 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Edit, Trash2, Loader2, Search, Package, FlaskConical } from 'lucide-react'
+import { ArrowLeft, Plus, Edit, Trash2, Loader2, Search, Upload } from 'lucide-react'
 import { productsService } from '../services/products.service'
 import { Product } from '../types'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
+import * as XLSX from 'xlsx'
 
 export default function ManageProducts() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<'products' | 'compostos'>('products')
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false)
+      }
+    }
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isDropdownOpen])
+
+  // State para Importação
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+  const [importHeaders, setImportHeaders] = useState<string[]>([])
+  const [importRows, setImportRows] = useState<any[]>([])
+  const [columnMapping, setColumnMapping] = useState<Record<string, string>>({
+    name: '',
+    price: '',
+    description: '',
+    category: '',
+    stock: '',
+    promo_price: ''
+  })
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result
+      const wb = XLSX.read(bstr, { type: 'binary' })
+      const wsname = wb.SheetNames[0]
+      const ws = wb.Sheets[wsname]
+      const data = XLSX.utils.sheet_to_json(ws, { header: 1 })
+      
+      if (data.length > 0) {
+        const headers = (data[0] as any[]).map(h => String(h))
+        setImportHeaders(headers)
+        
+        const rows = data.slice(1)
+        setImportRows(rows)
+        
+        // Auto detecção
+        const newMapping = { ...columnMapping }
+        headers.forEach((header) => {
+          const headerStr = header.toLowerCase()
+          if (headerStr.includes('nome') || headerStr.includes('name')) {
+            newMapping.name = header
+          } else if (headerStr.includes('preço') || headerStr.includes('preco') || headerStr.includes('price')) {
+            newMapping.price = header
+          } else if (headerStr.includes('desc') || headerStr.includes('about')) {
+            newMapping.description = header
+          } else if (headerStr.includes('cat')) {
+            newMapping.category = header
+          } else if (headerStr.includes('est') || headerStr.includes('stock')) {
+            newMapping.stock = header
+          } else if (headerStr.includes('promoc') || headerStr.includes('promo')) {
+            newMapping.promo_price = header
+          }
+        })
+        setColumnMapping(newMapping)
+      }
+    }
+    reader.readAsBinaryString(file)
+  }
+
+  const handleImportConfirm = async () => {
+    // Validação
+    if (!columnMapping.name || !columnMapping.price) {
+      alert('As colunas de Nome e Preço são obrigatórias para importação.')
+      return
+    }
+
+    try {
+      setLoading(true)
+      setIsImportModalOpen(false)
+
+      let importedCount = 0
+      for (const row of importRows) {
+        const productData: any = {}
+        
+        // Mapeia os dados
+        Object.keys(columnMapping).forEach((field) => {
+          const header = columnMapping[field]
+          if (header) {
+            const colIndex = importHeaders.indexOf(header)
+            if (colIndex !== -1) {
+              let value = row[colIndex]
+              
+              // Tratamento especial para preços e estoque
+              if (field === 'price' || field === 'promo_price' || field === 'stock') {
+                if (value) {
+                  // Remove R$ e converte para número
+                  value = String(value).replace('R$', '').replace(/\s/g, '').replace(',', '.')
+                  value = parseFloat(value)
+                } else if (field === 'stock') {
+                  value = 0
+                } else {
+                  value = null
+                }
+              }
+              
+              if (value !== undefined) {
+                productData[field] = value
+              }
+            }
+          }
+        })
+
+        // Se tiver nome e preço válido, cria o produto
+        if (productData.name && !isNaN(productData.price)) {
+          await productsService.create(productData)
+          importedCount++
+        }
+      }
+
+      alert(`${importedCount} produtos importados com sucesso!`)
+      await loadProducts()
+    } catch (err: any) {
+      console.error('Erro ao importar produtos:', err)
+      alert(err.message || 'Erro ao importar produtos')
+    } finally {
+      setLoading(false)
+      setImportHeaders([])
+      setImportRows([])
+    }
+  }
 
   const handleProductImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     handleImageError(e, PRODUCT_IMAGE_FALLBACK)
@@ -22,6 +159,30 @@ export default function ManageProducts() {
   useEffect(() => {
     loadProducts()
   }, [])
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    
+    if (!confirm(`Tem certeza que deseja excluir ${selectedIds.length} produtos?`)) {
+      return;
+    }
+    
+    if (!confirm('Esta ação é irreversível e os produtos serão apagados permanentemente. Confirma novamente?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await productsService.deleteBulk(selectedIds);
+      setSelectedIds([]);
+      await loadProducts();
+    } catch (err: any) {
+      console.error('Erro ao excluir produtos em massa:', err);
+      alert(err.message || 'Erro ao excluir produtos em massa');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const loadProducts = async () => {
     try {
@@ -62,7 +223,7 @@ export default function ManageProducts() {
   )
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827]">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
           <button
@@ -72,53 +233,47 @@ export default function ManageProducts() {
             <ArrowLeft size={18} className="sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
             Voltar
           </button>
-          <button
-            onClick={() => navigate('/admin/products/create')}
-            className="flex items-center justify-center bg-green-600 text-white px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
-          >
-            <Plus size={18} className="sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
-            Adicionar Produto
-          </button>
+          <div ref={dropdownRef} className="relative w-full sm:w-auto">
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center justify-center bg-green-600 text-white px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
+            >
+              <Plus size={18} className="sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+              Adicionar
+            </button>
+            
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      navigate('/admin/products/create')
+                      setIsDropdownOpen(false)
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
+                  >
+                    <Plus size={16} className="mr-2" />
+                    Novo Produto
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsImportModalOpen(true)
+                      setIsDropdownOpen(false)
+                    }}
+                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
+                  >
+                    <Upload size={16} className="mr-2" />
+                    Importar Excel/CSV
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mb-4 sm:mb-6 lg:mb-8">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-1.5 sm:mb-2">Gerenciar Produtos e Compostos</h1>
-          <p className="text-xs sm:text-sm lg:text-base text-gray-600 dark:text-gray-300">Gerencie produtos e compostos do sistema</p>
-        </div>
-
-        {/* Abas */}
-        <div className="mb-4 sm:mb-6 border-b border-gray-200 dark:border-[#0F828C]">
-          <nav className="-mb-px flex space-x-4 sm:space-x-6 lg:space-x-8 overflow-x-auto">
-            <button
-              onClick={() => {
-                setActiveTab('products')
-                setSearchTerm('')
-              }}
-              className={`${
-                activeTab === 'products'
-                  ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
-                  : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
-              } whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center`}
-            >
-              <Package size={16} className="sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
-              Produtos
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('compostos')
-                setSearchTerm('')
-                navigate('/admin/compostos')
-              }}
-              className={`${
-                activeTab === 'compostos'
-                  ? 'border-green-500 dark:border-green-500 text-green-600 dark:text-green-500'
-                  : 'border-transparent text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:border-gray-300 dark:hover:border-[#0F828C]'
-              } whitespace-nowrap py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm flex items-center`}
-            >
-              <FlaskConical size={16} className="sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
-              Compostos
-            </button>
-          </nav>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-1.5 sm:mb-2">Gerenciar Produtos</h1>
+          <p className="text-xs sm:text-sm lg:text-base text-gray-600 dark:text-gray-300">Gerencie os produtos da loja</p>
         </div>
 
         {/* Busca */}
@@ -130,7 +285,7 @@ export default function ManageProducts() {
               placeholder="Buscar produtos..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-[#111827] dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -158,12 +313,40 @@ export default function ManageProducts() {
         {/* Tabela de Produtos - Desktop / Cards - Mobile */}
         {!loading && !error && (
           <>
+            {selectedIds.length > 0 && (
+              <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
+                <span className="text-sm text-red-700 dark:text-red-300 font-medium">
+                  {selectedIds.length} produtos selecionados
+                </span>
+                <button
+                  onClick={handleBulkDelete}
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                >
+                  Excluir Selecionados
+                </button>
+              </div>
+            )}
+
             {/* Desktop: Tabela */}
-            <div className="hidden lg:block bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-[#0F828C]">
+            <div className="hidden lg:block bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-[#0F828C]">
-                  <thead className="bg-gray-50 dark:bg-[#065084]">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedIds(filteredProducts.map(p => p.id));
+                            } else {
+                              setSelectedIds([]);
+                            }
+                          }}
+                          className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                        />
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         Produto
                       </th>
@@ -181,16 +364,30 @@ export default function ManageProducts() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-[#065084] divide-y divide-gray-200 dark:divide-[#0F828C]">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {filteredProducts.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                           Nenhum produto encontrado
                         </td>
                       </tr>
                     ) : (
                       filteredProducts.map((product) => (
                         <tr key={product.id} className="hover:bg-gray-50 dark:hover:bg-[#065084]">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(product.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedIds([...selectedIds, product.id]);
+                                } else {
+                                  setSelectedIds(selectedIds.filter(id => id !== product.id));
+                                }
+                              }}
+                              className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                            />
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
                               <img
@@ -258,16 +455,28 @@ export default function ManageProducts() {
             {/* Mobile: Cards */}
             <div className="lg:hidden space-y-3">
               {filteredProducts.length === 0 ? (
-                <div className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg border border-gray-200 dark:border-[#0F828C] p-6 text-center">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg border border-gray-200 dark:border-gray-700 p-6 text-center">
                   <p className="text-sm text-gray-500 dark:text-gray-400">Nenhum produto encontrado</p>
                 </div>
               ) : (
                 filteredProducts.map((product) => (
                   <div
                     key={product.id}
-                    className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg border border-gray-200 dark:border-[#0F828C] p-3 sm:p-4"
+                    className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-4"
                   >
                     <div className="flex items-start space-x-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(product.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds([...selectedIds, product.id]);
+                          } else {
+                            setSelectedIds(selectedIds.filter(id => id !== product.id));
+                          }
+                        }}
+                        className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded mt-1 flex-shrink-0"
+                      />
                       <img
                         src={product.image}
                         alt={product.name}
@@ -324,6 +533,136 @@ export default function ManageProducts() {
               )}
             </div>
           </>
+        )}
+
+        {/* Modal de Importação */}
+        {isImportModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Importar Produtos</h2>
+                <button
+                  onClick={() => {
+                    setIsImportModalOpen(false)
+                    setImportHeaders([])
+                    setImportRows([])
+                  }}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white text-2xl"
+                >
+                  &times;
+                </button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto flex-1">
+                {importHeaders.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-12">
+                    <Upload size={48} className="text-gray-400 mb-4" />
+                    <p className="text-gray-600 dark:text-gray-300 mb-2">Selecione um arquivo Excel (.xlsx, .xls) ou CSV</p>
+                    <input
+                      type="file"
+                      accept=".csv, .xlsx, .xls"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <label
+                      htmlFor="file-upload"
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-blue-700 transition-colors mt-2"
+                    >
+                      Selecionar Arquivo
+                    </label>
+                  </div>
+                ) : (
+                  <div>
+                    {/* Mapping UI */}
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Vincular Colunas</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                      {Object.keys(columnMapping).map((field) => (
+                        <div key={field}>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {field === 'name' ? 'Nome *' :
+                             field === 'price' ? 'Preço *' :
+                             field === 'description' ? 'Descrição' :
+                             field === 'category' ? 'Categoria' :
+                             field === 'stock' ? 'Estoque' : 'Preço Promocional'}
+                          </label>
+                          <select
+                            value={columnMapping[field]}
+                            onChange={(e) => setColumnMapping({ ...columnMapping, [field]: e.target.value })}
+                            className="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          >
+                            <option value="">Não vincular</option>
+                            {importHeaders.map((header) => (
+                              <option key={header} value={header}>{header}</option>
+                            ))}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Preview Table */}
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Pré-visualização (Primeiras 5 linhas)</h3>
+                    <div className="overflow-x-auto border border-gray-200 dark:border-gray-700 rounded-lg mb-6">
+                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                        <thead className="bg-gray-50 dark:bg-gray-800">
+                          <tr>
+                            {importHeaders.map((header) => (
+                              <th key={header} className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                                {header}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                          {importRows.slice(0, 5).map((row, rowIndex) => (
+                            <tr key={rowIndex}>
+                              {importHeaders.map((_, colIndex) => (
+                                <td key={colIndex} className="px-4 py-2 text-sm text-gray-900 dark:text-white">
+                                  {String(row[colIndex] || '')}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {importHeaders.length > 0 && (
+                <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                  <button
+                    onClick={() => {
+                      setImportHeaders([])
+                      setImportRows([])
+                    }}
+                    className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium"
+                  >
+                    Trocar Arquivo
+                  </button>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => {
+                        setIsImportModalOpen(false)
+                        setImportHeaders([])
+                        setImportRows([])
+                      }}
+                      className="bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleImportConfirm}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Confirmar Importação ({importRows.length} linhas)
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>

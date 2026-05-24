@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
-import { Settings, MessageSquare, Users, Package, ShoppingCart, BarChart3, Truck, Gift, Tag, Image, Star, Layout } from 'lucide-react'
+import { Settings, MessageSquare, Users, Package, ShoppingCart, BarChart3, Truck, Gift, Tag, Image, Star, Layout, Menu } from 'lucide-react'
 
 export default function AdminPanel() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#111827]">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
         <div className="mb-4 sm:mb-6 lg:mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Painel Administrativo</h1>
@@ -14,7 +14,7 @@ export default function AdminPanel() {
           {/* Card WhatsApp */}
           <Link
             to="/admin/whatsapp"
-            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
           >
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="bg-green-100 dark:bg-green-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
@@ -30,7 +30,7 @@ export default function AdminPanel() {
           {/* Card Produtos */}
           <Link
             to="/admin/products"
-            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
           >
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="bg-blue-100 dark:bg-blue-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
@@ -46,7 +46,7 @@ export default function AdminPanel() {
           {/* Card Pedidos */}
           <Link
             to="/admin/orders"
-            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
           >
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="bg-purple-100 dark:bg-purple-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
@@ -62,7 +62,7 @@ export default function AdminPanel() {
           {/* Card Usuários */}
           <Link
             to="/admin/users"
-            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
           >
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
@@ -78,7 +78,7 @@ export default function AdminPanel() {
           {/* Card Relatórios */}
           <Link
             to="/admin/reports"
-            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
           >
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
@@ -94,7 +94,7 @@ export default function AdminPanel() {
           {/* Card Configurações */}
           <Link
             to="/admin/settings"
-            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
           >
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="bg-gray-100 dark:bg-gray-800 p-2 sm:p-3 rounded-lg flex-shrink-0">
@@ -110,7 +110,7 @@ export default function AdminPanel() {
           {/* Card Frete */}
           <Link
             to="/admin/shipping"
-            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
           >
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="bg-orange-100 dark:bg-orange-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
@@ -126,7 +126,7 @@ export default function AdminPanel() {
           {/* Card Promoções */}
           <Link
             to="/admin/promotions"
-            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
           >
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="bg-pink-100 dark:bg-pink-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
@@ -142,7 +142,7 @@ export default function AdminPanel() {
           {/* Card Códigos Promocionais */}
           <Link
             to="/admin/promo-codes"
-            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
           >
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="bg-purple-100 dark:bg-purple-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
@@ -158,7 +158,7 @@ export default function AdminPanel() {
           {/* Card Banners */}
           <Link
             to="/admin/banners"
-            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
           >
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="bg-teal-100 dark:bg-teal-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
@@ -174,7 +174,7 @@ export default function AdminPanel() {
           {/* Card Avaliações */}
           <Link
             to="/admin/reviews"
-            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
           >
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
@@ -190,7 +190,7 @@ export default function AdminPanel() {
           {/* Card Página Inicial */}
           <Link
             to="/admin/home-sections"
-            className="bg-white dark:bg-[#065084] rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-[#0F828C]"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
           >
             <div className="flex items-center space-x-3 sm:space-x-4">
               <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
@@ -199,6 +199,22 @@ export default function AdminPanel() {
               <div className="min-w-0 flex-1">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Página Inicial</h3>
                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Gerenciar seções e produtos em destaque</p>
+              </div>
+            </div>
+          </Link>
+
+          {/* Card Categorias do Cabeçalho */}
+          <Link
+            to="/admin/header-categories"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
+          >
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <div className="bg-cyan-100 dark:bg-cyan-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
+                <Menu className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600 dark:text-cyan-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Categorias do Cabeçalho</h3>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Gerenciar faixa de categorias abaixo do menu</p>
               </div>
             </div>
           </Link>

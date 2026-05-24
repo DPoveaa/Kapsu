@@ -20,6 +20,8 @@ export interface SiteSettings {
     secondary?: string
     accent?: string
   }
+  banner_height_mobile?: number
+  banner_height_desktop?: number
 }
 
 export interface SiteSettingsResponse {
@@ -40,7 +42,7 @@ export interface UploadLogoResponse {
 
 class SiteSettingsService {
   private getAuthHeaders() {
-    const token = localStorage.getItem('token') || localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
     return {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -89,11 +91,24 @@ class SiteSettingsService {
    * Atualiza configurações do site (apenas admin)
    */
   async updateSettings(settings: Partial<SiteSettings>): Promise<void> {
-    const response = await fetch(`${API_URL}/site-settings`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
+    const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
+    if (!token) {
+      throw new Error('Sessão expirada. Faça login novamente para salvar as configurações.')
+    }
+    const headers = this.getAuthHeaders()
+    let response = await fetch(`${API_URL}/site-settings`, {
+      method: 'PUT',
+      headers,
       body: JSON.stringify({ settings }),
     })
+    
+    if (response.status === 405 || response.status === 404) {
+      response = await fetch(`${API_URL}/site-settings`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ settings }),
+      })
+    }
 
     if (!response.ok) {
       const error = await response.json()
