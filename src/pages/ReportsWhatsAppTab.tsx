@@ -1,5 +1,6 @@
 import { MessageSquare, Send, Inbox, Clock, TrendingUp, AlertCircle, Users } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { TooltipValue, TooltipName, formatTooltipNumber } from '../types/recharts'
 
 interface WhatsAppStatsTabProps {
   whatsappStats: any
@@ -312,11 +313,11 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip 
                   labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  formatter={(value: number, name: string) => {
-                    if (name === 'totalCount') return [value, 'Total']
-                    if (name === 'receivedCount') return [value, 'Recebidas']
-                    if (name === 'sentCount') return [value, 'Enviadas']
-                    return [value, name]
+                  formatter={(value: TooltipValue, name: TooltipName) => {
+                    if (name === 'totalCount') return [formatTooltipNumber(value), 'Total']
+                    if (name === 'receivedCount') return [formatTooltipNumber(value), 'Recebidas']
+                    if (name === 'sentCount') return [formatTooltipNumber(value), 'Enviadas']
+                    return [formatTooltipNumber(value), name]
                   }}
                   contentStyle={{ fontSize: '12px' }}
                 />

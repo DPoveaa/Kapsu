@@ -1,5 +1,6 @@
 import { Package, DollarSign, TrendingUp, XCircle, CheckCircle, AlertCircle, Truck, Calendar } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { TooltipValue, TooltipName, formatTooltipNumber } from '../types/recharts'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
@@ -155,7 +156,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                   ))}
                 </Pie>
                 <Tooltip 
-                  formatter={(value: number, _name: string, props: any) => [
+                  formatter={(value: TooltipValue, _name: TooltipName, props: any) => [
                     `${value} pedidos (R$ ${props.payload.totalValue.toFixed(2).replace('.', ',')})`,
                     props.payload.name
                   ]}
@@ -193,7 +194,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip 
                   labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  formatter={(value: number) => [value, 'Pedidos']}
+                  formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Pedidos']}
                   contentStyle={{ fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -258,7 +259,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                 />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip 
-                  formatter={(value: number) => `R$ ${value.toFixed(2).replace('.', ',')}`}
+                  formatter={(value: TooltipValue) => `R$ ${formatTooltipNumber(value).toFixed(2).replace('.', ',')}`}
                   contentStyle={{ fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -511,7 +512,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                 />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip 
-                  formatter={(value: number) => [value, 'Pedidos']}
+                  formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Pedidos']}
                   contentStyle={{ fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />

@@ -1,4 +1,4 @@
-import { Package, TrendingUp, DollarSign, ShoppingCart, AlertTriangle, XCircle, Calendar } from 'lucide-react'
+import { Package, TrendingUp, DollarSign, ShoppingCart, XCircle, Calendar } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 
 interface ProductsStatsTabProps {
@@ -102,7 +102,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
       </div>
 
       {/* Cards Adicionais */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-5 lg:mb-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
@@ -120,22 +120,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Estoque Baixo</p>
-              <p className="text-xl sm:text-2xl font-bold text-red-600 dark:text-red-400 mt-1 break-words">
-                {productsStats.overview.lowStockCount}
-              </p>
-              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">
-                Menos de 10 unidades
-              </p>
-            </div>
-            <div className="bg-red-100 dark:bg-red-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0 ml-2">
-              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-red-600 dark:text-red-400" />
-            </div>
-          </div>
-        </div>
+
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700 sm:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
@@ -177,7 +162,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
                 <Tooltip 
                   labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  formatter={(value: number, name: string) => {
+                  formatter={(value: any, name: any) => {
                     if (name === 'totalRevenue') {
                       return [formatCurrency(value), 'Receita']
                     }
@@ -243,7 +228,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                     const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
                     return `${monthNames[parseInt(month) - 1]}/${year}`
                   }}
-                  formatter={(value: number, name: string) => {
+                  formatter={(value: any, name: any) => {
                     if (name === 'totalRevenue') {
                       return [formatCurrency(value), 'Receita']
                     }
@@ -291,9 +276,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Preço Médio
                     </th>
-                    <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Estoque
-                    </th>
+
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Status
                     </th>
@@ -322,17 +305,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-300">
                         {formatCurrency(product.avgSalePrice)}
                       </td>
-                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-300">
-                        <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full ${
-                          product.stock < 10 
-                            ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' 
-                            : product.stock < 50
-                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
-                            : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                        }`}>
-                          {product.stock}
-                        </span>
-                      </td>
+
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm">
                         {product.active ? (
                           <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
@@ -379,18 +352,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                       <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">Preço Médio</p>
                       <p className="text-xs sm:text-sm text-gray-900 dark:text-white">{formatCurrency(product.avgSalePrice)}</p>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">Estoque</p>
-                      <span className={`inline-block px-1.5 py-0.5 text-[10px] font-medium rounded-full ${
-                        product.stock < 10 
-                          ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' 
-                          : product.stock < 50
-                          ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
-                          : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                      }`}>
-                        {product.stock}
-                      </span>
-                    </div>
+
                     <div>
                       <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">Status</p>
                       {product.active ? (
@@ -447,9 +409,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Preço Médio
                     </th>
-                    <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Estoque
-                    </th>
+
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -475,17 +435,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-300">
                         {formatCurrency(product.avgSalePrice)}
                       </td>
-                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-300">
-                        <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full ${
-                          product.stock < 10 
-                            ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' 
-                            : product.stock < 50
-                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
-                            : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                        }`}>
-                          {product.stock}
-                        </span>
-                      </td>
+
                     </tr>
                   ))}
                 </tbody>
@@ -521,18 +471,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                       <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">Preço Médio</p>
                       <p className="text-xs sm:text-sm text-gray-900 dark:text-white">{formatCurrency(product.avgSalePrice)}</p>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">Estoque</p>
-                      <span className={`inline-block px-1.5 py-0.5 text-[10px] font-medium rounded-full ${
-                        product.stock < 10 
-                          ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' 
-                          : product.stock < 50
-                          ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
-                          : 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                      }`}>
-                        {product.stock}
-                      </span>
-                    </div>
+
                   </div>
                 </div>
               ))}
@@ -569,7 +508,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                   />
                   <YAxis tick={{ fontSize: 10 }} width={80} />
                   <Tooltip 
-                    formatter={(value: number, name: string) => {
+                    formatter={(value: any, name: any) => {
                       if (name === 'totalRevenue') {
                         return [formatCurrency(value), 'Receita']
                       }
@@ -609,7 +548,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                   />
                   <YAxis tick={{ fontSize: 10 }} width={80} />
                   <Tooltip 
-                    formatter={(value: number, name: string) => {
+                    formatter={(value: any, name: any) => {
                       if (name === 'totalRevenue') {
                         return [formatCurrency(value), 'Receita']
                       }
@@ -631,78 +570,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
         </div>
       </div>
 
-      {/* Produtos com Estoque Baixo */}
-      {productsStats.lowStockProducts && productsStats.lowStockProducts.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
-            ⚠️ Produtos com Estoque Baixo (Menos de 10 unidades)
-          </h2>
-          <>
-            {/* Desktop Table */}
-            <div className="hidden lg:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800">
-                  <tr>
-                    <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Produto
-                    </th>
-                    <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Estoque
-                    </th>
-                    <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Preço
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {productsStats.lowStockProducts.map((product: any) => (
-                    <tr key={product.id} className="bg-red-50 dark:bg-red-900/30">
-                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap">
-                        <div>
-                          <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white break-words">{product.name}</p>
-                          {product.description && (
-                            <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 break-words">{product.description}</p>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400">
-                        {product.stock}
-                      </td>
-                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-300">
-                        {formatCurrency(product.price)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {/* Mobile Cards */}
-            <div className="lg:hidden space-y-3">
-              {productsStats.lowStockProducts.map((product: any) => (
-                <div key={product.id} className="bg-red-50 dark:bg-red-900/30 rounded-lg p-3 border border-red-200 dark:border-red-800">
-                  <div className="mb-2">
-                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Produto</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white break-words">{product.name}</p>
-                    {product.description && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 break-words mt-1">{product.description}</p>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">Estoque</p>
-                      <p className="text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400">{product.stock}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">Preço</p>
-                      <p className="text-xs sm:text-sm text-gray-900 dark:text-white">{formatCurrency(product.price)}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        </div>
-      )}
+
 
       {/* Produtos Nunca Vendidos */}
       {productsStats.neverSoldProducts && productsStats.neverSoldProducts.length > 0 && (
@@ -722,9 +590,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Preço
                     </th>
-                    <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Estoque
-                    </th>
+
                     <th className="px-4 lg:px-6 py-2 lg:py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Status
                     </th>
@@ -744,9 +610,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-300">
                         {formatCurrency(product.price)}
                       </td>
-                      <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-300">
-                        {product.stock}
-                      </td>
+
                       <td className="px-4 lg:px-6 py-3 lg:py-4 whitespace-nowrap text-xs sm:text-sm">
                         {product.active ? (
                           <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
@@ -779,10 +643,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                       <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">Preço</p>
                       <p className="text-xs sm:text-sm text-gray-900 dark:text-white">{formatCurrency(product.price)}</p>
                     </div>
-                    <div>
-                      <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">Estoque</p>
-                      <p className="text-xs sm:text-sm text-gray-900 dark:text-white">{product.stock}</p>
-                    </div>
+
                     <div>
                       <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 mb-0.5">Status</p>
                       {product.active ? (

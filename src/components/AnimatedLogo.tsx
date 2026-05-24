@@ -94,10 +94,10 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
 
     // Verifica a cada 5 segundos
     const intervalTime = 5000
-    intervalRef.current = setInterval(checkBlink, intervalTime)
+    intervalRef.current = window.setInterval(checkBlink, intervalTime)
 
     // Primeira verificação após o intervalo
-    const timeoutId = setTimeout(checkBlink, intervalTime)
+    const timeoutId = window.setTimeout(checkBlink, intervalTime)
 
     return () => {
       if (intervalRef.current) {
@@ -153,10 +153,10 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
 
     // Verifica a cada 5 segundos
     const intervalTime = 5000
-    zIntervalRef.current = setInterval(checkZ, intervalTime)
+    zIntervalRef.current = window.setInterval(checkZ, intervalTime)
 
     // Primeira verificação após o intervalo
-    const timeoutId = setTimeout(checkZ, intervalTime)
+    const timeoutId = window.setTimeout(checkZ, intervalTime)
 
     return () => {
       if (zIntervalRef.current) {
