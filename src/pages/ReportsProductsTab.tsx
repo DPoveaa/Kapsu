@@ -177,7 +177,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
                 <Tooltip 
                   labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  formatter={(value: number, name: string) => {
+                  formatter={(value: any, name: any) => {
                     if (name === 'totalRevenue') {
                       return [formatCurrency(value), 'Receita']
                     }
@@ -243,7 +243,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                     const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
                     return `${monthNames[parseInt(month) - 1]}/${year}`
                   }}
-                  formatter={(value: number, name: string) => {
+                  formatter={(value: any, name: any) => {
                     if (name === 'totalRevenue') {
                       return [formatCurrency(value), 'Receita']
                     }
@@ -569,7 +569,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                   />
                   <YAxis tick={{ fontSize: 10 }} width={80} />
                   <Tooltip 
-                    formatter={(value: number, name: string) => {
+                    formatter={(value: any, name: any) => {
                       if (name === 'totalRevenue') {
                         return [formatCurrency(value), 'Receita']
                       }
@@ -609,7 +609,7 @@ export default function ProductsStatsTab({ productsStats, productsLoading }: Pro
                   />
                   <YAxis tick={{ fontSize: 10 }} width={80} />
                   <Tooltip 
-                    formatter={(value: number, name: string) => {
+                    formatter={(value: any, name: any) => {
                       if (name === 'totalRevenue') {
                         return [formatCurrency(value), 'Receita']
                       }

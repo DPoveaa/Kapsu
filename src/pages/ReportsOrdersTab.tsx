@@ -155,7 +155,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                   ))}
                 </Pie>
                 <Tooltip 
-                  formatter={(value: number, _name: string, props: any) => [
+                  formatter={(value: any, _name: any, props: any) => [
                     `${value} pedidos (R$ ${props.payload.totalValue.toFixed(2).replace('.', ',')})`,
                     props.payload.name
                   ]}
@@ -193,7 +193,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip 
                   labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  formatter={(value: number) => [value, 'Pedidos']}
+                  formatter={(value: any) => [value, 'Pedidos']}
                   contentStyle={{ fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -258,7 +258,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                 />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip 
-                  formatter={(value: number) => `R$ ${value.toFixed(2).replace('.', ',')}`}
+                  formatter={(value: any) => `R$ ${value.toFixed(2).replace('.', ',')}`}
                   contentStyle={{ fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -511,7 +511,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                 />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip 
-                  formatter={(value: number) => [value, 'Pedidos']}
+                  formatter={(value: any) => [value, 'Pedidos']}
                   contentStyle={{ fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />

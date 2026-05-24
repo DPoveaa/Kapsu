@@ -312,7 +312,7 @@ export default function ChatStatsTab({ chatStats, chatLoading }: ChatStatsTabPro
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip 
                   labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  formatter={(value: number, name: string) => {
+                  formatter={(value: any, name: any) => {
                     if (name === 'totalCount') return [value, 'Total']
                     if (name === 'userCount') return [value, 'Usuário']
                     if (name === 'assistantCount') return [value, 'IA']
@@ -376,7 +376,7 @@ export default function ChatStatsTab({ chatStats, chatLoading }: ChatStatsTabPro
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip 
                   labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  formatter={(value: number) => [value, 'Conversas']}
+                  formatter={(value: any) => [value, 'Conversas']}
                   contentStyle={{ fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />

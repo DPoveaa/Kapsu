@@ -312,7 +312,7 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip 
                   labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  formatter={(value: number, name: string) => {
+                  formatter={(value: any, name: any) => {
                     if (name === 'totalCount') return [value, 'Total']
                     if (name === 'receivedCount') return [value, 'Recebidas']
                     if (name === 'sentCount') return [value, 'Enviadas']

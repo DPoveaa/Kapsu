@@ -319,7 +319,7 @@ export default function WhatsAppHumanSupportStatsTab({
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip 
                     labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                    formatter={(value: number) => [value, 'Conversas']}
+                    formatter={(value: any) => [value, 'Conversas']}
                     contentStyle={{ fontSize: '12px' }}
                   />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -362,7 +362,7 @@ export default function WhatsAppHumanSupportStatsTab({
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip 
                     labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                    formatter={(value: number) => [value, 'Conversas']}
+                    formatter={(value: any) => [value, 'Conversas']}
                     contentStyle={{ fontSize: '12px' }}
                   />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />

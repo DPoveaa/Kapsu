@@ -153,7 +153,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
                 <Tooltip 
                   labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  formatter={(value: number, name: string) => {
+                  formatter={(value: any, name: any) => {
                     if (name === 'totalDiscount') {
                       return [formatCurrency(value), 'Desconto Total']
                     }
@@ -594,7 +594,7 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
                     ))}
                   </Pie>
                   <Tooltip 
-                    formatter={(value: number, _name: string, props: any) => [
+                    formatter={(value: any, _name: any, props: any) => [
                       `${value} usos (${formatCurrency(props.payload.totalDiscount)})`,
                       props.payload.name
                     ]}

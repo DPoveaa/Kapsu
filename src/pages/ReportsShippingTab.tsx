@@ -219,7 +219,7 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
                 />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip 
-                  formatter={(value: number) => [value, 'Fretes Grátis']}
+                  formatter={(value: any) => [value, 'Fretes Grátis']}
                   contentStyle={{ fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />

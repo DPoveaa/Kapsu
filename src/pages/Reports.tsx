@@ -598,7 +598,7 @@ export default function Reports() {
                           <YAxis tick={{ fontSize: 10 }} />
                           <Tooltip 
                             labelFormatter={(value) => formatDate(value)}
-                            formatter={(value: number) => value.toLocaleString('pt-BR')}
+                            formatter={(value: any) => value.toLocaleString('pt-BR')}
                             contentStyle={{ fontSize: '12px' }}
                           />
                           <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -659,7 +659,7 @@ export default function Reports() {
                           <YAxis tick={{ fontSize: 10 }} />
                           <Tooltip 
                             labelFormatter={(value) => formatDate(value)}
-                            formatter={(value: number) => value.toLocaleString('pt-BR')}
+                            formatter={(value: any) => value.toLocaleString('pt-BR')}
                             contentStyle={{ fontSize: '12px' }}
                           />
                           <Legend wrapperStyle={{ fontSize: '12px' }} />
