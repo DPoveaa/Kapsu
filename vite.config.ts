@@ -8,5 +8,11 @@ export default defineConfig({
     port: parseInt(process.env.VITE_PORT || process.env.PORT || '3000', 10),
     host: true, // Permite acesso de outros dispositivos na rede
   },
+  build: {
+    rollupOptions: {
+      // Limita o número de arquivos abertos em paralelo para evitar erro ENFILE em servidores menores
+      maxParallelFileOps: 2,
+    },
+  },
 })
 

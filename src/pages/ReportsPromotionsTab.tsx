@@ -1,6 +1,7 @@
 import { Gift, DollarSign, TrendingDown, CheckCircle, XCircle, Truck } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Link } from 'react-router-dom'
+import { TooltipValue, TooltipName, formatTooltipNumber } from '../types/recharts'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
@@ -37,8 +38,8 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
   fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReportsPromotionsTab.tsx:29',message:'before accessing overview',data:{hasOverview:promotionsStats?.overview!==undefined,overviewType:typeof promotionsStats?.overview,statsKeys:Object.keys(promotionsStats)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
   // #endregion
 
-  const formatCurrency = (value: number) => {
-    return `R$ ${value.toFixed(2).replace('.', ',')}`
+  const formatCurrency = (value: TooltipValue) => {
+    return `R$ ${formatTooltipNumber(value).toFixed(2).replace('.', ',')}`
   }
 
   const formatDate = (dateString: string) => {
@@ -178,7 +179,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
                 <Tooltip 
                   labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  formatter={(value: any, name: any) => {
+                  formatter={(value: TooltipValue, name: TooltipName) => {
                     if (name === 'totalDiscount') {
                       return [formatCurrency(value), 'Desconto Total']
                     }
@@ -188,7 +189,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
                     if (name === 'totalValueSaved') {
                       return [formatCurrency(value), 'Total Economizado']
                     }
-                    return [value, 'Quantidade de Usos']
+                    return [formatTooltipNumber(value), 'Quantidade de Usos']
                   }}
                   contentStyle={{ fontSize: '12px' }}
                 />
@@ -718,7 +719,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
                     ))}
                   </Pie>
                   <Tooltip 
-                    formatter={(value: any, _name: any, props: any) => [
+                    formatter={(value: TooltipValue, _name: TooltipName, props: any) => [
                       `${value} usos (${formatCurrency(props.payload.totalValueSaved)})`,
                       props.payload.name
                     ]}

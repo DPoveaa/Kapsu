@@ -1,5 +1,6 @@
 import { Clock, AlertCircle, TrendingUp, CheckCircle, XCircle, Timer, MessageSquare } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { TooltipValue, formatTooltipNumber } from '../types/recharts'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
@@ -319,7 +320,7 @@ export default function WhatsAppHumanSupportStatsTab({
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip 
                     labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                    formatter={(value: any) => [value, 'Conversas']}
+                    formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Conversas']}
                     contentStyle={{ fontSize: '12px' }}
                   />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -362,7 +363,7 @@ export default function WhatsAppHumanSupportStatsTab({
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip 
                     labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                    formatter={(value: any) => [value, 'Conversas']}
+                    formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Conversas']}
                     contentStyle={{ fontSize: '12px' }}
                   />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />

@@ -1,5 +1,6 @@
 import { Users, UserPlus, TrendingUp, Activity, ShoppingCart, UserCheck, UserX } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { TooltipValue, formatTooltipNumber } from '../types/recharts'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
@@ -26,8 +27,8 @@ export default function UsersStatsTab({ usersStats, usersLoading }: UsersStatsTa
     )
   }
 
-  const formatCurrency = (value: number) => {
-    return `R$ ${value.toFixed(2).replace('.', ',')}`
+  const formatCurrency = (value: TooltipValue) => {
+    return `R$ ${formatTooltipNumber(value).toFixed(2).replace('.', ',')}`
   }
 
   return (
@@ -184,7 +185,7 @@ export default function UsersStatsTab({ usersStats, usersLoading }: UsersStatsTa
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip 
                   labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  formatter={(value: any) => [value, 'Novos Clientes']}
+                  formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Novos Clientes']}
                   contentStyle={{ fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -234,7 +235,7 @@ export default function UsersStatsTab({ usersStats, usersLoading }: UsersStatsTa
                     const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
                     return `${monthNames[parseInt(month) - 1]}/${year}`
                   }}
-                  formatter={(value: any) => [value, 'Novos Clientes']}
+                  formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Novos Clientes']}
                   contentStyle={{ fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -267,7 +268,7 @@ export default function UsersStatsTab({ usersStats, usersLoading }: UsersStatsTa
                     tick={{ fontSize: 10 }}
                   />
                   <YAxis tick={{ fontSize: 10 }} width={80} />
-                  <Tooltip formatter={(value: any) => [value, 'Clientes']} contentStyle={{ fontSize: '12px' }} />
+                  <Tooltip formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Clientes']} contentStyle={{ fontSize: '12px' }} />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
                   <Bar dataKey="count" fill="#10b981" name="Novos Clientes" />
                 </BarChart>
@@ -298,7 +299,7 @@ export default function UsersStatsTab({ usersStats, usersLoading }: UsersStatsTa
                     tick={{ fontSize: 10 }}
                   />
                   <YAxis tick={{ fontSize: 10 }} width={80} />
-                  <Tooltip formatter={(value: any) => [value, 'Clientes']} contentStyle={{ fontSize: '12px' }} />
+                  <Tooltip formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Clientes']} contentStyle={{ fontSize: '12px' }} />
                   <Legend wrapperStyle={{ fontSize: '12px' }} />
                   <Bar dataKey="count" fill="#8b5cf6" name="Novos Clientes" />
                 </BarChart>
@@ -335,7 +336,7 @@ export default function UsersStatsTab({ usersStats, usersLoading }: UsersStatsTa
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: any) => [value, 'Clientes']} contentStyle={{ fontSize: '12px' }} />
+                <Tooltip formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Clientes']} contentStyle={{ fontSize: '12px' }} />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
               </PieChart>
             </ResponsiveContainer>

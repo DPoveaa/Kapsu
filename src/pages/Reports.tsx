@@ -11,6 +11,7 @@ import ProductsStatsTab from './ReportsProductsTab'
 import WhatsAppStatsTab from './ReportsWhatsAppTab'
 import ChatStatsTab from './ReportsChatTab'
 import WhatsAppHumanSupportStatsTab from './ReportsWhatsAppHumanSupportTab'
+import { TooltipValue, formatTooltipNumber } from '../types/recharts'
 
 interface SiteAccessStats {
   totalAccesses: number
@@ -598,7 +599,7 @@ export default function Reports() {
                           <YAxis tick={{ fontSize: 10 }} />
                           <Tooltip 
                             labelFormatter={(value) => formatDate(value)}
-                            formatter={(value: any) => value.toLocaleString('pt-BR')}
+                            formatter={(value: TooltipValue) => formatTooltipNumber(value).toLocaleString('pt-BR')}
                             contentStyle={{ fontSize: '12px' }}
                           />
                           <Legend wrapperStyle={{ fontSize: '12px' }} />
@@ -659,7 +660,7 @@ export default function Reports() {
                           <YAxis tick={{ fontSize: 10 }} />
                           <Tooltip 
                             labelFormatter={(value) => formatDate(value)}
-                            formatter={(value: any) => value.toLocaleString('pt-BR')}
+                            formatter={(value: TooltipValue) => formatTooltipNumber(value).toLocaleString('pt-BR')}
                             contentStyle={{ fontSize: '12px' }}
                           />
                           <Legend wrapperStyle={{ fontSize: '12px' }} />

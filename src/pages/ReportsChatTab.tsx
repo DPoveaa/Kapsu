@@ -1,5 +1,6 @@
 import { MessageSquare, Send, Inbox, Clock, TrendingUp, AlertCircle, Users, MessageCircle } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { TooltipValue, TooltipName, formatTooltipNumber } from '../types/recharts'
 
 interface ChatStatsTabProps {
   chatStats: any
@@ -312,11 +313,11 @@ export default function ChatStatsTab({ chatStats, chatLoading }: ChatStatsTabPro
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip 
                   labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  formatter={(value: any, name: any) => {
-                    if (name === 'totalCount') return [value, 'Total']
-                    if (name === 'userCount') return [value, 'Usuário']
-                    if (name === 'assistantCount') return [value, 'IA']
-                    return [value, name]
+                  formatter={(value: TooltipValue, name: TooltipName) => {
+                    if (name === 'totalCount') return [formatTooltipNumber(value), 'Total']
+                    if (name === 'userCount') return [formatTooltipNumber(value), 'Usuário']
+                    if (name === 'assistantCount') return [formatTooltipNumber(value), 'IA']
+                    return [formatTooltipNumber(value), name]
                   }}
                   contentStyle={{ fontSize: '12px' }}
                 />
@@ -376,7 +377,7 @@ export default function ChatStatsTab({ chatStats, chatLoading }: ChatStatsTabPro
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip 
                   labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  formatter={(value: any) => [value, 'Conversas']}
+                  formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Conversas']}
                   contentStyle={{ fontSize: '12px' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />

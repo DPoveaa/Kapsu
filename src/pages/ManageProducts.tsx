@@ -109,7 +109,7 @@ export default function ManageProducts() {
             if (colIndex !== -1) {
               let value = row[colIndex]
               
-              // Tratamento especial para preços e estoque
+              // Tratamento especial para preços
               if (field === 'price' || field === 'promo_price') {
                 if (value) {
                   // Remove R$ e converte para número
