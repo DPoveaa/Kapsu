@@ -163,6 +163,35 @@ class WhatsAppService {
   }
 
   /**
+   * Envia uma mensagem de teste de venda
+   */
+  async sendTestSaleMessage(phone: string): Promise<SendMessageResponse> {
+    try {
+      const response = await fetch(`${this.baseUrl}/test-sale-message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone }),
+      })
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao enviar mensagem de teste de venda')
+      }
+      return data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao enviar mensagem de teste de venda')
+    }
+  }
+
+  /**
    * Envia mídia
    */
   async sendMedia(

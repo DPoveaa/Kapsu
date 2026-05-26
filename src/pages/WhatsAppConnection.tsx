@@ -46,6 +46,7 @@ export default function WhatsAppConnection() {
   const [showDisconnectModal, setShowDisconnectModal] = useState(false)
   const [showFinalConfirm, setShowFinalConfirm] = useState(false)
   const [sending, setSending] = useState(false)
+  const [sendingTestSale, setSendingTestSale] = useState(false)
   const [testMessage, setTestMessage] = useState({ phone: '', message: '' })
   const [messageStatus, setMessageStatus] = useState<{ type: 'success' | 'error' | null; message: string }>({ type: null, message: '' })
   
@@ -1639,6 +1640,33 @@ export default function WhatsAppConnection() {
     }
   }
 
+  const handleSendTestSale = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!testMessage.phone) {
+      setMessageStatus({ type: 'error', message: 'Preencha o número para enviar o teste de venda' })
+      return
+    }
+
+    setSendingTestSale(true)
+    setMessageStatus({ type: null, message: '' })
+
+    try {
+      await whatsappService.sendTestSaleMessage(testMessage.phone)
+      setMessageStatus({ type: 'success', message: 'Mensagem de teste de venda enviada com sucesso!' })
+      // Recarrega conversas após enviar
+      setTimeout(() => {
+        loadConversations()
+        if (selectedConversation) {
+          loadMessages(selectedConversation)
+        }
+      }, 500)
+    } catch (error: any) {
+      setMessageStatus({ type: 'error', message: error.message || 'Erro ao enviar mensagem de teste de venda' })
+    } finally {
+      setSendingTestSale(false)
+    }
+  }
+
   const handleTestAI = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!testAIMessage.trim() || testingAI) return
@@ -2996,23 +3024,43 @@ export default function WhatsAppConnection() {
                       {messageStatus.message}
                     </div>
                   )}
-                  <button
-                    type="submit"
-                    disabled={sending}
-                    className="w-full flex items-center justify-center px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {sending ? (
-                      <>
-                        <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 animate-spin" />
-                        Enviando...
-                      </>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
-                        Enviar Mensagem
-                      </>
-                    )}
-                  </button>
+                  <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
+                    <button
+                      type="submit"
+                      disabled={sending || sendingTestSale}
+                      className="flex-1 flex items-center justify-center px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {sending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 animate-spin" />
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+                          Enviar Mensagem
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSendTestSale}
+                      disabled={sending || sendingTestSale || !testMessage.phone}
+                      className="flex-1 flex items-center justify-center px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {sendingTestSale ? (
+                        <>
+                          <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 animate-spin" />
+                          Enviando...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+                          Teste de Venda
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </form>
               </div>
             </div>
