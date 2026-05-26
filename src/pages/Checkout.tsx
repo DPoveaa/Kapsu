@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, Loader2, Truck, Plus, Save, Edit2, Trash2, Check, X, TestTube } from 'lucide-react'
+import { ArrowLeft, MapPin, Loader2, Truck, Plus, Save, Edit2, Trash2, Check, X, TestTube, CreditCard, Barcode } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { paymentService, buildShippingAddress } from '../services/payment.service'
@@ -16,8 +16,9 @@ export default function Checkout() {
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [creatingOrderWithoutPayment, setCreatingOrderWithoutPayment] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'pix' | 'boleto'>('pix')
   const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'quarterly'>('monthly')
-  
+
   // Estados para endereços salvos
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([])
   const [loadingAddresses, setLoadingAddresses] = useState(true)
@@ -29,7 +30,7 @@ export default function Checkout() {
   const [showEditAddressModal, setShowEditAddressModal] = useState(false)
   const [editAddressData, setEditAddressData] = useState<SavedAddress | null>(null)
   const nicknameInputRef = useRef<HTMLInputElement>(null)
-  
+
   const [formData, setFormData] = useState({
     cep: '',
     address: '',
@@ -45,19 +46,19 @@ export default function Checkout() {
   const [shippingMessage, setShippingMessage] = useState<string | null>(null)
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(0)
   const [shippingCalculationFailed, setShippingCalculationFailed] = useState(false)
-  
+
   // Estados para códigos promocionais (aplicados no carrinho)
   const [promoCodesValidation, setPromoCodesValidation] = useState<MultiplePromoCodesValidation | null>(null)
-  
+
   // Carrega códigos promocionais aplicados no carrinho (se houver)
   useEffect(() => {
     const savedPromoCodesValidation = localStorage.getItem('cart_promo_codes_validation')
-    
+
     if (savedPromoCodesValidation) {
       try {
         const validation = JSON.parse(savedPromoCodesValidation)
         setPromoCodesValidation(validation)
-        
+
         // IMPORTANTE: NÃO seta shippingFee aqui para não interferir na validação de CEP
         // O frete grátis por cupom será aplicado apenas no cálculo do custo final
         // Mas o cálculo de frete ainda precisa ser feito para validar se entregamos no CEP
@@ -73,7 +74,7 @@ export default function Checkout() {
 
   // Verifica se o carrinho tem assinatura e obtém o plano
   const isSubscription = items.length > 0 && items.some(item => item.purchaseType === 'subscription')
-  
+
   // Obtém o plano de assinatura do localStorage (salvo no carrinho)
   useEffect(() => {
     if (isSubscription) {
@@ -100,7 +101,7 @@ export default function Checkout() {
   useEffect(() => {
     // Não redireciona enquanto está verificando autenticação
     if (authLoading) return
-    
+
     // Só redireciona se realmente não estiver autenticado após verificação
     if (!isAuthenticated) {
       navigate('/login')
@@ -110,12 +111,12 @@ export default function Checkout() {
   // Carrega endereços salvos
   const loadAddresses = async () => {
     if (!isAuthenticated) return
-    
+
     try {
       setLoadingAddresses(true)
       const addresses = await addressService.getSavedAddresses()
       setSavedAddresses(addresses)
-      
+
       // Se houver endereço padrão e nenhum selecionado, seleciona automaticamente
       if (!selectedAddressId && !showNewAddressForm) {
         const defaultAddress = addresses.find(addr => addr.is_default)
@@ -158,13 +159,13 @@ export default function Checkout() {
   useEffect(() => {
     const calculateShipping = async () => {
       const cleanCep = formData.cep.replace(/\D/g, '')
-      
+
       if (cleanCep.length === 8) {
         try {
           setCalculatingShipping(true)
           setShippingMessage(null)
           setShippingCalculationFailed(false) // Reset do estado de falha antes de tentar
-          
+
           // Prepara itens do carrinho para envio
           const cartItems = items
             .filter(item => item.product) // Apenas produtos
@@ -172,13 +173,13 @@ export default function Checkout() {
               product_id: item.product!.id,
               quantity: item.quantity,
             }))
-          
+
           const result = await shippingService.calculateShipping(
-            formData.cep, 
+            formData.cep,
             subtotal,
             cartItems
           )
-          
+
           // IMPORTANTE: O backend retorna shippingFee: null quando não entregamos para o CEP
           // Mesmo com cupom de frete grátis, precisamos validar se entregamos no CEP
           if (result.shippingFee === null) {
@@ -191,7 +192,7 @@ export default function Checkout() {
           } else {
             // CEP válido - seta o shippingFee do resultado
             setShippingFee(result.shippingFee)
-            
+
             // Se houver cupom de frete grátis, mantém isFreeShipping como true
             // Caso contrário, usa o resultado do cálculo
             if (promoCodesValidation?.freeShipping) {
@@ -199,7 +200,7 @@ export default function Checkout() {
             } else {
               setIsFreeShipping(result.isFreeShipping)
             }
-            
+
             setFreeShippingThreshold(result.freeShippingThreshold || 0)
             setShippingMessage(result.message)
             setShippingCalculationFailed(false) // Sucesso, não falhou - CEP é válido
@@ -208,17 +209,17 @@ export default function Checkout() {
           console.error('Erro ao calcular frete:', error)
           setShippingFee(null)
           setIsFreeShipping(false)
-          
+
           // Verifica se o erro indica que não entregamos para o CEP
           const errorMessage = (error.message || error.toString() || '').toLowerCase()
-          const isCepNotServed = errorMessage.includes('não atendemos') || 
-                                 errorMessage.includes('não entregamos') ||
-                                 errorMessage.includes('cep inválido') ||
-                                 errorMessage.includes('não atendido') ||
-                                 errorMessage.includes('não temos entrega') ||
-                                 errorMessage.includes('região não atendida') ||
-                                 (error.response?.status === 400 && (errorMessage.includes('cep') || errorMessage.includes('entrega')))
-          
+          const isCepNotServed = errorMessage.includes('não atendemos') ||
+            errorMessage.includes('não entregamos') ||
+            errorMessage.includes('cep inválido') ||
+            errorMessage.includes('não atendido') ||
+            errorMessage.includes('não temos entrega') ||
+            errorMessage.includes('região não atendida') ||
+            (error.response?.status === 400 && (errorMessage.includes('cep') || errorMessage.includes('entrega')))
+
           if (isCepNotServed) {
             setShippingMessage('Não entregamos para este CEP no momento. Em breve estaremos por aí!')
             setShippingCalculationFailed(true)
@@ -246,12 +247,12 @@ export default function Checkout() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
-    
+
     // Formata CEP automaticamente
     if (name === 'cep') {
       const cleanValue = value.replace(/\D/g, '')
       if (cleanValue.length <= 8) {
-        const formatted = cleanValue.length > 5 
+        const formatted = cleanValue.length > 5
           ? `${cleanValue.substring(0, 5)}-${cleanValue.substring(5)}`
           : cleanValue
         setFormData(prev => ({ ...prev, [name]: formatted }))
@@ -262,7 +263,7 @@ export default function Checkout() {
     } else {
       setFormData(prev => ({ ...prev, [name]: value }))
     }
-    
+
     // Se estiver editando um endereço salvo, marca como editando
     if (selectedAddressId && !editingAddressId) {
       setEditingAddressId(selectedAddressId)
@@ -280,10 +281,10 @@ export default function Checkout() {
         city: formData.city,
         state: formData.state,
       })
-      
+
       await loadAddresses()
       setShowSaveAddressModal(false)
-      
+
       // Seleciona o endereço recém-criado
       const addresses = await addressService.getSavedAddresses()
       const newAddress = addresses.find(addr => addr.nickname === nickname)
@@ -308,10 +309,10 @@ export default function Checkout() {
         city: formData.city,
         state: formData.state,
       })
-      
+
       await loadAddresses()
       setEditingAddressId(null)
-      
+
       // Mantém o endereço selecionado
       const updatedAddress = savedAddresses.find(addr => addr.id === editingAddressId)
       if (updatedAddress) {
@@ -347,11 +348,11 @@ export default function Checkout() {
         state: editAddressData.state,
         isDefault: editAddressData.is_default,
       })
-      
+
       await loadAddresses()
       setShowEditAddressModal(false)
       setEditAddressData(null)
-      
+
       // Se o endereço editado estava selecionado, atualiza a seleção
       if (selectedAddressId === editAddressData.id) {
         const addresses = await addressService.getSavedAddresses()
@@ -372,7 +373,7 @@ export default function Checkout() {
       await addressService.deleteSavedAddress(id)
       await loadAddresses()
       setShowDeleteConfirmModal(null)
-      
+
       // Se o endereço deletado era o selecionado, limpa o formulário
       if (selectedAddressId === id) {
         setSelectedAddressId(null)
@@ -399,7 +400,7 @@ export default function Checkout() {
   const hasInvalidCep = () => {
     const cleanCep = formData.cep.replace(/\D/g, '')
     const hasCompleteCep = cleanCep.length === 8
-    
+
     // Só considera inválido se:
     // 1. CEP está completo
     // 2. Não está calculando
@@ -407,9 +408,9 @@ export default function Checkout() {
     // NOTA: Não verifica cupom de frete grátis - CEPs inválidos são sempre inválidos
     // NOTA: shippingFee pode ser 0 (frete grátis válido) ou null (CEP inválido)
     // Por isso verificamos shippingCalculationFailed para distinguir entre os casos
-    return hasCompleteCep && 
-           !calculatingShipping && 
-           shippingCalculationFailed
+    return hasCompleteCep &&
+      !calculatingShipping &&
+      shippingCalculationFailed
   }
 
   // Valida se o endereço está completo e se há entrega disponível
@@ -417,35 +418,52 @@ export default function Checkout() {
     const cleanCep = formData.cep.replace(/\D/g, '')
     const hasCompleteCep = cleanCep.length === 8
     const hasRequiredFields = formData.address && formData.number && formData.city && formData.state && formData.cep
-    
+
     // Se o CEP está completo mas não há frete disponível (e não está calculando), não é válido
     // IMPORTANTE: CEPs inválidos são sempre inválidos, mesmo com cupom de frete grátis
     if (hasInvalidCep()) {
       return false
     }
-    
+
     return hasRequiredFields && hasCompleteCep
   }
 
   const canProceedToPayment = () => {
     // Não pode prosseguir se estiver processando
     if (creatingOrder) return false
-    
+
     // Não pode prosseguir se estiver calculando frete
     if (calculatingShipping) return false
-    
+
     // Não pode prosseguir se o CEP não tiver entrega disponível
     if (hasInvalidCep()) return false
-    
+
     // Não pode prosseguir se o endereço não estiver válido
     if (!isAddressValid()) return false
-    
+
     return true
+  }
+
+  const canUseSavedAddressId = () =>
+    Boolean(selectedAddressId && !showNewAddressForm && editingAddressId !== selectedAddressId)
+
+  const buildCreatePreferenceParams = () => {
+    const base = {
+      ...(isSubscription ? { subscriptionPlan } : {}),
+      ...(shippingCost > 0 ? { shippingFee: shippingCost } : {}),
+    }
+
+    if (canUseSavedAddressId()) {
+      return { ...base, addressId: selectedAddressId! }
+    }
+
+    return { ...base, shippingAddress: buildShippingAddress(formData) }
   }
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    
+    if (creatingOrder) return
+
     // Valida endereço
     if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep) {
       alert('Por favor, preencha todos os campos do endereço')
@@ -459,41 +477,46 @@ export default function Checkout() {
       return
     }
 
-    // Se estiver editando um endereço salvo, salva as alterações primeiro
-    if (editingAddressId && selectedAddressId) {
-      await handleUpdateAddress()
-    }
-
     try {
       setCreatingOrder(true)
       setCheckoutError(null)
 
-      const shippingAddress = buildShippingAddress(formData)
-
-      // Cria preferência de pagamento ou assinatura no Mercado Pago
-      const preference = await paymentService.createPreference(
-        shippingAddress,
-        undefined,
-        isSubscription ? subscriptionPlan : undefined,
-        shippingCost > 0 ? shippingCost : undefined
-      )
-
-      console.log('✅ Preferência criada:', preference)
-
-      // Garante que temos a URL do checkout hospedado do Mercado Pago
-      if (!preference.initPoint) {
-        throw new Error('Não foi possível obter a URL do checkout do Mercado Pago.')
+      // Se estiver editando um endereço salvo, salva as alterações primeiro
+      if (editingAddressId && selectedAddressId) {
+        await handleUpdateAddress()
       }
 
-      // Valida se a URL é válida
-      if (!preference.initPoint || !preference.initPoint.startsWith('http')) {
-        throw new Error('URL de checkout inválida recebida do Mercado Pago')
+      const preference =
+        selectedPaymentMethod === 'boleto'
+          ? await paymentService.createPreference({
+              paymentMethod: 'boleto',
+              ...buildCreatePreferenceParams(),
+            })
+          : await paymentService.createPreference({
+              shippingAddress: buildShippingAddress(formData),
+              ...(isSubscription ? { subscriptionPlan } : {}),
+              ...(shippingCost > 0 ? { shippingFee: shippingCost } : {}),
+            })
+
+      const { redirectUrl } = preference
+      if (!redirectUrl.startsWith('http')) {
+        throw new Error(
+          selectedPaymentMethod === 'boleto'
+            ? 'Não foi possível obter o link do boleto.'
+            : 'URL de checkout inválida recebida do Mercado Pago'
+        )
       }
 
-      console.log('🔗 Redirecionando para:', preference.initPoint)
+      if (selectedPaymentMethod === 'boleto') {
+        const opened = window.open(redirectUrl, '_blank', 'noopener,noreferrer')
+        // if (!opened) {
+        //   throw new Error('Não foi possível abrir o boleto. Permita pop-ups neste site e tente novamente.')
+        // }
+        setCreatingOrder(false)
+        return
+      }
 
-      // Redireciona diretamente para a tela de checkout do Mercado Pago (Checkout Pro)
-      window.location.href = preference.initPoint
+      window.location.href = redirectUrl
     } catch (error: any) {
       console.error('Erro ao criar preferência de pagamento:', error)
       setCheckoutError(error.message || 'Erro ao processar pagamento. Tente novamente.')
@@ -580,6 +603,116 @@ export default function Checkout() {
   const selectedAddress = selectedAddressId ? savedAddresses.find(addr => addr.id === selectedAddressId) : null
   const isEditingSelected = editingAddressId === selectedAddressId
 
+  const renderPaymentMethodSelector = () => (
+    <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700">
+      <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
+        Forma de pagamento
+      </h3>
+      <div className="space-y-2 sm:space-y-3">
+        <label
+          className={`flex items-start gap-3 p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all ${
+            selectedPaymentMethod === 'pix'
+              ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-gray-800'
+              : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-400'
+          }`}
+        >
+          <input
+            type="radio"
+            name="paymentMethod"
+            value="pix"
+            checked={selectedPaymentMethod === 'pix'}
+            onChange={() => setSelectedPaymentMethod('pix')}
+            className="mt-1"
+          />
+          <div className="flex-1">
+            <div className="flex items-center gap-2 font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
+              <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 dark:text-primary-400" />
+              PIX ou cartão
+            </div>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1">
+              Pagamento via Mercado Pago (checkout seguro)
+            </p>
+          </div>
+        </label>
+
+        <label
+          className={`flex items-start gap-3 p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all ${
+            selectedPaymentMethod === 'boleto'
+              ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-gray-800'
+              : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-400'
+          }`}
+        >
+          <input
+            type="radio"
+            name="paymentMethod"
+            value="boleto"
+            checked={selectedPaymentMethod === 'boleto'}
+            onChange={() => setSelectedPaymentMethod('boleto')}
+            className="mt-1"
+          />
+          <div className="flex-1">
+            <div className="flex items-center gap-2 font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
+              <Barcode className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 dark:text-primary-400" />
+              Boleto bancário
+            </div>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1">
+              Emitido via Asaas — pague em qualquer banco ou lotérica
+            </p>
+          </div>
+        </label>
+      </div>
+    </div>
+  )
+
+  const renderCheckoutActions = () => (
+    <>
+      {renderPaymentMethodSelector()}
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-4 sm:mt-6 gap-2 sm:gap-3">
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={handleCreateOrderWithoutPayment}
+            className="text-xs px-2.5 sm:px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            disabled={!canProceedToPayment() || creatingOrderWithoutPayment || creatingOrder}
+            title="Criar pedido sem pagamento (apenas para testes)"
+          >
+            {creatingOrderWithoutPayment ? (
+              <>
+                <Loader2 className="animate-spin" size={12} />
+                Criando...
+              </>
+            ) : (
+              <>
+                <TestTube size={12} />
+                Teste (sem pagamento)
+              </>
+            )}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => void handleSubmit()}
+          className="btn-primary flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3 px-4 sm:ml-auto"
+          disabled={!canProceedToPayment() || creatingOrderWithoutPayment}
+        >
+          {creatingOrder ? (
+            <>
+              <Loader2 className="animate-spin mr-2" size={18} />
+              <span>Processando...</span>
+            </>
+          ) : selectedPaymentMethod === 'boleto' ? (
+            <span>Gerar boleto</span>
+          ) : (
+            <>
+              <span className="hidden sm:inline">Continuar Pagamento</span>
+              <span className="sm:hidden">Continuar para Pagamento</span>
+            </>
+          )}
+        </button>
+      </div>
+    </>
+  )
+
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
       <button
@@ -640,17 +773,16 @@ export default function Checkout() {
                       Novo Endereço
                     </button>
                   </div>
-                  
+
                   <div className="space-y-2 sm:space-y-3">
                     {savedAddresses.map((address) => (
                       <div
                         key={address.id}
                         onClick={() => selectAddress(address)}
-                        className={`p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                          selectedAddressId === address.id
+                        className={`p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedAddressId === address.id
                             ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-gray-800'
                             : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-[#065084]'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-2 sm:gap-4">
                           <div className="flex-1 min-w-0">
@@ -751,11 +883,10 @@ export default function Checkout() {
                         required
                         placeholder="00000-000"
                         maxLength={9}
-                        className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-white ${
-                          hasInvalidCep()
-                            ? 'border-red-500 dark:border-red-400 text-red-600 dark:text-red-400' 
+                        className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-white ${hasInvalidCep()
+                            ? 'border-red-500 dark:border-red-400 text-red-600 dark:text-red-400'
                             : 'border-gray-300 dark:border-gray-700'
-                        }`}
+                          }`}
                       />
                       {calculatingShipping && (
                         <div className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2">
@@ -873,50 +1004,8 @@ export default function Checkout() {
                     </div>
                   )}
 
-                  {/* Botão de continuar - só aparece se o CEP for válido */}
-                  {!hasInvalidCep() && (
-                    <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-4 sm:mt-6 gap-2 sm:gap-3">
-                      {isAdmin && (
-                        <button 
-                          type="button"
-                          onClick={handleCreateOrderWithoutPayment}
-                          className="text-xs px-2.5 sm:px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                          disabled={!canProceedToPayment() || creatingOrderWithoutPayment}
-                          title="Criar pedido sem pagamento (apenas para testes)"
-                        >
-                          {creatingOrderWithoutPayment ? (
-                            <>
-                              <Loader2 className="animate-spin" size={12} />
-                              Criando...
-                            </>
-                          ) : (
-                            <>
-                              <TestTube size={12} />
-                              Teste (sem pagamento)
-                            </>
-                          )}
-                        </button>
-                      )}
-                      <button 
-                        type="submit" 
-                        className="btn-primary sm:ml-auto flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3"
-                        disabled={!canProceedToPayment() || creatingOrderWithoutPayment}
-                      >
-                        {creatingOrder ? (
-                          <>
-                            <Loader2 className="animate-spin mr-2" size={18} />
-                            <span className="hidden sm:inline">Processando...</span>
-                            <span className="sm:hidden">Processando...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="hidden sm:inline">Continuar Pagamento</span>
-                            <span className="sm:hidden">Continuar para Pagamento</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  )}
+                  {/* Pagamento e confirmação — só aparece se o CEP for válido */}
+                  {!hasInvalidCep() && renderCheckoutActions()}
                 </form>
               )}
 
@@ -931,48 +1020,53 @@ export default function Checkout() {
                       </p>
                     </div>
                   )}
-                  {/* Botão de continuar - só aparece se o CEP for válido */}
+                  {/* Pagamento e confirmação — só aparece se o CEP for válido */}
                   {!hasInvalidCep() && (
-                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                      {isAdmin && (
-                        <button 
+                    <div>
+                      {renderPaymentMethodSelector()}
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4 sm:mt-6">
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={handleCreateOrderWithoutPayment}
+                            className="text-xs px-2.5 sm:px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                            disabled={!canProceedToPayment() || creatingOrderWithoutPayment || creatingOrder}
+                            title="Criar pedido sem pagamento (apenas para testes)"
+                          >
+                            {creatingOrderWithoutPayment ? (
+                              <>
+                                <Loader2 className="animate-spin" size={12} />
+                                Criando...
+                              </>
+                            ) : (
+                              <>
+                                <TestTube size={12} />
+                                Teste (sem pagamento)
+                              </>
+                            )}
+                          </button>
+                        )}
+                        <button
                           type="button"
-                          onClick={handleCreateOrderWithoutPayment}
-                          className="text-xs px-2.5 sm:px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                          onClick={() => handleSubmit()}
+                          className="btn-primary flex-1 flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3"
                           disabled={!canProceedToPayment() || creatingOrderWithoutPayment}
-                          title="Criar pedido sem pagamento (apenas para testes)"
                         >
-                          {creatingOrderWithoutPayment ? (
+                          {creatingOrder ? (
                             <>
-                              <Loader2 className="animate-spin" size={12} />
-                              Criando...
+                              <Loader2 className="animate-spin mr-2" size={18} />
+                              <span>Processando...</span>
                             </>
+                          ) : selectedPaymentMethod === 'boleto' ? (
+                            <span>Gerar boleto</span>
                           ) : (
                             <>
-                              <TestTube size={12} />
-                              Teste (sem pagamento)
+                              <span className="hidden sm:inline">Continuar Pagamento</span>
+                              <span className="sm:hidden">Continuar para Pagamento</span>
                             </>
                           )}
                         </button>
-                      )}
-                      <button 
-                        onClick={() => handleSubmit()}
-                        className="btn-primary flex-1 flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3"
-                        disabled={!canProceedToPayment() || creatingOrderWithoutPayment}
-                      >
-                        {creatingOrder ? (
-                          <>
-                            <Loader2 className="animate-spin mr-2" size={18} />
-                            <span className="hidden sm:inline">Processando...</span>
-                            <span className="sm:hidden">Processando...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="hidden sm:inline">Continuar Pagamento</span>
-                            <span className="sm:hidden">Continuar para Pagamento</span>
-                          </>
-                        )}
-                      </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -989,10 +1083,10 @@ export default function Checkout() {
               {items.map(item => {
                 const price = item.product?.price || 0
                 const itemTotal = price * item.quantity
-                const itemDiscountedPrice = isSubscription 
+                const itemDiscountedPrice = isSubscription
                   ? itemTotal * (1 - subscriptionDiscount)
                   : itemTotal
-                
+
                 return (
                   <div key={item.id} className="text-xs sm:text-sm">
                     <p className="font-medium dark:text-white line-clamp-2">
@@ -1038,7 +1132,7 @@ export default function Checkout() {
               {promoCodesValidation && promoCodesValidation.totalDiscount > 0 && (
                 <div className="flex justify-between items-center text-xs sm:text-sm">
                   <span className="text-gray-600 dark:text-gray-300">
-                    {promoCodesValidation.promoCodes.length > 1 
+                    {promoCodesValidation.promoCodes.length > 1
                       ? `Cupons (${promoCodesValidation.promoCodes.length})`
                       : 'Cupom'}
                   </span>
@@ -1047,7 +1141,7 @@ export default function Checkout() {
                   </span>
                 </div>
               )}
-              
+
               {/* Frete */}
               <div className="flex justify-between items-center text-xs sm:text-sm">
                 <span className="text-gray-600 dark:text-gray-300 flex items-center">
@@ -1208,7 +1302,7 @@ export default function Checkout() {
                 <X className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
-            
+
             <div className="space-y-3 sm:space-y-4">
               <div>
                 <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
@@ -1233,7 +1327,7 @@ export default function Checkout() {
                   onChange={(e) => {
                     const cleanValue = e.target.value.replace(/\D/g, '')
                     if (cleanValue.length <= 8) {
-                      const formatted = cleanValue.length > 5 
+                      const formatted = cleanValue.length > 5
                         ? `${cleanValue.substring(0, 5)}-${cleanValue.substring(5)}`
                         : cleanValue
                       setEditAddressData({ ...editAddressData, cep: formatted })

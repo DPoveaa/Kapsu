@@ -43,14 +43,46 @@ export function buildShippingAddress(input: {
   return shippingAddress
 }
 
+export interface CreatePreferenceParams {
+  paymentMethod?: string
+  shippingAddress?: ShippingAddress
+  addressId?: string
+  subscriptionPlan?: 'monthly' | 'quarterly'
+  shippingFee?: number
+}
+
+interface CreatePreferenceApiData {
+  preferenceId?: string
+  redirectUrl?: string
+  /** @deprecated Use redirectUrl — mantido só para compatibilidade com respostas antigas */
+  initPoint?: string
+  orderId: string
+  openInNewTab?: boolean
+  bankSlipUrl?: string
+}
+
+export interface CreatePreferenceResult {
+  preferenceId?: string
+  redirectUrl: string
+  orderId: string
+}
+
 interface CreatePreferenceResponse {
   success: boolean
-  data: {
-    preferenceId: string
-    initPoint: string
-    orderId: string
-  }
+  data: CreatePreferenceApiData
   message?: string
+}
+
+function normalizeCreatePreferenceResult(raw: CreatePreferenceApiData): CreatePreferenceResult {
+  const redirectUrl = raw.redirectUrl ?? raw.initPoint
+  if (!redirectUrl) {
+    throw new Error('Resposta sem URL de redirecionamento')
+  }
+  return {
+    preferenceId: raw.preferenceId,
+    redirectUrl,
+    orderId: raw.orderId,
+  }
 }
 
 interface PaymentStatusResponse {
@@ -77,14 +109,14 @@ class PaymentService {
   }
 
   /**
-   * Cria uma preferência de pagamento no Mercado Pago
+   * Cria preferência de pagamento (Mercado Pago) ou cobrança Asaas (boleto)
    */
-  async createPreference(shippingAddress: ShippingAddress, paymentMethod?: string, subscriptionPlan?: 'monthly' | 'quarterly', shippingFee?: number): Promise<CreatePreferenceResponse['data']> {
+  async createPreference(params: CreatePreferenceParams): Promise<CreatePreferenceResult> {
     try {
       const response = await fetch(`${this.baseUrl}/create-preference`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify({ shippingAddress, paymentMethod, subscriptionPlan, shippingFee }),
+        body: JSON.stringify(params),
       })
 
       const text = await response.text()
@@ -98,7 +130,7 @@ class PaymentService {
         throw new Error(data.message || 'Erro ao criar preferência de pagamento')
       }
 
-      return data.data
+      return normalizeCreatePreferenceResult(data.data)
     } catch (error: any) {
       if (error.message) {
         throw error
