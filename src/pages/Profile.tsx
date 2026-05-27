@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { authService } from '../services/auth.service'
 import { uploadService } from '../services/upload.service'
 import { addressService, SavedAddress } from '../services/address.service'
 import { cepService } from '../services/cep.service'
 import { orderService } from '../services/order.service'
-import { User, Camera, Lock, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Package, Calendar, CreditCard, ShoppingBag } from 'lucide-react'
+import { User, Camera, Lock, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Package, Calendar, CreditCard, ShoppingBag, Download } from 'lucide-react'
 import { env } from '../config/env'
 
 type ProfileSection = 'info' | 'password' | 'image' | 'addresses' | 'orders' | null
@@ -28,13 +29,30 @@ interface Order {
   created_at: Date | string;
   updated_at: Date | string;
   items?: OrderItem[];
+  boleto_url?: string;
 }
 
 export default function Profile() {
   const { user, updateUser } = useAuth()
-  const [activeSection, setActiveSection] = useState<ProfileSection>(null)
+  const [searchParams] = useSearchParams()
+  const location = useLocation()
+  
+  const initialSection = (searchParams.get('section') as ProfileSection) || 
+                         (location.state?.section as ProfileSection) || 
+                         null
+                         
+  const [activeSection, setActiveSection] = useState<ProfileSection>(initialSection)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // Atualiza activeSection quando searchParams ou location.state mudar
+  useEffect(() => {
+    const section = (searchParams.get('section') as ProfileSection) || 
+                    (location.state?.section as ProfileSection)
+    if (section) {
+      setActiveSection(section)
+    }
+  }, [searchParams, location.state])
 
   // Form states
   const [name, setName] = useState('')
@@ -840,6 +858,15 @@ export default function Profile() {
                                          <span className="text-gray-500 dark:text-gray-400">Status Financeiro:</span>
                                          <span className="font-semibold text-gray-900 dark:text-white">{translateStatus(order.status)}</span>
                                        </div>
+                                       {order.boleto_url && (
+                                          <div className="flex justify-between items-center text-sm mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                             <span className="text-gray-500 dark:text-gray-400">Boleto Bancário:</span>
+                                             <a href={order.boleto_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50 rounded-lg font-semibold transition-colors">
+                                               <Download className="w-4 h-4" />
+                                               Baixar PDF
+                                             </a>
+                                          </div>
+                                       )}
                                      </div>
                                    </div>
                                 </div>

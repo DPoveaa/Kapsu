@@ -8,10 +8,11 @@ import { shippingService } from '../services/shipping.service'
 import { addressService, SavedAddress } from '../services/address.service'
 import { orderService } from '../services/order.service'
 import { MultiplePromoCodesValidation } from '../services/promo-codes.service'
+import { cepService } from '../services/cep.service'
 
 export default function Checkout() {
   const navigate = useNavigate()
-  const { items, getTotal } = useCart()
+  const { items, getTotal, clearCart } = useCart()
   const { user, isAuthenticated, isAdmin, loading: authLoading } = useAuth()
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [creatingOrderWithoutPayment, setCreatingOrderWithoutPayment] = useState(false)
@@ -249,6 +250,46 @@ export default function Checkout() {
     const timeoutId = setTimeout(calculateShipping, 500)
     return () => clearTimeout(timeoutId)
   }, [formData.cep, subtotal, items])
+
+  // Busca endereço por CEP
+  useEffect(() => {
+    const fetchAddress = async () => {
+      const cleanCep = formData.cep.replace(/\D/g, '')
+      
+      if (cleanCep.length === 8) {
+        // Verifica se o usuário está focado no input de CEP (ou seja, digitando ativamente)
+        const isCepInputActive = document.activeElement?.getAttribute('name') === 'cep'
+        
+        try {
+          const addressData = await cepService.searchCep(cleanCep)
+          if (addressData) {
+            setFormData(prev => {
+              // Ou se os campos estiverem vazios
+              const isAddressEmpty = !prev.address || !prev.city || !prev.state
+              
+              // Só atualiza se o usuário estiver digitando o CEP ou se os campos estiverem vazios
+              // Isso evita sobrescrever um endereço salvo quando ele é selecionado
+              if (isCepInputActive || isAddressEmpty) {
+                return {
+                  ...prev,
+                  address: addressData.logradouro || prev.address,
+                  bairro: addressData.bairro || prev.bairro,
+                  city: addressData.localidade || prev.city,
+                  state: addressData.uf || prev.state
+                }
+              }
+              return prev
+            })
+          }
+        } catch (error) {
+          console.error('Erro ao buscar CEP:', error)
+        }
+      }
+    }
+
+    const timeoutId = setTimeout(fetchAddress, 400)
+    return () => clearTimeout(timeoutId)
+  }, [formData.cep])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -549,16 +590,15 @@ export default function Checkout() {
         )
       }
 
-      if (selectedPaymentMethod === 'boleto') {
-        window.open(redirectUrl, '_blank', 'noopener,noreferrer')
-        // if (!opened) {
-        //   throw new Error('Não foi possível abrir o boleto. Permita pop-ups neste site e tente novamente.')
-        // }
-        setCreatingOrder(false)
-        return
-      }
+      // Esvazia o carrinho antes de redirecionar
+      await clearCart()
 
-      window.location.href = redirectUrl
+      // Abre o link (Boleto ou Mercado Pago) em nova guia
+      window.open(redirectUrl, '_blank')
+      
+      // Redireciona a aba atual da Kapsu para Meus Pedidos
+      navigate('/perfil?section=orders', { state: { section: 'orders' } })
+
     } catch (error: any) {
       console.error('Erro ao criar preferência de pagamento:', error)
       setCheckoutError(error.message || 'Erro ao processar pagamento. Tente novamente.')
@@ -615,6 +655,9 @@ export default function Checkout() {
       )
 
       console.log('✅ Pedido criado sem pagamento:', order)
+
+      // Esvazia o carrinho
+      await clearCart()
 
       // Redireciona para a página de sucesso
       navigate(`/payment-success?order_id=${order.id}`)
