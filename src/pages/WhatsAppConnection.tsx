@@ -5,6 +5,44 @@ import { whatsappService, WhatsAppStatus } from '../services/whatsapp.service'
 import { env } from '../config/env'
 import { useAuth } from '../context/AuthContext'
 
+/**
+ * Retorna a URL de mídia com o token de autenticação anexado como query parameter,
+ * garantindo segurança para exibição de mídias no monitor/playground.
+ */
+const getMediaUrlWithToken = (urlOrId: string, isId: boolean = false): string => {
+  const token = localStorage.getItem('sanare_token') || localStorage.getItem('token') || ''
+  
+  let baseUrl = env.apiUrl
+  if (baseUrl.endsWith('/api')) {
+    baseUrl = baseUrl.slice(0, -4)
+  }
+  baseUrl = baseUrl.replace(/\/$/, '')
+  
+  let targetUrl = ''
+  if (isId) {
+    targetUrl = `${baseUrl}/api/whatsapp/media/${urlOrId}`
+  } else {
+    if (!urlOrId) return ''
+    if (urlOrId.startsWith('data:') || urlOrId.startsWith('blob:')) {
+      return urlOrId
+    }
+    if (urlOrId.startsWith('/')) {
+      targetUrl = `${baseUrl}${urlOrId}`
+    } else {
+      targetUrl = urlOrId
+    }
+  }
+  
+  if (token && (targetUrl.includes('/whatsapp/media') || targetUrl.includes('/api/whatsapp/media'))) {
+    const separator = targetUrl.includes('?') ? '&' : '?'
+    if (!targetUrl.includes('token=')) {
+      targetUrl = `${targetUrl}${separator}token=${encodeURIComponent(token)}`
+    }
+  }
+  
+  return targetUrl
+}
+
 interface WhatsAppMessage {
   id: string
   from: string
@@ -37,6 +75,9 @@ interface Conversation {
 export default function WhatsAppConnection() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [activeTab, setActiveTab] = useState<'connection' | 'settings' | 'simulation' | 'conversations' | 'tests'>('connection')
+  const [testActivePanel, setTestActivePanel] = useState<'free' | 'client_sale' | 'distributor'>('free')
+  const [sendingDistributorOrder, setSendingDistributorOrder] = useState(false)
   const [status, setStatus] = useState<WhatsAppStatus | null>(null)
   const [qrCode, setQrCode] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -107,7 +148,6 @@ export default function WhatsAppConnection() {
     }
   }>>([])
   const [testingAI, setTestingAI] = useState(false)
-  const [showTestPanel, setShowTestPanel] = useState(false)
   const [processingStatus, setProcessingStatus] = useState<string>('')
   const [selectedMessageForDetails, setSelectedMessageForDetails] = useState<number | null>(null)
   const testChatContainerRef = useRef<HTMLDivElement>(null)
@@ -124,7 +164,6 @@ export default function WhatsAppConnection() {
   } | null>(null)
 
   // Estados para gerenciar números de farmacêuticos
-  const [showPharmacistConfig, setShowPharmacistConfig] = useState(false)
   const [pharmacistNumbers, setPharmacistNumbers] = useState<Array<{
     id: string
     phone: string
@@ -150,7 +189,6 @@ export default function WhatsAppConnection() {
   const [addingPharmacist, setAddingPharmacist] = useState(false)
 
   // Estados para gerenciar números da distribuidora
-  const [showDistributorConfig, setShowDistributorConfig] = useState(false)
   const [distributorNumbers, setDistributorNumbers] = useState<Array<{
     id: string
     phone: string
@@ -167,6 +205,20 @@ export default function WhatsAppConnection() {
   const [newDistributorUserId, setNewDistributorUserId] = useState<string | null>(null)
   const [newDistributorName, setNewDistributorName] = useState('')
   const [addingDistributor, setAddingDistributor] = useState(false)
+
+  // Estados para gerenciar números permitidos para IA
+  const [allowedAINumbers, setAllowedAINumbers] = useState<Array<{
+    id: string
+    phone: string
+    description: string | null
+    isActive: boolean
+    createdAt: string
+  }>>([])
+  const [loadingAllowedAINumbers, setLoadingAllowedAINumbers] = useState(false)
+  const [showAddAllowedAIModal, setShowAddAllowedAIModal] = useState(false)
+  const [newAllowedAIPhone, setNewAllowedAIPhone] = useState('')
+  const [newAllowedAIDescription, setNewAllowedAIDescription] = useState('')
+  const [addingAllowedAI, setAddingAllowedAI] = useState(false)
 
   // Chave para armazenamento no localStorage
   const TEST_CHAT_STORAGE_KEY = 'sanare_ai_test_chat_history'
@@ -879,11 +931,11 @@ export default function WhatsAppConnection() {
                 className="relative group cursor-pointer"
                   onClick={() => {
                     // Abre preview da imagem em modal
-                    setImagePreview(mediaUrl)
+                    setImagePreview(getMediaUrlWithToken(mediaUrl))
                   }}
               >
                 <img 
-                  src={mediaUrl} 
+                  src={getMediaUrlWithToken(mediaUrl)} 
                   alt={msg.isFromMe ? "Imagem enviada por você" : "Imagem recebida"} 
                   className="w-full max-w-[240px] sm:max-w-[280px] lg:max-w-[320px] h-auto rounded-lg hover:opacity-90 transition-opacity block pointer-events-none"
                   onError={(e) => {
@@ -997,7 +1049,7 @@ export default function WhatsAppConnection() {
               className="w-full max-w-md min-w-[240px] sm:min-w-[280px]"
               preload="metadata"
               crossOrigin="anonymous"
-              src={mediaUrlWithCache}
+              src={getMediaUrlWithToken(mediaUrlWithCache)}
               onError={(e) => {
                 const target = e.target as HTMLAudioElement
                 
@@ -1152,13 +1204,13 @@ export default function WhatsAppConnection() {
                 }, 2000) // Aumenta o delay para evitar "piscamento"
               }}
             >
-              <source src={mediaUrlWithCache} type={mimeType} />
-              <source src={mediaUrlWithCache} type="audio/mpeg" />
-              <source src={mediaUrlWithCache} type="audio/wav" />
-              <source src={mediaUrlWithCache} type="audio/ogg; codecs=opus" />
-              <source src={mediaUrlWithCache} type="audio/webm; codecs=opus" />
-              <source src={mediaUrlWithCache} type="audio/ogg" />
-              <source src={mediaUrlWithCache} type="audio/webm" />
+              <source src={getMediaUrlWithToken(mediaUrlWithCache)} type={mimeType} />
+              <source src={getMediaUrlWithToken(mediaUrlWithCache)} type="audio/mpeg" />
+              <source src={getMediaUrlWithToken(mediaUrlWithCache)} type="audio/wav" />
+              <source src={getMediaUrlWithToken(mediaUrlWithCache)} type="audio/ogg; codecs=opus" />
+              <source src={getMediaUrlWithToken(mediaUrlWithCache)} type="audio/webm; codecs=opus" />
+              <source src={getMediaUrlWithToken(mediaUrlWithCache)} type="audio/ogg" />
+              <source src={getMediaUrlWithToken(mediaUrlWithCache)} type="audio/webm" />
               Seu navegador não suporta o elemento de áudio.
             </audio>
             {msg.body && (
@@ -1173,7 +1225,7 @@ export default function WhatsAppConnection() {
           <p className="text-xs sm:text-sm text-gray-500 italic mb-2">Áudio não disponível ainda. Aguarde alguns segundos...</p>
           {msg.id && (
           <a 
-              href={`${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`}
+              href={getMediaUrlWithToken(msg.id, true)}
             download
             className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
           >
@@ -1327,11 +1379,11 @@ export default function WhatsAppConnection() {
                 }
               }}
             >
-              <source src={mediaUrlWithCache} type={mimeType} />
-              <source src={mediaUrlWithCache} type="video/mp4" />
-              <source src={mediaUrlWithCache} type="video/webm" />
-              <source src={mediaUrlWithCache} type="video/ogg" />
-              <source src={mediaUrlWithCache} type="video/quicktime" />
+              <source src={getMediaUrlWithToken(mediaUrlWithCache)} type={mimeType} />
+              <source src={getMediaUrlWithToken(mediaUrlWithCache)} type="video/mp4" />
+              <source src={getMediaUrlWithToken(mediaUrlWithCache)} type="video/webm" />
+              <source src={getMediaUrlWithToken(mediaUrlWithCache)} type="video/ogg" />
+              <source src={getMediaUrlWithToken(mediaUrlWithCache)} type="video/quicktime" />
               Seu navegador não suporta o elemento de vídeo.
             </video>
             {msg.body && (
@@ -1344,7 +1396,7 @@ export default function WhatsAppConnection() {
       return (
         <div className="space-y-2">
           <a 
-            href={msg.id ? `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}` : '#'}
+            href={msg.id ? getMediaUrlWithToken(msg.id, true) : '#'}
             download
             className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
           >
@@ -1407,7 +1459,7 @@ export default function WhatsAppConnection() {
         return (
           <div className="space-y-2">
             <a 
-              href={mediaUrl || `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`}
+              href={getMediaUrlWithToken(mediaUrl || msg.id, !mediaUrl)}
               download
               className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
             >
@@ -1488,7 +1540,7 @@ export default function WhatsAppConnection() {
       return (
         <div className="space-y-2">
           <a 
-            href={mediaUrl || `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`}
+            href={getMediaUrlWithToken(mediaUrl || msg.id, !mediaUrl)}
             download
             className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
           >
@@ -1623,7 +1675,7 @@ export default function WhatsAppConnection() {
     setMessageStatus({ type: null, message: '' })
 
     try {
-      await whatsappService.sendMessage(testMessage.phone, testMessage.message)
+      await whatsappService.sendMessage(formatPhoneForBackend(testMessage.phone), testMessage.message)
       setMessageStatus({ type: 'success', message: 'Mensagem enviada com sucesso!' })
       setTestMessage({ phone: '', message: '' })
       // Recarrega conversas após enviar
@@ -1651,7 +1703,7 @@ export default function WhatsAppConnection() {
     setMessageStatus({ type: null, message: '' })
 
     try {
-      await whatsappService.sendTestSaleMessage(testMessage.phone)
+      await whatsappService.sendTestSaleMessage(formatPhoneForBackend(testMessage.phone))
       setMessageStatus({ type: 'success', message: 'Mensagem de teste de venda enviada com sucesso!' })
       // Recarrega conversas após enviar
       setTimeout(() => {
@@ -2043,6 +2095,12 @@ export default function WhatsAppConnection() {
     await loadUsersWithPhone()
   }
 
+  const formatPhoneForBackend = (phone: string) => {
+    const digits = phone.replace(/\D/g, '')
+    if (!digits) return ''
+    return digits.startsWith('55') ? digits : `55${digits}`
+  }
+
   const handleAddPharmacist = async () => {
     if (!newPharmacistPhone.trim() && !newPharmacistUserId) {
       alert('Por favor, selecione um usuário ou digite um número de telefone')
@@ -2052,7 +2110,7 @@ export default function WhatsAppConnection() {
     setAddingPharmacist(true)
     try {
       await whatsappService.addPharmacistNumber(
-        newPharmacistPhone.trim(),
+        formatPhoneForBackend(newPharmacistPhone.trim()),
         newPharmacistUserId || undefined,
         newPharmacistName.trim() || undefined
       )
@@ -2090,12 +2148,15 @@ export default function WhatsAppConnection() {
     }
   }
 
-  // Carrega números de farmacêuticos quando o painel é aberto
+  // Carrega as configurações ao ativar a aba de configurações
   useEffect(() => {
-    if (showPharmacistConfig) {
+    if (activeTab === 'settings') {
       loadPharmacistNumbers()
+      loadDistributorNumbers()
+      loadAllowedAINumbers()
     }
-  }, [showPharmacistConfig])
+  }, [activeTab])
+
 
   // Funções para gerenciar números da distribuidora
   const loadDistributorNumbers = async () => {
@@ -2128,7 +2189,7 @@ export default function WhatsAppConnection() {
     setAddingDistributor(true)
     try {
       await whatsappService.addDistributorNumber(
-        newDistributorPhone.trim(),
+        formatPhoneForBackend(newDistributorPhone.trim()),
         newDistributorUserId || undefined,
         newDistributorName.trim() || undefined
       )
@@ -2166,12 +2227,71 @@ export default function WhatsAppConnection() {
     }
   }
 
-  // Carrega números da distribuidora quando o painel é aberto
-  useEffect(() => {
-    if (showDistributorConfig) {
-      loadDistributorNumbers()
+  // Funções para gerenciar números permitidos para IA
+  const loadAllowedAINumbers = async () => {
+    setLoadingAllowedAINumbers(true)
+    try {
+      const numbers = await whatsappService.getAllowedAINumbers()
+      setAllowedAINumbers(numbers)
+    } catch (error: any) {
+      console.error('Erro ao carregar números permitidos para IA:', error)
+    } finally {
+      setLoadingAllowedAINumbers(false)
     }
-  }, [showDistributorConfig])
+  }
+
+  const handleAddAllowedAI = async () => {
+    if (!newAllowedAIPhone.trim()) {
+      alert('Por favor, digite o número de telefone')
+      return
+    }
+    setAddingAllowedAI(true)
+    try {
+      await whatsappService.addAllowedAINumber(
+        formatPhoneForBackend(newAllowedAIPhone.trim()),
+        newAllowedAIDescription.trim() || undefined
+      )
+      await loadAllowedAINumbers()
+      setShowAddAllowedAIModal(false)
+      setNewAllowedAIPhone('')
+      setNewAllowedAIDescription('')
+    } catch (error: any) {
+      alert('Erro ao adicionar número permitido: ' + error.message)
+    } finally {
+      setAddingAllowedAI(false)
+    }
+  }
+
+  const handleRemoveAllowedAI = async (id: string) => {
+    if (!confirm('Tem certeza que deseja remover este número da lista de permitidos?')) {
+      return
+    }
+    try {
+      await whatsappService.removeAllowedAINumber(id)
+      await loadAllowedAINumbers()
+      if (selectedConversation) {
+        checkIfNumberIsAllowed(selectedConversation)
+      }
+    } catch (error: any) {
+      alert('Erro ao remover número permitido: ' + error.message)
+    }
+  }
+
+  const handleSendDistributorOrder = async () => {
+    setSendingDistributorOrder(true)
+    try {
+      const response = await whatsappService.sendDistributorOrderNotification()
+      alert(`✅ ${response.message}${response.orderId ? `\nID do Pedido: ${response.orderId}` : ''}`)
+      // Atualiza conversas para mostrar a mensagem no monitor
+      setTimeout(() => { loadConversations() }, 500)
+    } catch (error: any) {
+      console.error('Erro ao enviar notificação de pedido para distribuidora:', error)
+      alert('Erro: ' + error.message)
+    } finally {
+      setSendingDistributorOrder(false)
+    }
+  }
+
 
   return (
     <>
@@ -2190,8 +2310,78 @@ export default function WhatsAppConnection() {
           <p className="mt-1 sm:mt-2 text-xs sm:text-sm lg:text-base text-gray-600 dark:text-gray-300">Conecte seu WhatsApp para enviar e receber mensagens</p>
         </div>
 
-        {/* Status Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 border border-gray-200 dark:border-gray-700">
+        {/* Tab Selection */}
+        <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <button
+            type="button"
+            onClick={() => setActiveTab('connection')}
+            className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-all duration-200 flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'connection'
+                ? 'border-green-600 text-green-600 dark:text-green-400 dark:border-green-400 font-bold'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <Power className="w-4 h-4" />
+            Conexão & Status
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('settings')}
+            className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-all duration-200 flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'settings'
+                ? 'border-green-600 text-green-600 dark:text-green-400 dark:border-green-400 font-bold'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            Configurações
+          </button>
+          {status?.connected && (
+            <>
+              <button
+                type="button"
+                onClick={() => setActiveTab('simulation')}
+                className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-all duration-200 flex items-center gap-2 whitespace-nowrap ${
+                  activeTab === 'simulation'
+                    ? 'border-green-600 text-green-600 dark:text-green-400 dark:border-green-400 font-bold'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                <Bot className="w-4 h-4" />
+                Simulador de IA
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('conversations')}
+                className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-all duration-200 flex items-center gap-2 whitespace-nowrap ${
+                  activeTab === 'conversations'
+                    ? 'border-green-600 text-green-600 dark:text-green-400 dark:border-green-400 font-bold'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                <MessageSquare className="w-4 h-4" />
+                Monitor de Atendimento
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('tests')}
+                className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-all duration-200 flex items-center gap-2 whitespace-nowrap ${
+                  activeTab === 'tests'
+                    ? 'border-orange-500 text-orange-500 dark:text-orange-400 dark:border-orange-400 font-bold'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                <Send className="w-4 h-4" />
+                Envios & Testes
+              </button>
+            </>
+          )}
+        </div>
+
+        {activeTab === 'connection' && (
+          <div className="space-y-6">
+            {/* Status Card */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-6 border border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 gap-2 sm:gap-3">
             <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white">Status da Conexão</h2>
             <button
@@ -2342,6 +2532,8 @@ export default function WhatsAppConnection() {
             </div>
           </div>
         )}
+          </div>
+        )}
 
         {/* Modal de Confirmação de Desconexão */}
         {showDisconnectModal && (
@@ -2420,25 +2612,18 @@ export default function WhatsAppConnection() {
         )}
 
         {/* Test Message e Conversas */}
-        {status?.connected && (
+        {status?.connected && activeTab === 'simulation' && (
           <div className="space-y-3 sm:space-y-4 lg:space-y-6">
             {/* Painel de Teste de IA */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-3 sm:mb-4">
                 <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                  <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2 text-yellow-600 dark:text-yellow-400" />
-                  Teste de IA
+                  <Bot className="w-5 h-5 mr-2 text-purple-600 animate-pulse" />
+                  Simulador de Inteligência Artificial (Playground)
                 </h2>
-                <button
-                  onClick={() => setShowTestPanel(!showTestPanel)}
-                  className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
-                >
-                  {showTestPanel ? 'Ocultar' : 'Mostrar'}
-                </button>
               </div>
               
-              {showTestPanel && (
-                <div className="flex flex-col" style={{ height: '500px', maxHeight: '70vh' }}>
+              <div className="flex flex-col" style={{ height: '600px', maxHeight: '75vh' }}>
                   {/* Configuração do Telefone de Teste */}
                   <div className="mb-2 sm:mb-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                     <label className="block text-xs font-medium text-gray-700 dark:text-white mb-1">
@@ -2821,161 +3006,414 @@ export default function WhatsAppConnection() {
                     </p>
                   </form>
                 </div>
-              )}
+              </div>
             </div>
+        )}
 
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
             {/* Painel de Configuração de Números de Farmacêuticos */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                  <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2 text-blue-600" />
-                  Números de Farmacêuticos
+                  <User className="w-5 h-5 mr-2 text-blue-600" />
+                  Números de Farmacêuticos (Notificações)
                 </h2>
                 <button
-                  onClick={() => setShowPharmacistConfig(!showPharmacistConfig)}
-                  className="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  type="button"
+                  onClick={handleOpenAddPharmacistModal}
+                  className="flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm font-medium whitespace-nowrap"
                 >
-                  {showPharmacistConfig ? 'Ocultar' : 'Mostrar'}
+                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span>Adicionar</span>
                 </button>
               </div>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-4">
+                Configure os números de WhatsApp dos farmacêuticos que receberão notificações em tempo real quando uma conversa precisar de intervenção humana (como no caso de receitas de medicamentos controlados).
+              </p>
               
-              {showPharmacistConfig && (
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 flex-1">
-                      Configure os números que receberão notificações quando uma conversa precisar de farmacêutico
-                    </p>
-                    <button
-                      onClick={handleOpenAddPharmacistModal}
-                      className="flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm whitespace-nowrap"
-                    >
-                      <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      <span>Adicionar</span>
-                    </button>
+              <div className="space-y-3 sm:space-y-4">
+                {loadingPharmacistNumbers ? (
+                  <div className="flex items-center justify-center py-6 sm:py-8">
+                    <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-blue-600" />
+                    <p className="ml-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300">Carregando...</p>
                   </div>
-
-                  {loadingPharmacistNumbers ? (
-                    <div className="flex items-center justify-center py-6 sm:py-8">
-                      <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-blue-600" />
-                      <p className="ml-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300">Carregando...</p>
-                    </div>
-                  ) : pharmacistNumbers.length === 0 ? (
-                    <div className="text-center py-6 sm:py-8 text-gray-500">
-                      <Phone className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-300" />
-                      <p className="text-xs sm:text-sm">Nenhum número configurado</p>
-                      <p className="text-xs sm:text-sm mt-1">Adicione um número para receber notificações</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {pharmacistNumbers.map((pharmacist) => (
-                        <div
-                          key={pharmacist.id}
-                          className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 gap-2"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
-                              <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-300 flex-shrink-0" />
-                              <p className="font-medium text-xs sm:text-sm text-gray-900 dark:text-white break-words">{pharmacist.phone}</p>
-                              {pharmacist.name && (
-                                <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">({pharmacist.name})</span>
-                              )}
-                            </div>
-                            {pharmacist.userEmail && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">Usuário: {pharmacist.userEmail}</p>
+                ) : pharmacistNumbers.length === 0 ? (
+                  <div className="text-center py-6 sm:py-8 text-gray-500">
+                    <Phone className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-300" />
+                    <p className="text-xs sm:text-sm">Nenhum número configurado</p>
+                    <p className="text-xs sm:text-sm mt-1">Adicione um número para receber notificações</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {pharmacistNumbers.map((pharmacist) => (
+                      <div
+                        key={pharmacist.id}
+                        className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 gap-2"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
+                            <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-300 flex-shrink-0" />
+                            <p className="font-medium text-xs sm:text-sm text-gray-900 dark:text-white break-words">{pharmacist.phone}</p>
+                            {pharmacist.name && (
+                              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">({pharmacist.name})</span>
                             )}
                           </div>
-                          <button
-                            onClick={() => handleRemovePharmacist(pharmacist.id)}
-                            className="ml-2 p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
-                            title="Remover"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          </button>
+                          {pharmacist.userEmail && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">Usuário: {pharmacist.userEmail}</p>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                        <button
+                          onClick={() => handleRemovePharmacist(pharmacist.id)}
+                          className="ml-2 p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                          title="Remover"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Painel de Configuração de Números da Distribuidora */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
-                  <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 lg:w-5 lg:h-5 mr-1.5 sm:mr-2 text-green-600" />
+                  <Settings className="w-5 h-5 mr-2 text-green-600" />
                   Números da Distribuidora
                 </h2>
                 <button
-                  onClick={() => setShowDistributorConfig(!showDistributorConfig)}
-                  className="text-xs sm:text-sm text-green-600 hover:text-green-700 font-medium"
+                  type="button"
+                  onClick={handleOpenAddDistributorModal}
+                  className="flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs sm:text-sm font-medium whitespace-nowrap"
                 >
-                  {showDistributorConfig ? 'Ocultar' : 'Mostrar'}
+                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span>Adicionar</span>
                 </button>
               </div>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-4">
+                Configure os números que receberão mensagens automáticas quando um pedido for marcado como pago. A mensagem será enviada apenas uma vez por pedido para todos os números configurados.
+              </p>
               
-              {showDistributorConfig && (
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 flex-1">
-                      Configure os números que receberão mensagens automáticas quando um pedido for marcado como pago. A mensagem será enviada apenas uma vez por pedido para todos os números configurados.
-                    </p>
-                    <button
-                      onClick={handleOpenAddDistributorModal}
-                      className="flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-xs sm:text-sm whitespace-nowrap"
-                    >
-                      <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      <span>Adicionar</span>
-                    </button>
+              <div className="space-y-3 sm:space-y-4">
+                {loadingDistributorNumbers ? (
+                  <div className="flex items-center justify-center py-6 sm:py-8">
+                    <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-green-600" />
+                    <p className="ml-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300">Carregando...</p>
                   </div>
-
-                  {loadingDistributorNumbers ? (
-                    <div className="flex items-center justify-center py-6 sm:py-8">
-                      <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-green-600" />
-                      <p className="ml-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300">Carregando...</p>
-                    </div>
-                  ) : distributorNumbers.length === 0 ? (
-                    <div className="text-center py-6 sm:py-8 text-gray-500">
-                      <Phone className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-300" />
-                      <p className="text-xs sm:text-sm">Nenhum número configurado</p>
-                      <p className="text-xs sm:text-sm mt-1">Adicione um número para receber notificações</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {distributorNumbers.map((distributor) => (
-                        <div
-                          key={distributor.id}
-                          className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 gap-2"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
-                              <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-300 flex-shrink-0" />
-                              <p className="font-medium text-xs sm:text-sm text-gray-900 dark:text-white break-words">{distributor.phone}</p>
-                              {distributor.name && (
-                                <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">({distributor.name})</span>
-                              )}
-                            </div>
-                            {distributor.userEmail && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">Usuário: {distributor.userEmail}</p>
+                ) : distributorNumbers.length === 0 ? (
+                  <div className="text-center py-6 sm:py-8 text-gray-500">
+                    <Phone className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-300" />
+                    <p className="text-xs sm:text-sm">Nenhum número configurado</p>
+                    <p className="text-xs sm:text-sm mt-1">Adicione um número para receber notificações</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {distributorNumbers.map((distributor) => (
+                      <div
+                        key={distributor.id}
+                        className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 gap-2"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
+                            <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-300 flex-shrink-0" />
+                            <p className="font-medium text-xs sm:text-sm text-gray-900 dark:text-white break-words">{distributor.phone}</p>
+                            {distributor.name && (
+                              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">({distributor.name})</span>
                             )}
                           </div>
-                          <button
-                            onClick={() => handleRemoveDistributor(distributor.id)}
-                            className="ml-2 p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
-                            title="Remover"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                          </button>
+                          {distributor.userEmail && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">Usuário: {distributor.userEmail}</p>
+                          )}
                         </div>
-                      ))}
+                        <button
+                          onClick={() => handleRemoveDistributor(distributor.id)}
+                          className="ml-2 p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                          title="Remover"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Painel de Configuração de Números Permitidos para a IA */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                  <Bot className="w-5 h-5 mr-2 text-purple-600 animate-pulse" />
+                  Números Permitidos para IA (Respostas Automáticas)
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setShowAddAllowedAIModal(true)}
+                  className="flex items-center space-x-1.5 sm:space-x-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-xs sm:text-sm font-medium whitespace-nowrap"
+                >
+                  <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span>Adicionar</span>
+                </button>
+              </div>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-4">
+                Quando a resposta automática da IA global estiver desativada (AI_AUTO_RESPOND=false no servidor), a IA responderá automaticamente apenas para os números cadastrados nesta lista. Útil para homologação e testes de novos fluxos.
+              </p>
+              
+              <div className="space-y-3 sm:space-y-4">
+                {loadingAllowedAINumbers ? (
+                  <div className="flex items-center justify-center py-6 sm:py-8">
+                    <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-purple-600" />
+                    <p className="ml-2 text-xs sm:text-sm text-gray-600 dark:text-gray-300">Carregando...</p>
+                  </div>
+                ) : allowedAINumbers.length === 0 ? (
+                  <div className="text-center py-6 sm:py-8 text-gray-500">
+                    <Bot className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 text-gray-300" />
+                    <p className="text-xs sm:text-sm">Nenhum número cadastrado na lista de permitidos</p>
+                    <p className="text-xs sm:text-sm mt-1">Adicione um número para habilitar respostas automáticas da IA</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {allowedAINumbers.map((num) => (
+                      <div
+                        key={num.id}
+                        className="flex items-center justify-between p-2.5 sm:p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 gap-2"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-1.5 sm:space-x-2 flex-wrap gap-1">
+                            <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600 dark:text-gray-300 flex-shrink-0" />
+                            <p className="font-medium text-xs sm:text-sm text-gray-900 dark:text-white break-words">{num.phone}</p>
+                            {num.description && (
+                              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">({num.description})</span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">Cadastrado em: {new Date(num.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveAllowedAI(num.id)}
+                          className="ml-2 p-1.5 sm:p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0"
+                          title="Remover"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============ ABA: ENVIOS & TESTES ============ */}
+        {status?.connected && activeTab === 'tests' && (
+          <div className="space-y-4">
+            {/* Header */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-1">
+                <Send className="w-5 h-5 text-orange-500" />
+                Envios &amp; Testes
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                Envie mensagens de teste reais pelo WhatsApp. As mensagens enviadas aqui aparecem no Monitor de Atendimento.
+              </p>
+
+              {/* Sub-nav */}
+              <div className="flex gap-2 mt-4 border-b border-gray-200 dark:border-gray-700 flex-wrap">
+                {[
+                  { id: 'free', label: '📨 Mensagem Livre', color: 'blue' },
+                  { id: 'client_sale', label: '🛍️ Simular Venda (Cliente)', color: 'green' },
+                  { id: 'distributor', label: '📦 Notificar Distribuidora', color: 'orange' },
+                ].map((panel) => (
+                  <button
+                    key={panel.id}
+                    type="button"
+                    onClick={() => setTestActivePanel(panel.id as 'free' | 'client_sale' | 'distributor')}
+                    className={`pb-2.5 px-3 text-xs sm:text-sm font-semibold border-b-2 transition-all whitespace-nowrap ${
+                      testActivePanel === panel.id
+                        ? panel.color === 'blue' ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                          : panel.color === 'green' ? 'border-green-500 text-green-600 dark:text-green-400'
+                          : 'border-orange-500 text-orange-600 dark:text-orange-400'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    {panel.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* ---- Sub-painel: Mensagem Livre ---- */}
+            {testActivePanel === 'free' && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md p-4 sm:p-6">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+                  <Send className="w-4 h-4 text-blue-500" />
+                  Mensagem Livre
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                  Envie qualquer mensagem para qualquer número. Útil para testar a entrega e visualizar no Monitor.
+                </p>
+                <form onSubmit={handleSendTest} className="space-y-3">
+                  <div>
+                    <label htmlFor="test-free-phone" className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Número de destino (DDD + número)
+                    </label>
+                    <input
+                      type="text"
+                      id="test-free-phone"
+                      value={testMessage.phone}
+                      onChange={(e) => setTestMessage({ ...testMessage, phone: e.target.value })}
+                      placeholder="(11) 99999-9999"
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="test-free-msg" className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Mensagem
+                    </label>
+                    <textarea
+                      id="test-free-msg"
+                      value={testMessage.message}
+                      onChange={(e) => setTestMessage({ ...testMessage, message: e.target.value })}
+                      placeholder="Digite a mensagem que será enviada via WhatsApp..."
+                      rows={4}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                      required
+                    />
+                  </div>
+                  {messageStatus.type && (
+                    <div className={`p-3 rounded-lg text-sm ${messageStatus.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'}`}>
+                      {messageStatus.message}
                     </div>
                   )}
+                  <button
+                    type="submit"
+                    disabled={sending}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                  >
+                    {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    {sending ? 'Enviando...' : 'Enviar Mensagem'}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* ---- Sub-painel: Simular Venda (Cliente) ---- */}
+            {testActivePanel === 'client_sale' && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md p-4 sm:p-6">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+                  <Send className="w-4 h-4 text-green-500" />
+                  Simular Venda — Confirmação para o Cliente
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Envia uma mensagem idêntica à que o cliente recebe ao finalizar um pedido, incluindo ID do pedido, produtos, valor e endereço.
+                </p>
+                <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                  <p className="text-xs text-green-700 dark:text-green-400 font-medium mb-1">📋 O que será enviado:</p>
+                  <ul className="text-xs text-green-700 dark:text-green-400 space-y-0.5 list-disc list-inside">
+                    <li>Saudação personalizada</li>
+                    <li>ID do pedido (gerado automaticamente)</li>
+                    <li>Data e hora do pedido</li>
+                    <li>Lista de produtos com valores</li>
+                    <li>Valor total e endereço de entrega</li>
+                    <li>Mensagem de confirmação e contato</li>
+                  </ul>
                 </div>
-              )}
-            </div>
-            
-            {/* Painel de Envio de Mensagem e Conversas */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                <div className="mb-3">
+                  <label htmlFor="test-sale-phone" className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Número do cliente (DDD + número)
+                  </label>
+                  <input
+                    type="text"
+                    id="test-sale-phone"
+                    value={testMessage.phone}
+                    onChange={(e) => setTestMessage({ ...testMessage, phone: e.target.value })}
+                    placeholder="(11) 99999-9999"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+                {messageStatus.type && (
+                  <div className={`p-3 rounded-lg text-sm mb-3 ${messageStatus.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300'}`}>
+                    {messageStatus.message}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSendTestSale}
+                  disabled={sendingTestSale || !testMessage.phone}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  {sendingTestSale ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  {sendingTestSale ? 'Enviando...' : 'Enviar Confirmação de Venda ao Cliente'}
+                </button>
+              </div>
+            )}
+
+            {/* ---- Sub-painel: Notificar Distribuidora ---- */}
+            {testActivePanel === 'distributor' && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md p-4 sm:p-6">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+                  <Send className="w-4 h-4 text-orange-500" />
+                  Notificar Distribuidora — Pedido para Envio
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  Envia uma notificação de pedido idêntica à que a distribuidora recebe em produção: contém apenas as informações de logística necessárias para separar e despachar o pedido.
+                </p>
+                <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                  <p className="text-xs text-orange-700 dark:text-orange-400 font-medium mb-1">📋 O que será enviado:</p>
+                  <ul className="text-xs text-orange-700 dark:text-orange-400 space-y-0.5 list-disc list-inside">
+                    <li>ID do pedido</li>
+                    <li>Data e hora</li>
+                    <li>Produtos com nome, quantidade e SKU/referência</li>
+                    <li>Endereço completo de entrega</li>
+                    <li>Solicitação de confirmação de recebimento</li>
+                  </ul>
+                  <p className="text-xs text-orange-600 dark:text-orange-300 mt-2 font-medium">
+                    ⚠️ Sem valores monetários nem forma de pagamento — a distribuidora só precisa saber <em>o que</em> enviar e <em>pra onde</em>.
+                  </p>
+                </div>
+
+                {distributorNumbers.length === 0 ? (
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg mb-4">
+                    <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                      ⚠️ Nenhum número de distribuidora cadastrado. Configure os números em <strong>Configurações → Distribuidora</strong>.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1">Será enviado para:</p>
+                    <div className="space-y-1">
+                      {distributorNumbers.filter(d => d.isActive).map(d => (
+                        <p key={d.id} className="text-xs text-gray-700 dark:text-gray-300">
+                          📱 {d.name ? `${d.name} — ` : ''}{d.phone}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleSendDistributorOrder}
+                  disabled={sendingDistributorOrder || distributorNumbers.filter(d => d.isActive).length === 0}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-orange-600 hover:bg-orange-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                >
+                  {sendingDistributorOrder ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  {sendingDistributorOrder ? 'Enviando Notificação...' : 'Enviar Notificação de Pedido à Distribuidora'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Painel de Envio de Mensagem e Conversas (Tab Monitor) */}
+        {status?.connected && activeTab === 'conversations' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+
               {/* Painel de Envio de Mensagem */}
               <div className="lg:col-span-1 order-2 lg:order-1">
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 border border-gray-200 dark:border-gray-700">
@@ -2993,7 +3431,7 @@ export default function WhatsAppConnection() {
                       id="phone"
                       value={testMessage.phone}
                       onChange={(e) => setTestMessage({ ...testMessage, phone: e.target.value })}
-                      placeholder="5511999999999"
+                      placeholder="(11) 99999-9999"
                       className="w-full px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
                     />
@@ -3567,7 +4005,6 @@ export default function WhatsAppConnection() {
               </div>
             </div>
           </div>
-          </div>
         )}
         </div>
 
@@ -3624,10 +4061,10 @@ export default function WhatsAppConnection() {
                         setNewPharmacistPhone(e.target.value)
                         setNewPharmacistUserId(null) // Limpa seleção de usuário quando digita
                       }}
-                      placeholder="5511999999999"
+                      placeholder="(11) 99999-9999"
                       className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Formato: 55 + DDD + Número</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Formato: DDD + Número</p>
                   </div>
 
                   {/* Nome (opcional) */}
@@ -3805,10 +4242,10 @@ export default function WhatsAppConnection() {
                         setNewDistributorPhone(e.target.value)
                         setNewDistributorUserId(null) // Limpa seleção de usuário quando digita
                       }}
-                      placeholder="5511999999999"
+                      placeholder="(11) 99999-9999"
                       className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Formato: 55 + DDD + Número</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Formato: DDD + Número</p>
                   </div>
 
                   {/* Nome (opcional) */}
@@ -3839,6 +4276,79 @@ export default function WhatsAppConnection() {
                     className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                   >
                     {addingDistributor ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 animate-spin" />
+                        Adicionando...
+                      </>
+                    ) : (
+                      'Adicionar'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal para Adicionar Número Permitido para IA */}
+        {showAddAllowedAIModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full border border-gray-200 dark:border-gray-700 max-h-[90vh] overflow-y-auto">
+              <div className="p-3 sm:p-4 lg:p-6">
+                <div className="flex items-center justify-between mb-3 sm:mb-4">
+                  <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Adicionar Número Permitido para IA</h3>
+                  <button
+                    onClick={() => setShowAddAllowedAIModal(false)}
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
+                  >
+                    <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-3 sm:space-y-4">
+                  {/* Número de telefone */}
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-white mb-1.5 sm:mb-2">
+                      Número de telefone (com DDD e código do país):
+                    </label>
+                    <input
+                      type="text"
+                      value={newAllowedAIPhone}
+                      onChange={(e) => setNewAllowedAIPhone(e.target.value)}
+                      placeholder="(11) 99999-9999"
+                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Formato: DDD + Número</p>
+                  </div>
+
+                  {/* Descrição / Identificação */}
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-white mb-1.5 sm:mb-2">
+                      Descrição / Identificação (opcional):
+                    </label>
+                    <input
+                      type="text"
+                      value={newAllowedAIDescription}
+                      onChange={(e) => setNewAllowedAIDescription(e.target.value)}
+                      placeholder="Ex: Telefone de homologação do Daniel"
+                      className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-200 dark:text-black rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 mt-4 sm:mt-6">
+                  <button
+                    onClick={() => setShowAddAllowedAIModal(false)}
+                    className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleAddAllowedAI}
+                    disabled={addingAllowedAI || !newAllowedAIPhone.trim()}
+                    className="flex-1 px-3 sm:px-4 py-2 text-xs sm:text-sm lg:text-base bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                  >
+                    {addingAllowedAI ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 animate-spin" />
                         Adicionando...

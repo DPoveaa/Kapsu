@@ -1,13 +1,13 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminLayout from './components/AdminLayout'
 import Home from './pages/Home'
 import Products from './pages/Products'
 import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
 import Login from './pages/Login'
-import Register from './pages/Register'
 import AdminPanel from './pages/AdminPanel'
 import WhatsAppConnection from './pages/WhatsAppConnection'
 import WhatsAppSupport from './pages/WhatsAppSupport'
@@ -54,7 +54,7 @@ function AppContent() {
         <Route path="/payment-success" element={<PaymentSuccess />} />
         <Route path="/payment-failure" element={<PaymentFailure />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/cadastro" element={<Register />} />
+        <Route path="/cadastro" element={<Login />} />
         <Route
           path="/perfil"
           element={
@@ -67,7 +67,9 @@ function AppContent() {
           path="/admin"
           element={
             <ProtectedRoute requireAdmin>
-              <AdminPanel />
+              <AdminLayout>
+                <AdminPanel />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -75,7 +77,9 @@ function AppContent() {
           path="/admin/whatsapp"
           element={
             <ProtectedRoute requireAdmin>
-              <WhatsAppConnection />
+              <AdminLayout>
+                <WhatsAppConnection />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -83,7 +87,9 @@ function AppContent() {
           path="/admin/whatsapp/support"
           element={
             <ProtectedRoute requireAdmin>
-              <WhatsAppSupport />
+              <AdminLayout>
+                <WhatsAppSupport />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -91,7 +97,9 @@ function AppContent() {
           path="/admin/users"
           element={
             <ProtectedRoute requireAdmin>
-              <UserManagement />
+              <AdminLayout>
+                <UserManagement />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -99,7 +107,9 @@ function AppContent() {
           path="/admin/products"
           element={
             <ProtectedRoute requireAdmin>
-              <ManageProducts />
+              <AdminLayout>
+                <ManageProducts />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -107,7 +117,9 @@ function AppContent() {
           path="/admin/products/create"
           element={
             <ProtectedRoute requireAdmin>
-              <CreateProduct />
+              <AdminLayout>
+                <CreateProduct />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -115,7 +127,9 @@ function AppContent() {
           path="/admin/products/edit/:id"
           element={
             <ProtectedRoute requireAdmin>
-              <EditProduct />
+              <AdminLayout>
+                <EditProduct />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -124,7 +138,9 @@ function AppContent() {
           path="/admin/orders"
           element={
             <ProtectedRoute requireAdmin>
-              <ManageOrders />
+              <AdminLayout>
+                <ManageOrders />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -132,7 +148,9 @@ function AppContent() {
           path="/admin/reports"
           element={
             <ProtectedRoute requireAdmin>
-              <Reports />
+              <AdminLayout>
+                <Reports />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -140,7 +158,9 @@ function AppContent() {
           path="/admin/settings"
           element={
             <ProtectedRoute requireAdmin>
-              <SiteSettings />
+              <AdminLayout>
+                <SiteSettings />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -148,7 +168,9 @@ function AppContent() {
           path="/admin/shipping"
           element={
             <ProtectedRoute requireAdmin>
-              <ShippingSettings />
+              <AdminLayout>
+                <ShippingSettings />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -156,7 +178,9 @@ function AppContent() {
           path="/admin/shipping/free-rules"
           element={
             <ProtectedRoute requireAdmin>
-              <FreeShippingRules />
+              <AdminLayout>
+                <FreeShippingRules />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -164,7 +188,9 @@ function AppContent() {
           path="/admin/promotions"
           element={
             <ProtectedRoute requireAdmin>
-              <ManagePromotions />
+              <AdminLayout>
+                <ManagePromotions />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -172,7 +198,9 @@ function AppContent() {
           path="/admin/promo-codes"
           element={
             <ProtectedRoute requireAdmin>
-              <ManagePromoCodes />
+              <AdminLayout>
+                <ManagePromoCodes />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -180,7 +208,9 @@ function AppContent() {
           path="/admin/banners"
           element={
             <ProtectedRoute requireAdmin>
-              <ManageBanners />
+              <AdminLayout>
+                <ManageBanners />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -188,7 +218,9 @@ function AppContent() {
           path="/admin/reviews"
           element={
             <ProtectedRoute requireAdmin>
-              <ManageReviews />
+              <AdminLayout>
+                <ManageReviews />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -196,7 +228,9 @@ function AppContent() {
           path="/admin/home-sections"
           element={
             <ProtectedRoute requireAdmin>
-              <ManageHomeSections />
+              <AdminLayout>
+                <ManageHomeSections />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -204,7 +238,9 @@ function AppContent() {
           path="/admin/header-categories"
           element={
             <ProtectedRoute requireAdmin>
-              <ManageHeaderCategories />
+              <AdminLayout>
+                <ManageHeaderCategories />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />
@@ -212,7 +248,9 @@ function AppContent() {
           path="/admin/orders/:id"
           element={
             <ProtectedRoute requireAdmin>
-              <OrderDetail />
+              <AdminLayout>
+                <OrderDetail />
+              </AdminLayout>
             </ProtectedRoute>
           }
         />

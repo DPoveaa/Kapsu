@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, Loader2, Truck, Plus, Save, Edit2, Trash2, Check, X, TestTube, CreditCard, Barcode } from 'lucide-react'
+import { ArrowLeft, MapPin, Loader2, Truck, Plus, Edit2, Trash2, X, TestTube, CreditCard, Barcode } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { paymentService, buildShippingAddress } from '../services/payment.service'
@@ -25,11 +25,12 @@ export default function Checkout() {
   const [showNewAddressForm, setShowNewAddressForm] = useState(false)
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
-  const [showSaveAddressModal, setShowSaveAddressModal] = useState(false)
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState<string | null>(null)
   const [showEditAddressModal, setShowEditAddressModal] = useState(false)
   const [editAddressData, setEditAddressData] = useState<SavedAddress | null>(null)
-  const nicknameInputRef = useRef<HTMLInputElement>(null)
+  const [saveAddressToProfile, setSaveAddressToProfile] = useState(false)
+  const [newAddressNickname, setNewAddressNickname] = useState('')
+  const [checkoutStep, setCheckoutStep] = useState<1 | 2>(1)
 
   const [formData, setFormData] = useState({
     cep: '',
@@ -118,17 +119,21 @@ export default function Checkout() {
       setSavedAddresses(addresses)
 
       // Se houver endereço padrão e nenhum selecionado, seleciona automaticamente
-      if (!selectedAddressId && !showNewAddressForm) {
-        const defaultAddress = addresses.find(addr => addr.is_default)
-        if (defaultAddress) {
-          selectAddress(defaultAddress)
-        }
+      if (!selectedAddressId && !showNewAddressForm && addresses.length > 0) {
+        const defaultAddress = addresses.find(addr => addr.is_default) || addresses[0]
+        selectAddress(defaultAddress)
+      }
+
+      // Se não houver nenhum endereço, marca a opção de salvar por padrão e abre formulário
+      if (addresses.length === 0) {
+        setShowNewAddressForm(true)
+        setSaveAddressToProfile(true)
       }
     } catch (error: any) {
       console.error('Erro ao carregar endereços:', error)
-      // Se não houver endereços, mostra formulário novo
       if (savedAddresses.length === 0) {
         setShowNewAddressForm(true)
+        setSaveAddressToProfile(true)
       }
     } finally {
       setLoadingAddresses(false)
@@ -270,32 +275,6 @@ export default function Checkout() {
     }
   }
 
-  const handleSaveAddress = async (nickname: string) => {
-    try {
-      await addressService.createSavedAddress({
-        nickname,
-        cep: formData.cep,
-        address: formData.address,
-        number: formData.number,
-        complement: formData.complement || undefined,
-        city: formData.city,
-        state: formData.state,
-      })
-
-      await loadAddresses()
-      setShowSaveAddressModal(false)
-
-      // Seleciona o endereço recém-criado
-      const addresses = await addressService.getSavedAddresses()
-      const newAddress = addresses.find(addr => addr.nickname === nickname)
-      if (newAddress) {
-        selectAddress(newAddress)
-      }
-    } catch (error: any) {
-      console.error('Erro ao salvar endereço:', error)
-      alert('Erro ao salvar endereço: ' + (error.message || 'Erro desconhecido'))
-    }
-  }
 
   const handleUpdateAddress = async () => {
     if (!editingAddressId) return
@@ -460,6 +439,50 @@ export default function Checkout() {
     return { ...base, shippingAddress: buildShippingAddress(formData) }
   }
 
+  const handleContinueToPayment = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+
+    // Valida endereço
+    if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep) {
+      alert('Por favor, preencha todos os campos do endereço')
+      return
+    }
+
+    // Valida se há entrega disponível
+    if (hasInvalidCep()) {
+      alert('Infelizmente, não estamos enviando para este CEP no momento. Por favor, verifique o endereço ou entre em contato conosco.')
+      return
+    }
+
+    // Se estiver editando um endereço salvo, salva as alterações primeiro
+    if (editingAddressId && selectedAddressId) {
+      await handleUpdateAddress()
+    } else if (!selectedAddressId && saveAddressToProfile) {
+      // Auto-salvar novo endereço
+      try {
+        await addressService.createSavedAddress({
+          nickname: newAddressNickname || 'Meu Endereço',
+          cep: formData.cep,
+          address: formData.address,
+          number: formData.number,
+          complement: formData.complement || undefined,
+          city: formData.city,
+          state: formData.state,
+        })
+        await loadAddresses()
+      } catch (err) {
+        console.error('Erro ao auto-salvar endereço (ignorando):', err)
+      }
+    }
+
+    setCheckoutStep(2)
+  }
+
+  const handleContinueWithSavedAddress = () => {
+    if (!canProceedToPayment()) return
+    setCheckoutStep(2)
+  }
+
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     if (creatingOrder) return
@@ -477,6 +500,25 @@ export default function Checkout() {
       return
     }
 
+    // Se estiver editando um endereço salvo, salva as alterações primeiro
+    if (editingAddressId && selectedAddressId) {
+      await handleUpdateAddress()
+    } else if (!selectedAddressId && saveAddressToProfile) {
+      // Auto-salvar novo endereço
+      try {
+        await addressService.createSavedAddress({
+          nickname: newAddressNickname || 'Meu Endereço',
+          cep: formData.cep,
+          address: formData.address,
+          number: formData.number,
+          complement: formData.complement || undefined,
+          city: formData.city,
+          state: formData.state,
+        })
+      } catch (err) {
+        console.error('Erro ao auto-salvar endereço (ignorando):', err)
+      }
+    }
     try {
       setCreatingOrder(true)
       setCheckoutError(null)
@@ -489,14 +531,14 @@ export default function Checkout() {
       const preference =
         selectedPaymentMethod === 'boleto'
           ? await paymentService.createPreference({
-              paymentMethod: 'boleto',
-              ...buildCreatePreferenceParams(),
-            })
+            paymentMethod: 'boleto',
+            ...buildCreatePreferenceParams(),
+          })
           : await paymentService.createPreference({
-              shippingAddress: buildShippingAddress(formData),
-              ...(isSubscription ? { subscriptionPlan } : {}),
-              ...(shippingCost > 0 ? { shippingFee: shippingCost } : {}),
-            })
+            shippingAddress: buildShippingAddress(formData),
+            ...(isSubscription ? { subscriptionPlan } : {}),
+            ...(shippingCost > 0 ? { shippingFee: shippingCost } : {}),
+          })
 
       const { redirectUrl } = preference
       if (!redirectUrl.startsWith('http')) {
@@ -508,7 +550,7 @@ export default function Checkout() {
       }
 
       if (selectedPaymentMethod === 'boleto') {
-        const opened = window.open(redirectUrl, '_blank', 'noopener,noreferrer')
+        window.open(redirectUrl, '_blank', 'noopener,noreferrer')
         // if (!opened) {
         //   throw new Error('Não foi possível abrir o boleto. Permita pop-ups neste site e tente novamente.')
         // }
@@ -542,6 +584,21 @@ export default function Checkout() {
     // Se estiver editando um endereço salvo, salva as alterações primeiro
     if (editingAddressId && selectedAddressId) {
       await handleUpdateAddress()
+    } else if (!selectedAddressId && saveAddressToProfile) {
+      // Auto-salvar novo endereço
+      try {
+        await addressService.createSavedAddress({
+          nickname: newAddressNickname || 'Meu Endereço',
+          cep: formData.cep,
+          address: formData.address,
+          number: formData.number,
+          complement: formData.complement || undefined,
+          city: formData.city,
+          state: formData.state,
+        })
+      } catch (err) {
+        console.error('Erro ao auto-salvar endereço (ignorando):', err)
+      }
     }
 
     try {
@@ -610,11 +667,10 @@ export default function Checkout() {
       </h3>
       <div className="space-y-2 sm:space-y-3">
         <label
-          className={`flex items-start gap-3 p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all ${
-            selectedPaymentMethod === 'pix'
-              ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-gray-800'
-              : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-400'
-          }`}
+          className={`flex items-start gap-3 p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedPaymentMethod === 'pix'
+            ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-gray-800'
+            : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-400'
+            }`}
         >
           <input
             type="radio"
@@ -636,11 +692,10 @@ export default function Checkout() {
         </label>
 
         <label
-          className={`flex items-start gap-3 p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all ${
-            selectedPaymentMethod === 'boleto'
-              ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-gray-800'
-              : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-400'
-          }`}
+          className={`flex items-start gap-3 p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedPaymentMethod === 'boleto'
+            ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-gray-800'
+            : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-400'
+            }`}
         >
           <input
             type="radio"
@@ -701,11 +756,11 @@ export default function Checkout() {
               <span>Processando...</span>
             </>
           ) : selectedPaymentMethod === 'boleto' ? (
-            <span>Gerar boleto</span>
+            <span>Continuar</span>
           ) : (
             <>
-              <span className="hidden sm:inline">Continuar Pagamento</span>
-              <span className="sm:hidden">Continuar para Pagamento</span>
+              <span className="hidden sm:inline">Continuar</span>
+              <span className="sm:hidden">Continuar</span>
             </>
           )}
         </button>
@@ -715,13 +770,6 @@ export default function Checkout() {
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-4 sm:mb-6 cursor-pointer text-sm sm:text-base"
-      >
-        <ArrowLeft size={18} className="mr-2" />
-        Voltar
-      </button>
 
       <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">Finalizar Compra</h1>
 
@@ -740,336 +788,423 @@ export default function Checkout() {
                 </div>
               )}
 
-              {/* Lista de Endereços Salvos */}
-              {!showNewAddressForm && loadingAddresses && (
-                <div className="mb-6 text-center py-8">
-                  <Loader2 className="animate-spin mx-auto text-primary-600 dark:text-primary-400 mb-2" size={24} />
-                  <p className="text-gray-600 dark:text-gray-300">Carregando endereços...</p>
-                </div>
-              )}
-
-              {!showNewAddressForm && !loadingAddresses && savedAddresses.length > 0 && (
-                <div className="mb-4 sm:mb-6">
-                  <div className="flex items-center justify-between mb-3 sm:mb-4 flex-wrap gap-2">
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Endereços Salvos</h3>
-                    <button
-                      onClick={() => {
-                        setShowNewAddressForm(true)
-                        setSelectedAddressId(null)
-                        setEditingAddressId(null)
-                        setFormData({
-                          cep: '',
-                          address: '',
-                          number: '',
-                          complement: '',
-                          bairro: '',
-                          city: '',
-                          state: ''
-                        })
-                      }}
-                      className="text-xs sm:text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
-                      Novo Endereço
-                    </button>
-                  </div>
-
-                  <div className="space-y-2 sm:space-y-3">
-                    {savedAddresses.map((address) => (
-                      <div
-                        key={address.id}
-                        onClick={() => selectAddress(address)}
-                        className={`p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedAddressId === address.id
-                            ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-gray-800'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-[#065084]'
-                          }`}
-                      >
-                        <div className="flex items-start justify-between gap-2 sm:gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center mb-1.5 sm:mb-2 flex-wrap gap-1.5">
-                              <span className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">{address.nickname}</span>
-                              {address.is_default && (
-                                <span className="text-xs bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-300 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded">
-                                  Padrão
-                                </span>
-                              )}
-                              {selectedAddressId === address.id && (
-                                <Check className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 dark:text-primary-400 flex-shrink-0" />
-                              )}
-                            </div>
-                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 break-words">
-                              {address.address}, {address.number}
-                              {address.complement && ` - ${address.complement}`}
-                            </p>
-                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
-                              {address.city} - {address.state}, CEP: {address.cep}
-                            </p>
-                          </div>
-                          <div className="flex items-center space-x-1 sm:space-x-2 ml-2 sm:ml-4 flex-shrink-0">
-                            <button
-                              onClick={(e) => handleEditAddress(address, e)}
-                              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 p-1 cursor-pointer"
-                              title="Editar endereço"
-                            >
-                              <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setShowDeleteConfirmModal(address.id)
-                              }}
-                              className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 p-1 cursor-pointer"
-                              title="Remover endereço"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                            </button>
-                          </div>
-
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Formulário de Endereço (Novo ou Editando) */}
-              {(showNewAddressForm || savedAddresses.length === 0 || (selectedAddressId && isEditingSelected)) && (
-                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-                  {savedAddresses.length > 0 && !isEditingSelected && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowNewAddressForm(false)
-                        setSelectedAddressId(null)
-                        setEditingAddressId(null)
-                        setFormData({
-                          cep: '',
-                          address: '',
-                          number: '',
-                          complement: '',
-                          bairro: '',
-                          city: '',
-                          state: ''
-                        })
-                      }}
-                      className="text-xs sm:text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 mb-3 sm:mb-4 flex items-center cursor-pointer"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
-                      Voltar para endereços salvos
-                    </button>
-                  )}
-
-                  {isEditingSelected && selectedAddress && (
-                    <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
-                      <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-300">
-                        <strong>Editando:</strong> {selectedAddress.nickname}
-                      </p>
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                        As alterações serão salvas automaticamente ao finalizar a compra
-                      </p>
+              {checkoutStep === 1 ? (
+                <>
+                  {/* Lista de Endereços Salvos */}
+                  {!showNewAddressForm && loadingAddresses && (
+                    <div className="mb-6 text-center py-8">
+                      <Loader2 className="animate-spin mx-auto text-primary-600 dark:text-primary-400 mb-2" size={24} />
+                      <p className="text-gray-600 dark:text-gray-300">Carregando endereços...</p>
                     </div>
                   )}
 
-                  <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
-                      CEP *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        name="cep"
-                        value={formData.cep}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="00000-000"
-                        maxLength={9}
-                        className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-white ${hasInvalidCep()
-                            ? 'border-red-500 dark:border-red-400 text-red-600 dark:text-red-400'
-                            : 'border-gray-300 dark:border-gray-700'
-                          }`}
-                      />
-                      {calculatingShipping && (
-                        <div className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2">
-                          <Loader2 className="animate-spin text-primary-600 dark:text-primary-400" size={18} />
+                  {!loadingAddresses && savedAddresses.length > 0 && (
+                    <div className="mb-4 sm:mb-6">
+                      <div className="flex items-center justify-between mb-3 sm:mb-4 flex-wrap gap-2">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Endereços Salvos</h3>
+                        {showNewAddressForm ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowNewAddressForm(false)
+                              setEditingAddressId(null)
+                              setFormData({
+                                cep: '',
+                                address: '',
+                                number: '',
+                                complement: '',
+                                bairro: '',
+                                city: '',
+                                state: ''
+                              })
+                              if (savedAddresses.length > 0) {
+                                const defaultAddress = savedAddresses.find(addr => addr.is_default) || savedAddresses[0]
+                                selectAddress(defaultAddress)
+                              }
+                            }}
+                            className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1 cursor-pointer"
+                          >
+                            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                            Cancelar
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowNewAddressForm(true)
+                              setSelectedAddressId(null)
+                              setEditingAddressId(null)
+                              setFormData({
+                                cep: '',
+                                address: '',
+                                number: '',
+                                complement: '',
+                                bairro: '',
+                                city: '',
+                                state: ''
+                              })
+                            }}
+                            className="text-xs sm:text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+                            Novo Endereço
+                          </button>
+                        )}
+                      </div>
+
+                      {!showNewAddressForm && (
+                        <div className="space-y-3 sm:space-y-4">
+                          {savedAddresses.map((address) => (
+                            <div
+                              key={address.id}
+                              onClick={() => selectAddress(address)}
+                              className={`p-4 sm:p-5 rounded-xl cursor-pointer transition-all duration-200 border shadow-sm hover:shadow-md ${selectedAddressId === address.id
+                                ? 'border-primary-500 dark:border-primary-400 bg-primary-50/50 dark:bg-primary-900/10 ring-1 ring-primary-500 dark:ring-primary-400'
+                                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-primary-300 dark:hover:border-primary-600'
+                                }`}
+                            >
+                              <div className="flex items-start gap-3 sm:gap-4">
+                                {/* Radio Indicator */}
+                                <div className="mt-0.5 flex-shrink-0">
+                                  {selectedAddressId === address.id ? (
+                                    <div className="w-5 h-5 rounded-full border-[5px] border-primary-600 dark:border-primary-400 bg-white dark:bg-gray-900" />
+                                  ) : (
+                                    <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" />
+                                  )}
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center mb-1.5 sm:mb-2 flex-wrap gap-2">
+                                    <span className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">{address.nickname}</span>
+                                    {address.is_default && (
+                                      <span className="text-[10px] sm:text-xs font-medium tracking-wide bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 px-2 py-0.5 rounded-full uppercase">
+                                        Padrão
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-600 dark:text-gray-300 break-words leading-relaxed">
+                                    {address.address}, {address.number}
+                                    {address.complement && ` - ${address.complement}`}
+                                  </p>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    {address.city} - {address.state}, CEP: {address.cep}
+                                  </p>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex items-center space-x-1 sm:space-x-2 ml-2 flex-shrink-0">
+                                  <button
+                                    onClick={(e) => handleEditAddress(address, e)}
+                                    className="text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 p-1.5 sm:p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors cursor-pointer"
+                                    title="Editar endereço"
+                                  >
+                                    <Edit2 className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setShowDeleteConfirmModal(address.id)
+                                    }}
+                                    className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1.5 sm:p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors cursor-pointer"
+                                    title="Remover endereço"
+                                  >
+                                    <Trash2 className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>
-                    {shippingMessage && isFreeShipping && !promoCodesValidation?.freeShipping && (
-                      <div className="mt-2 text-sm flex items-center text-green-600 dark:text-green-400">
-                        <Truck className="w-4 h-4 mr-1" />
-                        {shippingMessage}
-                      </div>
-                    )}
-                    {!isFreeShipping && shippingFee !== null && subtotal < freeShippingThreshold && (
-                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        Adicione mais R$ {(freeShippingThreshold - subtotal).toFixed(2).replace('.', ',')} para ganhar frete grátis!
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
-                      Endereço *
-                    </label>
-                    <input
-                      type="text"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      required
-                      placeholder="Rua, Avenida, etc."
-                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                    <div>
-                      <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
-                        Número *
-                      </label>
-                      <input
-                        type="text"
-                        name="number"
-                        value={formData.number}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="123"
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
-                        Complemento
-                      </label>
-                      <input
-                        type="text"
-                        name="complement"
-                        value={formData.complement}
-                        onChange={handleInputChange}
-                        placeholder="Apto, Bloco, etc."
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    <div>
-                      <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
-                        Cidade *
-                      </label>
-                      <input
-                        type="text"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="São Paulo"
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
-                        Estado *
-                      </label>
-                      <input
-                        type="text"
-                        name="state"
-                        value={formData.state}
-                        onChange={handleInputChange}
-                        required
-                        placeholder="SP"
-                        maxLength={2}
-                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Botão para salvar endereço (apenas se for novo) */}
-                  {!isEditingSelected && formData.cep && formData.address && formData.number && formData.city && formData.state && (
-                    <div className="pt-3 sm:pt-4 border-t">
-                      <button
-                        type="button"
-                        onClick={() => setShowSaveAddressModal(true)}
-                        className="text-xs sm:text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 flex items-center cursor-pointer"
-                      >
-                        <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
-                        Salvar este endereço para entregas futuras
-                      </button>
-                    </div>
                   )}
 
-                  {/* Mensagem de CEP não atendido */}
-                  {hasInvalidCep() && (
-                    <div className="mt-3 sm:mt-4 p-2.5 sm:p-3 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-lg">
-                      <p className="text-xs sm:text-sm text-orange-800 dark:text-orange-300">
-                        ⚠️ Não entregamos para o CEP <strong>{formData.cep}</strong> no momento. Em breve estaremos por aí!
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Pagamento e confirmação — só aparece se o CEP for válido */}
-                  {!hasInvalidCep() && renderCheckoutActions()}
-                </form>
-              )}
-
-              {/* Botão de continuar quando endereço salvo está selecionado (sem edição) */}
-              {!showNewAddressForm && selectedAddressId && !isEditingSelected && (
-                <div className="mt-4 sm:mt-6">
-                  {/* Mensagem de CEP não atendido */}
-                  {hasInvalidCep() && (
-                    <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-lg">
-                      <p className="text-xs sm:text-sm text-orange-800 dark:text-orange-300">
-                        ⚠️ Não entregamos para o CEP <strong>{formData.cep}</strong> no momento. Em breve estaremos por aí!
-                      </p>
-                    </div>
-                  )}
-                  {/* Pagamento e confirmação — só aparece se o CEP for válido */}
-                  {!hasInvalidCep() && (
-                    <div>
-                      {renderPaymentMethodSelector()}
-                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4 sm:mt-6">
-                        {isAdmin && (
-                          <button
-                            type="button"
-                            onClick={handleCreateOrderWithoutPayment}
-                            className="text-xs px-2.5 sm:px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                            disabled={!canProceedToPayment() || creatingOrderWithoutPayment || creatingOrder}
-                            title="Criar pedido sem pagamento (apenas para testes)"
-                          >
-                            {creatingOrderWithoutPayment ? (
-                              <>
-                                <Loader2 className="animate-spin" size={12} />
-                                Criando...
-                              </>
-                            ) : (
-                              <>
-                                <TestTube size={12} />
-                                Teste (sem pagamento)
-                              </>
-                            )}
-                          </button>
-                        )}
+                  {/* Formulário de Endereço (Novo ou Editando) */}
+                  {(showNewAddressForm || savedAddresses.length === 0 || (selectedAddressId && isEditingSelected)) && (
+                    <form onSubmit={handleContinueToPayment} className="space-y-3 sm:space-y-4">
+                      {savedAddresses.length > 0 && !isEditingSelected && (
                         <button
                           type="button"
-                          onClick={() => handleSubmit()}
-                          className="btn-primary flex-1 flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3"
-                          disabled={!canProceedToPayment() || creatingOrderWithoutPayment}
+                          onClick={() => {
+                            setShowNewAddressForm(false)
+                            setEditingAddressId(null)
+                            setFormData({
+                              cep: '',
+                              address: '',
+                              number: '',
+                              complement: '',
+                              bairro: '',
+                              city: '',
+                              state: ''
+                            })
+                            // Seleciona novamente um endereço ao cancelar
+                            if (savedAddresses.length > 0) {
+                              const defaultAddress = savedAddresses.find(addr => addr.is_default) || savedAddresses[0]
+                              selectAddress(defaultAddress)
+                            }
+                          }}
+                          className="text-xs sm:text-sm text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 mb-3 sm:mb-4 flex items-center cursor-pointer"
                         >
-                          {creatingOrder ? (
-                            <>
-                              <Loader2 className="animate-spin mr-2" size={18} />
-                              <span>Processando...</span>
-                            </>
-                          ) : selectedPaymentMethod === 'boleto' ? (
-                            <span>Gerar boleto</span>
-                          ) : (
-                            <>
-                              <span className="hidden sm:inline">Continuar Pagamento</span>
-                              <span className="sm:hidden">Continuar para Pagamento</span>
-                            </>
-                          )}
+                          <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+                          Voltar para endereços salvos
                         </button>
+                      )}
+
+                      {isEditingSelected && selectedAddress && (
+                        <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                          <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-300">
+                            <strong>Editando:</strong> {selectedAddress.nickname}
+                          </p>
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            As alterações serão salvas ao continuar
+                          </p>
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
+                          CEP *
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            name="cep"
+                            value={formData.cep}
+                            onChange={handleInputChange}
+                            required
+                            placeholder="00000-000"
+                            maxLength={9}
+                            className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-white ${hasInvalidCep()
+                              ? 'border-red-500 dark:border-red-400 text-red-600 dark:text-red-400'
+                              : 'border-gray-300 dark:border-gray-700'
+                              }`}
+                          />
+                          {calculatingShipping && (
+                            <div className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2">
+                              <Loader2 className="animate-spin text-primary-600 dark:text-primary-400" size={18} />
+                            </div>
+                          )}
+                        </div>
+                        {shippingMessage && isFreeShipping && !promoCodesValidation?.freeShipping && (
+                          <div className="mt-2 text-sm flex items-center text-green-600 dark:text-green-400">
+                            <Truck className="w-4 h-4 mr-1" />
+                            {shippingMessage}
+                          </div>
+                        )}
+                        {!isFreeShipping && shippingFee !== null && subtotal < freeShippingThreshold && (
+                          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                            Adicione mais R$ {(freeShippingThreshold - subtotal).toFixed(2).replace('.', ',')} para ganhar frete grátis!
+                          </div>
+                        )}
                       </div>
+                      <div>
+                        <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
+                          Endereço *
+                        </label>
+                        <input
+                          type="text"
+                          name="address"
+                          value={formData.address}
+                          onChange={handleInputChange}
+                          required
+                          placeholder="Rua, Avenida, etc."
+                          className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                        <div>
+                          <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
+                            Número *
+                          </label>
+                          <input
+                            type="text"
+                            name="number"
+                            value={formData.number}
+                            onChange={handleInputChange}
+                            required
+                            placeholder="123"
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
+                            Complemento
+                          </label>
+                          <input
+                            type="text"
+                            name="complement"
+                            value={formData.complement}
+                            onChange={handleInputChange}
+                            placeholder="Apt, Bloco, etc."
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                        <div className="col-span-1">
+                          <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
+                            Bairro *
+                          </label>
+                          <input
+                            type="text"
+                            name="bairro"
+                            value={formData.bairro}
+                            onChange={handleInputChange}
+                            required
+                            placeholder="Bairro"
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
+                            Cidade *
+                          </label>
+                          <input
+                            type="text"
+                            name="city"
+                            value={formData.city}
+                            onChange={handleInputChange}
+                            required
+                            disabled
+                            placeholder="Cidade"
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-750 dark:text-gray-300 rounded-lg cursor-not-allowed"
+                          />
+                        </div>
+                        <div className="col-span-1">
+                          <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-1.5 sm:mb-2">
+                            Estado *
+                          </label>
+                          <input
+                            type="text"
+                            name="state"
+                            value={formData.state}
+                            onChange={handleInputChange}
+                            required
+                            disabled
+                            placeholder="UF"
+                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-750 dark:text-gray-300 rounded-lg cursor-not-allowed"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Checkbox para Salvar Endereço (somente se logado e não for um endereço já salvo em edição) */}
+                      {isAuthenticated && !selectedAddressId && (
+                        <div className="mt-3 sm:mt-4">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              name="saveAddressToProfile"
+                              id="saveAddressToProfile"
+                              checked={saveAddressToProfile}
+                              onChange={(e) => setSaveAddressToProfile(e.target.checked)}
+                              className="w-4.5 h-4.5 rounded border-gray-300 dark:border-gray-700 text-primary-600 focus:ring-primary-500"
+                            />
+                            <label htmlFor="saveAddressToProfile" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                              Salvar endereço na minha conta
+                            </label>
+                          </div>
+
+                          {saveAddressToProfile && (
+                            <div className="mt-2.5 sm:mt-3 pl-6">
+                              <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                                Identificação do Endereço (ex: Casa, Trabalho, Mãe) *
+                              </label>
+                              <input
+                                type="text"
+                                value={newAddressNickname}
+                                onChange={(e) => setNewAddressNickname(e.target.value)}
+                                required={saveAddressToProfile}
+                                placeholder="Ex: Casa, Trabalho, Mãe..."
+                                className="w-full sm:w-2/3 px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Mensagem de CEP não atendido */}
+                      {hasInvalidCep() && (
+                        <div className="mt-3 sm:mt-4 p-2.5 sm:p-3 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-lg">
+                          <p className="text-xs sm:text-sm text-orange-800 dark:text-orange-300">
+                            ⚠️ Não entregamos para o CEP <strong>{formData.cep}</strong> no momento. Em breve estaremos por aí!
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Botão de continuar - só aparece se o CEP for válido */}
+                      {!hasInvalidCep() && (
+                        <div className="flex flex-col sm:flex-row justify-end mt-4 sm:mt-6">
+                          <button
+                            type="submit"
+                            className="btn-primary flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3 px-6"
+                            disabled={!canProceedToPayment()}
+                          >
+                            Continuar
+                          </button>
+                        </div>
+                      )}
+                    </form>
+                  )}
+
+                  {/* Botão de continuar quando endereço salvo está selecionado (sem edição) */}
+                  {!showNewAddressForm && selectedAddressId && !isEditingSelected && (
+                    <div className="mt-4 sm:mt-6">
+                      {/* Mensagem de CEP não atendido */}
+                      {hasInvalidCep() && (
+                        <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-lg">
+                          <p className="text-xs sm:text-sm text-orange-800 dark:text-orange-300">
+                            ⚠️ Não entregamos para o CEP <strong>{formData.cep}</strong> no momento. Em breve estaremos por aí!
+                          </p>
+                        </div>
+                      )}
+                      {/* Botão continuar */}
+                      {!hasInvalidCep() && (
+                        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+                          <button
+                            type="button"
+                            onClick={handleContinueWithSavedAddress}
+                            className="btn-primary flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3 px-6"
+                            disabled={!canProceedToPayment()}
+                          >
+                            Continuar
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
+                </>
+              ) : (
+                <>
+                  {/* Passo 2: Pagamento */}
+                  <div className="bg-gray-55 dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 mb-6">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <MapPin className="text-primary-600 dark:text-primary-400" size={16} />
+                        Enviar para: {selectedAddressId ? savedAddresses.find(a => a.id === selectedAddressId)?.nickname || 'Endereço Selecionado' : 'Novo Endereço'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCheckoutStep(1)}
+                        className="text-xs text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                      >
+                        <Edit2 size={12} />
+                        Alterar endereço
+                      </button>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 pl-5">
+                      {formData.address}, {formData.number} {formData.complement && `- ${formData.complement}`}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 pl-5">
+                      {formData.bairro ? `${formData.bairro}, ` : ''}{formData.city} - {formData.state}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 pl-5">
+                      CEP: {formData.cep}
+                    </p>
+                  </div>
+
+                  {renderCheckoutActions()}
+                </>
               )}
             </div>
           </div>
@@ -1193,59 +1328,6 @@ export default function Checkout() {
       </div>
 
       {/* Modal para salvar endereço */}
-      {showSaveAddressModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 cursor-pointer p-3 sm:p-4" onClick={() => setShowSaveAddressModal(false)}>
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 sm:p-6 max-w-md w-full border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">Salvar Endereço</h3>
-              <button onClick={() => setShowSaveAddressModal(false)} className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white cursor-pointer">
-                <X className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
-            </div>
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3 sm:mb-4">
-              Dê um apelido para este endereço para facilitar nas próximas compras (ex: Casa, Trabalho, etc.)
-            </p>
-            <input
-              ref={nicknameInputRef}
-              type="text"
-              placeholder="Ex: Casa, Trabalho, Escritório..."
-              className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent mb-3 sm:mb-4"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  const input = e.target as HTMLInputElement
-                  if (input.value.trim()) {
-                    handleSaveAddress(input.value.trim())
-                  }
-                }
-              }}
-              autoFocus
-            />
-            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-3">
-              <button
-                onClick={() => setShowSaveAddressModal(false)}
-                className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  const input = nicknameInputRef.current
-                  if (input?.value.trim()) {
-                    handleSaveAddress(input.value.trim())
-                  } else {
-                    alert('Por favor, digite um apelido para o endereço')
-                  }
-                }}
-                className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-primary-600 text-white rounded-lg hover:bg-primary-700 cursor-pointer"
-              >
-                Salvar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Modal de confirmação de exclusão */}
       {showDeleteConfirmModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4" onClick={() => setShowDeleteConfirmModal(null)}>

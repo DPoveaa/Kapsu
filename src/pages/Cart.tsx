@@ -24,7 +24,7 @@ export default function Cart() {
   const [localPurchaseType, setLocalPurchaseType] = useState<'one-time' | 'subscription' | null>(null)
   const [applicablePromotions, setApplicablePromotions] = useState<Promotion[]>([])
   const [loadingPromotions, setLoadingPromotions] = useState(false)
-  
+
   // Estados para códigos promocionais
   const [promoCode, setPromoCode] = useState('')
   const [appliedPromoCodes, setAppliedPromoCodes] = useState<string[]>([])
@@ -37,13 +37,13 @@ export default function Cart() {
   const handleProductImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     handleImageError(e, PRODUCT_IMAGE_FALLBACK)
   }
-  
+
   // Tipo de compra global do carrinho (usa estado local se disponível, senão usa o primeiro item)
-  const globalPurchaseType = localPurchaseType || (items.length > 0 
+  const globalPurchaseType = localPurchaseType || (items.length > 0
     ? (items[0].purchaseType || 'one-time')
     : 'one-time')
   const isSubscription = globalPurchaseType === 'subscription'
-  
+
   // Calcula totais com desconto
   const baseTotal = getTotal()
   const subscriptionDiscount = isSubscription ? (subscriptionPlan === 'quarterly' ? 0.15 : 0.10) : 0
@@ -55,7 +55,7 @@ export default function Cart() {
   const calculatePromotionDiscount = (total: number): number => {
     let discount = 0
     const productItems = items.filter(item => item.product)
-    
+
     for (const promo of applicablePromotions) {
       if (promo.type === 'discount_percentage') {
         if (promo.applicable_product_ids && promo.applicable_product_ids.length > 0) {
@@ -81,13 +81,13 @@ export default function Cart() {
         }
       }
     }
-    
+
     return discount
   }
 
   const promotionDiscount = calculatePromotionDiscount(isSubscription ? discountedTotal : baseTotal)
   const subtotalAfterPromotions = (isSubscription ? discountedTotal : baseTotal) - promotionDiscount
-  
+
   // Desconto de cupons promocionais
   const promoCodeDiscount = promoCodesValidation?.totalDiscount || 0
   const totalAfterPromotions = subtotalAfterPromotions - promoCodeDiscount
@@ -117,7 +117,7 @@ export default function Cart() {
             product_id: item.product!.id,
             quantity: item.quantity,
           }))
-        
+
         const promotions = await promotionsService.checkPromotions(
           baseTotal,
           cartItems,
@@ -183,7 +183,7 @@ export default function Cart() {
         // Usuário não está logado, salva o token e redireciona para login
         cartService.savePendingToken(token)
         setLinkMessage({ type: 'info', text: 'Faça login ou cadastre-se para ver seu carrinho do WhatsApp' })
-        
+
         // Redireciona para login após mostrar mensagem
         setTimeout(() => {
           navigate('/login?redirect=/carrinho')
@@ -249,7 +249,7 @@ export default function Cart() {
     }
 
     const codeToAdd = promoCode.trim().toUpperCase()
-    
+
     if (appliedPromoCodes.includes(codeToAdd)) {
       setPromoCodeError('Este código já foi aplicado')
       return
@@ -258,7 +258,7 @@ export default function Cart() {
     try {
       setValidatingPromoCode(true)
       setPromoCodeError(null)
-      
+
       const cartItems = items
         .filter(item => item.product)
         .map(item => ({
@@ -266,24 +266,24 @@ export default function Cart() {
           quantity: item.quantity,
           price: item.product!.price,
         }))
-      
+
       const codesToValidate = [...appliedPromoCodes, codeToAdd]
       const subtotal = isSubscription ? discountedTotal : baseTotal
-      
+
       const validation = await promoCodesService.validateMultiplePromoCodes(
         codesToValidate,
         subtotal,
         cartItems,
         user?.id
       )
-      
+
       const validatedCodes = validation.promoCodes.map(pc => pc.code.toUpperCase())
       const newCodeWasAccepted = validatedCodes.includes(codeToAdd)
-      
+
       if (!newCodeWasAccepted) {
         let codeError = 'Este código não pode ser aplicado'
         if (validation.errors && validation.errors.length > 0) {
-          const specificError = validation.errors.find(err => 
+          const specificError = validation.errors.find(err =>
             err.toLowerCase().includes(codeToAdd.toLowerCase())
           )
           codeError = specificError || validation.errors[0] || codeError
@@ -293,7 +293,7 @@ export default function Cart() {
         setPromoCodesValidation(validation)
         return
       }
-      
+
       setPromoCodesValidation(validation)
       setAppliedPromoCodes(validatedCodes)
       setPromoCode('')
@@ -310,7 +310,7 @@ export default function Cart() {
   const handleRemovePromoCode = async (codeToRemove: string) => {
     const newCodes = appliedPromoCodes.filter(code => code !== codeToRemove)
     setAppliedPromoCodes(newCodes)
-    
+
     if (newCodes.length === 0) {
       setPromoCodesValidation(null)
       return
@@ -325,7 +325,7 @@ export default function Cart() {
           quantity: item.quantity,
           price: item.product!.price,
         }))
-      
+
       const subtotal = isSubscription ? discountedTotal : baseTotal
       const validation = await promoCodesService.validateMultiplePromoCodes(
         newCodes,
@@ -333,7 +333,7 @@ export default function Cart() {
         cartItems,
         user?.id
       )
-      
+
       setPromoCodesValidation(validation)
       setCurrentCouponIndex(prev => prev >= newCodes.length ? Math.max(0, newCodes.length - 1) : prev)
     } catch (error: any) {
@@ -395,7 +395,7 @@ export default function Cart() {
   const handlePurchaseTypeChange = async (type: 'one-time' | 'subscription') => {
     // Atualiza estado local imediatamente para evitar o "piscar"
     setLocalPurchaseType(type)
-    
+
     try {
       await updateAllPurchaseType(type)
     } catch (error) {
@@ -404,7 +404,7 @@ export default function Cart() {
       setLocalPurchaseType(null)
     }
   }
-  
+
   // Sincroniza estado local com items quando items mudam
   useEffect(() => {
     if (items.length > 0 && !localPurchaseType) {
@@ -439,11 +439,10 @@ export default function Cart() {
 
         {/* Mensagem de vinculação do carrinho WhatsApp */}
         {linkMessage && (
-          <div className={`mb-3 sm:mb-4 p-3 sm:p-4 rounded-lg flex items-center gap-2 sm:gap-3 text-sm sm:text-base ${
-            linkMessage.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-700' :
-            linkMessage.type === 'error' ? 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-700' :
-            'bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-700'
-          }`}>
+          <div className={`mb-3 sm:mb-4 p-3 sm:p-4 rounded-lg flex items-center gap-2 sm:gap-3 text-sm sm:text-base ${linkMessage.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-700' :
+              linkMessage.type === 'error' ? 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-200 dark:border-red-700' :
+                'bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-700'
+            }`}>
             {linkMessage.type === 'success' && <CheckCircle size={18} className="flex-shrink-0" />}
             {linkMessage.type === 'info' && <Loader2 className="animate-spin flex-shrink-0" size={18} />}
             <span className="flex-1 min-w-0">{linkMessage.text}</span>
@@ -483,11 +482,10 @@ export default function Cart() {
                 <div className="flex gap-2 sm:gap-4 mb-4 sm:mb-6">
                   <button
                     onClick={() => handlePurchaseTypeChange('subscription')}
-                    className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 rounded-xl font-bold text-sm sm:text-base transition-all duration-200 ${
-                      isSubscription
+                    className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 rounded-xl font-bold text-sm sm:text-base transition-all duration-200 ${isSubscription
                         ? 'bg-gradient-to-r from-green-600 to-green-700 text-white scale-105'
                         : 'bg-gradient-to-r from-gray-800 to-gray-900 text-white'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-center gap-2 sm:gap-3">
                       <Repeat size={18} />
@@ -496,105 +494,102 @@ export default function Cart() {
                   </button>
                   <button
                     onClick={() => handlePurchaseTypeChange('one-time')}
-                    className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 rounded-xl font-bold text-sm sm:text-base transition-all duration-200 ${
-                      !isSubscription
+                    className={`flex-1 py-3 sm:py-4 px-3 sm:px-6 rounded-xl font-bold text-sm sm:text-base transition-all duration-200 ${!isSubscription
                         ? 'bg-gradient-to-r from-green-600 to-green-700 text-white scale-105'
                         : 'bg-gradient-to-r from-gray-800 to-gray-900 text-white'
-                    }`}
+                      }`}
                   >
                     Compra Única
                   </button>
                 </div>
 
-              {/* Conteúdo da assinatura */}
-              {isSubscription && (
-                <div className="space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
-                  {/* Planos de assinatura */}
-                  <div>
-                    <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-2 sm:mb-3">
-                      Escolha seu Plano:
-                    </label>
-                    <div className="grid grid-cols-2 gap-2 sm:gap-4">
-                      <button
-                        onClick={() => setSubscriptionPlan('monthly')}
-                        className={`relative p-3 sm:p-5 rounded-xl transition-all ${
-                          subscriptionPlan === 'monthly'
-                            ? 'bg-white dark:bg-gray-800 border-2 border-green-500 dark:border-green-500 shadow-lg dark:shadow-xl'
-                            : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
-                        }`}
-                      >
-                        <div className="text-left">
-                          <div className="flex items-center justify-between mb-1 sm:mb-2">
-                            <span className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">Mensal</span>
-                            {subscriptionPlan === 'monthly' && (
-                              <Check size={16} className="text-primary-600 flex-shrink-0" />
-                            )}
+                {/* Conteúdo da assinatura */}
+                {isSubscription && (
+                  <div className="space-y-4 sm:space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
+                    {/* Planos de assinatura */}
+                    <div>
+                      <label className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-white mb-2 sm:mb-3">
+                        Escolha seu Plano:
+                      </label>
+                      <div className="grid grid-cols-2 gap-2 sm:gap-4">
+                        <button
+                          onClick={() => setSubscriptionPlan('monthly')}
+                          className={`relative p-3 sm:p-5 rounded-xl transition-all ${subscriptionPlan === 'monthly'
+                              ? 'bg-white dark:bg-gray-800 border-2 border-green-500 dark:border-green-500 shadow-lg dark:shadow-xl'
+                              : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
+                            }`}
+                        >
+                          <div className="text-left">
+                            <div className="flex items-center justify-between mb-1 sm:mb-2">
+                              <span className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">Mensal</span>
+                              {subscriptionPlan === 'monthly' && (
+                                <Check size={16} className="text-primary-600 flex-shrink-0" />
+                              )}
+                            </div>
+                            <p className="text-base sm:text-lg md:text-xl font-bold text-primary-600 dark:text-primary-400">
+                              R$ {monthlySubscriptionPrice.toFixed(2).replace('.', ',')}
+                              <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 font-normal">/mês</span>
+                            </p>
                           </div>
-                          <p className="text-base sm:text-lg md:text-xl font-bold text-primary-600 dark:text-primary-400">
-                            R$ {monthlySubscriptionPrice.toFixed(2).replace('.', ',')}
-                            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 font-normal">/mês</span>
-                          </p>
-                        </div>
-                      </button>
-                      <button
-                        onClick={() => setSubscriptionPlan('quarterly')}
-                        className={`relative p-3 sm:p-5 rounded-xl transition-all ${
-                          subscriptionPlan === 'quarterly'
-                            ? 'bg-white dark:bg-gray-800 border-2 border-green-500 dark:border-green-500 shadow-lg dark:shadow-xl'
-                            : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
-                        }`}
-                      >
-                        <div className="text-left">
-                          <div className="flex items-center justify-between mb-1 sm:mb-2">
-                            <span className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">Trimestral</span>
-                            {subscriptionPlan === 'quarterly' && (
-                              <Check size={16} className="text-primary-600 flex-shrink-0" />
-                            )}
-                            <span className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-green-500 text-white text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-bold">
-                              Mais pedido
-                            </span>
+                        </button>
+                        <button
+                          onClick={() => setSubscriptionPlan('quarterly')}
+                          className={`relative p-3 sm:p-5 rounded-xl transition-all ${subscriptionPlan === 'quarterly'
+                              ? 'bg-white dark:bg-gray-800 border-2 border-green-500 dark:border-green-500 shadow-lg dark:shadow-xl'
+                              : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-[#0F828C] hover:shadow-md'
+                            }`}
+                        >
+                          <div className="text-left">
+                            <div className="flex items-center justify-between mb-1 sm:mb-2">
+                              <span className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">Trimestral</span>
+                              {subscriptionPlan === 'quarterly' && (
+                                <Check size={16} className="text-primary-600 flex-shrink-0" />
+                              )}
+                              <span className="absolute top-2 right-2 sm:top-3 sm:right-3 bg-green-500 text-white text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-bold">
+                                Mais pedido
+                              </span>
+                            </div>
+                            <p className="text-base sm:text-lg md:text-xl font-bold text-primary-600 dark:text-primary-400">
+                              R$ {quarterlySubscriptionPrice.toFixed(2).replace('.', ',')}
+                              <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 font-normal">/mês</span>
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">Economia de 15%</p>
                           </div>
-                          <p className="text-base sm:text-lg md:text-xl font-bold text-primary-600 dark:text-primary-400">
-                            R$ {quarterlySubscriptionPrice.toFixed(2).replace('.', ',')}
-                            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 font-normal">/mês</span>
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-300 mt-1">Economia de 15%</p>
-                        </div>
-                      </button>
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Benefícios da assinatura */}
-                  <div className="bg-gradient-to-r from-primary-50 dark:from-gray-800 to-purple-50 dark:to-[#065084] rounded-xl p-3 sm:p-5 border border-primary-100 dark:border-gray-700">
-                    <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">Você receberá:</p>
-                    <ul className="space-y-2 sm:space-y-3">
-                      <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-                        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
-                          <Check size={12} className="text-white" />
-                        </div>
-                        <span>Seus produtos a cada 30 dias</span>
-                      </li>
-                      <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-                        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
-                          <Check size={12} className="text-white" />
-                        </div>
-                        <span>{subscriptionPlan === 'quarterly' ? '15%' : '10%'} de desconto automático</span>
-                      </li>
-                      <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-                        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
-                          <Check size={12} className="text-white" />
-                        </div>
-                        <span>Frete grátis em todas as entregas</span>
-                      </li>
-                    </ul>
-                  </div>
+                    {/* Benefícios da assinatura */}
+                    <div className="bg-gradient-to-r from-primary-50 dark:from-gray-800 to-purple-50 dark:to-[#065084] rounded-xl p-3 sm:p-5 border border-primary-100 dark:border-gray-700">
+                      <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">Você receberá:</p>
+                      <ul className="space-y-2 sm:space-y-3">
+                        <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
+                            <Check size={12} className="text-white" />
+                          </div>
+                          <span>Seus produtos a cada 30 dias</span>
+                        </li>
+                        <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
+                            <Check size={12} className="text-white" />
+                          </div>
+                          <span>{subscriptionPlan === 'quarterly' ? '15%' : '10%'} de desconto automático</span>
+                        </li>
+                        <li className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary-600 flex items-center justify-center flex-shrink-0">
+                            <Check size={12} className="text-white" />
+                          </div>
+                          <span>Frete grátis em todas as entregas</span>
+                        </li>
+                      </ul>
+                    </div>
 
-                  {/* Política de cancelamento */}
-                  <p className="text-xs text-gray-500 dark:text-gray-300 text-center">
-                    Cancele ou edite a qualquer momento antes da próxima entrega
-                  </p>
-                </div>
-              )}
+                    {/* Política de cancelamento */}
+                    <p className="text-xs text-gray-500 dark:text-gray-300 text-center">
+                      Cancele ou edite a qualquer momento antes da próxima entrega
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -610,7 +605,7 @@ export default function Cart() {
               {items.map(item => {
                 const price = item.product?.price || 0
                 const itemTotal = price * item.quantity
-                const itemDiscountedPrice = isSubscription 
+                const itemDiscountedPrice = isSubscription
                   ? itemTotal * (1 - subscriptionDiscount)
                   : itemTotal
 
@@ -757,7 +752,7 @@ export default function Cart() {
                   <Tag className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-300 flex-shrink-0" />
                   Cupons Promocionais
                 </h3>
-                
+
                 {appliedPromoCodes.length === 0 ? (
                   <div className="space-y-2">
                     <div className="flex gap-2">
@@ -801,7 +796,7 @@ export default function Cart() {
                     {appliedPromoCodes.length > 1 && promoCodesValidation ? (
                       <div className="relative">
                         <div className="overflow-hidden">
-                          <div 
+                          <div
                             className="flex transition-transform duration-300 ease-in-out"
                             style={{ transform: `translateX(-${currentCouponIndex * 100}%)` }}
                           >
@@ -809,7 +804,7 @@ export default function Cart() {
                               const appliedDiscount = promoCodesValidation.appliedDiscounts.percentage?.code === promoCode.code
                                 ? promoCodesValidation.appliedDiscounts.percentage
                                 : promoCodesValidation.appliedDiscounts.fixed.find(f => f.code === promoCode.code)
-                              
+
                               return (
                                 <div key={promoCode.id} className="min-w-full flex-shrink-0">
                                   <div className="bg-green-50 dark:bg-gray-800 border border-green-200 dark:border-gray-700 rounded-md px-2 sm:px-3 py-1.5 sm:py-2 flex items-center justify-between gap-2">
@@ -825,7 +820,7 @@ export default function Cart() {
                                           </span>
                                           {appliedDiscount && appliedDiscount.discount > 0 && (
                                             <span className="text-xs font-bold text-green-600 dark:text-green-400">
-                                              • {promoCode.discount_type === 'percentage' 
+                                              • {promoCode.discount_type === 'percentage'
                                                 ? `${promoCode.discount_value}% OFF`
                                                 : `R$ ${appliedDiscount.discount.toFixed(2).replace('.', ',')} OFF`}
                                             </span>
@@ -856,7 +851,7 @@ export default function Cart() {
                             })}
                           </div>
                         </div>
-                        
+
                         {/* Navegação do carrossel */}
                         <div className="flex items-center justify-between mt-2">
                           <button
@@ -871,9 +866,8 @@ export default function Cart() {
                               <button
                                 key={index}
                                 onClick={() => setCurrentCouponIndex(index)}
-                                className={`h-1.5 rounded-full transition-all ${
-                                  index === currentCouponIndex ? 'bg-primary-600 dark:bg-primary-400 w-4' : 'bg-gray-300 dark:bg-gray-600 w-1.5'
-                                }`}
+                                className={`h-1.5 rounded-full transition-all ${index === currentCouponIndex ? 'bg-primary-600 dark:bg-primary-400 w-4' : 'bg-gray-300 dark:bg-gray-600 w-1.5'
+                                  }`}
                                 disabled={validatingPromoCode}
                               />
                             ))}
@@ -895,7 +889,7 @@ export default function Cart() {
                             const appliedDiscount = promoCodesValidation.appliedDiscounts.percentage?.code === promoCode.code
                               ? promoCodesValidation.appliedDiscounts.percentage
                               : promoCodesValidation.appliedDiscounts.fixed.find(f => f.code === promoCode.code)
-                            
+
                             return (
                               <div key={promoCode.id} className="flex items-center justify-between gap-2">
                                 <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0">
@@ -910,7 +904,7 @@ export default function Cart() {
                                       </span>
                                       {appliedDiscount && appliedDiscount.discount > 0 && (
                                         <span className="text-xs font-bold text-green-600 dark:text-green-400">
-                                          • {promoCode.discount_type === 'percentage' 
+                                          • {promoCode.discount_type === 'percentage'
                                             ? `${promoCode.discount_value}% OFF`
                                             : `R$ ${appliedDiscount.discount.toFixed(2).replace('.', ',')} OFF`}
                                         </span>
@@ -941,7 +935,7 @@ export default function Cart() {
                         </div>
                       )
                     )}
-                    
+
                     {/* Input para adicionar novo código */}
                     <div className="space-y-1">
                       <div className="flex gap-2">
@@ -1007,7 +1001,7 @@ export default function Cart() {
                 {promoCodesValidation && promoCodesValidation.totalDiscount > 0 && (
                   <div className="flex justify-between items-center text-xs sm:text-sm">
                     <span className="text-gray-600 dark:text-gray-300">
-                      {promoCodesValidation.promoCodes.length > 1 
+                      {promoCodesValidation.promoCodes.length > 1
                         ? `Cupom (${promoCodesValidation.promoCodes.length})`
                         : 'Cupom'}
                     </span>
@@ -1125,7 +1119,7 @@ export default function Cart() {
                 }}
                 className="w-full bg-primary-600 hover:bg-primary-700 dark:bg-primary-400 dark:hover:bg-primary-500 text-white font-bold py-3 sm:py-4 px-4 sm:px-6 rounded-xl transition-all duration-200 mb-3 sm:mb-4 flex items-center justify-center gap-2 text-sm sm:text-base"
               >
-                Finalizar Compra
+                Continuar
                 <ArrowRight size={18} />
               </button>
 

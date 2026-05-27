@@ -124,10 +124,11 @@ export default function UserManagement() {
 
   const formatPhone = (phone: string | null) => {
     if (!phone) return 'N/A'
-    if (phone.length === 11) {
-      return phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+    const cleanPhone = phone.startsWith('55') && phone.length > 11 ? phone.substring(2) : phone;
+    if (cleanPhone.length === 11) {
+      return cleanPhone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
     }
-    return phone
+    return cleanPhone
   }
 
   const getRoleBadge = (role: string) => {

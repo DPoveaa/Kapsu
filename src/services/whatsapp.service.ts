@@ -39,11 +39,26 @@ class WhatsAppService {
   private baseUrl = `${API_URL}/whatsapp`
 
   /**
+   * Helper para chamadas com autenticação Bearer
+   */
+  private async fetchWithAuth(endpoint: string, options: RequestInit = {}): Promise<Response> {
+    const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
+    const headers = new Headers(options.headers || {})
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
+    return fetch(`${this.baseUrl}${endpoint}`, {
+      ...options,
+      headers,
+    })
+  }
+
+  /**
    * Inicializa o WhatsApp e gera QR Code
    */
   async initialize(): Promise<QRCodeResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/initialize`, {
+      const response = await this.fetchWithAuth('/initialize', {
         method: 'POST',
       })
       const text = await response.text()
@@ -68,7 +83,7 @@ class WhatsAppService {
    */
   async getQRCode(): Promise<QRCodeResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/qrcode`)
+      const response = await this.fetchWithAuth('/qrcode')
       const text = await response.text()
       if (!text) {
         throw new Error('Resposta vazia do servidor')
@@ -91,7 +106,7 @@ class WhatsAppService {
    */
   async regenerateQRCode(): Promise<QRCodeResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/regenerate-qrcode`, {
+      const response = await this.fetchWithAuth('/regenerate-qrcode', {
         method: 'POST',
       })
       const text = await response.text()
@@ -116,7 +131,7 @@ class WhatsAppService {
    */
   async getStatus(): Promise<WhatsAppStatus> {
     try {
-      const response = await fetch(`${this.baseUrl}/status`)
+      const response = await this.fetchWithAuth('/status')
       if (!response.ok) {
         throw new Error('Erro ao verificar status')
       }
@@ -138,7 +153,7 @@ class WhatsAppService {
    */
   async sendMessage(phone: string, message: string): Promise<SendMessageResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/send`, {
+      const response = await this.fetchWithAuth('/send', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,7 +182,7 @@ class WhatsAppService {
    */
   async sendTestSaleMessage(phone: string): Promise<SendMessageResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/test-sale-message`, {
+      const response = await this.fetchWithAuth('/test-sale-message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -202,7 +217,7 @@ class WhatsAppService {
     filename?: string
   ): Promise<SendMessageResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/send-media`, {
+      const response = await this.fetchWithAuth('/send-media', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -231,7 +246,7 @@ class WhatsAppService {
    */
   async setupWebhook(): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/webhook`, {
+      const response = await this.fetchWithAuth('/webhook', {
         method: 'POST',
       })
       const text = await response.text()
@@ -256,7 +271,7 @@ class WhatsAppService {
    */
   async disconnect(): Promise<WhatsAppStatus> {
     try {
-      const response = await fetch(`${this.baseUrl}/disconnect`, {
+      const response = await this.fetchWithAuth('/disconnect', {
         method: 'POST',
       })
       const text = await response.text()
@@ -281,7 +296,7 @@ class WhatsAppService {
    */
   async getConversations(): Promise<{ success: boolean; conversations: any[] }> {
     try {
-      const response = await fetch(`${this.baseUrl}/conversations`)
+      const response = await this.fetchWithAuth('/conversations')
       const text = await response.text()
       if (!text) {
         throw new Error('Resposta vazia do servidor')
@@ -304,7 +319,7 @@ class WhatsAppService {
    */
   async getConversationsNeedingResponse(): Promise<{ success: boolean; conversations: any[]; count: number }> {
     try {
-      const response = await fetch(`${this.baseUrl}/conversations/needing-response`)
+      const response = await this.fetchWithAuth('/conversations/needing-response')
       const text = await response.text()
       if (!text) {
         throw new Error('Resposta vazia do servidor')
@@ -327,7 +342,7 @@ class WhatsAppService {
    */
   async getConversationMessages(phone: string): Promise<{ success: boolean; messages: any[] }> {
     try {
-      const response = await fetch(`${this.baseUrl}/conversations/${encodeURIComponent(phone)}`)
+      const response = await this.fetchWithAuth(`/conversations/${encodeURIComponent(phone)}`)
       const text = await response.text()
       if (!text) {
         throw new Error('Resposta vazia do servidor')
@@ -350,7 +365,7 @@ class WhatsAppService {
    */
   async loadChats(): Promise<{ success: boolean; message: string; count: number }> {
     try {
-      const response = await fetch(`${this.baseUrl}/conversations/load`, {
+      const response = await this.fetchWithAuth('/conversations/load', {
         method: 'POST',
       })
       const text = await response.text()
@@ -375,7 +390,7 @@ class WhatsAppService {
    */
   async markConversationAsRead(phone: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/conversations/read`, {
+      const response = await this.fetchWithAuth('/conversations/read', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -409,7 +424,7 @@ class WhatsAppService {
     needsResponse: number
   }> {
     try {
-      const response = await fetch(`${this.baseUrl}/conversations/intervention-count`, {
+      const response = await this.fetchWithAuth('/conversations/intervention-count', {
         method: 'GET',
       })
       const text = await response.text()
@@ -434,7 +449,7 @@ class WhatsAppService {
    */
   async markConversationAsAssumed(phone: string, assumedBy?: string, reason?: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/conversations/mark-assumed`, {
+      const response = await this.fetchWithAuth('/conversations/mark-assumed', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -467,7 +482,7 @@ class WhatsAppService {
    */
   async unmarkConversationAsAssumed(phone: string): Promise<{ success: boolean; message: string }> {
     try {
-      const response = await fetch(`${this.baseUrl}/conversations/unmark-assumed`, {
+      const response = await this.fetchWithAuth('/conversations/unmark-assumed', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -526,7 +541,7 @@ class WhatsAppService {
     }
   }> {
     try {
-      const response = await fetch(`${this.baseUrl}/test-ai`, {
+      const response = await this.fetchWithAuth('/test-ai', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -588,6 +603,7 @@ class WhatsAppService {
     }
   }> {
     try {
+      // Público - não usa fetchWithAuth
       const response = await fetch(`${this.baseUrl}/site-chat`, {
         method: 'POST',
         headers: {
@@ -1063,7 +1079,60 @@ class WhatsAppService {
       throw new Error('Erro ao remover número da distribuidora: ' + (error.message || 'Erro desconhecido'))
     }
   }
+
+  /**
+   * Envia uma mensagem de teste para todos os números da distribuidora ativos
+   */
+  async sendTestDistributorMessage(message?: string): Promise<{ success: boolean; message: string; notifiedNumbers: any[] }> {
+    try {
+      const response = await this.fetchWithAuth('/test-distributor-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao enviar mensagem de teste para a distribuidora')
+      }
+      return data
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro ao enviar mensagem de teste para a distribuidora')
+    }
+  }
+
+  /**
+   * Envia notificação de pedido simulado para a distribuidora (sem valores, foco em logística)
+   */
+  async sendDistributorOrderNotification(): Promise<{ success: boolean; message: string; notifiedNumbers: any[]; orderId?: string }> {
+    try {
+      const response = await this.fetchWithAuth('/distributor-order-notification', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({}),
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao enviar notificação de pedido para a distribuidora')
+      }
+      return data
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro ao enviar notificação de pedido para a distribuidora')
+    }
+  }
 }
 
 export const whatsappService = new WhatsAppService()
-

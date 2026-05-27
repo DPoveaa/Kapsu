@@ -95,14 +95,14 @@ export default function Home() {
     loadReviews()
   }, [])
   
-  // Array de imagens do carrossel - usa apenas banners da API (sem fallback durante carregamento)
-  const bannerImages = banners.map(banner => banner.image_url)
+  // Usa o array de banners da API (sem fallback durante carregamento)
+  const bannerImages = banners
   
   // Cria array com clones para loop infinito: [última, ...originais, primeira]
   // Só cria o array infinito se houver banners carregados
   const infiniteBannerImages = bannerImages.length > 0 ? [
     bannerImages[bannerImages.length - 1], // Clone da última no início
-    ...bannerImages, // Imagens originais
+    ...bannerImages, // Banners originais
     bannerImages[0] // Clone da primeira no final
   ] : []
 
@@ -467,34 +467,44 @@ export default function Home() {
             onTouchMove={handleBannerTouchMove}
             onTouchEnd={handleBannerTouchEnd}
           >
-            {infiniteBannerImages.map((image, index) => (
-              <div 
-                key={index} 
-                className="flex-shrink-0 w-full relative flex items-center justify-center bg-gray-100 dark:bg-gray-800"
-              >
-                <img
-                  src={image}
-                  alt={`Banner ${index + 1}`}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement
-                    target.style.display = 'none'
-                  }}
-                />
-                <div 
-                  className="absolute inset-0 z-10"
-                  style={{
-                    background: 'linear-gradient(to top, #DDF4E7 0%, rgba(221, 244, 231, 0.5) 10%, transparent 20%, transparent 100%)'
-                  }}
-                ></div>
-                <div 
-                  className="absolute inset-0 z-10 opacity-0 dark:opacity-100 transition-opacity duration-300"
-                  style={{
-                    background: 'linear-gradient(to top, #124170 0%, rgba(18, 65, 112, 0.5) 10%, transparent 20%, transparent 100%)'
-                  }}
-                ></div>
-              </div>
-            ))}
+            {infiniteBannerImages.map((banner, index) => {
+              const bannerContent = (
+                <div className="w-full h-full relative flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                  <img
+                    src={banner.image_url}
+                    alt={banner.title || `Banner ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.style.display = 'none'
+                    }}
+                  />
+                  <div 
+                    className="absolute inset-0 z-10 pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(to top, #DDF4E7 0%, rgba(221, 244, 231, 0.5) 10%, transparent 20%, transparent 100%)'
+                    }}
+                  ></div>
+                  <div 
+                    className="absolute inset-0 z-10 opacity-0 dark:opacity-100 transition-opacity duration-300 pointer-events-none"
+                    style={{
+                      background: 'linear-gradient(to top, #124170 0%, rgba(18, 65, 112, 0.5) 10%, transparent 20%, transparent 100%)'
+                    }}
+                  ></div>
+                </div>
+              );
+
+              if (banner.link) {
+                const isExternal = banner.link.startsWith('http');
+                if (isExternal) {
+                  return <a href={banner.link} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 w-full h-full block" key={index}>{bannerContent}</a>
+                } else {
+                  return <Link to={banner.link} className="flex-shrink-0 w-full h-full block" key={index}>{bannerContent}</Link>
+                }
+              }
+
+              return <div className="flex-shrink-0 w-full h-full block" key={index}>{bannerContent}</div>
+            })}
           </div>
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-center space-x-2 z-10">
             {bannerImages.map((_, index) => {

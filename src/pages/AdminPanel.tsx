@@ -1,227 +1,88 @@
 import { Link } from 'react-router-dom'
-import { Settings, MessageSquare, Users, Package, ShoppingCart, BarChart3, Truck, Gift, Tag, Image, Star, Layout, Menu } from 'lucide-react'
+import { PackagePlus, ShoppingBag, Settings, ArrowRight, Truck, Image as ImageIcon } from 'lucide-react'
 
 export default function AdminPanel() {
+  const quickActions = [
+    {
+      title: "Adicionar Produto",
+      description: "Cadastre um novo item no catálogo.",
+      icon: PackagePlus,
+      link: "/admin/products/create",
+      color: "bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400"
+    },
+    {
+      title: "Ver Pedidos",
+      description: "Gerencie vendas recentes.",
+      icon: ShoppingBag,
+      link: "/admin/orders",
+      color: "bg-purple-100 text-purple-600 dark:bg-purple-900/40 dark:text-purple-400"
+    },
+    {
+      title: "Personalizar Banners",
+      description: "Altere o visual da página inicial.",
+      icon: ImageIcon,
+      link: "/admin/banners",
+      color: "bg-teal-100 text-teal-600 dark:bg-teal-900/40 dark:text-teal-400"
+    },
+    {
+      title: "Taxas de Frete",
+      description: "Ajuste os valores de entrega.",
+      icon: Truck,
+      link: "/admin/shipping",
+      color: "bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-400"
+    }
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8">
-        <div className="mb-4 sm:mb-6 lg:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Painel Administrativo</h1>
-          <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-300">Gerencie seu sistema Kapsu</p>
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="mb-8 lg:mb-10 bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] dark:bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-opacity-20 dark:bg-opacity-5 relative overflow-hidden">
+        <div className="relative z-10">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Painel Administrativo</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-300 text-lg">Bem-vindo(a) à central de gestão da Sanare.</p>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          {/* Card WhatsApp */}
-          <Link
-            to="/admin/whatsapp"
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="bg-green-100 dark:bg-green-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">WhatsApp</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Conectar e gerenciar WhatsApp</p>
-              </div>
-            </div>
-          </Link>
-
-          {/* Card Produtos */}
-          <Link
-            to="/admin/products"
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="bg-blue-100 dark:bg-blue-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <Package className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Produtos</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Gerenciar produtos</p>
-              </div>
-            </div>
-          </Link>
-
-          {/* Card Pedidos */}
-          <Link
-            to="/admin/orders"
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="bg-purple-100 dark:bg-purple-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Pedidos</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Visualizar pedidos</p>
-              </div>
-            </div>
-          </Link>
-
-          {/* Card Usuários */}
-          <Link
-            to="/admin/users"
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <Users className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Usuários</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Gerenciar usuários</p>
-              </div>
-            </div>
-          </Link>
-
-          {/* Card Relatórios */}
-          <Link
-            to="/admin/reports"
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Relatórios</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Visualizar relatórios</p>
-              </div>
-            </div>
-          </Link>
-
-          {/* Card Configurações */}
-          <Link
-            to="/admin/settings"
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="bg-gray-100 dark:bg-gray-800 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-gray-600 dark:text-gray-300" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Configurações</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Configurações do sistema</p>
-              </div>
-            </div>
-          </Link>
-
-          {/* Card Frete */}
-          <Link
-            to="/admin/shipping"
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="bg-orange-100 dark:bg-orange-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <Truck className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Frete</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Configurar frete e regiões</p>
-              </div>
-            </div>
-          </Link>
-
-          {/* Card Promoções */}
-          <Link
-            to="/admin/promotions"
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="bg-pink-100 dark:bg-pink-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <Gift className="w-5 h-5 sm:w-6 sm:h-6 text-pink-600 dark:text-pink-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Promoções</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Criar e gerenciar promoções</p>
-              </div>
-            </div>
-          </Link>
-
-          {/* Card Códigos Promocionais */}
-          <Link
-            to="/admin/promo-codes"
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="bg-purple-100 dark:bg-purple-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <Tag className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Códigos Promocionais</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Criar cupons e códigos de desconto</p>
-              </div>
-            </div>
-          </Link>
-
-          {/* Card Banners */}
-          <Link
-            to="/admin/banners"
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="bg-teal-100 dark:bg-teal-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <Image className="w-5 h-5 sm:w-6 sm:h-6 text-teal-600 dark:text-teal-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Banners</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Gerenciar banners da página inicial</p>
-              </div>
-            </div>
-          </Link>
-
-          {/* Card Avaliações */}
-          <Link
-            to="/admin/reviews"
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="bg-yellow-100 dark:bg-yellow-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <Star className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Avaliações</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Gerenciar avaliações da página inicial</p>
-              </div>
-            </div>
-          </Link>
-
-          {/* Card Página Inicial */}
-          <Link
-            to="/admin/home-sections"
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <Layout className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Página Inicial</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Gerenciar seções e produtos em destaque</p>
-              </div>
-            </div>
-          </Link>
-
-          {/* Card Categorias do Cabeçalho */}
-          <Link
-            to="/admin/header-categories"
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 hover:shadow-lg dark:hover:shadow-xl transition-shadow border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <div className="bg-cyan-100 dark:bg-cyan-900/30 p-2 sm:p-3 rounded-lg flex-shrink-0">
-                <Menu className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600 dark:text-cyan-400" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Categorias do Cabeçalho</h3>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Gerenciar faixa de categorias abaixo do menu</p>
-              </div>
-            </div>
-          </Link>
+        <div className="hidden sm:block relative z-10">
+          <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/50 rounded-2xl flex items-center justify-center transform rotate-3">
+            <Settings className="w-8 h-8 text-primary-600 dark:text-primary-400" />
+          </div>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Ações Rápidas</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Acesso direto às tarefas mais frequentes.</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        {quickActions.map((action, index) => (
+          <Link
+            key={index}
+            to={action.link}
+            className="group bg-white dark:bg-gray-800 rounded-2xl p-5 hover:shadow-md transition-all border border-gray-100 dark:border-gray-700 hover:border-primary-200 dark:hover:border-primary-800 hover:-translate-y-1 flex flex-col h-full"
+          >
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 ${action.color}`}>
+              <action.icon className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+              {action.title}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 flex-grow">
+              {action.description}
+            </p>
+            <div className="mt-4 flex items-center text-sm font-semibold text-primary-600 dark:text-primary-400">
+              Acessar
+              <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="mt-12 bg-primary-50 dark:bg-primary-900/20 rounded-2xl p-6 sm:p-8 border border-primary-100 dark:border-primary-900/50">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Utilize o Menu Lateral</h2>
+        <p className="text-gray-600 dark:text-gray-300">
+          A partir de agora, toda a navegação principal da sua loja está disponível de forma contínua no menu à esquerda. 
+          Isso permite que você alterne entre pedidos, produtos e configurações sem precisar voltar à tela inicial.
+        </p>
       </div>
     </div>
   )
 }
-
-

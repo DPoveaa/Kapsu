@@ -5,6 +5,44 @@ import { whatsappService } from '../services/whatsapp.service'
 import { env } from '../config/env'
 import { useAuth } from '../context/AuthContext'
 
+/**
+ * Retorna a URL de mídia com o token de autenticação anexado como query parameter,
+ * garantindo segurança para exibição de mídias no monitor/suporte.
+ */
+const getMediaUrlWithToken = (urlOrId: string, isId: boolean = false): string => {
+  const token = localStorage.getItem('sanare_token') || localStorage.getItem('token') || ''
+  
+  let baseUrl = env.apiUrl
+  if (baseUrl.endsWith('/api')) {
+    baseUrl = baseUrl.slice(0, -4)
+  }
+  baseUrl = baseUrl.replace(/\/$/, '')
+  
+  let targetUrl = ''
+  if (isId) {
+    targetUrl = `${baseUrl}/api/whatsapp/media/${urlOrId}`
+  } else {
+    if (!urlOrId) return ''
+    if (urlOrId.startsWith('data:') || urlOrId.startsWith('blob:')) {
+      return urlOrId
+    }
+    if (urlOrId.startsWith('/')) {
+      targetUrl = `${baseUrl}${urlOrId}`
+    } else {
+      targetUrl = urlOrId
+    }
+  }
+  
+  if (token && (targetUrl.includes('/whatsapp/media') || targetUrl.includes('/api/whatsapp/media'))) {
+    const separator = targetUrl.includes('?') ? '&' : '?'
+    if (!targetUrl.includes('token=')) {
+      targetUrl = `${targetUrl}${separator}token=${encodeURIComponent(token)}`
+    }
+  }
+  
+  return targetUrl
+}
+
 interface WhatsAppMessage {
   id: string
   from: string
@@ -529,10 +567,6 @@ export default function WhatsAppSupport() {
   }
 
   const renderMessageContent = (msg: WhatsAppMessage) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WhatsAppSupport.tsx:531',message:'renderMessageContent called',data:{messageId:msg.id,type:msg.type,hasMediaUrl:!!msg.mediaUrl,bodyLength:msg.body?.length,bodyStart:msg.body?.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    
     // Verifica se o body contém base64 (imagem) - mesmo que não seja tipo 'image'
     const bodyTrimmed = (msg.body || '').trim()
     const isBase64Image = bodyTrimmed && (
@@ -543,52 +577,22 @@ export default function WhatsAppSupport() {
       (bodyTrimmed.length > 100 && /^[A-Za-z0-9+/=]+$/.test(bodyTrimmed.replace(/\s/g, ''))) // Base64 genérico
     )
     
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WhatsAppSupport.tsx:541',message:'Base64 detection result',data:{isBase64Image,bodyTrimmed:bodyTrimmed?.substring(0,30),bodyLength:bodyTrimmed?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
-    
     // Se for imagem OU se o body contém base64, trata como imagem
     if (msg.type === 'image' || isBase64Image) {
-      // Se já tiver mediaUrl (pode ser base64 ou URL), usa diretamente
       let imageSrc: string | null = null
       
-      // Se já tem mediaUrl (pode ser base64 ou URL), usa diretamente
       if (msg.mediaUrl) {
-        // Valida que mediaUrl é uma string válida
         if (typeof msg.mediaUrl !== 'string') {
           console.error('⚠️ [WHATSAPP_SUPPORT] mediaUrl não é uma string:', {
             messageId: msg.id,
             mediaUrl: msg.mediaUrl,
             type: typeof msg.mediaUrl,
           });
-          // Ignora mediaUrl inválido e tenta usar body ou ID
-        } else if (msg.mediaUrl.startsWith('/')) {
-          // Se for URL relativa (começa com /), converte para URL completa
-          let baseUrl = env.apiUrl
-          if (baseUrl.endsWith('/api')) {
-            baseUrl = baseUrl.slice(0, -4) // Remove '/api'
-          }
-          baseUrl = baseUrl.replace(/\/$/, '')
-          imageSrc = `${baseUrl}${msg.mediaUrl}`
-        } else if (msg.mediaUrl.startsWith('data:')) {
-          // Se for data URL, usa diretamente
-          imageSrc = msg.mediaUrl
-        } else if (msg.mediaUrl.startsWith('http://') || msg.mediaUrl.startsWith('https://')) {
-          // Se for URL completa, usa diretamente
-          imageSrc = msg.mediaUrl
         } else {
-          // Se não for nenhum formato conhecido, tenta construir URL do endpoint
-          let baseUrl = env.apiUrl
-          if (baseUrl.endsWith('/api')) {
-            baseUrl = baseUrl.slice(0, -4)
-          }
-          baseUrl = baseUrl.replace(/\/$/, '')
-          imageSrc = `${baseUrl}/api/whatsapp/media/${msg.id}`
+          imageSrc = getMediaUrlWithToken(msg.mediaUrl)
         }
       } 
-      // Se não tiver mediaUrl mas o body contém base64, usa o body
       else if (isBase64Image) {
-        // Detecta o tipo de imagem pelo início do base64
         let mimeType = 'image/jpeg'
         if (bodyTrimmed.startsWith('iVBORw0KGgo')) {
           mimeType = 'image/png'
@@ -599,28 +603,11 @@ export default function WhatsAppSupport() {
         } else if (bodyTrimmed.startsWith('UklGR')) {
           mimeType = 'image/webp'
         }
-        // Remove espaços e quebras de linha do base64 para evitar erros
         const cleanBase64 = bodyTrimmed.replace(/\s/g, '')
         imageSrc = `data:${mimeType};base64,${cleanBase64}`
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WhatsAppSupport.tsx:596',message:'Using body as base64 image',data:{mimeType,cleanBase64Length:cleanBase64.length,imageSrcStart:imageSrc.substring(0,50)},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
       } 
-      // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
       else if (msg.id) {
-        // Remove /api do final da URL base se existir
-        let baseUrl = env.apiUrl
-        if (baseUrl.endsWith('/api')) {
-          baseUrl = baseUrl.slice(0, -4) // Remove '/api'
-        }
-        // Garante que temos uma base URL válida
-        if (!baseUrl || baseUrl === '') {
-          baseUrl = 'http://localhost:3000'
-        }
-        // Remove barra final se existir
-        baseUrl = baseUrl.replace(/\/$/, '')
-        imageSrc = `${baseUrl}/api/whatsapp/media/${msg.id}`
+        imageSrc = getMediaUrlWithToken(msg.id, true)
       }
       
       if (imageSrc) {
@@ -629,10 +616,9 @@ export default function WhatsAppSupport() {
             <div className="relative">
               <div 
                 className="relative group cursor-pointer"
-                  onClick={() => {
-                    // Abre preview da imagem em modal
-                    setImagePreview(imageSrc)
-                  }}
+                onClick={() => {
+                  setImagePreview(imageSrc)
+                }}
               >
                 <img 
                   src={imageSrc} 
@@ -645,11 +631,8 @@ export default function WhatsAppSupport() {
                       messageId: msg.id,
                       imageSrc: imageSrc?.substring(0, 100),
                       mediaUrl: msg.mediaUrl?.substring(0, 100),
-                      filePath: msg.filePath,
-                      type: msg.type,
                     })
                     
-                    // Se for base64 e falhou, não há o que fazer
                     if (imageSrc?.startsWith('data:')) {
                       target.style.display = 'none'
                       const errorDiv = document.createElement('div')
@@ -659,23 +642,6 @@ export default function WhatsAppSupport() {
                       return
                     }
                     
-                    // Se não for base64 e tiver ID, tenta novamente com a URL do endpoint
-                    if (msg.id && !imageSrc?.includes('/api/whatsapp/media/')) {
-                      let baseUrl = env.apiUrl
-                      if (baseUrl.endsWith('/api')) {
-                        baseUrl = baseUrl.slice(0, -4)
-                      }
-                      baseUrl = baseUrl.replace(/\/$/, '')
-                      if (!baseUrl || baseUrl === '') {
-                        baseUrl = 'http://localhost:3000'
-                      }
-                      const fallbackUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
-                      console.log('🔄 [WHATSAPP_SUPPORT] Tentando recarregar imagem com URL do endpoint:', fallbackUrl)
-                      target.src = fallbackUrl
-                      return
-                    }
-                    
-                    // Se já tentou tudo e falhou, mostra erro
                     target.style.display = 'none'
                     const errorDiv = document.createElement('div')
                     errorDiv.className = 'p-3 bg-red-50 rounded-lg'
@@ -683,7 +649,7 @@ export default function WhatsAppSupport() {
                       <p class="text-xs sm:text-sm text-red-600">Erro ao carregar imagem</p>
                       ${msg.id ? `
                         <a 
-                          href="${imageSrc || `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`}" 
+                          href="${imageSrc || getMediaUrlWithToken(msg.id, true)}" 
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="text-xs text-blue-600 hover:underline mt-1 inline-block"
@@ -694,20 +660,14 @@ export default function WhatsAppSupport() {
                     `
                     target.parentElement?.parentElement?.appendChild(errorDiv)
                   }}
-                  onLoad={() => {
-                    // Imagem carregada com sucesso
-                  }}
                 />
-                {/* Ícone de zoom ao passar o mouse */}
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
                   <ZoomIn className="w-8 h-8 text-white" />
                 </div>
-                {/* Botão de download na imagem pequena */}
                 <button
                   onClick={async (e) => {
                     e.stopPropagation()
                     try {
-                      // Se for base64, converte para blob
                       if (imageSrc.startsWith('data:')) {
                         const response = await fetch(imageSrc)
                         const blob = await response.blob()
@@ -720,7 +680,6 @@ export default function WhatsAppSupport() {
                         document.body.removeChild(a)
                         window.URL.revokeObjectURL(url)
                       } else {
-                        // Para URLs remotas, faz fetch e baixa
                         const response = await fetch(imageSrc)
                         const blob = await response.blob()
                         const url = window.URL.createObjectURL(blob)
@@ -734,7 +693,6 @@ export default function WhatsAppSupport() {
                       }
                     } catch (error) {
                       console.error('Erro ao baixar imagem:', error)
-                      // Fallback: abre em nova aba
                       window.open(imageSrc, '_blank')
                     }
                   }}
@@ -745,67 +703,27 @@ export default function WhatsAppSupport() {
                 </button>
               </div>
             </div>
-            {/* Legenda da imagem - só mostra se o body não for base64 (evita mostrar base64 como texto) */}
             {msg.body && !isBase64Image && (
               <p className="text-xs sm:text-sm whitespace-pre-wrap break-words px-2 pt-1">{msg.body}</p>
             )}
           </div>
         )
       }
-      // Se não tiver mediaUrl nem ID, mostra placeholder
       return <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">(imagem não disponível)</p>
     }
 
     // Se for áudio, sempre tenta mostrar player
     if (msg.type === 'audio') {
-      // Tenta usar mediaUrl direto, ou busca do endpoint
       let mediaUrl: string | null = null;
       
-      // Valida que mediaUrl é uma string válida
       if (msg.mediaUrl && typeof msg.mediaUrl === 'string') {
-        mediaUrl = msg.mediaUrl;
-      } else if (msg.mediaUrl) {
-        console.error('⚠️ [WHATSAPP_SUPPORT] mediaUrl não é uma string (áudio):', {
-          messageId: msg.id,
-          mediaUrl: msg.mediaUrl,
-          type: typeof msg.mediaUrl,
-        });
-      }
-      
-      // Se mediaUrl for relativa (começa com /), converte para URL completa
-      if (mediaUrl && mediaUrl.startsWith('/')) {
-        let baseUrl = env.apiUrl
-        if (baseUrl.endsWith('/api')) {
-          baseUrl = baseUrl.slice(0, -4)
-        }
-        baseUrl = baseUrl.replace(/\/$/, '')
-        mediaUrl = `${baseUrl}${mediaUrl}`
-      }
-      
-      // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
-      // IMPORTANTE: Sempre tenta construir URL do endpoint se tiver ID, mesmo que tenha mediaUrl
-      // Isso garante que mensagens recentes funcionem mesmo se mediaUrl não estiver disponível ainda
-      if (msg.id) {
-        let baseUrl = env.apiUrl
-        if (baseUrl.endsWith('/api')) {
-          baseUrl = baseUrl.slice(0, -4)
-        }
-        baseUrl = baseUrl.replace(/\/$/, '')
-        if (!baseUrl || baseUrl === '') {
-          baseUrl = 'http://localhost:3000'
-      }
-        const endpointUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
-      
-        // Se não tem mediaUrl, usa endpoint. Se tem, mantém mediaUrl mas adiciona endpoint como fallback
-      if (!mediaUrl) {
-          mediaUrl = endpointUrl
-        }
+        mediaUrl = getMediaUrlWithToken(msg.mediaUrl);
+      } else if (msg.id) {
+        mediaUrl = getMediaUrlWithToken(msg.id, true);
       }
       
       if (mediaUrl) {
-        // Determina o tipo MIME correto
         const mimeType = msg.mediaMimetype || 'audio/ogg; codecs=opus'
-        
         return (
           <AudioPlayer 
             key={`audio-${msg.id}`}
@@ -817,19 +735,18 @@ export default function WhatsAppSupport() {
           />
         )
       }
-      // Se não tiver mediaUrl nem ID, mostra link para baixar
       return (
         <div className="space-y-2">
           <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic mb-2">Áudio não disponível ainda. Aguarde alguns segundos...</p>
           {msg.id && (
-          <a 
-              href={`${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`}
-            download
-            className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-          >
-            <span>🎵</span>
-            <span>Baixar áudio</span>
-          </a>
+            <a 
+              href={getMediaUrlWithToken(msg.id, true)}
+              download
+              className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+            >
+              <span>🎵</span>
+              <span>Baixar áudio</span>
+            </a>
           )}
           {msg.body && (
             <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.body}</p>
@@ -840,77 +757,36 @@ export default function WhatsAppSupport() {
 
     // Se for vídeo, sempre tenta mostrar player
     if (msg.type === 'video') {
-      // Tenta usar mediaUrl direto, ou busca do endpoint
       let mediaUrl: string | null = null;
       
-      // Valida que mediaUrl é uma string válida
       if (msg.mediaUrl && typeof msg.mediaUrl === 'string') {
-        mediaUrl = msg.mediaUrl;
-      } else if (msg.mediaUrl) {
-        console.error('⚠️ [WHATSAPP_SUPPORT] mediaUrl não é uma string (vídeo):', {
-          messageId: msg.id,
-          mediaUrl: msg.mediaUrl,
-          type: typeof msg.mediaUrl,
-        });
-      }
-      
-      // Se mediaUrl for relativa (começa com /), converte para URL completa
-      if (mediaUrl && mediaUrl.startsWith('/')) {
-        let baseUrl = env.apiUrl
-        if (baseUrl.endsWith('/api')) {
-          baseUrl = baseUrl.slice(0, -4)
-        }
-        baseUrl = baseUrl.replace(/\/$/, '')
-        mediaUrl = `${baseUrl}${mediaUrl}`
-      }
-      
-      // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
-      // IMPORTANTE: Sempre tenta construir URL do endpoint se tiver ID
-      if (msg.id) {
-        let baseUrl = env.apiUrl
-        if (baseUrl.endsWith('/api')) {
-          baseUrl = baseUrl.slice(0, -4)
-        }
-        baseUrl = baseUrl.replace(/\/$/, '')
-        if (!baseUrl || baseUrl === '') {
-          baseUrl = 'http://localhost:3000'
-      }
-        const endpointUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
-      
-        // Se não tem mediaUrl, usa endpoint. Se tem, mantém mediaUrl mas adiciona endpoint como fallback
-      if (!mediaUrl) {
-          mediaUrl = endpointUrl
-        }
+        mediaUrl = getMediaUrlWithToken(msg.mediaUrl);
+      } else if (msg.id) {
+        mediaUrl = getMediaUrlWithToken(msg.id, true);
       }
       
       if (mediaUrl) {
-        // Determina o tipo MIME correto
         const mimeType = msg.mediaMimetype || 'video/mp4'
-        
         return (
           <div className="space-y-2">
             <video 
-              key={`video-${msg.id}-${Date.now()}`} // Force re-render para mensagens recentes
+              key={`video-${msg.id}`}
               controls 
               className="max-w-full rounded-lg"
-              preload="auto" // Muda de "metadata" para "auto" para carregar completamente
-              crossOrigin="anonymous" // Permite CORS se necessário
+              preload="auto"
+              crossOrigin="anonymous"
               onError={(e) => {
                 const target = e.target as HTMLVideoElement
-                
-                // Se falhar e tiver ID, tenta recarregar após um delay
                 if (msg.id && target.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) {
                   setTimeout(() => {
                     if (target && target.parentElement) {
-                      target.load() // Força recarregar o vídeo
+                      target.load()
                     }
                   }, 1000)
                   return
                 }
-                
                 const parent = target.parentElement
                 if (parent) {
-                  // Se falhar completamente, mostra link para baixar
                   parent.innerHTML = `
                     <div class="space-y-2">
                       <p class="text-xs sm:text-sm text-red-600 mb-2">Erro ao carregar vídeo. Tentando baixar...</p>
@@ -918,7 +794,6 @@ export default function WhatsAppSupport() {
                         href="${mediaUrl}" 
                         download
                         class="text-xs sm:text-sm text-blue-600 hover:text-blue-700 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                        onclick="this.href='${mediaUrl}'; this.download='video-${msg.id || Date.now()}.${msg.fileExtension || 'mp4'}';"
                       >
                         <span>🎬</span>
                         <span>Baixar vídeo</span>
@@ -928,29 +803,8 @@ export default function WhatsAppSupport() {
                   `
                 }
               }}
-              onLoadStart={() => {
-                // Iniciando carregamento de vídeo
-              }}
-              onCanPlay={() => {
-                // Vídeo pronto para reprodução
-              }}
-              onLoadedMetadata={() => {
-                // Metadados do vídeo carregados
-              }}
-              onStalled={(e) => {
-                const target = e.target as HTMLVideoElement
-                setTimeout(() => {
-                  if (target && target.readyState < HTMLMediaElement.HAVE_FUTURE_DATA) {
-                    target.load()
-                  }
-                }, 1000)
-              }}
             >
               <source src={mediaUrl} type={mimeType} />
-              <source src={mediaUrl} type="video/mp4" />
-              <source src={mediaUrl} type="video/webm" />
-              <source src={mediaUrl} type="video/ogg" />
-              <source src={mediaUrl} type="video/quicktime" />
               Seu navegador não suporta o elemento de vídeo.
             </video>
             {msg.body && (
@@ -959,11 +813,10 @@ export default function WhatsAppSupport() {
           </div>
         )
       }
-      // Se não tiver mediaUrl nem ID, mostra link para baixar
       return (
         <div className="space-y-2">
           <a 
-            href={msg.id ? `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}` : '#'}
+            href={msg.id ? getMediaUrlWithToken(msg.id, true) : '#'}
             download
             className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
           >
@@ -981,38 +834,12 @@ export default function WhatsAppSupport() {
     if (msg.type === 'document' || msg.type === 'other') {
       let mediaUrl: string | null = null;
       
-      // Valida que mediaUrl é uma string válida
       if (msg.mediaUrl && typeof msg.mediaUrl === 'string') {
-        mediaUrl = msg.mediaUrl;
-      } else if (msg.mediaUrl) {
-        console.error('⚠️ [WHATSAPP_SUPPORT] mediaUrl não é uma string (documento):', {
-          messageId: msg.id,
-          mediaUrl: msg.mediaUrl,
-          type: typeof msg.mediaUrl,
-        });
+        mediaUrl = getMediaUrlWithToken(msg.mediaUrl);
+      } else if (msg.id) {
+        mediaUrl = getMediaUrlWithToken(msg.id, true);
       }
       
-      // Se mediaUrl for relativa (começa com /), converte para URL completa
-      if (mediaUrl && mediaUrl.startsWith('/')) {
-        let baseUrl = env.apiUrl
-        if (baseUrl.endsWith('/api')) {
-          baseUrl = baseUrl.slice(0, -4)
-        }
-        baseUrl = baseUrl.replace(/\/$/, '')
-        mediaUrl = `${baseUrl}${mediaUrl}`
-      }
-      
-      // Se não tiver mediaUrl mas tiver ID, constrói URL do endpoint
-      if (!mediaUrl && msg.id) {
-        let baseUrl = env.apiUrl
-        if (baseUrl.endsWith('/api')) {
-          baseUrl = baseUrl.slice(0, -4)
-        }
-        baseUrl = baseUrl.replace(/\/$/, '')
-        mediaUrl = `${baseUrl}/api/whatsapp/media/${msg.id}`
-      }
-      
-      // Determina o nome do arquivo baseado no mimetype
       const getFileIcon = (mimetype?: string) => {
         if (!mimetype) return '📎'
         if (mimetype.includes('pdf')) return '📄'
@@ -1037,7 +864,7 @@ export default function WhatsAppSupport() {
         return (
           <div className="space-y-2">
             <a 
-              href={mediaUrl || `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`}
+              href={mediaUrl || getMediaUrlWithToken(msg.id, true)}
               download
               className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
             >
@@ -1051,7 +878,6 @@ export default function WhatsAppSupport() {
           </div>
         )
       }
-      // Se não tiver mediaUrl nem ID, mostra placeholder
       return (
         <div className="space-y-2">
           <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic flex items-center space-x-2">
@@ -1069,8 +895,6 @@ export default function WhatsAppSupport() {
     if (msg.type === 'text') {
       const body = msg.body || ''
       
-      // Detecta se o body é base64 de imagem
-      // Padrões: /9j/ (JPEG), /9j/4AAQ (JPEG), iVBORw0KGgo (PNG), R0lGODlh (GIF), UklGR (WebP), data:image/
       const isBase64Image = body.length > 100 && (
         body.startsWith('/9j/') || 
         body.startsWith('iVBORw0KGgo') || 
@@ -1078,16 +902,13 @@ export default function WhatsAppSupport() {
         body.startsWith('R0lGODdh') ||
         body.startsWith('UklGR') ||
         body.startsWith('data:image/') ||
-        // Verifica se é base64 válido (caracteres alfanuméricos, +, /, =)
         /^[A-Za-z0-9+\/=\s]{100,}$/.test(body.trim())
       )
       
       if (isBase64Image) {
-        // É uma imagem em base64, converte para data URL se necessário
         let imageSrc = body.trim()
         if (!body.startsWith('data:')) {
-          // Tenta detectar o tipo de imagem pelo início do base64
-          let mimeType = 'image/jpeg' // Padrão
+          let mimeType = 'image/jpeg'
           const bodyTrimmed = body.trim()
           if (bodyTrimmed.startsWith('iVBORw0KGgo')) {
             mimeType = 'image/png'
@@ -1098,7 +919,6 @@ export default function WhatsAppSupport() {
           } else if (bodyTrimmed.startsWith('UklGR')) {
             mimeType = 'image/webp'
           }
-          // Remove espaços em branco e quebras de linha do base64 para evitar erros
           const cleanBase64 = bodyTrimmed.replace(/\s/g, '')
           imageSrc = `data:${mimeType};base64,${cleanBase64}`
         }
@@ -1134,23 +954,22 @@ export default function WhatsAppSupport() {
         )
       }
       
-      // Se não for base64, mostra o texto normalmente
       return <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{body}</p>
     }
 
     // Para qualquer outro tipo não identificado, tenta buscar como mídia
     let mediaUrl: string | null = null;
     if (msg.mediaUrl && typeof msg.mediaUrl === 'string') {
-      mediaUrl = msg.mediaUrl;
+      mediaUrl = getMediaUrlWithToken(msg.mediaUrl);
     } else if (msg.id) {
-      mediaUrl = `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`;
+      mediaUrl = getMediaUrlWithToken(msg.id, true);
     }
     
     if (mediaUrl || msg.id) {
       return (
         <div className="space-y-2">
           <a 
-            href={mediaUrl || `${env.apiUrl.replace('/api', '')}/api/whatsapp/media/${msg.id}`}
+            href={mediaUrl || getMediaUrlWithToken(msg.id, true)}
             download
             className="text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline flex items-center space-x-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
           >
@@ -1164,7 +983,6 @@ export default function WhatsAppSupport() {
       )
     }
 
-    // Fallback final
     return <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{msg.body || '(mensagem sem conteúdo)'}</p>
   }
 

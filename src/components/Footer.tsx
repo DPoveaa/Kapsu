@@ -20,13 +20,13 @@ export default function Footer() {
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
             <div className="flex items-center gap-1.5">
               <Phone size={12} style={{ color: '#ffffff' }} />
-              <span>(11) 1234-5678</span>
+              <span>(11) 5304-2534</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Mail size={12} style={{ color: '#ffffff' }} />
-              <span>contato@kapsu.com.br</span>
+              <span>kapsultda@gmail.com</span>
             </div>
-            <span>CNPJ: 12.345.678/0001-90</span>
+            <span>CNPJ: 66.915.543/0001-47</span>
           </div>
 
           {/* Redes Sociais & Copyright */}
