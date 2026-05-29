@@ -30,6 +30,7 @@ interface Order {
   updated_at: Date | string;
   items?: OrderItem[];
   boleto_url?: string;
+  payment_url?: string;
 }
 
 export default function Profile() {
@@ -400,23 +401,45 @@ export default function Profile() {
   }
 
   const translateStatus = (status: string) => {
+    const normalized = (status || '').toUpperCase()
     const statusMap: Record<string, string> = {
-      'pending': 'Pendente',
-      'paid': 'Pago',
-      'shipped': 'Enviado',
-      'delivered': 'Entregue',
-      'cancelled': 'Cancelado',
-      'processing': 'Processando'
+      'PENDING': 'Pendente',
+      'RECEIVED': 'Recebido',
+      'CONFIRMED': 'Confirmado',
+      'OVERDUE': 'Vencido',
+      'REFUNDED': 'Reembolsado',
+      'RECEIVED_IN_CASH': 'Recebido em Dinheiro',
+      'REFUND_REQUESTED': 'Reembolso Solicitado',
+      'REFUND_IN_PROGRESS': 'Reembolso em Andamento',
+      'CHARGEBACK_REQUESTED': 'Chargeback Solicitado',
+      'CHARGEBACK_DISPUTE': 'Chargeback em Disputa',
+      'AWAITING_CHARGEBACK_REVERSAL': 'Aguardando Reversão de Chargeback',
+      'DUNNING_REQUESTED': 'Cobrança Solicitada',
+      'DUNNING_RECEIVED': 'Cobrança Recebida',
+      'AWAITING_RISK_ANALYSIS': 'Aguardando Análise de Risco',
+      // Maintain older generic ones
+      'PAID': 'Pago',
+      'SHIPPED': 'Enviado',
+      'DELIVERED': 'Entregue',
+      'CANCELLED': 'Cancelado',
+      'PROCESSING': 'Processando'
     }
-    return statusMap[status] || status
+    return statusMap[normalized] || status
   }
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid': case 'delivered': return { bg: 'bg-green-100', text: 'text-green-600', badge: 'bg-green-100 text-green-700' }
-      case 'pending': case 'processing': return { bg: 'bg-yellow-100', text: 'text-yellow-600', badge: 'bg-yellow-100 text-yellow-700' }
-      case 'cancelled': return { bg: 'bg-red-100', text: 'text-red-600', badge: 'bg-red-100 text-red-700' }
-      default: return { bg: 'bg-blue-100', text: 'text-blue-600', badge: 'bg-blue-100 text-blue-700' }
+    const normalized = (status || '').toUpperCase()
+    switch (normalized) {
+      case 'RECEIVED': case 'CONFIRMED': case 'RECEIVED_IN_CASH': case 'PAID': case 'DELIVERED': 
+        return { bg: 'bg-green-100', text: 'text-green-600', badge: 'bg-green-100 text-green-700' }
+      case 'PENDING': case 'AWAITING_RISK_ANALYSIS': case 'PROCESSING':
+        return { bg: 'bg-yellow-100', text: 'text-yellow-600', badge: 'bg-yellow-100 text-yellow-700' }
+      case 'OVERDUE': case 'REFUND_REQUESTED': case 'REFUND_IN_PROGRESS': case 'CHARGEBACK_REQUESTED': case 'CHARGEBACK_DISPUTE': case 'AWAITING_CHARGEBACK_REVERSAL': case 'REFUNDED': case 'CANCELLED': 
+        return { bg: 'bg-red-100', text: 'text-red-600', badge: 'bg-red-100 text-red-700' }
+      case 'DUNNING_REQUESTED': case 'DUNNING_RECEIVED': 
+        return { bg: 'bg-orange-100', text: 'text-orange-600', badge: 'bg-orange-100 text-orange-700' }
+      default: 
+        return { bg: 'bg-blue-100', text: 'text-blue-600', badge: 'bg-blue-100 text-blue-700' }
     }
   }
 
@@ -431,28 +454,36 @@ export default function Profile() {
   }
 
   const renderTimeline = (status: string) => {
-    if (status === 'cancelled') {
+    const normalized = (status || '').toUpperCase()
+    
+    // Statuses that represent cancellation or failure
+    const isCancelled = ['CANCELLED', 'REJECTED', 'OVERDUE', 'REFUNDED', 'REFUND_REQUESTED', 'REFUND_IN_PROGRESS', 'CHARGEBACK_REQUESTED', 'CHARGEBACK_DISPUTE', 'AWAITING_CHARGEBACK_REVERSAL'].includes(normalized);
+
+    if (isCancelled) {
       return (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900">
           <p className="text-red-600 dark:text-red-400 font-medium flex items-center gap-2">
-            <X className="w-5 h-5" /> Pedido Cancelado
+            <X className="w-5 h-5" /> {translateStatus(normalized)}
           </p>
         </div>
       )
     }
 
     const steps = [
-      { key: 'pending', label: 'Realizado' },
-      { key: 'paid', label: 'Pago' },
-      { key: 'processing', label: 'Preparação' },
-      { key: 'shipped', label: 'Enviado' },
-      { key: 'delivered', label: 'Entregue' }
+      { key: 'PENDING', label: 'Realizado' },
+      { key: 'CONFIRMED', label: 'Confirmado/Pago' },
+      { key: 'PROCESSING', label: 'Preparação' },
+      { key: 'SHIPPED', label: 'Enviado' },
+      { key: 'DELIVERED', label: 'Entregue' }
     ];
 
     const mapIndex: Record<string, number> = {
-      'pending': 0, 'paid': 1, 'processing': 2, 'shipped': 3, 'delivered': 4
+      'PENDING': 0, 'AWAITING_RISK_ANALYSIS': 0, 'DUNNING_REQUESTED': 0, 'DUNNING_RECEIVED': 0,
+      'PAID': 1, 'CONFIRMED': 1, 'RECEIVED': 1, 'RECEIVED_IN_CASH': 1,
+      'PROCESSING': 2, 'SHIPPED': 3, 'DELIVERED': 4
     };
-    const currentIndex = mapIndex[status] !== undefined ? mapIndex[status] : 0;
+    
+    const currentIndex = mapIndex[normalized] !== undefined ? mapIndex[normalized] : 0;
 
     return (
       <div className="mt-4 mb-10 px-4 sm:px-8">
@@ -864,6 +895,17 @@ export default function Profile() {
                                              <a href={order.boleto_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50 rounded-lg font-semibold transition-colors">
                                                <Download className="w-4 h-4" />
                                                Baixar PDF
+                                             </a>
+                                          </div>
+                                       )}
+                                       {order.payment_url && (
+                                          <div className="flex justify-between items-center text-sm mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                             <span className="text-gray-500 dark:text-gray-400">
+                                               {order.payment_method === 'credit_card' ? 'Cartão de Crédito:' : order.payment_method === 'pix' ? 'PIX:' : 'Pagamento Online:'}
+                                             </span>
+                                             <a href={order.payment_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50 rounded-lg font-semibold transition-colors">
+                                               <CreditCard className="w-4 h-4" />
+                                               Visualizar Pagamento
                                              </a>
                                           </div>
                                        )}
