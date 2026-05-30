@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Edit, Trash2, Loader2, Image as ImageIcon, X, Save, ArrowUp, ArrowDown } from 'lucide-react'
 import { bannersService, Banner, CreateBannerData } from '../services/banners.service'
-import { siteSettingsService } from '../services/site-settings.service'
 import BannerImageUpload from '../components/BannerImageUpload'
 import { normalizeImagePath } from '../utils/imageUrl'
+import { confirm } from '../utils/toast'
 
 // Componente para preview de imagem com fallback automático via API
 function BannerImagePreview({ banner }: { banner: Banner }) {
@@ -102,30 +102,10 @@ export default function ManageBanners() {
     order: 0,
     active: true,
   })
-  const [bannerHeightMobile, setBannerHeightMobile] = useState<number>(300)
-  const [bannerHeightDesktop, setBannerHeightDesktop] = useState<number>(500)
-  const [savingHeight, setSavingHeight] = useState(false)
 
   // Carrega banners
   useEffect(() => {
     loadBanners()
-  }, [])
-
-  useEffect(() => {
-    const loadHeights = async () => {
-      try {
-        const settings = await siteSettingsService.getSettings()
-        if (typeof settings.banner_height_mobile === 'number') {
-          setBannerHeightMobile(settings.banner_height_mobile)
-        }
-        if (typeof settings.banner_height_desktop === 'number') {
-          setBannerHeightDesktop(settings.banner_height_desktop)
-        }
-      } catch (err) {
-        console.warn('Não foi possível carregar altura dos banners', err)
-      }
-    }
-    loadHeights()
   }, [])
 
   const loadBanners = async () => {
@@ -199,21 +179,19 @@ export default function ManageBanners() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este banner?')) {
-      return
-    }
-
-    try {
-      setDeletingId(id)
-      await bannersService.delete(id)
-      await loadBanners()
-    } catch (err: any) {
-      console.error('Erro ao excluir banner:', err)
-      alert(err.message || 'Erro ao excluir banner')
-    } finally {
-      setDeletingId(null)
-    }
+  const handleDelete = (id: string) => {
+    confirm.show('Tem certeza que deseja excluir este banner?', async () => {
+      try {
+        setDeletingId(id)
+        await bannersService.delete(id)
+        await loadBanners()
+      } catch (err: any) {
+        console.error('Erro ao excluir banner:', err)
+        alert(err.message || 'Erro ao excluir banner')
+      } finally {
+        setDeletingId(null)
+      }
+    })
   }
 
   const handleEdit = (banner: Banner) => {
@@ -273,20 +251,7 @@ export default function ManageBanners() {
     setShowCreateForm(false)
     setEditingBanner(null)
   }
-  
-  const handleSaveHeights = async () => {
-    try {
-      setSavingHeight(true)
-      await siteSettingsService.updateSettings({
-        banner_height_mobile: bannerHeightMobile,
-        banner_height_desktop: bannerHeightDesktop,
-      })
-    } catch (err: any) {
-      alert(err.message || 'Erro ao salvar altura dos banners')
-    } finally {
-      setSavingHeight(false)
-    }
-  }
+
 
   if (loading) {
     return (
@@ -327,50 +292,7 @@ export default function ManageBanners() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Gerenciar Banners</h1>
           <p className="text-gray-600 dark:text-gray-300">Gerencie os banners exibidos na página inicial</p>
         </div>
-        
-        {/* Configuração de Altura Global */}
-        <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Altura dos Banners</h2>
-          </div>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-            Defina a altura dos banners exibidos na página inicial. Os valores são em pixels.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Altura Mobile (px)</label>
-              <input
-                type="number"
-                min={200}
-                step={10}
-                value={bannerHeightMobile}
-                onChange={(e) => setBannerHeightMobile(Number(e.target.value))}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Altura Desktop (px)</label>
-              <input
-                type="number"
-                min={300}
-                step={10}
-                value={bannerHeightDesktop}
-                onChange={(e) => setBannerHeightDesktop(Number(e.target.value))}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
-              />
-            </div>
-          </div>
-          <div className="mt-4 flex justify-end">
-            <button
-              onClick={handleSaveHeights}
-              disabled={savingHeight}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center"
-            >
-              {savingHeight ? <Loader2 className="animate-spin mr-2" size={18} /> : <Save size={18} className="mr-2" />}
-              Salvar Altura
-            </button>
-          </div>
-        </div>
+
 
         {error && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
@@ -396,7 +318,7 @@ export default function ManageBanners() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Imagem *
+                  Imagem * <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1">(Dimensões recomendadas: 1920x1080 - proporção 16:9)</span>
                 </label>
                 <BannerImageUpload
                   value={formData.image_url}

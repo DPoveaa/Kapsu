@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Edit, Trash2, Loader2, Star, X, Save, ArrowUp, ArrowDown, Package, Plus, Search } from 'lucide-react'
 import { homeSectionsService, HomeSection } from '../services/home-sections.service'
 import { productsService } from '../services/products.service'
 import { Product } from '../types'
+import { confirm } from '../utils/toast'
 
 export default function ManageHomeSections() {
   const navigate = useNavigate()
@@ -27,6 +28,22 @@ export default function ManageHomeSections() {
     display_type: 'category' as 'manual' | 'best_selling' | 'newest' | 'category' | 'promotions',
     category: '',
   })
+
+  // Extrai todas as categorias únicas de forma dinâmica a partir de todos os produtos
+  const dynamicCategories = useMemo(() => {
+    const catsSet = new Set<string>()
+    for (const p of allProducts) {
+      if (p.category) {
+        p.category.split(',').forEach(c => {
+          const trimmed = c.trim()
+          if (trimmed) {
+            catsSet.add(trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase())
+          }
+        })
+      }
+    }
+    return Array.from(catsSet).sort((a, b) => a.localeCompare(b))
+  }, [allProducts])
 
   // Carrega dados
   useEffect(() => {
@@ -203,19 +220,17 @@ export default function ManageHomeSections() {
     }
   }
 
-  const handleRemoveProduct = async (productId: string) => {
-    if (!confirm('Tem certeza que deseja remover este produto de destaque?')) {
-      return
-    }
-
-    try {
-      // A API aceita tanto o featured_id quanto o product_id
-      await homeSectionsService.removeFeaturedProduct(productId)
-      await loadData()
-    } catch (err: any) {
-      console.error('Erro ao remover produto:', err)
-      alert(err.message || 'Erro ao remover produto')
-    }
+  const handleRemoveProduct = (productId: string) => {
+    confirm.show('Tem certeza que deseja remover este produto de destaque?', async () => {
+      try {
+        // A API aceita tanto o featured_id quanto o product_id
+        await homeSectionsService.removeFeaturedProduct(productId)
+        await loadData()
+      } catch (err: any) {
+        console.error('Erro ao remover produto:', err)
+        alert(err.message || 'Erro ao remover produto')
+      }
+    })
   }
 
   const resetForm = () => {
@@ -288,18 +303,16 @@ export default function ManageHomeSections() {
     }
   }
 
-  const handleRemoveSectionProduct = async (sectionId: string, productId: string) => {
-    if (!confirm('Tem certeza que deseja remover este produto da seção?')) {
-      return
-    }
-
-    try {
-      await homeSectionsService.removeSectionProduct(sectionId, productId)
-      await loadData()
-    } catch (err: any) {
-      console.error('Erro ao remover produto:', err)
-      alert(err.message || 'Erro ao remover produto')
-    }
+  const handleRemoveSectionProduct = (sectionId: string, productId: string) => {
+    confirm.show('Tem certeza que deseja remover este produto da seção?', async () => {
+      try {
+        await homeSectionsService.removeSectionProduct(sectionId, productId)
+        await loadData()
+      } catch (err: any) {
+        console.error('Erro ao remover produto:', err)
+        alert(err.message || 'Erro ao remover produto')
+      }
+    })
   }
 
   const handleMoveSectionProduct = async (sectionId: string, product: Product, direction: 'up' | 'down') => {
@@ -331,23 +344,21 @@ export default function ManageHomeSections() {
     setCreatingSection(false)
   }
 
-  const handleDeleteSection = async (sectionId: string, sectionName: string) => {
-    if (!confirm(`Tem certeza que deseja deletar a seção "${sectionName}"?\n\nEsta ação não pode ser desfeita e todos os produtos associados a esta seção serão removidos.`)) {
-      return
-    }
-
-    try {
-      await homeSectionsService.delete(sectionId)
-      await loadData()
-      // Limpa o estado de edição se a seção deletada estava sendo editada
-      if (editingSection?.id === sectionId) {
-        setEditingSection(null)
-        resetForm()
+  const handleDeleteSection = (sectionId: string, sectionName: string) => {
+    confirm.show(`Tem certeza que deseja deletar a seção "${sectionName}"?\n\nEsta ação não pode ser desfeita e todos os produtos associados a esta seção serão removidos.`, async () => {
+      try {
+        await homeSectionsService.delete(sectionId)
+        await loadData()
+        // Limpa o estado de edição se a seção deletada estava sendo editada
+        if (editingSection?.id === sectionId) {
+          setEditingSection(null)
+          resetForm()
+        }
+      } catch (err: any) {
+        console.error('Erro ao deletar seção:', err)
+        alert(err.message || 'Erro ao deletar seção')
       }
-    } catch (err: any) {
-      console.error('Erro ao deletar seção:', err)
-      alert(err.message || 'Erro ao deletar seção')
-    }
+    })
   }
 
   // Filtra produtos disponíveis
@@ -530,10 +541,9 @@ export default function ManageHomeSections() {
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   >
                     <option value="">Todas as categorias</option>
-                    <option value="vitamina">Vitaminas</option>
-                    <option value="mineral">Minerais</option>
-                    <option value="fitoterapico">Fitoterápicos</option>
-                    <option value="outros">Outros</option>
+                    {dynamicCategories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
                   </select>
                 </div>
               )}

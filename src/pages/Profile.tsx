@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
-import { useSearchParams, useLocation } from 'react-router-dom'
+import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { authService } from '../services/auth.service'
 import { uploadService } from '../services/upload.service'
 import { addressService, SavedAddress } from '../services/address.service'
 import { cepService } from '../services/cep.service'
 import { orderService } from '../services/order.service'
-import { User, Camera, Lock, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Package, Calendar, CreditCard, ShoppingBag, Download } from 'lucide-react'
+import { User, Camera, Lock, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Package, Calendar, CreditCard, ShoppingBag, Download, ArrowLeft } from 'lucide-react'
 import { env } from '../config/env'
+import { confirm } from '../utils/toast'
 
 type ProfileSection = 'info' | 'password' | 'image' | 'addresses' | 'orders' | null
 
@@ -34,6 +35,7 @@ interface Order {
 }
 
 export default function Profile() {
+  const navigate = useNavigate()
   const { user, updateUser } = useAuth()
   const [searchParams] = useSearchParams()
   const location = useLocation()
@@ -294,6 +296,13 @@ export default function Profile() {
       setAddressForm({
         nickname: '', cep: '', address: '', number: '', complement: '', bairro: '', city: '', state: '', isDefault: false,
       })
+
+      const redirectUrl = searchParams.get('redirect')
+      if (redirectUrl) {
+        setTimeout(() => {
+          navigate(redirectUrl)
+        }, 1500)
+      }
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Erro ao salvar endereço' })
     } finally {
@@ -301,19 +310,19 @@ export default function Profile() {
     }
   }
 
-  const handleDeleteAddress = async (id: string) => {
-    if (!confirm('Tem certeza que deseja remover este endereço?')) return
-
-    try {
-      setLoading(true)
-      await addressService.deleteSavedAddress(id)
-      setMessage({ type: 'success', text: 'Endereço removido com sucesso!' })
-      await loadAddresses()
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Erro ao remover endereço' })
-    } finally {
-      setLoading(false)
-    }
+  const handleDeleteAddress = (id: string) => {
+    confirm.show('Tem certeza que deseja remover este endereço?', async () => {
+      try {
+        setLoading(true)
+        await addressService.deleteSavedAddress(id)
+        setMessage({ type: 'success', text: 'Endereço removido com sucesso!' })
+        await loadAddresses()
+      } catch (error: any) {
+        setMessage({ type: 'error', text: error.message || 'Erro ao remover endereço' })
+      } finally {
+        setLoading(false)
+      }
+    })
   }
 
   const handleSetDefaultAddress = async (id: string) => {
@@ -546,7 +555,7 @@ export default function Profile() {
                   {profileImage ? (
                     <img src={profileImage} alt={user.name} className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-800 shadow-md" />
                   ) : (
-                    <div className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold border-4 border-white dark:border-gray-800 shadow-md bg-[#67C090]">
+                    <div className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold border-4 border-white dark:border-gray-800 shadow-md bg-[#00A86B]">
                       {getInitials(user.name)}
                     </div>
                   )}
@@ -676,7 +685,7 @@ export default function Profile() {
                       ) : profileImage ? (
                         <img src={profileImage} alt={user.name} className="w-32 h-32 rounded-full object-cover border-4 border-gray-100 dark:border-gray-700 shadow-md" />
                       ) : (
-                        <div className="w-32 h-32 rounded-full flex items-center justify-center text-white text-3xl font-bold border-4 border-gray-100 dark:border-gray-700 shadow-md bg-[#67C090]">
+                        <div className="w-32 h-32 rounded-full flex items-center justify-center text-white text-3xl font-bold border-4 border-gray-100 dark:border-gray-700 shadow-md bg-[#00A86B]">
                           {getInitials(user.name)}
                         </div>
                       )}
@@ -702,6 +711,15 @@ export default function Profile() {
               {/* Endereços Section */}
               {activeSection === 'addresses' && (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  {searchParams.get('redirect') && (
+                    <button
+                      onClick={() => navigate(searchParams.get('redirect')!)}
+                      className="mb-4 flex items-center gap-1.5 text-xs text-primary-600 dark:text-primary-400 hover:underline font-extrabold cursor-pointer"
+                    >
+                      <ArrowLeft size={14} />
+                      Voltar para o Carrinho
+                    </button>
+                  )}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                       <MapPin className="text-primary-500" />

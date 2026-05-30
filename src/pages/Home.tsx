@@ -5,7 +5,6 @@ import { Product } from '../types'
 import { productsService } from '../services/products.service'
 import { bannersService, Banner } from '../services/banners.service'
 import { reviewsService, Review } from '../services/reviews.service'
-import { siteSettingsService } from '../services/site-settings.service'
 import { homeSectionsService, HomeSection } from '../services/home-sections.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 export default function Home() {
@@ -13,19 +12,18 @@ export default function Home() {
   const [sections, setSections] = useState<HomeSection[]>([])
   const [sectionProducts, setSectionProducts] = useState<Record<string, Product[]>>({})
   const [loading, setLoading] = useState(true)
-  const [banners, setBanners] = useState<Banner[]>([])
+  const [banners, setBanners] = useState<Banner[] | null>(null)
   const [bannerIndex, setBannerIndex] = useState(1) // Começa em 1 porque o índice 0 é um clone
   const [reviews, setReviews] = useState<Review[]>([])
   const [reviewIndex, setReviewIndex] = useState(0)
-  const [isTransitioning, setIsTransitioning] = useState(true)
+  const [isTransitioning, setIsTransitioning] = useState(false)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640)
   const [isDragging, setIsDragging] = useState(false)
+  const [dragged, setDragged] = useState(false)
   const [startX, setStartX] = useState(0)
   const [currentX, setCurrentX] = useState(0)
   const [autoRotatePaused, setAutoRotatePaused] = useState(false)
   const bannerRef = useRef<HTMLDivElement>(null)
-  const [bannerHeightMobile, setBannerHeightMobile] = useState<number>(300)
-  const [bannerHeightDesktop, setBannerHeightDesktop] = useState<number>(500)
   
   // Carrega banners da API ou usa fallback
   useEffect(() => {
@@ -47,35 +45,22 @@ export default function Home() {
       loadBanners()
     }, [])
   
-  // Carrega altura dos banners das configurações do site
+  // Reseta o bannerIndex para 1 quando os banners são carregados (ou 0 se for apenas 1 banner)
   useEffect(() => {
-    const loadBannerHeights = async () => {
-      try {
-        const settings = await siteSettingsService.getSettings()
-        if (typeof settings.banner_height_mobile === 'number') {
-          setBannerHeightMobile(settings.banner_height_mobile)
-        }
-        if (typeof settings.banner_height_desktop === 'number') {
-          setBannerHeightDesktop(settings.banner_height_desktop)
-        }
-      } catch (err) {
-        console.warn('Não foi possível carregar altura dos banners', err)
-      }
-    }
-    loadBannerHeights()
-  }, [])
+    if (banners === null) return
 
-  // Reseta o bannerIndex para 1 quando os banners são carregados
-  useEffect(() => {
-    if (banners.length > 0) {
-      // Garante que o índice está dentro dos limites válidos
-      setBannerIndex(1) // Sempre começa no primeiro banner após carregar (índice 1 = primeiro banner original)
-      setIsTransitioning(true)
+    if (banners.length > 1) {
+      setBannerIndex(1) // Começa no primeiro banner original (índice 1)
+      setIsTransitioning(false)
+      const timer = setTimeout(() => {
+        setIsTransitioning(true)
+      }, 50)
+      return () => clearTimeout(timer)
     } else {
-      // Se não houver banners, reseta o índice
-      setBannerIndex(1)
+      setBannerIndex(0) // Começa no índice 0 se houver apenas 1 banner
+      setIsTransitioning(false)
     }
-  }, [banners.length])
+  }, [banners])
 
   // Carrega reviews da API
   useEffect(() => {
@@ -96,15 +81,16 @@ export default function Home() {
   }, [])
   
   // Usa o array de banners da API (sem fallback durante carregamento)
-  const bannerImages = banners
+  const bannerImages = banners || []
   
-  // Cria array com clones para loop infinito: [última, ...originais, primeira]
-  // Só cria o array infinito se houver banners carregados
-  const infiniteBannerImages = bannerImages.length > 0 ? [
+  const isInfinite = bannerImages.length > 1
+  
+  // Cria array com clones para loop infinito apenas se houver mais de 1 banner
+  const infiniteBannerImages = isInfinite ? [
     bannerImages[bannerImages.length - 1], // Clone da última no início
     ...bannerImages, // Banners originais
     bannerImages[0] // Clone da primeira no final
-  ] : []
+  ] : bannerImages
 
   // Carrega seções da home
   useEffect(() => {
@@ -168,7 +154,7 @@ export default function Home() {
 
   // Auto-rotaciona banners com loop infinito (pausa quando hover/touch)
   useEffect(() => {
-    if (autoRotatePaused) return
+    if (autoRotatePaused || !isInfinite) return
     
     const interval = setInterval(() => {
       setBannerIndex((prev) => {
@@ -186,10 +172,11 @@ export default function Home() {
       })
     }, 6000)
     return () => clearInterval(interval)
-  }, [infiniteBannerImages.length, autoRotatePaused])
+  }, [infiniteBannerImages.length, autoRotatePaused, isInfinite])
   
   // Reseta para o final quando volta para o clone inicial
   useEffect(() => {
+    if (!isInfinite) return
     if (bannerIndex === 0) {
       setTimeout(() => {
         setIsTransitioning(false)
@@ -197,7 +184,7 @@ export default function Home() {
         setTimeout(() => setIsTransitioning(true), 50)
       }, 500)
     }
-  }, [bannerIndex, bannerImages.length])
+  }, [bannerIndex, bannerImages.length, isInfinite])
 
   // Detecta mudanças no tamanho da tela
   useEffect(() => {
@@ -210,10 +197,13 @@ export default function Home() {
 
   // Event listeners globais para drag (caso o mouse saia do elemento durante o drag)
   useEffect(() => {
-    if (!isDragging) return
+    if (!isDragging || !isInfinite) return
 
     const handleGlobalMouseMove = (e: MouseEvent) => {
       setCurrentX(e.clientX)
+      if (Math.abs(startX - e.clientX) > 10) {
+        setDragged(true)
+      }
     }
 
     const handleGlobalMouseUp = () => {
@@ -259,6 +249,8 @@ export default function Home() {
       setIsDragging(false)
       setStartX(0)
       setCurrentX(0)
+      // Reseta dragged após um tick para que o onClick do link ainda consiga verificar
+      setTimeout(() => setDragged(false), 10)
       setTimeout(() => {
         setAutoRotatePaused(false)
       }, 1000)
@@ -271,7 +263,7 @@ export default function Home() {
       window.removeEventListener('mousemove', handleGlobalMouseMove)
       window.removeEventListener('mouseup', handleGlobalMouseUp)
     }
-  }, [isDragging, startX, currentX, infiniteBannerImages.length, bannerImages.length])
+  }, [isDragging, startX, currentX, infiniteBannerImages.length, bannerImages.length, isInfinite])
 
   // Auto-rotaciona reviews (1 por vez no mobile, 2 no desktop)
   useEffect(() => {
@@ -306,6 +298,7 @@ export default function Home() {
   // Handlers para drag/swipe do banner
   const handleBannerMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true)
+    setDragged(false) // Reseta o estado de arrasto a cada nova interação
     setStartX(e.clientX)
     setCurrentX(e.clientX)
     setAutoRotatePaused(true)
@@ -318,7 +311,7 @@ export default function Home() {
   }
 
   const handleBannerMouseUp = () => {
-    if (!isDragging) return
+    if (!isDragging || !isInfinite) return
     
     const diff = startX - currentX
     const threshold = 50 // Pixels mínimos para mudar de banner
@@ -371,9 +364,12 @@ export default function Home() {
     }
   }
 
+
   // Touch handlers para mobile
   const handleBannerTouchStart = (e: React.TouchEvent) => {
+    if (!isInfinite) return
     setIsDragging(true)
+    setDragged(false)
     setStartX(e.touches[0].clientX)
     setCurrentX(e.touches[0].clientX)
     setAutoRotatePaused(true)
@@ -381,12 +377,15 @@ export default function Home() {
   }
 
   const handleBannerTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging) return
+    if (!isDragging || !isInfinite) return
     setCurrentX(e.touches[0].clientX)
+    if (Math.abs(startX - e.touches[0].clientX) > 10) {
+      setDragged(true)
+    }
   }
 
   const handleBannerTouchEnd = () => {
-    if (!isDragging) return
+    if (!isDragging || !isInfinite) return
     
     const diff = startX - currentX
     const threshold = 50 // Pixels mínimos para mudar de banner
@@ -428,123 +427,145 @@ export default function Home() {
     setIsDragging(false)
     setStartX(0)
     setCurrentX(0)
+    // Reseta dragged após um tick para que o onClick do link ainda consiga verificar
+    setTimeout(() => setDragged(false), 10)
     setTimeout(() => {
       setAutoRotatePaused(false)
     }, 1000) // Retoma auto-rotate após 1 segundo
   }
 
   return (
-    <div className="min-h-screen bg-palette-light dark:bg-gray-900 transition-colors duration-300">
-      {/* Banner Hero */}
-      {infiniteBannerImages.length > 0 ? (
+    <div className="min-h-screen bg-palette-light dark:bg-gray-950 transition-colors duration-300">
+      {banners === null ? (
+        <section className="relative overflow-hidden w-full aspect-[12/5] bg-gray-100 dark:bg-gray-800 animate-pulse" />
+      ) : banners.length > 0 ? (
         <section 
-          className="relative overflow-hidden mb-4"
+          className="relative overflow-hidden w-full aspect-[12/5] group"
           onMouseEnter={() => {
-            setAutoRotatePaused(true)
+            if (isInfinite) {
+              setAutoRotatePaused(true)
+            }
           }}
           onMouseLeave={() => {
-            if (!isDragging) {
+            if (isInfinite && !isDragging) {
               setTimeout(() => {
                 setAutoRotatePaused(false)
               }, 1000)
             }
           }}
-          style={{ height: `${isMobile ? bannerHeightMobile : bannerHeightDesktop}px` }}
         >
           <div 
             ref={bannerRef}
-            className={`flex cursor-grab active:cursor-grabbing h-full ${isTransitioning && !isDragging ? 'transition-transform duration-500 ease-in-out' : ''}`}
+            className={`flex w-full h-full ${isInfinite ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
             style={{ 
               transform: `translateX(calc(-${bannerIndex * 100}% + ${isDragging ? (currentX - startX) : 0}px))`,
+              transition: isTransitioning && !isDragging ? 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
               userSelect: 'none',
-              height: '100%'
             }}
-            onMouseDown={handleBannerMouseDown}
-            onMouseMove={handleBannerMouseMove}
-            onMouseUp={handleBannerMouseUp}
-            onMouseLeave={handleBannerMouseLeave}
-            onTouchStart={handleBannerTouchStart}
-            onTouchMove={handleBannerTouchMove}
-            onTouchEnd={handleBannerTouchEnd}
+            onMouseDown={isInfinite ? handleBannerMouseDown : undefined}
+            onMouseMove={isInfinite ? handleBannerMouseMove : undefined}
+            onMouseUp={isInfinite ? handleBannerMouseUp : undefined}
+            onMouseLeave={isInfinite ? handleBannerMouseLeave : undefined}
+            onTouchStart={isInfinite ? handleBannerTouchStart : undefined}
+            onTouchMove={isInfinite ? handleBannerTouchMove : undefined}
+            onTouchEnd={isInfinite ? handleBannerTouchEnd : undefined}
           >
             {infiniteBannerImages.map((banner, index) => {
               const bannerContent = (
-                <div className="w-full h-full relative flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+                <div className="min-w-full h-full relative bg-gray-100 dark:bg-gray-800 select-none">
                   <img
                     src={banner.image_url}
                     alt={banner.title || `Banner ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-fill select-none pointer-events-none"
+                    draggable={false}
+                    onDragStart={(e) => e.preventDefault()}
                     onError={(e) => {
                       const target = e.target as HTMLImageElement
                       target.style.display = 'none'
                     }}
                   />
                   <div 
-                    className="absolute inset-0 z-10 pointer-events-none"
+                    className="absolute inset-0 z-10 pointer-events-none dark:hidden"
                     style={{
-                      background: 'linear-gradient(to top, #DDF4E7 0%, rgba(221, 244, 231, 0.5) 10%, transparent 20%, transparent 100%)'
+                      background: 'linear-gradient(to top, #FFFFFF 0%, rgba(255, 255, 255, 0.4) 7%, transparent 14%, transparent 100%)'
                     }}
                   ></div>
                   <div 
-                    className="absolute inset-0 z-10 opacity-0 dark:opacity-100 transition-opacity duration-300 pointer-events-none"
+                    className="absolute inset-0 z-10 pointer-events-none hidden dark:block"
                     style={{
-                      background: 'linear-gradient(to top, #124170 0%, rgba(18, 65, 112, 0.5) 10%, transparent 20%, transparent 100%)'
+                      background: 'linear-gradient(to top, #0A0F0D 0%, rgba(10, 15, 13, 0.4) 7%, transparent 14%, transparent 100%)'
                     }}
                   ></div>
                 </div>
               );
 
               if (banner.link) {
-                const isExternal = banner.link.startsWith('http');
+                const linkProps = {
+                  draggable: false,
+                  onDragStart: (e: React.DragEvent) => e.preventDefault(),
+                  onClick: (e: React.MouseEvent) => {
+                    if (dragged) {
+                      e.preventDefault()
+                      e.stopPropagation()
+                    }
+                  },
+                  className: "flex-shrink-0 min-w-full h-full block"
+                };
+
+                // Sempre usa Link interno (mesmo para URLs externas, abre na mesma aba)
+                const isExternal = banner.link.startsWith('http')
                 if (isExternal) {
-                  return <a href={banner.link} target="_blank" rel="noopener noreferrer" className="flex-shrink-0 w-full h-full block" key={index}>{bannerContent}</a>
+                  return <a href={banner.link} key={index} {...linkProps}>{bannerContent}</a>
                 } else {
-                  return <Link to={banner.link} className="flex-shrink-0 w-full h-full block" key={index}>{bannerContent}</Link>
+                  return <Link to={banner.link} key={index} {...linkProps}>{bannerContent}</Link>
                 }
               }
 
-              return <div className="flex-shrink-0 w-full h-full block" key={index}>{bannerContent}</div>
+              return <div className="flex-shrink-0 min-w-full h-full block" key={index}>{bannerContent}</div>
             })}
           </div>
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-center space-x-2 z-10">
-            {bannerImages.map((_, index) => {
-              const realIndex = bannerIndex === 0 ? bannerImages.length - 1 : 
-                               bannerIndex === infiniteBannerImages.length - 1 ? 0 : 
-                               bannerIndex - 1
-              return (
-                <button
-                  key={index}
-                  onClick={() => {
-                    setIsTransitioning(true)
-                    setBannerIndex(index + 1)
-                  }}
-                  className={`h-2 w-2 rounded-full transition-all ${
-                    index === realIndex
-                      ? 'bg-white'
-                      : 'bg-white/50'
-                  }`}
-                  aria-label={`Ir para imagem ${index + 1}`}
-                />
-              )
-            })}
-          </div>
+
+          {/* Indicators */}
+          {isInfinite && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-center space-x-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              {bannerImages.map((_, index) => {
+                const realIndex = bannerIndex === 0 ? bannerImages.length - 1 : 
+                                 bannerIndex === infiniteBannerImages.length - 1 ? 0 : 
+                                 bannerIndex - 1
+                return (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setIsTransitioning(true)
+                      setBannerIndex(index + 1)
+                    }}
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      index === realIndex
+                        ? 'w-6 bg-white'
+                        : 'w-2 bg-white/50 hover:bg-white/80'
+                    }`}
+                    aria-label={`Ir para imagem ${index + 1}`}
+                  />
+                )
+              })}
+            </div>
+          )}
         </section>
       ) : (
         <section 
-          className="relative overflow-hidden mb-4"
-          style={{ height: `${isMobile ? bannerHeightMobile : bannerHeightDesktop}px` }}
+          className="relative overflow-hidden w-full aspect-[12/5]"
         >
           <div className="absolute inset-0">
             <div className="w-full h-full"
               style={{
                 backgroundImage:
-                  'radial-gradient(1000px 300px at 10% 10%, rgba(103,192,144,0.25), transparent 60%), radial-gradient(800px 300px at 90% 20%, rgba(15,130,140,0.30), transparent 60%), linear-gradient(135deg, #DDF4E7 0%, #BFEAD4 50%, #AEE3CB 100%)'
+                  'radial-gradient(1000px 300px at 10% 10%, rgba(0,168,107,0.20), transparent 60%), radial-gradient(800px 300px at 90% 20%, rgba(37,99,235,0.25), transparent 60%), linear-gradient(135deg, #E8FFF4 0%, #CFFFE7 50%, #A3F7CE 100%)'
               }}
             />
             <div className="absolute inset-0 opacity-0 dark:opacity-100 transition-opacity"
               style={{
                 backgroundImage:
-                  'radial-gradient(1000px 300px at 10% 10%, rgba(120,185,181,0.20), transparent 60%), radial-gradient(800px 300px at 90% 20%, rgba(15,130,140,0.35), transparent 60%), linear-gradient(135deg, #0B2E4F 0%, #0E3F6E 50%, #124170 100%)'
+                  'radial-gradient(1000px 300px at 10% 10%, rgba(0,168,107,0.15), transparent 60%), radial-gradient(800px 300px at 90% 20%, rgba(59,130,246,0.20), transparent 60%), linear-gradient(135deg, #0A0F0D 0%, #003D27 50%, #111827 100%)'
               }}
             />
           </div>
@@ -560,7 +581,7 @@ export default function Home() {
                 <Link
                   to="/produtos"
                   className="px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-white font-semibold"
-                  style={{ backgroundColor: '#67C090' }}
+                  style={{ backgroundColor: '#00A86B' }}
                 >
                   Ver produtos
                 </Link>
@@ -735,12 +756,12 @@ export default function Home() {
                             {review.show_image !== false && (
                               <div className="flex-shrink-0">
                                 <img
-                                  src={review.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name || 'Cliente')}&size=64&background=67C090&color=fff&bold=true`}
+                                  src={review.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name || 'Cliente')}&size=64&background=00A86B&color=fff&bold=true`}
                                   alt={review.name || 'Cliente'}
                                   className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement
-                                    target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name || 'Cliente')}&size=64&background=67C090&color=fff&bold=true`
+                                    target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name || 'Cliente')}&size=64&background=00A86B&color=fff&bold=true`
                                   }}
                                 />
                               </div>
@@ -790,7 +811,7 @@ export default function Home() {
                             ? ''
                             : 'bg-gray-300 dark:bg-gray-700'
                         }`}
-                        style={currentIndex === reviewIndex ? { backgroundColor: '#67C090' } : {}}
+                        style={currentIndex === reviewIndex ? { backgroundColor: '#00A86B' } : {}}
                         aria-label={`Ir para reviews ${currentIndex + 1}-${currentIndex + 2}`}
                       />
                     )

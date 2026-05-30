@@ -1012,7 +1012,7 @@ const FloatingChat: React.FC = () => {
         onMouseDown={!isOpen ? handleButtonMouseDown : undefined}
         className={`fixed z-50 flex flex-col transition-all duration-500 ease-in-out ${isOpen
           ? 'bg-white dark:bg-gray-800 shadow-2xl overflow-hidden'
-          : 'bg-[#67C090] hover:bg-[#5aad7d] text-white shadow-lg flex items-center justify-center cursor-pointer select-none touch-none hover:scale-110'
+          : 'bg-[#00A86B] hover:bg-[#008A57] text-white shadow-lg flex items-center justify-center cursor-pointer select-none touch-none hover:scale-110'
           }`}
         style={{
           left: isOpen ? `${chatPosition.x}px` : `${buttonPosition.x}px`,
@@ -1041,7 +1041,7 @@ const FloatingChat: React.FC = () => {
             onMouseDown={handleChatMouseDown}
             onTouchStart={handleChatTouchStart}
             className="text-white p-3 sm:p-4 cursor-move flex items-center justify-between select-none touch-none flex-shrink-0"
-            style={{ backgroundColor: '#67C090' }}
+            style={{ backgroundColor: '#00A86B' }}
           >
             <div className="flex items-center space-x-1.5 sm:space-x-2">
               <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1055,7 +1055,7 @@ const FloatingChat: React.FC = () => {
                   backgroundColor: 'transparent',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#5aad7d'
+                  e.currentTarget.style.backgroundColor = '#008A57'
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.backgroundColor = 'transparent'

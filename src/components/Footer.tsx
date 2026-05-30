@@ -10,7 +10,7 @@ export default function Footer() {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 mb-2 md:mb-0">
             <AnimatedLogo
-              className="h-8 w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+              className="h-8 w-8 object-contain opacity-90 hover:opacity-100 transition-opacity"
               alt="Kapsu Logo"
             />
             <span className="text-sm font-semibold text-white">Kapsu</span>

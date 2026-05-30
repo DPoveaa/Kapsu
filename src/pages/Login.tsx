@@ -231,12 +231,12 @@ export default function Login() {
       <div className="w-full lg:w-[42%] xl:w-[38%] flex items-center justify-center p-6 sm:p-10 lg:p-12 xl:p-16 relative z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md">
         
         {/* Glows decorativos de fundo */}
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#67C090]/10 rounded-full blur-[100px] -translate-x-1/2 translate-y-1/2 pointer-events-none z-0" />
-        <div className="absolute top-0 left-0 w-80 h-80 bg-[#26667F]/5 rounded-full blur-[100px] -translate-x-1/4 -translate-y-1/4 pointer-events-none z-0" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#00A86B]/10 rounded-full blur-[100px] -translate-x-1/2 translate-y-1/2 pointer-events-none z-0" />
+        <div className="absolute top-0 left-0 w-80 h-80 bg-[#2563EB]/5 rounded-full blur-[100px] -translate-x-1/4 -translate-y-1/4 pointer-events-none z-0" />
 
         {/* Círculos concêntricos decorativos */}
         <div className="absolute top-0 left-0 w-[400px] h-[400px] pointer-events-none opacity-20 dark:opacity-10 -translate-x-1/4 -translate-y-1/4 z-0">
-          <svg viewBox="0 0 100 100" className="w-full h-full text-[#67C090]">
+          <svg viewBox="0 0 100 100" className="w-full h-full text-[#00A86B]">
             <circle cx="20" cy="20" r="80" fill="none" stroke="currentColor" strokeWidth="0.25" />
             <circle cx="20" cy="20" r="68" fill="none" stroke="currentColor" strokeWidth="0.25" />
             <circle cx="20" cy="20" r="56" fill="none" stroke="currentColor" strokeWidth="0.25" />
@@ -260,11 +260,11 @@ export default function Login() {
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-6 text-center tracking-tight">
             {isLogin ? (
               <>
-                Bem-vindo a <span className="text-[#67C090]">Kapsu</span>
+                Bem-vindo a <span className="text-[#00A86B]">Kapsu</span>
               </>
             ) : (
               <>
-                Criar <span className="text-[#67C090]">Conta</span>
+                Criar <span className="text-[#00A86B]">Conta</span>
               </>
             )}
           </h1>
@@ -272,7 +272,7 @@ export default function Login() {
           {/* Banner de Sucesso */}
           {successMessage && (
             <div className="mb-5 p-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-500/50 rounded-xl text-green-700 dark:text-green-300 text-sm flex items-center shadow-sm">
-              <CheckCircle size={16} className="mr-2 flex-shrink-0 text-[#67C090]" />
+              <CheckCircle size={16} className="mr-2 flex-shrink-0 text-[#00A86B]" />
               <span className="break-words">{successMessage}</span>
             </div>
           )}
@@ -280,7 +280,7 @@ export default function Login() {
           {/* Banner de Carrinho Pendente */}
           {hasPendingCart && isLogin && (
             <div className="mb-5 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-500/50 rounded-xl text-blue-700 dark:text-blue-300 text-sm flex items-center shadow-sm">
-              <ShoppingCart size={16} className="mr-2 flex-shrink-0 text-[#26667F]" />
+              <ShoppingCart size={16} className="mr-2 flex-shrink-0 text-[#2563EB]" />
               <span className="break-words">Você tem um carrinho do WhatsApp pendente! Faça login para vincular à sua conta.</span>
             </div>
           )}
@@ -306,7 +306,7 @@ export default function Login() {
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
                     placeholder="seu@email.com"
-                    className="w-full pl-10 pr-4 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#67C090] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none"
+                    className="w-full pl-10 pr-4 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#00A86B] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none"
                     required
                   />
                   <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
@@ -323,7 +323,7 @@ export default function Login() {
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     placeholder="Sua senha"
-                    className="w-full pl-10 pr-12 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#67C090] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none"
+                    className="w-full pl-10 pr-12 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#00A86B] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none"
                     required
                   />
                   <Lock className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
@@ -341,13 +341,13 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => handleToggleMode(false)}
-                  className="text-gray-600 dark:text-gray-400 hover:text-[#67C090] dark:hover:text-[#67C090] transition-colors text-left"
+                  className="text-gray-600 dark:text-gray-400 hover:text-[#00A86B] dark:hover:text-[#00A86B] transition-colors text-left"
                 >
-                  Não tem uma conta? <span className="text-[#67C090] font-semibold hover:underline">Cadastre-se</span>
+                  Não tem uma conta? <span className="text-[#00A86B] font-semibold hover:underline">Cadastre-se</span>
                 </button>
                 <Link
                   to="/recuperar-senha"
-                  className="text-[#67C090] font-semibold hover:underline transition-colors whitespace-nowrap"
+                  className="text-[#00A86B] font-semibold hover:underline transition-colors whitespace-nowrap"
                 >
                   Esqueceu sua senha?
                 </Link>
@@ -356,7 +356,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#67C090] hover:bg-[#56b180] text-white font-bold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#67C090]/25 hover:shadow-[#67C090]/35 text-base tracking-wide"
+                className="w-full bg-[#00A86B] hover:bg-[#008A57] text-white font-bold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#00A86B]/25 hover:shadow-[#00A86B]/35 text-base tracking-wide"
               >
                 {loading ? (
                   <>
@@ -382,7 +382,7 @@ export default function Login() {
                     value={registerData.name}
                     onChange={(e) => handleRegisterChange('name', e.target.value)}
                     placeholder="Seu nome completo"
-                    className={`w-full pl-10 pr-4 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#67C090] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
+                    className={`w-full pl-10 pr-4 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#00A86B] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
                       fieldErrors.name ? 'ring-2 ring-red-500' : ''
                     }`}
                     required
@@ -408,7 +408,7 @@ export default function Login() {
                     value={registerData.email}
                     onChange={(e) => handleRegisterChange('email', e.target.value)}
                     placeholder="seu@email.com"
-                    className={`w-full pl-10 pr-4 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#67C090] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
+                    className={`w-full pl-10 pr-4 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#00A86B] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
                       fieldErrors.email ? 'ring-2 ring-red-500' : ''
                     }`}
                     required
@@ -437,7 +437,7 @@ export default function Login() {
                       onChange={(e) => handleRegisterChange('phone', e.target.value)}
                       placeholder="(11) 99999-9999"
                       maxLength={15}
-                      className={`w-full pl-10 pr-4 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#67C090] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
+                      className={`w-full pl-10 pr-4 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#00A86B] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
                         fieldErrors.phone ? 'ring-2 ring-red-500' : ''
                       }`}
                       required
@@ -464,7 +464,7 @@ export default function Login() {
                       onChange={(e) => handleRegisterChange('cpf', e.target.value)}
                       placeholder="000.000.000-00"
                       maxLength={14}
-                      className={`w-full pl-10 pr-4 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#67C090] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
+                      className={`w-full pl-10 pr-4 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#00A86B] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
                         fieldErrors.cpf ? 'ring-2 ring-red-500' : ''
                       }`}
                       required
@@ -491,7 +491,7 @@ export default function Login() {
                     value={registerData.password}
                     onChange={(e) => handleRegisterChange('password', e.target.value)}
                     placeholder="Mínimo 6 caracteres"
-                    className={`w-full pl-10 pr-12 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#67C090] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
+                    className={`w-full pl-10 pr-12 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#00A86B] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
                       fieldErrors.password ? 'ring-2 ring-red-500' : ''
                     }`}
                     required
@@ -524,7 +524,7 @@ export default function Login() {
                     value={registerData.confirmPassword}
                     onChange={(e) => handleRegisterChange('confirmPassword', e.target.value)}
                     placeholder="Digite a senha novamente"
-                    className={`w-full pl-10 pr-12 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#67C090] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
+                    className={`w-full pl-10 pr-12 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#00A86B] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
                       fieldErrors.confirmPassword ? 'ring-2 ring-red-500' : ''
                     }`}
                     required
@@ -550,16 +550,16 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => handleToggleMode(true)}
-                  className="text-gray-600 dark:text-gray-400 hover:text-[#67C090] dark:hover:text-[#67C090] transition-colors"
+                  className="text-gray-600 dark:text-gray-400 hover:text-[#00A86B] dark:hover:text-[#00A86B] transition-colors"
                 >
-                  Já tem uma conta? <span className="text-[#67C090] font-semibold hover:underline">Faça login</span>
+                  Já tem uma conta? <span className="text-[#00A86B] font-semibold hover:underline">Faça login</span>
                 </button>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-[#67C090] hover:bg-[#56b180] text-white font-bold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#67C090]/25 hover:shadow-[#67C090]/35 text-base tracking-wide"
+                className="w-full bg-[#00A86B] hover:bg-[#008A57] text-white font-bold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#00A86B]/25 hover:shadow-[#00A86B]/35 text-base tracking-wide"
               >
                 {loading ? (
                   <>

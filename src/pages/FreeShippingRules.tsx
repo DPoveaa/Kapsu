@@ -3,6 +3,7 @@ import { Plus, Trash2, Gift, DollarSign, Package, ShoppingBag, X, Edit2 } from '
 import { freeShippingRulesService, FreeShippingRule } from '../services/free-shipping-rules.service'
 import { productsService } from '../services/products.service'
 import { Product } from '../types'
+import { confirm } from '../utils/toast'
 
 export default function FreeShippingRules() {
   const [rules, setRules] = useState<FreeShippingRule[]>([])
@@ -114,18 +115,18 @@ export default function FreeShippingRules() {
     }
   }
 
-  const handleDeleteRule = async (id: string) => {
-    if (!confirm('Tem certeza que deseja remover esta regra?')) return
-
-    try {
-      setError(null)
-      await freeShippingRulesService.deleteFreeShippingRule(id)
-      setSuccess('Regra removida com sucesso!')
-      setTimeout(() => setSuccess(null), 3000)
-      await loadData()
-    } catch (err: any) {
-      setError(err.message || 'Erro ao remover regra')
-    }
+  const handleDeleteRule = (id: string) => {
+    confirm.show('Tem certeza que deseja remover esta regra?', async () => {
+      try {
+        setError(null)
+        await freeShippingRulesService.deleteFreeShippingRule(id)
+        setSuccess('Regra removida com sucesso!')
+        setTimeout(() => setSuccess(null), 3000)
+        await loadData()
+      } catch (err: any) {
+        setError(err.message || 'Erro ao remover regra')
+      }
+    })
   }
 
   const handleEditRule = (rule: FreeShippingRule) => {

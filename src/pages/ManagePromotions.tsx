@@ -3,6 +3,7 @@ import { Plus, Trash2, Gift, Percent, DollarSign, Truck, ShoppingBag, X, Edit2, 
 import { promotionsService, Promotion } from '../services/promotions.service'
 import { productsService } from '../services/products.service'
 import { Product } from '../types'
+import { confirm } from '../utils/toast'
 
 export default function ManagePromotions() {
   const [promotions, setPromotions] = useState<Promotion[]>([])
@@ -144,18 +145,18 @@ export default function ManagePromotions() {
     }
   }
 
-  const handleDeletePromotion = async (id: string) => {
-    if (!confirm('Tem certeza que deseja remover esta promoção?')) return
-
-    try {
-      setError(null)
-      await promotionsService.deletePromotion(id)
-      setSuccess('Promoção removida com sucesso!')
-      setTimeout(() => setSuccess(null), 3000)
-      await loadData()
-    } catch (err: any) {
-      setError(err.message || 'Erro ao remover promoção')
-    }
+  const handleDeletePromotion = (id: string) => {
+    confirm.show('Tem certeza que deseja remover esta promoção?', async () => {
+      try {
+        setError(null)
+        await promotionsService.deletePromotion(id)
+        setSuccess('Promoção removida com sucesso!')
+        setTimeout(() => setSuccess(null), 3000)
+        await loadData()
+      } catch (err: any) {
+        setError(err.message || 'Erro ao remover promoção')
+      }
+    })
   }
 
   const handleEditPromotion = (promotion: Promotion) => {

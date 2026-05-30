@@ -3,6 +3,7 @@ import { Plus, Trash2, Tag, Percent, DollarSign, Truck, X, Edit2, Copy, CheckCir
 import { promoCodesService, PromoCode } from '../services/promo-codes.service'
 import { productsService } from '../services/products.service'
 import { Product } from '../types'
+import { confirm } from '../utils/toast'
 
 export default function ManagePromoCodes() {
   const [codes, setCodes] = useState<PromoCode[]>([])
@@ -180,18 +181,18 @@ export default function ManagePromoCodes() {
     }
   }
 
-  const handleDeleteCode = async (id: string) => {
-    if (!confirm('Tem certeza que deseja remover este código promocional?')) return
-
-    try {
-      setError(null)
-      await promoCodesService.deletePromoCode(id)
-      setSuccess('Código promocional removido com sucesso!')
-      setTimeout(() => setSuccess(null), 3000)
-      await loadData()
-    } catch (err: any) {
-      setError(err.message || 'Erro ao remover código promocional')
-    }
+  const handleDeleteCode = (id: string) => {
+    confirm.show('Tem certeza que deseja remover este código promocional?', async () => {
+      try {
+        setError(null)
+        await promoCodesService.deletePromoCode(id)
+        setSuccess('Código promocional removido com sucesso!')
+        setTimeout(() => setSuccess(null), 3000)
+        await loadData()
+      } catch (err: any) {
+        setError(err.message || 'Erro ao remover código promocional')
+      }
+    })
   }
 
   const handleEditCode = (code: PromoCode) => {

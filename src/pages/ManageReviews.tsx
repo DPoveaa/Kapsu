@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Edit, Trash2, Loader2, Star, X, Save, ArrowUp, ArrowDown, User } from 'lucide-react'
 import { reviewsService, Review, CreateReviewData } from '../services/reviews.service'
 import ImageUpload from '../components/ImageUpload'
+import { confirm } from '../utils/toast'
 
 export default function ManageReviews() {
   const navigate = useNavigate()
@@ -94,21 +95,19 @@ export default function ManageReviews() {
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta avaliação?')) {
-      return
-    }
-
-    try {
-      setDeletingId(id)
-      await reviewsService.delete(id)
-      await loadReviews()
-    } catch (err: any) {
-      console.error('Erro ao excluir review:', err)
-      alert(err.message || 'Erro ao excluir review')
-    } finally {
-      setDeletingId(null)
-    }
+  const handleDelete = (id: string) => {
+    confirm.show('Tem certeza que deseja excluir esta avaliação?', async () => {
+      try {
+        setDeletingId(id)
+        await reviewsService.delete(id)
+        await loadReviews()
+      } catch (err: any) {
+        console.error('Erro ao excluir review:', err)
+        alert(err.message || 'Erro ao excluir review')
+      } finally {
+        setDeletingId(null)
+      }
+    })
   }
 
   const handleEdit = (review: Review) => {

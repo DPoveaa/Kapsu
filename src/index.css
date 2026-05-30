@@ -18,7 +18,7 @@
     @apply text-gray-900 dark:text-white;
     margin: 0;
     padding: 0;
-    background-color: #DDF4E7;
+    background-color: #FFFFFF;
     font-family: "Bellota Text", sans-serif;
     font-weight: 700;
     -webkit-font-smoothing: antialiased;
@@ -29,7 +29,7 @@
   }
   
   html.dark body {
-    background-color: #111827 !important;
+    background-color: #0A0F0D !important;
     color: #FFFFFF !important;
     text-shadow: 0.5px 0.5px 0.5px rgba(255, 255, 255, 0.1);
   }
@@ -52,20 +52,44 @@
     color: #FFFFFF !important;
   }
   
-  /* Sobrescreve classes de texto do Tailwind no modo escuro */
-  html.dark .text-gray-900,
-  html.dark .text-gray-800,
-  html.dark .text-gray-700,
-  html.dark .text-gray-600,
-  html.dark .text-gray-500,
-  html.dark .text-gray-400,
-  html.dark .text-gray-300,
-  html.dark .text-gray-200,
+  /* Sobrescreve classes de texto do Tailwind no modo escuro mantendo a hierarquia */
+  html.dark .text-gray-950 {
+    color: #f9fafb !important;
+  }
+  html.dark .text-gray-900 {
+    color: #f3f4f6 !important;
+  }
+  html.dark .text-gray-800 {
+    color: #e5e7eb !important;
+  }
+  html.dark .text-gray-700 {
+    color: #d1d5db !important;
+  }
+  html.dark .text-gray-600 {
+    color: #9ca3af !important;
+  }
+  html.dark .text-gray-500 {
+    color: #9ca3af !important;
+  }
+  html.dark .text-gray-400 {
+    color: #9ca3af !important;
+  }
+  html.dark .text-gray-300 {
+    color: #d1d5db !important;
+  }
+  html.dark .text-gray-250 {
+    color: #e5e7eb !important;
+  }
+  html.dark .text-gray-200 {
+    color: #e5e7eb !important;
+  }
+  
+  /* Mantém as cores primárias legíveis em modo escuro */
   html.dark .text-primary-600,
   html.dark .text-primary-700,
   html.dark .text-primary-800,
   html.dark .text-primary-900 {
-    color: #FFFFFF !important;
+    color: #00C878 !important;
   }
   
   /* Exceção: elementos com fundo branco e texto preto devem manter texto preto mesmo no modo escuro */
@@ -92,33 +116,43 @@
   html {
     margin: 0;
     padding: 0;
-    background-color: #DDF4E7;
+    background-color: #FFFFFF;
     transition: background-color 0.3s ease;
   }
   
   html.dark {
-    background-color: #111827 !important;
+    background-color: #0A0F0D !important;
   }
 
   #root {
     margin: 0;
     padding: 0;
-    background-color: #DDF4E7;
+    background-color: #FFFFFF;
     transition: background-color 0.3s ease;
     min-height: 100vh;
   }
 
   html.dark #root {
-    background-color: #111827 !important;
+    background-color: #0A0F0D !important;
   }
   
-  /* Garante que todas as páginas tenham o fundo #111827 no tema escuro */
+  /* Background principal do site em modo escuro */
+  html.dark body,
+  html.dark #root,
   html.dark .min-h-screen,
   html.dark main,
-  html.dark [class*="bg-gray-900"],
-  html.dark [class*="bg-gray-800"],
   html.dark [class*="bg-gray-950"] {
+    background-color: #0A0F0D !important;
+  }
+
+  /* Superfícies intermediárias em modo escuro */
+  html.dark [class*="bg-gray-900"] {
     background-color: #111827 !important;
+  }
+
+  /* Cards e contêineres em modo escuro */
+  html.dark [class*="bg-gray-800"] {
+    background-color: #151A1F !important;
   }
 }
 
@@ -239,5 +273,119 @@
 
 .mercado-pago-checkout .mp-checkout-button:disabled {
   @apply opacity-50 cursor-not-allowed;
+}
+
+/* Custom Animations for Product Details */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes pulseSubtle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 2s infinite ease-in-out;
+}
+
+/* Custom Animations for Notifications & Modals */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes shrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+/* Padronização universal dos campos de texto (inputs, textareas, selects) */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="number"],
+input[type="tel"],
+input[type="search"],
+textarea,
+select {
+  background-color: #FFFFFF !important;
+  color: #111111 !important;
+  border-color: #E5E7EB !important;
+  transition: all 0.2s ease-in-out;
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+input[type="number"]:focus,
+input[type="tel"]:focus,
+input[type="search"]:focus,
+textarea:focus,
+select:focus {
+  border-color: #00A86B !important;
+  box-shadow: 0 0 0 2px rgba(0, 168, 107, 0.15) !important;
+  outline: none !important;
+}
+
+/* Modo Escuro para os campos de texto */
+html.dark input[type="text"],
+html.dark input[type="password"],
+html.dark input[type="email"],
+html.dark input[type="number"],
+html.dark input[type="tel"],
+html.dark input[type="search"],
+html.dark textarea,
+html.dark select {
+  background-color: #151A1F !important;
+  color: #D1D5DB !important;
+  border-color: #1F2937 !important;
+}
+
+html.dark input[type="text"]:focus,
+html.dark input[type="password"]:focus,
+html.dark input[type="email"]:focus,
+html.dark input[type="number"]:focus,
+html.dark input[type="tel"]:focus,
+html.dark input[type="search"]:focus,
+html.dark textarea:focus,
+html.dark select:focus {
+  border-color: #00C878 !important;
+  box-shadow: 0 0 0 2px rgba(0, 200, 120, 0.2) !important;
+  outline: none !important;
 }
 

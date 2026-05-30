@@ -1,15 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import { productsService } from '../services/products.service'
 import ImageUpload from '../components/ImageUpload'
-
-const categories = [
-  { value: 'vitamina', label: 'Vitamina' },
-  { value: 'mineral', label: 'Mineral' },
-  { value: 'fitoterapico', label: 'Fitoterápico' },
-  { value: 'outros', label: 'Outros' },
-]
 
 export default function CreateProduct() {
   const navigate = useNavigate()
@@ -21,14 +14,63 @@ export default function CreateProduct() {
     description: '',
     price: '',
     promo_price: '',
+    purchase_price: '',
     image: '',
-    category: 'outros',
+    category: 'Outros',
     active: true,
     compositions: '',
     indication: '',
     contraindication: '',
     free_shipping: false,
   })
+
+  const [existingCategories, setExistingCategories] = useState<string[]>([
+    'Vitamina', 'Mineral', 'Fitoterápico', 'Outros'
+  ])
+  const [newCatInput, setNewCatInput] = useState('')
+
+  // Load existing categories from products on mount
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const allProds = await productsService.getAllForAdmin()
+        const catsSet = new Set<string>(['Vitamina', 'Mineral', 'Fitoterápico', 'Outros'])
+        for (const p of allProds) {
+          if (p.category) {
+            p.category.split(',').forEach(c => {
+              const trimmed = c.trim()
+              if (trimmed) {
+                catsSet.add(trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase())
+              }
+            })
+          }
+        }
+        setExistingCategories(Array.from(catsSet).sort((a, b) => a.localeCompare(b)))
+      } catch (err) {
+        console.error('Erro ao carregar categorias:', err)
+      }
+    }
+    loadCategories()
+  }, [])
+
+  const handleAddNewCat = () => {
+    const trimmed = newCatInput.trim()
+    if (!trimmed) return
+    const formatted = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase()
+    
+    // Add to existingCategories if not already present
+    if (!existingCategories.includes(formatted)) {
+      setExistingCategories(prev => [...prev, formatted].sort((a, b) => a.localeCompare(b)))
+    }
+    
+    // Check it for the product
+    const currentCats = formData.category.split(',').map(s => s.trim()).filter(Boolean)
+    if (!currentCats.includes(formatted)) {
+      const updatedCats = [...currentCats, formatted]
+      setFormData(prev => ({ ...prev, category: updatedCats.join(', ') }))
+    }
+    setNewCatInput('')
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target
@@ -49,7 +91,13 @@ export default function CreateProduct() {
     }
 
     if (!formData.price || isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
-      setError('O preço deve ser um número positivo')
+      setError('O preço de venda deve ser um número positivo')
+      return
+    }
+
+    // Validação de preço de compra
+    if (formData.purchase_price && (isNaN(Number(formData.purchase_price)) || Number(formData.purchase_price) <= 0)) {
+      setError('O preço de compra deve ser um número positivo')
       return
     }
 
@@ -60,7 +108,7 @@ export default function CreateProduct() {
     }
 
     if (formData.promo_price && Number(formData.promo_price) >= Number(formData.price)) {
-      setError('O preço promocional deve ser menor que o preço normal')
+      setError('O preço promocional deve ser menor que o preço de venda')
       return
     }
 
@@ -71,6 +119,7 @@ export default function CreateProduct() {
         description: formData.description.trim() || undefined,
         price: Number(formData.price),
         promo_price: formData.promo_price ? Number(formData.promo_price) : null,
+        purchase_price: formData.purchase_price ? Number(formData.purchase_price) : null,
         active: formData.active,
         image: formData.image.trim() || undefined,
         category: formData.category || undefined,
@@ -150,11 +199,30 @@ export default function CreateProduct() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Preço */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Preço de Compra */}
+              <div>
+                <label htmlFor="purchase_price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Preço de Compra (Custo) (R$)
+                </label>
+                <input
+                  type="number"
+                  id="purchase_price"
+                  name="purchase_price"
+                  value={formData.purchase_price}
+                  onChange={handleChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                  placeholder="0.00 (opcional)"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Custo pago pelo produto.</p>
+              </div>
+
+              {/* Preço de Venda */}
               <div>
                 <label htmlFor="price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Preço (R$) <span className="text-red-500">*</span>
+                  Preço de Venda (R$) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -187,31 +255,64 @@ export default function CreateProduct() {
                   placeholder="0.00 (opcional)"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Deixe vazio se não houver promoção. Deve ser menor que o preço normal.
+                  Deixe vazio se não houver promoção.
                 </p>
               </div>
-
-
             </div>
 
             {/* Categoria */}
             <div>
-              <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Categoria
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Categorias do Produto
               </label>
-              <select
-                id="category"
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
-              >
-                {categories.map(cat => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-wrap gap-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                {existingCategories.map(cat => {
+                  const isChecked = formData.category.split(',').map(s => s.trim().toLowerCase()).includes(cat.toLowerCase())
+                  return (
+                    <label key={cat} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={e => {
+                          const currentCats = formData.category.split(',').map(s => s.trim()).filter(Boolean)
+                          let newCats: string[]
+                          if (e.target.checked) {
+                            if (currentCats.length === 1 && currentCats[0].toLowerCase() === 'outros' && cat.toLowerCase() !== 'outros') {
+                              newCats = [cat]
+                            } else {
+                              newCats = [...currentCats, cat]
+                            }
+                          } else {
+                            newCats = currentCats.filter(c => c.toLowerCase() !== cat.toLowerCase())
+                          }
+                          if (newCats.length === 0) newCats = ['Outros']
+                          setFormData(prev => ({ ...prev, category: newCats.join(', ') }))
+                        }}
+                        className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                      />
+                      {cat}
+                    </label>
+                  )
+                })}
+              </div>
+              
+              {/* Add Custom Category Input */}
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Nova categoria..."
+                  value={newCatInput}
+                  onChange={e => setNewCatInput(e.target.value)}
+                  className="px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddNewCat}
+                  className="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors"
+                >
+                  + Adicionar Categoria
+                </button>
+              </div>
             </div>
 
             {/* Imagem */}

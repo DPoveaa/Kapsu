@@ -1,5 +1,5 @@
 import { env } from '../config/env'
-import { Product } from '../types'
+import { Product, ProductPriceHistory } from '../types'
 import { PRODUCT_IMAGE_FALLBACK } from '../utils/imageFallback'
 
 const API_URL = env.apiUrl
@@ -11,9 +11,11 @@ interface BackendProduct {
   description: string | null
   price: number
   promo_price: number | null
+  purchase_price: number | null
   image: string | null
   category: string | null
   active: boolean
+  archived: boolean
   compositions: string | null
   indication: string | null
   contraindication: string | null
@@ -93,9 +95,11 @@ class ProductsService {
       description: product.description || '',
       price: Number(product.price),
       promo_price: product.promo_price ? Number(product.promo_price) : null,
+      purchase_price: product.purchase_price != null ? Number(product.purchase_price) : null,
       image: this.getImageUrl(product.image),
       category: (product.category as Product['category']) || 'outros',
       active: product.active,
+      archived: product.archived ?? false,
       free_shipping: product.free_shipping ?? false,
     }
   }
@@ -236,6 +240,7 @@ class ProductsService {
     description?: string
     price: number
     promo_price?: number | null
+    purchase_price?: number | null
     image?: string
     category?: string
     active?: boolean
@@ -369,9 +374,11 @@ class ProductsService {
     description?: string
     price?: number
     promo_price?: number | null
+    purchase_price?: number | null
     image?: string
     category?: string
     active?: boolean
+    archived?: boolean
     compositions?: string
     indication?: string
     contraindication?: string
@@ -407,7 +414,7 @@ class ProductsService {
   /**
    * Deleta um produto (soft delete)
    */
-  async delete(id: string): Promise<void> {
+  async delete(id: string): Promise<any> {
     try {
       const response = await fetch(`${this.baseUrl}/${id}`, {
         method: 'DELETE',
@@ -424,6 +431,8 @@ class ProductsService {
       if (!response.ok) {
         throw new Error(data.message || 'Erro ao excluir produto')
       }
+
+      return data
     } catch (error: any) {
       if (error.message) {
         throw error
@@ -435,7 +444,7 @@ class ProductsService {
   /**
    * Deleta múltiplos produtos (bulk delete)
    */
-  async deleteBulk(ids: string[]): Promise<void> {
+  async deleteBulk(ids: string[]): Promise<any> {
     try {
       const response = await fetch(`${this.baseUrl}/bulk-delete`, {
         method: 'POST',
@@ -444,20 +453,123 @@ class ProductsService {
       })
 
       const text = await response.text()
-      if (!text) {
-        throw new Error('Resposta vazia do servidor')
-      }
-
+      if (!text) throw new Error('Resposta vazia do servidor')
       const data = JSON.parse(text)
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Erro ao excluir produtos em massa')
-      }
+      if (!response.ok) throw new Error(data.message || 'Erro ao excluir produtos em massa')
+      return data
     } catch (error: any) {
-      if (error.message) {
-        throw error
-      }
+      if (error.message) throw error
       throw new Error('Erro de conexão. Verifique se o servidor está rodando.')
+    }
+  }
+
+  /**
+   * Busca o histórico de preços de um produto específico
+   */
+  async getPriceHistory(id: string): Promise<ProductPriceHistory[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/admin/${id}/price-history`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      })
+      const text = await response.text()
+      if (!text) throw new Error('Resposta vazia do servidor')
+      const data = JSON.parse(text)
+      if (!response.ok) throw new Error(data.message || 'Erro ao buscar histórico de preços')
+      return data.data
+    } catch (error: any) {
+      if (error.message) throw error
+      throw new Error('Erro de conexão. Verifique se o servidor está rodando.')
+    }
+  }
+
+  /**
+   * Busca o histórico de preços de todos os produtos agrupado
+   */
+  async getAllPriceHistory(): Promise<{
+    product: { id: string; name: string; active: boolean; archived: boolean };
+    history: ProductPriceHistory[];
+  }[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/admin/price-history/all`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      })
+      const text = await response.text()
+      if (!text) throw new Error('Resposta vazia do servidor')
+      const data = JSON.parse(text)
+      if (!response.ok) throw new Error(data.message || 'Erro ao buscar histórico de preços')
+      return data.data
+    } catch (error: any) {
+      if (error.message) throw error
+      throw new Error('Erro de conexão. Verifique se o servidor está rodando.')
+    }
+  }
+
+  /**
+   * Busca as avaliações de um produto
+   */
+  async getProductReviews(productId: string): Promise<any[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/${productId}/reviews`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      const text = await response.text()
+      if (!text) throw new Error('Resposta vazia do servidor')
+      const data = JSON.parse(text)
+      if (!response.ok) throw new Error(data.message || 'Erro ao buscar avaliações')
+      return data.data || []
+    } catch (error: any) {
+      if (error.message) throw error
+      throw new Error('Erro de conexão ao buscar avaliações.')
+    }
+  }
+
+  /**
+   * Verifica se o usuário é elegível para avaliar o produto
+   */
+  async checkReviewEligibility(productId: string): Promise<{ eligible: boolean; message?: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/${productId}/reviews/eligibility`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      })
+      const text = await response.text()
+      if (!text) throw new Error('Resposta vazia do servidor')
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        return { eligible: false, message: data.message || 'Faça login para avaliar' }
+      }
+      return { eligible: data.eligible, message: data.message }
+    } catch (error: any) {
+      return { eligible: false, message: 'Não foi possível verificar a elegibilidade.' }
+    }
+  }
+
+  /**
+   * Cria uma avaliação para o produto
+   */
+  async createProductReview(
+    productId: string,
+    review: { rating: number; comment: string; image?: string | null }
+  ): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/${productId}/reviews`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(review),
+      })
+      const text = await response.text()
+      if (!text) throw new Error('Resposta vazia do servidor')
+      const data = JSON.parse(text)
+      if (!response.ok) throw new Error(data.message || 'Erro ao enviar avaliação')
+      return data.data
+    } catch (error: any) {
+      if (error.message) throw error
+      throw new Error('Erro de conexão ao enviar avaliação.')
     }
   }
 }

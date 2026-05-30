@@ -121,14 +121,14 @@ export default function Header() {
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-50 backdrop-blur-sm bg-white/95 dark:bg-gray-800/95">
       {/* Barra superior verde */}
-      <div className="h-1" style={{ backgroundColor: '#67C090' }}></div>
+      <div className="h-1" style={{ backgroundColor: '#00A86B' }}></div>
 
       <nav className="container mx-auto px-6 md:px-8 lg:px-12">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3 group">
             <AnimatedLogo
-              className="h-11 w-auto object-contain group-hover:opacity-90 transition-opacity duration-200"
+              className="h-11 w-11 object-contain group-hover:opacity-90 transition-opacity duration-200"
               alt="Kapsu Logo"
             />
             <span className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Kapsu</span>
@@ -169,12 +169,12 @@ export default function Header() {
                         setSearchTerm('')
                         navigate(`/produtos/${p.id}`)
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-600 text-left"
+                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
                     >
                       <img
                         src={getImageUrl(p.image)}
                         alt={p.name}
-                        className="w-10 h-10 rounded object-cover border border-gray-200 dark:border-gray-700"
+                        className="w-10 h-10 rounded object-contain bg-white p-0.5 border border-gray-200 dark:border-gray-700"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement
                           target.style.display = 'none'
@@ -199,11 +199,11 @@ export default function Header() {
             <ThemeToggle />
             <Link
               to="/carrinho"
-              className="relative p-2.5 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-all duration-200"
+              className="relative p-2.5 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-all duration-200"
             >
               <ShoppingCart size={22} />
               {itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 shadow-md" style={{ backgroundColor: '#67C090' }}>
+                <span className="absolute -top-1 -right-1 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 shadow-md" style={{ backgroundColor: '#00A86B' }}>
                   {itemCount > 99 ? '99+' : itemCount}
                 </span>
               )}
@@ -211,7 +211,7 @@ export default function Header() {
             {(isAdmin || isPharmacist) && (
               <Link
                 to="/admin/whatsapp/support"
-                className="relative p-2.5 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-all duration-200"
+                className="relative p-2.5 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-all duration-200"
                 title="Conversas que precisam de intervenção"
               >
                 <MessageCircle size={22} />
@@ -226,7 +226,7 @@ export default function Header() {
               <div className="hidden md:block relative" ref={userMenuRef}>
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors duration-200 group"
+                  className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 group"
                 >
                   {getProfileImageUrl(user.profile_image) ? (
                     <img
@@ -241,14 +241,14 @@ export default function Header() {
                         if (parent) {
                           const fallback = document.createElement('div')
                           fallback.className = 'w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm'
-                          fallback.style.backgroundColor = '#67C090'
+                          fallback.style.backgroundColor = '#00A86B'
                           fallback.textContent = getInitials(user.name)
                           parent.appendChild(fallback)
                         }
                       }}
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: '#67C090' }}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: '#00A86B' }}>
                       {getInitials(user.name)}
                     </div>
                   )}
@@ -261,7 +261,7 @@ export default function Header() {
                       <Link
                         to="/admin"
                         onClick={() => setUserMenuOpen(false)}
-                        className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-gray-600 hover:text-primary-600 dark:hover:text-primary-300 flex items-center space-x-2 transition-colors"
+                        className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-gray-700 hover:text-primary-600 dark:hover:text-primary-300 flex items-center space-x-2 transition-colors"
                       >
                         <Shield size={16} />
                         <span>Painel Admin</span>
@@ -270,7 +270,7 @@ export default function Header() {
                     <Link
                       to="/perfil"
                       onClick={() => setUserMenuOpen(false)}
-                      className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-gray-600 hover:text-primary-600 dark:hover:text-primary-300 flex items-center space-x-2 transition-colors"
+                      className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-gray-700 hover:text-primary-600 dark:hover:text-primary-300 flex items-center space-x-2 transition-colors"
                     >
                       <UserCircle size={16} />
                       <span>Meu Perfil</span>
@@ -291,14 +291,14 @@ export default function Header() {
             ) : (
               <Link
                 to="/login"
-                className="hidden md:flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-all duration-200"
+                className="hidden md:flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-all duration-200"
               >
                 <User size={20} />
                 <span>Entrar</span>
               </Link>
             )}
             <button
-              className="md:hidden p-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              className="md:hidden p-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               <Menu size={22} />
@@ -343,7 +343,7 @@ export default function Header() {
                     <img
                       src={getImageUrl(p.image)}
                       alt={p.name}
-                      className="w-10 h-10 rounded object-cover border border-gray-200 dark:border-gray-700"
+                      className="w-10 h-10 rounded object-contain bg-white p-0.5 border border-gray-200 dark:border-gray-700"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement
                         target.style.display = 'none'
@@ -368,7 +368,7 @@ export default function Header() {
           <div className="md:hidden border-t border-gray-100 dark:border-gray-700 pt-4 pb-4 space-y-1">
             <Link
               to="/produtos"
-              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Produtos
@@ -376,14 +376,14 @@ export default function Header() {
 
             <Link
               to="/sobre"
-              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Sobre
             </Link>
             <Link
               to="/contato"
-              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              className="block px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
               onClick={() => setMobileMenuOpen(false)}
             >
               Contato
@@ -404,14 +404,14 @@ export default function Header() {
                         if (parent) {
                           const fallback = document.createElement('div')
                           fallback.className = 'w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm'
-                          fallback.style.backgroundColor = '#67C090'
+                          fallback.style.backgroundColor = '#00A86B'
                           fallback.textContent = getInitials(user.name)
                           parent.appendChild(fallback)
                         }
                       }}
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: '#67C090' }}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: '#00A86B' }}>
                       {getInitials(user.name)}
                     </div>
                   )}
@@ -426,7 +426,7 @@ export default function Header() {
                     <Link
                       to="/admin"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                      className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                     >
                       <Shield size={16} />
                       <span>Painel Admin</span>
@@ -449,7 +449,7 @@ export default function Header() {
                 <Link
                   to="/perfil"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
                   <UserCircle size={16} />
                   <span>Meu Perfil</span>

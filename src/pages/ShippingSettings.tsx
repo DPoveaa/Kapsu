@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Save, Plus, Trash2, Truck, DollarSign, Gift } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { shippingService, ShippingRegion, ShippingSettings as ShippingSettingsType } from '../services/shipping.service'
+import { confirm } from '../utils/toast'
 
 export default function ShippingSettings() {
   const [regions, setRegions] = useState<ShippingRegion[]>([])
@@ -102,18 +103,18 @@ export default function ShippingSettings() {
     }
   }
 
-  const handleDeleteRegion = async (id: string) => {
-    if (!confirm('Tem certeza que deseja remover esta região?')) return
-
-    try {
-      setError(null)
-      await shippingService.deleteShippingRegion(id)
-      setSuccess('Região removida com sucesso!')
-      setTimeout(() => setSuccess(null), 3000)
-      await loadData()
-    } catch (err: any) {
-      setError(err.message || 'Erro ao remover região')
-    }
+  const handleDeleteRegion = (id: string) => {
+    confirm.show('Tem certeza que deseja remover esta região?', async () => {
+      try {
+        setError(null)
+        await shippingService.deleteShippingRegion(id)
+        setSuccess('Região removida com sucesso!')
+        setTimeout(() => setSuccess(null), 3000)
+        await loadData()
+      } catch (err: any) {
+        setError(err.message || 'Erro ao remover região')
+      }
+    })
   }
 
   const handleEditRegion = (region: ShippingRegion) => {

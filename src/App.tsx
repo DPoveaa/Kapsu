@@ -35,6 +35,7 @@ import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import FloatingChat from './components/FloatingChat'
+import ToastContainer from './components/ToastContainer'
 
 function AppContent() {
   const location = useLocation()
@@ -42,6 +43,7 @@ function AppContent() {
 
   return (
     <Layout>
+      <ToastContainer />
       {!hideChat && <FloatingChat />}
       <Routes>
         <Route path="/" element={<Home />} />

@@ -36,7 +36,7 @@ export default function HeaderCategories() {
 
   return (
     <div 
-      className="w-full flex items-center justify-start md:justify-center gap-4 md:gap-6 py-2 px-4 overflow-x-auto shadow-sm [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+      className="w-full flex items-center justify-start md:justify-center gap-3 md:gap-5 pt-0 pb-1 px-4 overflow-x-auto shadow-sm [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
       style={{ backgroundColor: barBgColor }}
     >
       {categories.map(cat => {
@@ -46,9 +46,9 @@ export default function HeaderCategories() {
         const isExternal = cat.url.startsWith('http')
         
         const content = (
-          <div className="flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-black/10 rounded-full transition-colors whitespace-nowrap">
-            {cat.show_icon && <CatIcon size={16} style={{ color: cat.icon_color }} />}
-            <span className="text-sm font-medium" style={{ color: cat.text_color }}>{cat.name}</span>
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 cursor-pointer hover:bg-black/10 rounded-full transition-colors whitespace-nowrap">
+            {cat.show_icon && <CatIcon size={14} style={{ color: cat.icon_color }} />}
+            <span className="text-xs font-medium" style={{ color: cat.text_color }}>{cat.name}</span>
           </div>
         )
         

@@ -4,6 +4,7 @@ import { ArrowLeft, RefreshCw, CheckCircle2, XCircle, Send, Loader2, QrCode, Log
 import { whatsappService, WhatsAppStatus } from '../services/whatsapp.service'
 import { env } from '../config/env'
 import { useAuth } from '../context/AuthContext'
+import { confirm } from '../utils/toast'
 
 /**
  * Retorna a URL de mídia com o token de autenticação anexado como query parameter,
@@ -1891,8 +1892,8 @@ export default function WhatsAppConnection() {
     }
   }
 
-  const handleClearTestChat = async () => {
-    if (confirm('Deseja limpar o histórico do chat de teste? Isso irá limpar o carrinho, contexto e todas as informações - simulando um cliente totalmente novo.')) {
+  const handleClearTestChat = () => {
+    confirm.show('Deseja limpar o histórico do chat de teste? Isso irá limpar o carrinho, contexto e todas as informações - simulando um cliente totalmente novo.', async () => {
       // Guarda o telefone ANTES de limpar qualquer coisa
       const phoneToReset = testAIPhone.trim() || 'TEST_PHONE'
       console.log('🧹 [CLEAR_CHAT] Iniciando limpeza para telefone:', phoneToReset)
@@ -1952,7 +1953,7 @@ export default function WhatsAppConnection() {
       setTimeout(() => {
         setProcessingStatus('')
       }, 2000)
-    }
+    })
   }
 
   // Scroll automático para última mensagem no chat de teste
@@ -2126,17 +2127,15 @@ export default function WhatsAppConnection() {
     }
   }
 
-  const handleRemovePharmacist = async (id: string) => {
-    if (!confirm('Tem certeza que deseja remover este número?')) {
-      return
-    }
-
-    try {
-      await whatsappService.removePharmacistNumber(id)
-      await loadPharmacistNumbers()
-    } catch (error: any) {
-      alert('Erro ao remover número: ' + error.message)
-    }
+  const handleRemovePharmacist = (id: string) => {
+    confirm.show('Tem certeza que deseja remover este número?', async () => {
+      try {
+        await whatsappService.removePharmacistNumber(id)
+        await loadPharmacistNumbers()
+      } catch (error: any) {
+        alert('Erro ao remover número: ' + error.message)
+      }
+    })
   }
 
   const handleUserSelect = (userId: string) => {
@@ -2205,17 +2204,15 @@ export default function WhatsAppConnection() {
     }
   }
 
-  const handleRemoveDistributor = async (id: string) => {
-    if (!confirm('Tem certeza que deseja remover este número?')) {
-      return
-    }
-
-    try {
-      await whatsappService.removeDistributorNumber(id)
-      await loadDistributorNumbers()
-    } catch (error: any) {
-      alert('Erro ao remover número: ' + error.message)
-    }
+  const handleRemoveDistributor = (id: string) => {
+    confirm.show('Tem certeza que deseja remover este número?', async () => {
+      try {
+        await whatsappService.removeDistributorNumber(id)
+        await loadDistributorNumbers()
+      } catch (error: any) {
+        alert('Erro ao remover número: ' + error.message)
+      }
+    })
   }
 
   const handleDistributorUserSelect = (userId: string) => {
@@ -2262,19 +2259,18 @@ export default function WhatsAppConnection() {
     }
   }
 
-  const handleRemoveAllowedAI = async (id: string) => {
-    if (!confirm('Tem certeza que deseja remover este número da lista de permitidos?')) {
-      return
-    }
-    try {
-      await whatsappService.removeAllowedAINumber(id)
-      await loadAllowedAINumbers()
-      if (selectedConversation) {
-        checkIfNumberIsAllowed(selectedConversation)
+  const handleRemoveAllowedAI = (id: string) => {
+    confirm.show('Tem certeza que deseja remover este número da lista de permitidos?', async () => {
+      try {
+        await whatsappService.removeAllowedAINumber(id)
+        await loadAllowedAINumbers()
+        if (selectedConversation) {
+          checkIfNumberIsAllowed(selectedConversation)
+        }
+      } catch (error: any) {
+        alert('Erro ao remover número permitido: ' + error.message)
       }
-    } catch (error: any) {
-      alert('Erro ao remover número permitido: ' + error.message)
-    }
+    })
   }
 
   const handleSendDistributorOrder = async () => {

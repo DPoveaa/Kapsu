@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Save, Upload, Trash2, Image as ImageIcon, Mail, Phone, MapPin, Palette, Globe } from 'lucide-react'
 import { siteSettingsService, SiteSettings as SiteSettingsType } from '../services/site-settings.service'
 import { env } from '../config/env'
+import { confirm } from '../utils/toast'
 
 export default function SiteSettings() {
   const [settings, setSettings] = useState<SiteSettingsType>({})
@@ -96,20 +97,20 @@ export default function SiteSettings() {
     }
   }
 
-  const handleDeleteLogo = async () => {
-    if (!confirm('Tem certeza que deseja remover a logo?')) return
-
-    try {
-      setError(null)
-      await siteSettingsService.deleteLogo()
-      setSettings(prev => ({ ...prev, logo_url: undefined }))
-      setLogoPreview(null)
-      setSuccess('Logo removida com sucesso!')
-      
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (err: any) {
-      setError(err.message || 'Erro ao remover logo')
-    }
+  const handleDeleteLogo = () => {
+    confirm.show('Tem certeza que deseja remover a logo?', async () => {
+      try {
+        setError(null)
+        await siteSettingsService.deleteLogo()
+        setSettings(prev => ({ ...prev, logo_url: undefined }))
+        setLogoPreview(null)
+        setSuccess('Logo removida com sucesso!')
+        
+        setTimeout(() => setSuccess(null), 3000)
+      } catch (err: any) {
+        setError(err.message || 'Erro ao remover logo')
+      }
+    })
   }
 
   const handleSave = async () => {

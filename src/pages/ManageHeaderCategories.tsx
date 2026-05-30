@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, MoveUp, MoveDown, X } from 'lucide-react'
 import { headerCategoriesService, HeaderCategory } from '../services/header-categories.service'
 import { siteSettingsService } from '../services/site-settings.service'
 import * as LucideIcons from 'lucide-react'
+import { confirm } from '../utils/toast'
 
 // Array de nomes de ícones comuns para o seletor
 const COMMON_ICONS = [
@@ -130,16 +131,17 @@ export default function ManageHeaderCategories() {
     setIsModalOpen(true)
   }
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta categoria?')) return
-    try {
-      await headerCategoriesService.delete(id)
-      fetchData()
-      window.dispatchEvent(new Event('header-settings-updated'))
-    } catch (error) {
-      console.error('Error deleting category:', error)
-      alert('Erro ao excluir categoria.')
-    }
+  const handleDelete = (id: string) => {
+    confirm.show('Tem certeza que deseja excluir esta categoria?', async () => {
+      try {
+        await headerCategoriesService.delete(id)
+        fetchData()
+        window.dispatchEvent(new Event('header-settings-updated'))
+      } catch (error) {
+        console.error('Error deleting category:', error)
+        alert('Erro ao excluir categoria.')
+      }
+    })
   }
 
   const handleSave = async (e: React.FormEvent) => {

@@ -74,13 +74,13 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
     const checkBlink = () => {
       // Gera número aleatório de 1 a 100
       const random = Math.floor(Math.random() * 100) + 1
-      
+
       // Se o número aleatório for menor ou igual à chance atual, pisca
       if (random <= blinkChanceRef.current) {
         setIsBlinking(true)
         // Reseta a chance para 10% após piscar
         blinkChanceRef.current = 10
-        
+
         // Remove a classe de piscar após a animação (200ms)
         setTimeout(() => {
           setIsBlinking(false)
@@ -124,7 +124,7 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
     const checkZ = () => {
       // Gera número aleatório de 1 a 100
       const random = Math.floor(Math.random() * 100) + 1
-      
+
       // Se o número aleatório for menor ou igual à chance atual, mostra os Z
       if (random <= zChanceRef.current) {
         // Cria sequência de 3 Z com micro intervalo entre cada (200ms)
@@ -136,10 +136,10 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
           })
         }
         setZBubbles(newZBubbles)
-        
+
         // Reseta a chance para 10% após mostrar os Z
         zChanceRef.current = 10
-        
+
         // Remove os Z após a animação (2 segundos para subir e desaparecer)
         setTimeout(() => {
           setZBubbles([])
@@ -167,14 +167,14 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
   }, [isDarkMode])
 
   return (
-    <div 
+    <div
       className={`relative inline-block ${className}`}
     >
       {/* Container principal com proporção mantida */}
       <div className="relative w-full h-full" style={{ aspectRatio: '1 / 1' }}>
         {/* Orelha Esquerda - Topo esquerdo */}
-        <img 
-          src={orelhaEsquerda} 
+        <img
+          src={orelhaEsquerda}
           alt=""
           className="absolute"
           style={{
@@ -186,10 +186,10 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
             objectFit: 'contain'
           }}
         />
-        
+
         {/* Orelha Direita - Topo direito */}
-        <img 
-          src={orelhaDireita} 
+        <img
+          src={orelhaDireita}
           alt=""
           className="absolute"
           style={{
@@ -201,10 +201,10 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
             objectFit: 'contain'
           }}
         />
-        
+
         {/* olho esquerdo */}
-        <img 
-          src={olhoEsquerdo} 
+        <img
+          src={olhoEsquerdo}
           alt=""
           className="absolute panda-eye-left"
           style={{
@@ -216,10 +216,10 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
             objectFit: 'contain'
           }}
         />
-        
+
         {/* pupila esquerdo */}
-        <img 
-          src={isBlinking ? pupilaDormindoEsquerdo : pupilaNormalEsquerdo} 
+        <img
+          src={isBlinking ? pupilaDormindoEsquerdo : pupilaNormalEsquerdo}
           alt=""
           className="absolute panda-pupil-left"
           style={{
@@ -232,10 +232,10 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
             pointerEvents: 'none'
           }}
         />
-        
+
         {/* olho direito */}
-        <img 
-          src={olhoDireito} 
+        <img
+          src={olhoDireito}
           alt=""
           className="absolute panda-eye-right"
           style={{
@@ -247,10 +247,10 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
             objectFit: 'contain'
           }}
         />
-        
+
         {/* pupila direita */}
-        <img 
-          src={isBlinking ? pupilaDormindoDireito : pupilaNormalDireito} 
+        <img
+          src={isBlinking ? pupilaDormindoDireito : pupilaNormalDireito}
           alt=""
           className="absolute panda-pupil-right"
           style={{
@@ -263,10 +263,10 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
             pointerEvents: 'none'
           }}
         />
-        
+
         {/* Nariz - Centro inferior, muito próximo dos olhos */}
-        <img 
-          src={nariz} 
+        <img
+          src={nariz}
           alt=""
           className="absolute"
           style={{
@@ -279,37 +279,37 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
             objectFit: 'contain'
           }}
         />
-        
+
         {/* Comprimido Esquerdo - Parte inferior esquerda, próximo ao nariz */}
-        <img 
-          src={comprimidoEsquerdo} 
+        <img
+          src={comprimidoEsquerdo}
           alt=""
           className="absolute"
           style={{
             bottom: '19%',
-            left: '0%',
-            width: '50%',
+            left: '-1%',
+            width: '51%',
             height: 'auto',
             zIndex: 1,
             objectFit: 'contain'
           }}
         />
-        
+
         {/* Comprimido Direito - Parte inferior direita, próximo ao nariz */}
-        <img 
-          src={comprimidoDireito} 
+        <img
+          src={comprimidoDireito}
           alt=""
           className="absolute"
           style={{
             bottom: '19%',
-            right: '0.9%',
-            width: '49%',
+            right: '-1%',
+            width: '51%',
             height: 'auto',
             zIndex: 1,
             objectFit: 'contain'
           }}
         />
-        
+
       </div>
 
       {/* Z bubbles - aparecem quando está dormindo (modo escuro) */}
