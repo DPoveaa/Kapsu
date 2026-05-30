@@ -7,6 +7,7 @@ import { bannersService, Banner } from '../services/banners.service'
 import { reviewsService, Review } from '../services/reviews.service'
 import { homeSectionsService, HomeSection } from '../services/home-sections.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
+import { getImageUrl } from '../utils/imageUrl'
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
   const [sections, setSections] = useState<HomeSection[]>([])
@@ -474,14 +475,20 @@ export default function Home() {
               const bannerContent = (
                 <div className="min-w-full h-full relative bg-gray-100 dark:bg-gray-800 select-none">
                   <img
-                    src={banner.image_url}
+                    src={getImageUrl(banner.image_url)}
                     alt={banner.title || `Banner ${index + 1}`}
                     className="w-full h-full object-fill select-none pointer-events-none"
                     draggable={false}
                     onDragStart={(e) => e.preventDefault()}
                     onError={(e) => {
                       const target = e.target as HTMLImageElement
-                      target.style.display = 'none'
+                      if (target.src && !target.src.includes('/api/uploads/') && !target.dataset.triedApi) {
+                        target.dataset.triedApi = '1'
+                        target.src = target.src.replace('/uploads/', '/api/uploads/')
+                      } else {
+                        target.onerror = null
+                        target.style.display = 'none'
+                      }
                     }}
                   />
                   <div 

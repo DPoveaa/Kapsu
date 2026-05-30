@@ -70,13 +70,14 @@ export default function BannerImageUpload({
       
       // Salva apenas o caminho relativo (começando com /)
       onChange(normalizedPath)
-      // Atualiza preview com a URL completa para exibição
-      setPreview(getImageUrl(normalizedPath))
+      // Mantém o preview base64 local (já definido pelo FileReader acima)
+      // Não substituímos pelo URL do servidor para evitar falha de carregamento imediato
       onError?.(null) // Limpa erro anterior
     } catch (error: any) {
       console.error('Erro ao fazer upload:', error)
       onError?.(error.message || 'Erro ao fazer upload da imagem')
-      setPreview(value || null) // Restaura preview anterior
+      // Restaura preview anterior em caso de erro
+      setPreview(value ? getPreviewUrl(value) : null)
     } finally {
       setUploading(false)
       // Limpa o input para permitir selecionar o mesmo arquivo novamente
@@ -111,10 +112,15 @@ export default function BannerImageUpload({
               alt="Preview"
               className="w-full h-full object-cover"
               onError={(e) => {
-                // Se a imagem falhar ao carregar, tenta usar o fallback
+                // Se a URL do servidor falhar, tenta via rota /api/uploads
                 const target = e.target as HTMLImageElement
-                target.onerror = null // Previne loop infinito
-                target.style.display = 'none'
+                if (target.src && !target.src.startsWith('data:') && !target.dataset.triedApi) {
+                  target.dataset.triedApi = '1'
+                  target.src = target.src.replace('/uploads/', '/api/uploads/')
+                } else {
+                  target.onerror = null // Previne loop infinito
+                  target.style.display = 'none'
+                }
               }}
             />
             {!disabled && (

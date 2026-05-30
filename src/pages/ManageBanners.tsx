@@ -4,16 +4,17 @@ import { ArrowLeft, Plus, Edit, Trash2, Loader2, Image as ImageIcon, X, Save, Ar
 import { bannersService, Banner, CreateBannerData } from '../services/banners.service'
 import BannerImageUpload from '../components/BannerImageUpload'
 import { normalizeImagePath } from '../utils/imageUrl'
+import { getImageUrl } from '../utils/imageUrl'
 import { confirm } from '../utils/toast'
 
 // Componente para preview de imagem com fallback automático via API
 function BannerImagePreview({ banner }: { banner: Banner }) {
-  const [imageUrl, setImageUrl] = useState(banner.image_url)
+  const [imageUrl, setImageUrl] = useState(getImageUrl(banner.image_url))
   const [triedApiUrl, setTriedApiUrl] = useState(false)
   const [hasError, setHasError] = useState(false)
 
   useEffect(() => {
-    setImageUrl(banner.image_url)
+    setImageUrl(getImageUrl(banner.image_url))
     setTriedApiUrl(false)
     setHasError(false)
   }, [banner.image_url])
@@ -22,8 +23,8 @@ function BannerImagePreview({ banner }: { banner: Banner }) {
     const target = e.target as HTMLImageElement
     
     if (!triedApiUrl) {
-      // Primeira tentativa falhou, tenta via API
-      const apiUrl = banner.image_url.replace('/uploads/', '/api/uploads/')
+      // Primeira tentativa falhou, tenta via rota /api/uploads
+      const apiUrl = imageUrl.replace('/uploads/', '/api/uploads/')
       console.log('🔄 Tentando URL via API:', apiUrl)
       setImageUrl(apiUrl)
       setTriedApiUrl(true)
@@ -364,7 +365,7 @@ export default function ManageBanners() {
                   type="url"
                   value={formData.link}
                   onChange={(e) => setFormData(prev => ({ ...prev, link: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                   placeholder="https://exemplo.com"
                 />
               </div>
