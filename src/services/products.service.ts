@@ -20,6 +20,7 @@ interface BackendProduct {
   indication: string | null
   contraindication: string | null
   free_shipping?: boolean
+  markup?: number | null
   created_at: Date
   updated_at: Date
 }
@@ -101,6 +102,7 @@ class ProductsService {
       active: product.active,
       archived: product.archived ?? false,
       free_shipping: product.free_shipping ?? false,
+      markup: product.markup != null ? Number(product.markup) : null,
     }
   }
 
@@ -248,6 +250,7 @@ class ProductsService {
     indication?: string
     contraindication?: string
     free_shipping?: boolean
+    markup?: number | null
   }): Promise<Product> {
     try {
       const response = await fetch(`${this.baseUrl}`, {
@@ -383,6 +386,7 @@ class ProductsService {
     indication?: string
     contraindication?: string
     free_shipping?: boolean
+    markup?: number | null
   }): Promise<Product> {
     try {
       const response = await fetch(`${this.baseUrl}/${id}`, {
@@ -570,6 +574,27 @@ class ProductsService {
     } catch (error: any) {
       if (error.message) throw error
       throw new Error('Erro de conexão ao enviar avaliação.')
+    }
+  }
+
+  /**
+   * Aplica um markup global para todos os produtos
+   */
+  async applyGlobalMarkup(markup: number): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/admin/apply-global-markup`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ markup }),
+      })
+      const text = await response.text()
+      if (!text) throw new Error('Resposta vazia do servidor')
+      const data = JSON.parse(text)
+      if (!response.ok) throw new Error(data.message || 'Erro ao aplicar markup global')
+      return data
+    } catch (error: any) {
+      if (error.message) throw error
+      throw new Error('Erro de conexão ao aplicar markup global.')
     }
   }
 }

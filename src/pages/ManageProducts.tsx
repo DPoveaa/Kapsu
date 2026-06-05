@@ -7,6 +7,7 @@ import {
   Sparkles, Check, AlertCircle
 } from 'lucide-react'
 import { productsService } from '../services/products.service'
+import { siteSettingsService } from '../services/site-settings.service'
 import { Product, ProductPriceHistory } from '../types'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import * as XLSX from 'xlsx'
@@ -143,6 +144,7 @@ export default function ManageProducts() {
 
   // ── Price history modal state ─────────────────────────────────────────────
   const [isHistoryOpen, setIsHistoryOpen]     = useState(false)
+  const [isGlobalMarkupModalOpen, setIsGlobalMarkupModalOpen] = useState(false)
   const [historyData, setHistoryData]          = useState<{
     product: { id: string; name: string; active: boolean; archived: boolean };
     history: ProductPriceHistory[];
@@ -162,6 +164,96 @@ export default function ManageProducts() {
     if (isDropdownOpen) document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [isDropdownOpen])
+
+  // ── Markup state & handlers ──────────────────────────────────────────────
+  const [globalMarkup, setGlobalMarkup] = useState<number | null>(null)
+  const [globalMarkupInput, setGlobalMarkupInput] = useState<string>('')
+  const [isApplyingGlobalMarkup, setIsApplyingGlobalMarkup] = useState(false)
+  const [editingMarkupId, setEditingMarkupId] = useState<string | null>(null)
+  const [tempMarkupValue, setTempMarkupValue] = useState<string>('')
+
+  const loadGlobalMarkup = useCallback(async () => {
+    try {
+      const val = await siteSettingsService.getSetting('global_markup')
+      if (val !== null && val !== undefined) {
+        setGlobalMarkup(Number(val))
+        setGlobalMarkupInput(String(val))
+      }
+    } catch (e) {
+      console.error('Erro ao carregar markup global:', e)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadGlobalMarkup()
+  }, [loadGlobalMarkup])
+
+  const startEditingMarkup = (p: Product) => {
+    if (p.purchase_price == null || Number(p.purchase_price) <= 0) {
+      toast.warning('Defina um preço de custo (compra) para este produto antes de ajustar o markup.')
+      return
+    }
+    setEditingMarkupId(p.id)
+    setTempMarkupValue(p.markup != null ? String(p.markup) : '')
+  }
+
+  const saveMarkup = async (productId: string) => {
+    const markupVal = tempMarkupValue === '' ? null : Number(tempMarkupValue)
+    if (markupVal !== null && (isNaN(markupVal) || markupVal < 0)) {
+      toast.error('O markup deve ser um número positivo ou zero.')
+      return
+    }
+
+    try {
+      // Optimistic update
+      setProducts(prev => prev.map(p => p.id === productId ? { ...p, markup: markupVal } : p))
+      await productsService.update(productId, { markup: markupVal })
+      toast.success('Markup do produto atualizado com sucesso!')
+      setEditingMarkupId(null)
+      await loadProducts() // Reload to get newly calculated selling price
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao atualizar markup.')
+      await loadProducts()
+    }
+  }
+
+  const handleKeyPressMarkup = (e: React.KeyboardEvent, productId: string) => {
+    if (e.key === 'Enter') {
+      saveMarkup(productId)
+    } else if (e.key === 'Escape') {
+      setEditingMarkupId(null)
+    }
+  }
+
+  const handleApplyGlobalMarkup = () => {
+    const value = globalMarkupInput.trim()
+    if (value === '' || isNaN(Number(value)) || Number(value) < 0) {
+      toast.error('Insira um markup válido (número positivo ou zero).')
+      return
+    }
+
+    const targetMarkup = Number(value)
+
+    confirm.show(
+      `Deseja aplicar o markup de ${targetMarkup}% globalmente?\nIsso recalculará o preço de venda de todos os produtos ativos e inativos que possuem preço de custo cadastrado.`,
+      async () => {
+        try {
+          setIsApplyingGlobalMarkup(true)
+          const result = await productsService.applyGlobalMarkup(targetMarkup)
+          setGlobalMarkup(targetMarkup)
+          toast.success(result.message || 'Markup global aplicado com sucesso!')
+          await loadProducts() // Reload products with updated prices
+        } catch (e: any) {
+          toast.error(e.message || 'Erro ao aplicar markup global.')
+        } finally {
+          setIsApplyingGlobalMarkup(false)
+        }
+      },
+      undefined,
+      'Aplicar',
+      'Cancelar'
+    )
+  }
 
   // ── Load ──────────────────────────────────────────────────────────────────
   const loadProducts = useCallback(async () => {
@@ -573,9 +665,12 @@ export default function ManageProducts() {
           </button>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             {/* History button */}
-            <button onClick={openHistory} className="flex items-center gap-2 px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
-              <BarChart2 size={16}/>
-              <span className="hidden sm:inline">Histórico de Preços</span>
+            <button onClick={openHistory} className="flex items-center justify-center p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm" title="Histórico de Preços">
+              <BarChart2 size={18}/>
+            </button>
+            {/* Global Markup button */}
+            <button onClick={() => setIsGlobalMarkupModalOpen(true)} className="flex items-center justify-center p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm" title="Ajuste de Markup Global">
+              <TrendingUp size={18} className="text-green-600 dark:text-green-400" />
             </button>
             {/* Add dropdown */}
             <div ref={dropdownRef} className="relative flex-1 sm:flex-none">
@@ -602,6 +697,8 @@ export default function ManageProducts() {
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-1">Gerenciar Produtos</h1>
           <p className="text-sm text-gray-600 dark:text-gray-300">Gerencie os produtos da loja</p>
         </div>
+
+
 
         {/* Tabs */}
         <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
@@ -660,23 +757,24 @@ export default function ManageProducts() {
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-800/80">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">
                         <input type="checkbox" checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0} onChange={e => setSelectedIds(e.target.checked ? filteredProducts.map(p => p.id) : [])} className="h-4 w-4 text-primary-600 border-gray-300 rounded"/>
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Produto</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Categoria</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Compra</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Venda</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Status</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Ações</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Produto</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Categoria</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Compra</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Markup / Margem</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Venda</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Status</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {filteredProducts.length === 0 ? (
-                      <tr><td colSpan={7} className="px-6 py-10 text-center text-gray-500 dark:text-gray-400 text-sm">Nenhum produto encontrado.</td></tr>
+                      <tr><td colSpan={8} className="px-6 py-10 text-center text-gray-500 dark:text-gray-400 text-sm">Nenhum produto encontrado.</td></tr>
                     ) : filteredProducts.map(p => (
-                      <tr key={p.id} className={`hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors ${p.archived ? 'opacity-70' : ''}`}>
-                        <td className="px-4 py-3">
+                      <tr key={p.id} className={`hover:bg-gray-50 dark:hover:bg-[#065084]/40 transition-colors ${p.archived ? 'opacity-70' : ''}`}>
+                        <td className="px-4 py-3 whitespace-nowrap">
                           <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={e => setSelectedIds(e.target.checked ? [...selectedIds, p.id] : selectedIds.filter(x => x !== p.id))} className="h-4 w-4 text-primary-600 border-gray-300 rounded"/>
                         </td>
                         <td className="px-4 py-3">
@@ -702,12 +800,66 @@ export default function ManageProducts() {
                             })}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                          {p.purchase_price != null ? <span className="text-purple-700 dark:text-purple-400 font-medium">{fmt(p.purchase_price)}</span> : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                          {p.purchase_price != null ? <span className="text-purple-705 dark:text-purple-400 font-medium">{fmt(p.purchase_price)}</span> : <span className="text-gray-300 dark:text-gray-600">—</span>}
                         </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">{fmt(p.price)}</td>
-                        <td className="px-4 py-3">{renderStatusBadge(p)}</td>
-                        <td className="px-4 py-3 text-right">{renderActions(p)}</td>
+                        <td className="px-4 py-3 text-sm whitespace-nowrap">
+                          {p.purchase_price != null && Number(p.purchase_price) > 0 ? (
+                            editingMarkupId === p.id ? (
+                              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="number"
+                                  value={tempMarkupValue}
+                                  onChange={(e) => setTempMarkupValue(e.target.value)}
+                                  onKeyDown={(e) => handleKeyPressMarkup(e, p.id)}
+                                  className="w-16 px-1.5 py-1 text-xs border border-green-500 rounded focus:outline-none dark:bg-gray-900 dark:text-white"
+                                  autoFocus
+                                />
+                                <button onClick={() => saveMarkup(p.id)} className="p-1 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/30 rounded" title="Salvar">
+                                  <Check size={14} />
+                                </button>
+                                <button onClick={() => setEditingMarkupId(null)} className="p-1 text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded" title="Cancelar">
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ) : (
+                              <div 
+                                className="group flex flex-col justify-start items-start cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 p-1 rounded-lg transition-colors min-w-[90px]" 
+                                onClick={() => startEditingMarkup(p)} 
+                                title="Clique para editar o markup"
+                              >
+                                <div className="flex items-center gap-1">
+                                  <span className="font-semibold text-green-600 dark:text-green-400 text-sm">
+                                    {p.markup != null ? `${Number(p.markup).toFixed(1).replace('.', ',')}%` : (() => {
+                                      const cost = Number(p.purchase_price);
+                                      const sale = Number(p.price);
+                                      return `${((sale - cost) / cost * 100).toFixed(1).replace('.', ',')}%`;
+                                    })()}
+                                  </span>
+                                  <Edit size={11} className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                                {(() => {
+                                  const cost = Number(p.purchase_price);
+                                  const sale = Number(p.price);
+                                  if (cost > 0 && sale > 0) {
+                                    const margin = ((sale - cost) / sale) * 100;
+                                    return (
+                                      <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                                        Margem: {margin.toFixed(1).replace('.', ',')}%
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            )
+                          ) : (
+                            <span className="text-xs text-gray-400 dark:text-gray-500 italic" title="Defina o preço de custo para usar markup">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{fmt(p.price)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">{renderStatusBadge(p)}</td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">{renderActions(p)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -744,8 +896,36 @@ export default function ManageProducts() {
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex flex-col">
-                          {p.purchase_price != null && <span className="text-[10px] text-purple-600 dark:text-purple-400 font-medium">Compra: {fmt(p.purchase_price)}</span>}
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">Venda: {fmt(p.price)}</span>
+                          {p.purchase_price != null && (
+                            <div className="flex flex-wrap items-center gap-x-2 text-[10px] text-purple-600 dark:text-purple-400 font-medium">
+                              <span>Compra: {fmt(p.purchase_price)}</span>
+                              {Number(p.purchase_price) > 0 && (
+                                <span className="text-green-600 dark:text-green-400 font-semibold">
+                                  Mkp: {p.markup != null ? `${Number(p.markup).toFixed(0)}%` : (() => {
+                                    const cost = Number(p.purchase_price);
+                                    const sale = Number(p.price);
+                                    return `${((sale - cost) / cost * 100).toFixed(0)}%`;
+                                  })()}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-semibold text-gray-900 dark:text-white">Venda: {fmt(p.price)}</span>
+                            {p.purchase_price != null && Number(p.purchase_price) > 0 && (() => {
+                              const cost = Number(p.purchase_price);
+                              const sale = Number(p.price);
+                              if (cost > 0 && sale > 0) {
+                                const margin = ((sale - cost) / sale) * 100;
+                                return (
+                                  <span className="text-[10px] font-medium px-1.5 py-0.2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
+                                    Margem: {margin.toFixed(0)}%
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
                         </div>
                         <div className="flex items-center gap-1.5">
                           {p.archived
@@ -1117,6 +1297,88 @@ export default function ManageProducts() {
                 className="flex-1 py-2.5 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
               >
                 Confirmar e Importar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════ GLOBAL MARKUP MODAL ═══════════════════════════════ */}
+      {isGlobalMarkupModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-200 dark:border-gray-700">
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-green-50 dark:bg-green-900/30">
+                  <TrendingUp size={20} className="text-green-600 dark:text-green-400"/>
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white">Ajuste de Markup Global</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Recalcular margens de todos os produtos</p>
+                </div>
+              </div>
+              <button onClick={() => setIsGlobalMarkupModalOpen(false)} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <X size={18}/>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-gray-650 dark:text-gray-400">
+                Defina um markup percentual para aplicar a todos os produtos de uma só vez. O preço de venda de cada produto será recalculado como <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[10px] font-mono text-green-700 dark:text-green-400">Custo + Markup %</code>. Produtos sem preço de custo cadastrado não sofrerão alterações.
+              </p>
+              
+              {globalMarkup !== null && (
+                <div className="p-3 bg-green-50/50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 rounded-xl text-xs text-green-700 dark:text-green-400 flex items-center gap-2">
+                  <Check size={14} />
+                  <span>Markup global ativo atualmente: <strong>{globalMarkup}%</strong></span>
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">Novo Markup (%)</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={globalMarkupInput}
+                    onChange={(e) => setGlobalMarkupInput(e.target.value)}
+                    placeholder="Ex: 50"
+                    min="0"
+                    step="0.1"
+                    disabled={isApplyingGlobalMarkup}
+                    className="w-full pl-3 pr-8 py-2.5 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="p-5 border-t border-gray-100 dark:border-gray-800 flex gap-3 bg-gray-50/50 dark:bg-gray-850">
+              <button
+                onClick={() => setIsGlobalMarkupModalOpen(false)}
+                disabled={isApplyingGlobalMarkup}
+                className="flex-1 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  handleApplyGlobalMarkup();
+                  setIsGlobalMarkupModalOpen(false);
+                }}
+                disabled={isApplyingGlobalMarkup || globalMarkupInput.trim() === ''}
+                className="flex-1 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
+              >
+                {isApplyingGlobalMarkup ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    Aplicando...
+                  </>
+                ) : (
+                  <>Aplicar Global</>
+                )}
               </button>
             </div>
           </div>

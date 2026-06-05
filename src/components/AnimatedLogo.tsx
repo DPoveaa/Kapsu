@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import orelhaEsquerda from '../images/orelha_esquerda.png'
-import orelhaDireita from '../images/orelha_direita.png'
-import olhoEsquerdo from '../images/olho_esquerdo.png'
-import olhoDireito from '../images/olho_direito.png'
+import orelhaLogo from '../images/orelha_logo.png'
+import olhoLogo from '../images/olho_logo.png'
 import pupilaNormalEsquerdo from '../images/pupila_esquerda_base.png'
 import pupilaNormalDireito from '../images/pupila_direita_base.png'
 import pupilaDormindoEsquerdo from '../images/pupila_dormindo_esquerda.png'
@@ -172,48 +170,54 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
     >
       {/* Container principal com proporção mantida */}
       <div className="relative w-full h-full" style={{ aspectRatio: '1 / 1' }}>
-        {/* Orelha Esquerda - Topo esquerdo */}
+        {/* Orelha Esquerda - Topo esquerdo (espelho da direita) */}
         <img
-          src={orelhaEsquerda}
+          src={orelhaLogo}
           alt=""
           className="absolute"
           style={{
-            top: '0%',
-            left: '0%',
-            width: '38%',
+            top: '-3%',
+            left: '-5%',
+            width: '48%',
             height: 'auto',
             zIndex: 1,
-            objectFit: 'contain'
+            objectFit: 'contain',
+            transform: 'scaleX(-1)',
+            transformOrigin: 'center center'
           }}
         />
 
         {/* Orelha Direita - Topo direito */}
         <img
-          src={orelhaDireita}
+          src={orelhaLogo}
           alt=""
           className="absolute"
           style={{
-            top: '0%',
-            right: '0%',
-            width: '38%',
+            top: '-3%',
+            right: '-5%',
+            width: '48%',
             height: 'auto',
             zIndex: 1,
-            objectFit: 'contain'
+            objectFit: 'contain',
+            transform: 'none',
+            transformOrigin: 'center center'
           }}
         />
 
         {/* olho esquerdo */}
         <img
-          src={olhoEsquerdo}
+          src={olhoLogo}
           alt=""
           className="absolute panda-eye-left"
           style={{
-            top: '25%',
-            left: '25%',
-            width: '18%',
+            top: '22%',
+            left: '22%',
+            width: '25%',
             height: 'auto',
             zIndex: 2,
-            objectFit: 'contain'
+            objectFit: 'contain',
+            transform: 'scaleX(-1)',
+            transformOrigin: 'center center'
           }}
         />
 
@@ -235,16 +239,18 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
 
         {/* olho direito */}
         <img
-          src={olhoDireito}
+          src={olhoLogo}
           alt=""
           className="absolute panda-eye-right"
           style={{
-            top: '25%',
-            right: '25%',
-            width: '18%',
+            top: '22%',
+            right: '22%',
+            width: '25%',
             height: 'auto',
             zIndex: 2,
-            objectFit: 'contain'
+            objectFit: 'contain',
+            transform: 'none',
+            transformOrigin: 'center center'
           }}
         />
 
@@ -270,10 +276,10 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
           alt=""
           className="absolute"
           style={{
-            top: '40%',
+            top: '29%',
             left: '50%',
             transform: 'translateX(-50%)',
-            width: '10%',
+            width: '25%',
             height: 'auto',
             zIndex: 2,
             objectFit: 'contain'

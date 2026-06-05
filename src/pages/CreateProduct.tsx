@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
 import { productsService } from '../services/products.service'
@@ -15,6 +15,7 @@ export default function CreateProduct() {
     price: '',
     promo_price: '',
     purchase_price: '',
+    markup: '',
     image: '',
     category: 'Outros',
     active: true,
@@ -80,6 +81,58 @@ export default function CreateProduct() {
     }))
   }
 
+  const handlePriceFieldChange = (name: string, value: string) => {
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value }
+
+      const cost = name === 'purchase_price' ? Number(value) : Number(prev.purchase_price)
+
+      if (name === 'purchase_price') {
+        const costNum = Number(value)
+        if (costNum > 0) {
+          if (prev.markup && !isNaN(Number(prev.markup))) {
+            const calculatedPrice = costNum * (1 + Number(prev.markup) / 100)
+            updated.price = isNaN(calculatedPrice) ? prev.price : calculatedPrice.toFixed(2)
+          } else if (prev.price && !isNaN(Number(prev.price))) {
+            const calculatedMarkup = ((Number(prev.price) - costNum) / costNum) * 100
+            updated.markup = isNaN(calculatedMarkup) ? prev.markup : calculatedMarkup.toFixed(1)
+          }
+        } else {
+          updated.markup = ''
+        }
+      } else if (name === 'markup') {
+        const markupNum = Number(value)
+        if (cost > 0 && value !== '') {
+          const calculatedPrice = cost * (1 + markupNum / 100)
+          updated.price = isNaN(calculatedPrice) ? prev.price : calculatedPrice.toFixed(2)
+        }
+      } else if (name === 'price') {
+        const priceNum = Number(value)
+        if (cost > 0 && priceNum > 0) {
+          const calculatedMarkup = ((priceNum - cost) / cost) * 100
+          updated.markup = isNaN(calculatedMarkup) ? prev.markup : calculatedMarkup.toFixed(1)
+        }
+      }
+
+      return updated
+    })
+  }
+
+  const marginInfo = useMemo(() => {
+    const cost = Number(formData.purchase_price)
+    const sale = Number(formData.price)
+    if (!isNaN(cost) && !isNaN(sale) && cost > 0 && sale > 0) {
+      const profit = sale - cost
+      const margin = (profit / sale) * 100
+      return {
+        margin: margin.toFixed(1).replace('.', ','),
+        profit: profit.toFixed(2).replace('.', ','),
+        isPositive: profit >= 0
+      }
+    }
+    return null
+  }, [formData.purchase_price, formData.price])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -120,6 +173,7 @@ export default function CreateProduct() {
         price: Number(formData.price),
         promo_price: formData.promo_price ? Number(formData.promo_price) : null,
         purchase_price: formData.purchase_price ? Number(formData.purchase_price) : null,
+        markup: formData.markup ? Number(formData.markup) : null,
         active: formData.active,
         image: formData.image.trim() || undefined,
         category: formData.category || undefined,
@@ -199,7 +253,7 @@ export default function CreateProduct() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
               {/* Preço de Compra */}
               <div>
                 <label htmlFor="purchase_price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -210,13 +264,34 @@ export default function CreateProduct() {
                   id="purchase_price"
                   name="purchase_price"
                   value={formData.purchase_price}
-                  onChange={handleChange}
+                  onChange={(e) => handlePriceFieldChange('purchase_price', e.target.value)}
                   min="0"
                   step="0.01"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="0.00 (opcional)"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Custo pago pelo produto.</p>
+              </div>
+
+              {/* Markup (%) */}
+              <div>
+                <label htmlFor="markup" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Markup (%)
+                </label>
+                <input
+                  type="number"
+                  id="markup"
+                  name="markup"
+                  value={formData.markup}
+                  onChange={(e) => handlePriceFieldChange('markup', e.target.value)}
+                  min="0"
+                  step="0.1"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="Ex: 50"
+                  disabled={!formData.purchase_price || Number(formData.purchase_price) <= 0}
+                  title={(!formData.purchase_price || Number(formData.purchase_price) <= 0) ? "Preencha o Preço de Compra para utilizar o markup" : ""}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Margem sobre o custo.</p>
               </div>
 
               {/* Preço de Venda */}
@@ -229,13 +304,18 @@ export default function CreateProduct() {
                   id="price"
                   name="price"
                   value={formData.price}
-                  onChange={handleChange}
+                  onChange={(e) => handlePriceFieldChange('price', e.target.value)}
                   required
                   min="0"
                   step="0.01"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
                   placeholder="0.00"
                 />
+                {marginInfo && (
+                  <p className={`text-[11px] font-semibold mt-1 ${marginInfo.isPositive ? 'text-green-600' : 'text-red-500'}`}>
+                    Margem: {marginInfo.margin}% (R$ {marginInfo.profit})
+                  </p>
+                )}
               </div>
 
               {/* Preço Promocional */}

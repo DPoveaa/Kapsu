@@ -13,6 +13,7 @@ export interface Product {
   indication?: string | null;
   contraindication?: string | null;
   compositions?: string | null;
+  markup?: number | null;
 }
 
 export type PriceHistoryType = 'purchase' | 'sale' | 'promo';
