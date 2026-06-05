@@ -9,7 +9,6 @@ interface CartContextType {
   addProduct: (product: Product, quantity: number) => Promise<void>
   removeItem: (id: string) => Promise<void>
   updateQuantity: (id: string, quantity: number) => Promise<void>
-  updateAllPurchaseType: (purchaseType: 'one-time' | 'subscription') => Promise<void>
   clearCart: () => Promise<void>
   getTotal: () => number
   getItemCount: () => number
@@ -50,7 +49,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           active: ((item.product as any).active ?? true),
         } : undefined,
         quantity: item.quantity,
-        purchaseType: (item.purchase_type as 'one-time' | 'subscription' | undefined) || 'one-time',
+        purchaseType: 'one-time',
       }))
 
       setItems(cartItems)
@@ -129,32 +128,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }
 
   // REMOVIDO: updatePurchaseType - não é mais possível alterar purchaseType de produtos individuais
-  // A assinatura só pode ser definida globalmente para todo o carrinho através de updateAllPurchaseType
-
-  const updateAllPurchaseType = async (purchaseType: 'one-time' | 'subscription') => {
-    // Atualiza todos os itens localmente primeiro
-    setItems(prev => prev.map(item => ({ ...item, purchaseType })))
-
-    if (!isAuthenticated) {
-      return
-    }
-
-    // Atualiza todos os itens no backend
-    try {
-      const currentItems = items // Captura os itens atuais antes de atualizar
-      const updatePromises = currentItems
-        .map(item => cartService.updateItem(item.id, undefined, purchaseType))
-      
-      await Promise.all(updatePromises)
-      // Não recarrega o carrinho para evitar o "piscar" - mantém o estado local atualizado
-      // O carrinho será recarregado naturalmente na próxima vez que for necessário
-    } catch (error) {
-      console.error('Erro ao atualizar tipo de compra de todos os itens:', error)
-      // Em caso de erro, recarrega o carrinho para reverter
-      await loadCart()
-      throw error
-    }
-  }
+  // A assinatura foi removida completamente.
 
   const clearCart = async () => {
     if (!isAuthenticated) {
@@ -189,7 +163,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
       addProduct,
       removeItem,
       updateQuantity,
-      updateAllPurchaseType,
       clearCart,
       getTotal,
       getItemCount,

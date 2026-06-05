@@ -18,7 +18,7 @@ export default function Checkout() {
   const [creatingOrderWithoutPayment, setCreatingOrderWithoutPayment] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'pix' | 'boleto'>('pix')
-  const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'quarterly'>('monthly')
+  const [subscriptionPlan] = useState<'monthly' | 'quarterly'>('monthly')
 
   // Estados para endereços salvos
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([])
@@ -74,18 +74,8 @@ export default function Checkout() {
     }
   }, [])
 
-  // Verifica se o carrinho tem assinatura e obtém o plano
-  const isSubscription = items.length > 0 && items.some(item => item.purchaseType === 'subscription')
-
-  // Obtém o plano de assinatura do localStorage (salvo no carrinho)
-  useEffect(() => {
-    if (isSubscription) {
-      const savedPlan = localStorage.getItem('subscription_plan') as 'monthly' | 'quarterly' | null
-      if (savedPlan) {
-        setSubscriptionPlan(savedPlan)
-      }
-    }
-  }, [isSubscription])
+  // Verifica se o carrinho tem assinatura (REMOVIDO: recurso desativado)
+  const isSubscription = false
 
   // Calcula totais com desconto de assinatura
   const baseTotal = getTotal()

@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, Loader2, CheckCircle, Repeat, Check, Sparkles, Truck, Gift, Tag, X, ChevronLeft, ChevronRight, ShoppingBag, ArrowLeft } from 'lucide-react'
+import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, Loader2, CheckCircle, Check, Sparkles, Truck, Gift, Tag, X, ChevronLeft, ChevronRight, ShoppingBag, ArrowLeft } from 'lucide-react'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
@@ -27,13 +27,11 @@ export default function Cart() {
   }
   const [searchParams, setSearchParams] = useSearchParams()
   const { isAuthenticated, loading: authLoading, user } = useAuth()
-  const { items, updateQuantity, removeItem, getTotal, addProduct, refreshCart, updateAllPurchaseType } = useCart()
+  const { items, updateQuantity, removeItem, getTotal, addProduct, refreshCart } = useCart()
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([])
   const [loadingRecommendations, setLoadingRecommendations] = useState(false)
   const [linkingCart, setLinkingCart] = useState(false)
   const [linkMessage, setLinkMessage] = useState<{ type: 'success' | 'error' | 'info', text: string } | null>(null)
-  const [subscriptionPlan, setSubscriptionPlan] = useState<'monthly' | 'quarterly'>('monthly')
-  const [localPurchaseType, setLocalPurchaseType] = useState<'one-time' | 'subscription' | null>(null)
   const [applicablePromotions, setApplicablePromotions] = useState<Promotion[]>([])
   const [loadingPromotions, setLoadingPromotions] = useState(false)
 
@@ -57,18 +55,11 @@ export default function Cart() {
     handleImageError(e, PRODUCT_IMAGE_FALLBACK)
   }
 
-  // Tipo de compra global do carrinho (usa estado local se disponível, senão usa o primeiro item)
-  const globalPurchaseType = localPurchaseType || (items.length > 0
-    ? (items[0].purchaseType || 'one-time')
-    : 'one-time')
-  const isSubscription = globalPurchaseType === 'subscription'
+  // Tipo de compra global do carrinho (assinaturas desativadas)
+  const isSubscription = false
 
-  // Calcula totais com desconto
+  // Calcula totais
   const baseTotal = getTotal()
-  const subscriptionDiscount = isSubscription ? (subscriptionPlan === 'quarterly' ? 0.15 : 0.10) : 0
-  const discountedTotal = baseTotal * (1 - subscriptionDiscount)
-  const monthlySubscriptionPrice = baseTotal * 0.9
-  const quarterlySubscriptionPrice = baseTotal * 0.85
 
   // Calcula descontos de promoções
   const calculatePromotionDiscount = (total: number): number => {
@@ -104,17 +95,17 @@ export default function Cart() {
     return discount
   }
 
-  const promotionDiscount = calculatePromotionDiscount(isSubscription ? discountedTotal : baseTotal)
-  const subtotalAfterPromotions = (isSubscription ? discountedTotal : baseTotal) - promotionDiscount
+  const promotionDiscount = calculatePromotionDiscount(baseTotal)
+  const subtotalAfterPromotions = baseTotal - promotionDiscount
 
   // Desconto de cupons promocionais
   const promoCodeDiscount = promoCodesValidation?.totalDiscount || 0
   const totalAfterPromotions = subtotalAfterPromotions - promoCodeDiscount
 
-  // Verifica se há frete grátis (por cupom, valor mínimo ou por ser assinatura)
+  // Verifica se há frete grátis (por cupom ou valor mínimo)
   const hasFreeShippingByCoupon = promoCodesValidation?.freeShipping || false
   const hasFreeShippingByThreshold = freeShippingThreshold > 0 && totalAfterPromotions >= freeShippingThreshold
-  const hasFreeShipping = hasFreeShippingByCoupon || hasFreeShippingByThreshold || isSubscription
+  const hasFreeShipping = hasFreeShippingByCoupon || hasFreeShippingByThreshold
 
   const shippingCost = hasFreeShipping ? 0 : (shippingFee || 0)
   const currentTotal = totalAfterPromotions + shippingCost
@@ -363,7 +354,7 @@ export default function Cart() {
         }))
 
       const codesToValidate = [...appliedPromoCodes, codeToAdd]
-      const subtotal = isSubscription ? discountedTotal : baseTotal
+      const subtotal = baseTotal
 
       const validation = await promoCodesService.validateMultiplePromoCodes(
         codesToValidate,
@@ -421,7 +412,7 @@ export default function Cart() {
           price: item.product!.price,
         }))
 
-      const subtotal = isSubscription ? discountedTotal : baseTotal
+      const subtotal = baseTotal
       const validation = await promoCodesService.validateMultiplePromoCodes(
         newCodes,
         subtotal,
@@ -500,24 +491,7 @@ export default function Cart() {
     }
   }
 
-  const handlePurchaseTypeChange = async (type: 'one-time' | 'subscription') => {
-    setLocalPurchaseType(type)
-
-    try {
-      await updateAllPurchaseType(type)
-    } catch (error) {
-      console.error('Erro ao atualizar tipo de compra:', error)
-      setLocalPurchaseType(null)
-    }
-  }
-
-  // Sincroniza estado local com items quando items mudam
-  useEffect(() => {
-    if (items.length > 0 && !localPurchaseType) {
-      const firstItemType = items[0].purchaseType || 'one-time'
-      setLocalPurchaseType(firstItemType)
-    }
-  }, [items, localPurchaseType])
+  // Tipo de compra recorrente removido.
 
   // Agrupa as recomendações por categoria para navegação por abas (suporta tags compostas separadas por vírgula)
   const recommendationsByCategory = useMemo(() => {
@@ -662,151 +636,12 @@ export default function Cart() {
           {/* Left Column: Cart items and global settings */}
           <div className="lg:col-span-2 space-y-6">
 
-            {/* Global Recurrence Config Card */}
-            {items.length > 0 && (
-              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 p-5 sm:p-6 overflow-hidden relative">
-
-                {/* Decorative glow */}
-                <div className="absolute -top-10 -right-10 w-24 h-24 bg-primary-400/10 dark:bg-primary-400/5 rounded-full blur-2xl pointer-events-none"></div>
-
-                <div className="flex items-start justify-between gap-4 mb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-primary-50 dark:bg-primary-950/30 text-primary-600 dark:text-primary-400 rounded-2xl shadow-inner">
-                      <Sparkles size={20} className="animate-pulse" />
-                    </div>
-                    <div>
-                      <h4 className="text-base sm:text-lg font-black text-gray-900 dark:text-white">
-                        Forma de Compra do Carrinho
-                      </h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        O tipo escolhido se aplicará a todos os produtos de sua cesta.
-                      </p>
-                    </div>
-                  </div>
-
-                  {isSubscription && (
-                    <span className="bg-gradient-to-r from-accent-400 to-accent-500 text-white text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm animate-pulse-subtle">
-                      Sanare Prime
-                    </span>
-                  )}
-                </div>
-
-                {/* Styled selector toggle grid */}
-                <div className="grid grid-cols-2 gap-2 p-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl mb-5">
-                  <button
-                    onClick={() => handlePurchaseTypeChange('one-time')}
-                    className={`py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 ${!isSubscription
-                      ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm border border-gray-200 dark:border-gray-600'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-                      }`}
-                  >
-                    Compra Única
-                  </button>
-                  <button
-                    onClick={() => handlePurchaseTypeChange('subscription')}
-                    className={`py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm transition-all duration-300 flex items-center justify-center gap-2 ${isSubscription
-                      ? 'bg-gradient-to-r from-primary-600 to-primary-700 dark:from-primary-500 dark:to-primary-600 text-white shadow-md'
-                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300'
-                      }`}
-                  >
-                    <Repeat size={14} className={isSubscription ? 'animate-spin-slow' : ''} />
-                    <span>Compra Recorrente</span>
-                  </button>
-                </div>
-
-                {/* Subscriptions Options detail with slide animation */}
-                {isSubscription && (
-                  <div className="space-y-4 animate-fade-in">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-
-                      {/* Plan: Monthly */}
-                      <button
-                        onClick={() => setSubscriptionPlan('monthly')}
-                        className={`p-4 rounded-2xl border text-left transition-all ${subscriptionPlan === 'monthly'
-                          ? 'bg-primary-50/20 dark:bg-primary-950/10 border-2 border-primary-500 dark:border-primary-400 shadow-sm'
-                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                          }`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-extrabold text-gray-900 dark:text-white uppercase tracking-wider">Assinatura Mensal</span>
-                          {subscriptionPlan === 'monthly' && <Check size={16} className="text-primary-600 dark:text-primary-400" />}
-                        </div>
-                        <p className="text-xl font-black text-primary-600 dark:text-primary-400">
-                          R$ {monthlySubscriptionPrice.toFixed(2).replace('.', ',')}
-                          <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">/mês</span>
-                        </p>
-                        <span className="text-[10px] text-gray-500 dark:text-gray-400 block mt-1.5 font-semibold">10% de desconto recorrente</span>
-                      </button>
-
-                      {/* Plan: Quarterly */}
-                      <button
-                        onClick={() => setSubscriptionPlan('quarterly')}
-                        className={`p-4 rounded-2xl border text-left transition-all relative ${subscriptionPlan === 'quarterly'
-                          ? 'bg-primary-50/20 dark:bg-primary-950/10 border-2 border-primary-500 dark:border-primary-400 shadow-sm'
-                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                          }`}
-                      >
-                        <span className="absolute -top-2.5 right-4 bg-accent-400 dark:bg-accent-500 text-white text-[9px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-widest shadow-sm">
-                          Melhor Valor
-                        </span>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-extrabold text-gray-900 dark:text-white uppercase tracking-wider">Assinatura Trimestral</span>
-                          {subscriptionPlan === 'quarterly' && <Check size={16} className="text-primary-600 dark:text-primary-400" />}
-                        </div>
-                        <p className="text-xl font-black text-primary-600 dark:text-primary-400">
-                          R$ {quarterlySubscriptionPrice.toFixed(2).replace('.', ',')}
-                          <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">/mês</span>
-                        </p>
-                        <span className="text-[10px] text-gray-500 dark:text-gray-400 block mt-1.5 font-semibold">15% de desconto recorrente</span>
-                      </button>
-                    </div>
-
-                    {/* Subscription Perks list */}
-                    <div className="bg-gray-55 dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
-                      <p className="text-xs font-extrabold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-1.5">
-                        <Gift className="w-3.5 h-3.5 text-primary-600 dark:text-primary-400" />
-                        Seus Benefícios Sanare Prime:
-                      </p>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="flex items-start gap-2.5">
-                          <span className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-950 text-primary-600 dark:text-primary-400 flex items-center justify-center flex-shrink-0 text-xs font-bold">✓</span>
-                          <div>
-                            <h5 className="text-[11px] font-black text-gray-900 dark:text-white">Simplicidade</h5>
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-normal">Receba na sua casa a cada 30 dias</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-2.5">
-                          <span className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-950 text-primary-600 dark:text-primary-400 flex items-center justify-center flex-shrink-0 text-xs font-bold">✓</span>
-                          <div>
-                            <h5 className="text-[11px] font-black text-gray-900 dark:text-white">Mais Desconto</h5>
-                            <p className="text-[10px] text-gray-505 dark:text-gray-400 leading-normal">{subscriptionPlan === 'quarterly' ? '15% de desconto' : '10% de desconto'} fixo</p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-start gap-2.5">
-                          <span className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-950 text-primary-600 dark:text-primary-400 flex items-center justify-center flex-shrink-0 text-xs font-bold">✓</span>
-                          <div>
-                            <h5 className="text-[11px] font-black text-gray-900 dark:text-white">Frete Grátis Fixo</h5>
-                            <p className="text-[10px] text-gray-505 dark:text-gray-400 leading-normal">Entrega grátis garantida em todas as recorrências</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* List of Cart Products */}
             <div className="space-y-4">
               {items.map(item => {
                 const price = item.product?.price || 0
                 const itemTotal = price * item.quantity
-                const itemDiscountedPrice = isSubscription
-                  ? itemTotal * (1 - subscriptionDiscount)
-                  : itemTotal
+                const itemDiscountedPrice = itemTotal
 
                 return (
                   <div key={item.id} className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 overflow-hidden group">
@@ -1177,20 +1012,7 @@ export default function Cart() {
                   <span className="font-extrabold text-gray-900 dark:text-white">R$ {baseTotal.toFixed(2).replace('.', ',')}</span>
                 </div>
 
-                {/* Recurrence Discount */}
-                {isSubscription && (
-                  <div className="bg-primary-50/30 dark:bg-primary-950/15 rounded-xl p-3 border border-primary-100/50 dark:border-primary-900/30">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs font-extrabold text-primary-700 dark:text-primary-400">Desconto Recorrência</span>
-                      <span className="text-xs font-black text-primary-600 dark:text-primary-400">
-                        -{subscriptionDiscount * 100}%
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-normal">
-                      {subscriptionPlan === 'quarterly' ? 'Plano Trimestral ativo' : 'Plano Mensal ativo'}
-                    </p>
-                  </div>
-                )}
+
 
                 {/* Coupons Discount */}
                 {promoCodesValidation && promoCodesValidation.totalDiscount > 0 && (
@@ -1293,22 +1115,13 @@ export default function Cart() {
                       R$ {currentTotal.toFixed(2).replace('.', ',')}
                     </span>
                   </div>
-                  {isSubscription && (
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-right font-semibold">
-                      Cobrado {subscriptionPlan === 'quarterly' ? 'a cada 3 meses' : 'mensalmente'}
-                    </p>
-                  )}
                 </div>
               </div>
 
               {/* Action checkout buttons */}
               <button
                 onClick={() => {
-                  if (isSubscription) {
-                    localStorage.setItem('subscription_plan', subscriptionPlan)
-                  } else {
-                    localStorage.removeItem('subscription_plan')
-                  }
+                  localStorage.removeItem('subscription_plan')
                   navigate('/checkout')
                 }}
                 className="w-full bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-black py-4 px-6 rounded-2xl transition-all duration-200 mb-4 flex items-center justify-center gap-2 text-sm shadow-md hover:shadow-lg active:scale-98 group"
