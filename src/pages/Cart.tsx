@@ -1166,7 +1166,7 @@ export default function Cart() {
           </div>
         )}
 
-        {loadingRecommendations && (
+        {loadingRecommendations && recommendedProducts.length === 0 && (
           <div className="mt-16 pt-8">
             <div className="flex justify-center py-10">
               <Loader2 className="animate-spin text-primary-600 dark:text-primary-400" size={28} />
