@@ -29,7 +29,7 @@ export default function Cart() {
   }
   const [searchParams, setSearchParams] = useSearchParams()
   const { isAuthenticated, loading: authLoading, user } = useAuth()
-  const { items, updateQuantity, removeItem, getTotal, addProduct, refreshCart } = useCart()
+  const { items, updateQuantity, removeItem, getTotal, refreshCart } = useCart()
   const [recommendedProducts, setRecommendedProducts] = useState<Product[]>([])
   const [loadingRecommendations, setLoadingRecommendations] = useState(false)
   const [linkingCart, setLinkingCart] = useState(false)
@@ -45,8 +45,6 @@ export default function Cart() {
   const [promoCodeError, setPromoCodeError] = useState<string | null>(null)
   const [currentCouponIndex, setCurrentCouponIndex] = useState(0)
   const [freeShippingThreshold, setFreeShippingThreshold] = useState<number>(0)
-  const [addingProductId, setAddingProductId] = useState<string | null>(null)
-  const [addedProductId, setAddedProductId] = useState<string | null>(null)
 
   // Estados para simulação e cálculo de frete no carrinho
   const [shippingFee, setShippingFee] = useState<number | null>(null)
@@ -476,23 +474,6 @@ export default function Cart() {
 
     loadRecommendations()
   }, [cartCategories, cartProductIds])
-
-  const handleAddRecommendation = async (product: Product, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setAddingProductId(product.id)
-    try {
-      await addProduct(product, 1)
-      setAddedProductId(product.id)
-      setTimeout(() => {
-        setAddedProductId(null)
-      }, 1500)
-    } catch (error) {
-      console.error('Erro ao adicionar produto:', error)
-    } finally {
-      setAddingProductId(null)
-    }
-  }
-
   // Tipo de compra recorrente removido.
 
   // Agrupa as recomendações por categoria para navegação por abas (suporta tags compostas separadas por vírgula)
