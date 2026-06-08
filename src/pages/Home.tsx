@@ -8,6 +8,8 @@ import { reviewsService, Review } from '../services/reviews.service'
 import { homeSectionsService, HomeSection } from '../services/home-sections.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import { getImageUrl } from '../utils/imageUrl'
+import { HorizontalScrollContainer } from '../components/HorizontalScrollContainer'
+
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
   const [sections, setSections] = useState<HomeSection[]>([])
@@ -622,81 +624,85 @@ export default function Home() {
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
             </div>
           ) : featuredProducts.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 px-2">
-              {featuredProducts.slice(0, 6).map(product => (
-                <Link
-                  key={product.id}
-                  to={`/produtos/${product.id}`}
-                  className="bg-white dark:bg-gray-700 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 hover:shadow-md dark:hover:shadow-xl transition-all flex flex-col h-full group"
-                >
-                  {/* 1:1 image fills top of card */}
-                  <div className="w-full aspect-square bg-white overflow-hidden flex-shrink-0 relative">
-                    <img
-                      src={productsService.getImageUrl(product.image)}
-                      alt={product.name}
-                      className="w-full h-full object-contain select-none pointer-events-none group-hover:scale-105 transition-transform duration-300"
-                      draggable={false}
-                      onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
-                    />
-                    {product.promo_price && (
-                      <span className="absolute top-2 left-2 bg-primary-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
-                        {Math.round(((Number(product.price) - Number(product.promo_price)) / Number(product.price)) * 100)}% OFF
-                      </span>
-                    )}
-                  </div>
-                  <div className="p-2.5 sm:p-3.5 flex flex-col flex-1 justify-between bg-white dark:bg-gray-700">
-                    {/* Fixed-height Title to prevent shifting */}
-                    <div className="h-[36px] sm:h-[40px] overflow-hidden mb-1 flex items-start">
-                      <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-primary-600 dark:group-hover:text-primary-450 transition-colors">
-                        {product.name}
-                      </h3>
+            <HorizontalScrollContainer
+              className="flex gap-3 sm:gap-4 pb-4 scrollbar-hide px-2"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {featuredProducts.map(product => (
+                <div key={product.id} className="w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] lg:w-[calc(16.66%-10px)] flex-shrink-0">
+                  <Link
+                    to={`/produtos/${product.id}`}
+                    className="bg-white dark:bg-gray-700 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 hover:shadow-md dark:hover:shadow-xl transition-all flex flex-col h-full group"
+                  >
+                    {/* 1:1 image fills top of card */}
+                    <div className="w-full aspect-square bg-white overflow-hidden flex-shrink-0 relative">
+                      <img
+                        src={productsService.getImageUrl(product.image)}
+                        alt={product.name}
+                        className="w-full h-full object-contain select-none pointer-events-none group-hover:scale-105 transition-transform duration-300"
+                        draggable={false}
+                        onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
+                      />
+                      {product.promo_price && (
+                        <span className="absolute top-2 left-2 bg-primary-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+                          {Math.round(((Number(product.price) - Number(product.promo_price)) / Number(product.price)) * 100)}% OFF
+                        </span>
+                      )}
                     </div>
+                    <div className="p-2.5 sm:p-3.5 flex flex-col flex-1 justify-between bg-white dark:bg-gray-700">
+                      {/* Fixed-height Title to prevent shifting */}
+                      <div className="h-[36px] sm:h-[40px] overflow-hidden mb-1 flex items-start">
+                        <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-primary-600 dark:group-hover:text-primary-450 transition-colors">
+                          {product.name}
+                        </h3>
+                      </div>
 
-                    {/* Fixed-height Description */}
-                    <div className="h-[30px] sm:h-[34px] overflow-hidden mb-2">
-                      <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
-                        {product.description || 'Fórmula manipulada com alto padrão de qualidade e eficácia.'}
-                      </p>
-                    </div>
+                      {/* Fixed-height Description */}
+                      <div className="h-[30px] sm:h-[34px] overflow-hidden mb-2">
+                        <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                          {product.description || 'Fórmula manipulada com alto padrão de qualidade e eficácia.'}
+                        </p>
+                      </div>
 
-                    {/* Price and Promotion container */}
-                    <div className="flex flex-col justify-end mt-auto">
-                      {product.promo_price ? (
-                        <div>
-                          <p className="text-[10px] text-gray-400 line-through leading-none mb-1">
-                            R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
-                          </p>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400 leading-none">
-                              R$ {Number(product.promo_price || 0).toFixed(2).replace('.', ',')}
+                      {/* Price and Promotion container */}
+                      <div className="flex flex-col justify-end mt-auto">
+                        {product.promo_price ? (
+                          <div>
+                            <p className="text-[10px] text-gray-400 line-through leading-none mb-1">
+                              R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
+                            </p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400 leading-none">
+                                R$ {Number(product.promo_price || 0).toFixed(2).replace('.', ',')}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            {/* Spacer to keep same height layout */}
+                            <p className="text-[10px] text-transparent leading-none mb-1 select-none">&nbsp;</p>
+                            <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-none">
+                              R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
                             </span>
                           </div>
-                        </div>
-                      ) : (
-                        <div>
-                          {/* Spacer to keep same height layout */}
-                          <p className="text-[10px] text-transparent leading-none mb-1 select-none">&nbsp;</p>
-                          <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-none">
-                            R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                        )}
+                      </div>
 
-                    {/* Free shipping banner with fixed height */}
-                    <div className="h-4 mt-1.5 flex items-center">
-                      {product.free_shipping ? (
-                        <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold flex items-center">
-                          🚚 Frete grátis
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-transparent select-none">&nbsp;</span>
-                      )}
+                      {/* Free shipping banner with fixed height */}
+                      <div className="h-4 mt-1.5 flex items-center">
+                        {product.free_shipping ? (
+                          <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold flex items-center">
+                            🚚 Frete grátis
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-transparent select-none">&nbsp;</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </div>
               ))}
-            </div>
+            </HorizontalScrollContainer>
           ) : null}
             </div>
           </section>
@@ -735,81 +741,85 @@ export default function Home() {
                     </Link>
                   )}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 px-2">
-                  {products.slice(0, 6).map(product => (
-                    <Link
-                      key={product.id}
-                      to={`/produtos/${product.id}`}
-                      className="bg-white dark:bg-gray-700 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 hover:shadow-md dark:hover:shadow-xl transition-all flex flex-col h-full group"
-                    >
-                      {/* 1:1 image fills top of card */}
-                      <div className="w-full aspect-square bg-white overflow-hidden flex-shrink-0 relative">
-                        <img
-                          src={productsService.getImageUrl(product.image)}
-                          alt={product.name}
-                          className="w-full h-full object-contain select-none pointer-events-none group-hover:scale-105 transition-transform duration-300"
-                          draggable={false}
-                          onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
-                        />
-                        {product.promo_price && (
-                          <span className="absolute top-2 left-2 bg-primary-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
-                            {Math.round(((Number(product.price) - Number(product.promo_price)) / Number(product.price)) * 100)}% OFF
-                          </span>
-                        )}
-                      </div>
-                      <div className="p-2.5 sm:p-3.5 flex flex-col flex-1 justify-between bg-white dark:bg-gray-700">
-                        {/* Fixed-height Title to prevent shifting */}
-                        <div className="h-[36px] sm:h-[40px] overflow-hidden mb-1 flex items-start">
-                          <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-primary-600 dark:group-hover:text-primary-450 transition-colors">
-                            {product.name}
-                          </h3>
+                <HorizontalScrollContainer
+                  className="flex gap-3 sm:gap-4 pb-4 scrollbar-hide px-2"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  {products.map(product => (
+                    <div key={product.id} className="w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] lg:w-[calc(16.66%-10px)] flex-shrink-0">
+                      <Link
+                        to={`/produtos/${product.id}`}
+                        className="bg-white dark:bg-gray-700 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 hover:shadow-md dark:hover:shadow-xl transition-all flex flex-col h-full group"
+                      >
+                        {/* 1:1 image fills top of card */}
+                        <div className="w-full aspect-square bg-white overflow-hidden flex-shrink-0 relative">
+                          <img
+                            src={productsService.getImageUrl(product.image)}
+                            alt={product.name}
+                            className="w-full h-full object-contain select-none pointer-events-none group-hover:scale-105 transition-transform duration-300"
+                            draggable={false}
+                            onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
+                          />
+                          {product.promo_price && (
+                            <span className="absolute top-2 left-2 bg-primary-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+                              {Math.round(((Number(product.price) - Number(product.promo_price)) / Number(product.price)) * 100)}% OFF
+                            </span>
+                          )}
                         </div>
+                        <div className="p-2.5 sm:p-3.5 flex flex-col flex-1 justify-between bg-white dark:bg-gray-700">
+                          {/* Fixed-height Title to prevent shifting */}
+                          <div className="h-[36px] sm:h-[40px] overflow-hidden mb-1 flex items-start">
+                            <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-primary-600 dark:group-hover:text-primary-450 transition-colors">
+                              {product.name}
+                            </h3>
+                          </div>
 
-                        {/* Fixed-height Description */}
-                        <div className="h-[30px] sm:h-[34px] overflow-hidden mb-2">
-                          <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
-                            {product.description || 'Fórmula manipulada com alto padrão de qualidade e eficácia.'}
-                          </p>
-                        </div>
+                          {/* Fixed-height Description */}
+                          <div className="h-[30px] sm:h-[34px] overflow-hidden mb-2">
+                            <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                              {product.description || 'Fórmula manipulada com alto padrão de qualidade e eficácia.'}
+                            </p>
+                          </div>
 
-                        {/* Price and Promotion container */}
-                        <div className="flex flex-col justify-end mt-auto">
-                          {product.promo_price ? (
-                            <div>
-                              <p className="text-[10px] text-gray-400 line-through leading-none mb-1">
-                                R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
-                              </p>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400 leading-none">
-                                  R$ {Number(product.promo_price || 0).toFixed(2).replace('.', ',')}
+                          {/* Price and Promotion container */}
+                          <div className="flex flex-col justify-end mt-auto">
+                            {product.promo_price ? (
+                              <div>
+                                <p className="text-[10px] text-gray-400 line-through leading-none mb-1">
+                                  R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
+                                </p>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400 leading-none">
+                                    R$ {Number(product.promo_price || 0).toFixed(2).replace('.', ',')}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                {/* Spacer to keep same height layout */}
+                                <p className="text-[10px] text-transparent leading-none mb-1 select-none">&nbsp;</p>
+                                <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-none">
+                                  R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
                                 </span>
                               </div>
-                            </div>
-                          ) : (
-                            <div>
-                              {/* Spacer to keep same height layout */}
-                              <p className="text-[10px] text-transparent leading-none mb-1 select-none">&nbsp;</p>
-                              <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-none">
-                                R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                            )}
+                          </div>
 
-                        {/* Free shipping banner with fixed height */}
-                        <div className="h-4 mt-1.5 flex items-center">
-                          {product.free_shipping ? (
-                            <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold flex items-center">
-                              🚚 Frete grátis
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-transparent select-none">&nbsp;</span>
-                          )}
+                          {/* Free shipping banner with fixed height */}
+                          <div className="h-4 mt-1.5 flex items-center">
+                            {product.free_shipping ? (
+                              <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold flex items-center">
+                                🚚 Frete grátis
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-transparent select-none">&nbsp;</span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </Link>
+                      </Link>
+                    </div>
                   ))}
-                </div>
+                </HorizontalScrollContainer>
               </div>
             </section>
           )

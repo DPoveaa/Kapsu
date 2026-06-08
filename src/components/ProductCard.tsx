@@ -181,7 +181,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           {/* ── Content ── */}
           <div className="flex flex-col flex-1 p-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug mb-1">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
               {product.name}
             </h3>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed mb-2 flex-1">
