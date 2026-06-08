@@ -130,6 +130,32 @@ class OrderService {
   }
 
   /**
+   * Busca a nota fiscal do pedido
+   */
+  async getOrderInvoice(orderId: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/${orderId}/invoice`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      })
+
+      if (!response.ok) {
+        return { status: 'NOT_FOUND' }; // Retorna objeto em vez de falhar
+      }
+
+      const text = await response.text()
+      if (!text) {
+        return { status: 'NOT_FOUND' };
+      }
+
+      const data = JSON.parse(text)
+      return data.data || { status: 'NOT_FOUND' }
+    } catch (error: any) {
+      return { status: 'ERROR' };
+    }
+  }
+
+  /**
    * Atualiza o status de um pedido (apenas para admins em testes)
    */
   async updateOrderStatus(orderId: string, status: string): Promise<Order> {

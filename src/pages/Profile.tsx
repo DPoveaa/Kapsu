@@ -86,6 +86,8 @@ export default function Profile() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loadingOrders, setLoadingOrders] = useState(false)
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
+  const [invoices, setInvoices] = useState<Record<string, any>>({})
+  const [loadingInvoices, setLoadingInvoices] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     if (user) {
@@ -110,10 +112,23 @@ export default function Profile() {
   }, [user])
 
   useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
     if (activeSection === 'addresses') {
       loadAddresses()
     } else if (activeSection === 'orders') {
       loadOrders()
+      
+      // Auto-refresh orders every 10 seconds silently
+      intervalId = setInterval(() => {
+        orderService.getOrders()
+          .then(data => setOrders(data))
+          .catch(err => console.error('Erro ao atualizar pedidos:', err))
+      }, 10000)
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
     }
   }, [activeSection])
 
@@ -512,7 +527,7 @@ export default function Profile() {
                 }`}>
                   {isCompleted ? <Check className="w-3 h-3 sm:w-4 sm:h-4" /> : <div className="w-2 h-2 rounded-full bg-white dark:bg-gray-800"></div>}
                 </div>
-                <p className={`absolute top-8 sm:top-10 text-[10px] sm:text-xs text-center w-16 sm:w-20 -ml-8 sm:-ml-10 ${
+                <p className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs text-center w-24 sm:w-28 ${
                   isActive ? 'text-primary-600 dark:text-primary-400 font-bold' : isCompleted ? 'text-gray-800 dark:text-gray-200 font-medium' : 'text-gray-400'
                 }`}>
                   {step.label}
@@ -846,7 +861,21 @@ export default function Profile() {
                         <div key={order.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:border-primary-300 dark:hover:border-primary-700 transition-colors">
                           <div 
                             className="p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center cursor-pointer bg-gray-50/50 dark:bg-gray-800/30 hover:bg-primary-50/30 dark:hover:bg-gray-800/80 transition-colors"
-                            onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
+                            onClick={() => {
+                              const newExpanded = expandedOrder === order.id ? null : order.id;
+                              setExpandedOrder(newExpanded);
+                              
+                              if (newExpanded && !invoices[newExpanded] && !loadingInvoices[newExpanded]) {
+                                setLoadingInvoices(prev => ({ ...prev, [newExpanded]: true }));
+                                orderService.getOrderInvoice(newExpanded).then(invoice => {
+                                  if (invoice) {
+                                    setInvoices(prev => ({ ...prev, [newExpanded]: invoice }));
+                                  }
+                                }).finally(() => {
+                                  setLoadingInvoices(prev => ({ ...prev, [newExpanded]: false }));
+                                });
+                              }
+                            }}
                           >
                             <div className="flex items-center gap-4 mb-4 sm:mb-0">
                                {getOrderImage(order) ? (
@@ -925,6 +954,27 @@ export default function Profile() {
                                                <CreditCard className="w-4 h-4" />
                                                Visualizar Pagamento
                                              </a>
+                                          </div>
+                                       )}
+                                       {['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'PAID', 'DISTRIBUTOR_INFORMED'].includes((order.status || '').toUpperCase()) && loadingInvoices[order.id] && (
+                                          <div className="flex justify-between items-center text-sm mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                            <span className="text-gray-500 dark:text-gray-400">Nota Fiscal:</span>
+                                            <span className="text-gray-400 text-xs flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin"/> Buscando...</span>
+                                          </div>
+                                       )}
+                                       {['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'PAID', 'DISTRIBUTOR_INFORMED'].includes((order.status || '').toUpperCase()) && !loadingInvoices[order.id] && invoices[order.id] && (
+                                          <div className="flex justify-between items-center text-sm mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                            <span className="text-gray-500 dark:text-gray-400">Nota Fiscal:</span>
+                                            {invoices[order.id].status === 'AUTHORIZED' && invoices[order.id].pdfUrl ? (
+                                              <a href={invoices[order.id].pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50 rounded-lg font-semibold transition-colors">
+                                                <Download className="w-4 h-4" />
+                                                Baixar PDF
+                                              </a>
+                                            ) : invoices[order.id].status === 'ERROR' ? (
+                                              <span className="text-red-500 text-xs font-medium">Erro ao buscar nota</span>
+                                            ) : (
+                                              <span className="text-yellow-600 dark:text-yellow-500 text-xs bg-yellow-50 dark:bg-yellow-900/30 px-2.5 py-1.5 rounded-lg font-semibold tracking-wide uppercase">Aguardando emissão</span>
+                                            )}
                                           </div>
                                        )}
                                      </div>
