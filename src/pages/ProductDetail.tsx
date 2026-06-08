@@ -259,14 +259,10 @@ export default function ProductDetail() {
     )
   }
 
-  // Gallery images setup (mocks auxiliary packaging/ingredient images for natural theme)
-  const productImages = product?.image 
-    ? [
-        product.image,
-        'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?auto=format&fit=crop&q=80&w=600',
-        'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?auto=format&fit=crop&q=80&w=600'
-      ]
-    : []
+  // Gallery images setup
+  const productImages = product?.image && product.image.trim() !== '' && product.image !== PRODUCT_IMAGE_FALLBACK
+    ? [product.image]
+    : [PRODUCT_IMAGE_FALLBACK]
 
   const handleNextImage = () => {
     if (productImages.length > 1) {
@@ -415,7 +411,7 @@ export default function ProductDetail() {
                 <img
                   src={productImages[selectedImage] || PRODUCT_IMAGE_FALLBACK}
                   alt={product.name}
-                  className="max-w-full max-h-full object-contain p-6 transition-transform duration-100 ease-out"
+                  className="w-full h-full object-cover transition-transform duration-100 ease-out"
                   style={{
                     transform: isZoomed ? 'scale(2.2)' : 'scale(1)',
                     transformOrigin: isZoomed ? `${zoomPos.x}% ${zoomPos.y}%` : 'center',
@@ -494,16 +490,16 @@ export default function ProductDetail() {
                   <div className="space-y-1">
                     <span className="text-xs text-gray-400 line-through">De R$ {Number(product.price).toFixed(2).replace('.', ',')}</span>
                     <div className="flex items-center gap-3">
-                      <span className="text-3xl sm:text-4xl font-extrabold text-red-600 dark:text-red-400">
+                      <span className="text-3xl sm:text-4xl font-extrabold text-primary-600 dark:text-primary-400">
                         R$ {Number(product.promo_price).toFixed(2).replace('.', ',')}
                       </span>
-                      <span className="text-xs bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-bold px-2 py-1 rounded-lg border border-red-200 dark:border-red-900/30 animate-pulse">
+                      <span className="text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-bold px-2 py-1 rounded-lg border border-primary-200 dark:border-primary-900/30 animate-pulse">
                         {discountPct}% OFF
                       </span>
                     </div>
                   </div>
                 ) : (
-                  <span className="text-3xl sm:text-4xl font-extrabold text-gray-955 dark:text-white">
+                  <span className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white">
                     R$ {Number(product.price).toFixed(2).replace('.', ',')}
                   </span>
                 )}
@@ -991,7 +987,7 @@ export default function ProductDetail() {
       {/* ═══════════════ LIGHTBOX MODAL (Image Fullscreen) ════════════════════ */}
       {isLightboxOpen && productImages.length > 0 && (
         <div 
-          className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 animate-fade-in"
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex flex-col justify-between p-4 animate-fade-in"
           onClick={() => setIsLightboxOpen(false)}
         >
           {/* Close button at top-right */}
@@ -1067,7 +1063,7 @@ export default function ProductDetail() {
       {/* ═══════════════ REVIEW IMAGE LIGHTBOX MODAL ════════════════════ */}
       {activeReviewImage && (
         <div
-          className="fixed inset-0 z-[110] bg-black/95 backdrop-blur-md flex flex-col justify-center items-center p-4 animate-fade-in"
+          className="fixed inset-0 z-[110] bg-black/60 backdrop-blur-sm flex flex-col justify-center items-center p-4 animate-fade-in"
           onClick={() => setActiveReviewImage(null)}
         >
           <div className="absolute top-4 right-4">

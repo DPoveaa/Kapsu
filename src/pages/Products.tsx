@@ -29,7 +29,7 @@ export default function Products() {
   const [currentPage, setCurrentPage] = useState(1)
   const [categorySearch, setCategorySearch] = useState('')
   const [showAllCategories, setShowAllCategories] = useState(false)
-  const productsPerPage = 20
+  const productsPerPage = 21 // múltiplo de 3 colunas → sem linha incompleta no fim
 
   const [params, setParams] = useSearchParams()
 
@@ -516,7 +516,7 @@ export default function Products() {
 
             {/* Products Grid */}
             {!loading && !error && paginatedProducts.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-3">
                 {paginatedProducts.map(product => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -528,7 +528,10 @@ export default function Products() {
               <div className="mt-8 flex items-center justify-center gap-1.5 flex-wrap">
                 <button
                   disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  onClick={() => {
+                    setCurrentPage(prev => Math.max(prev - 1, 1))
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
                   className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   Anterior
@@ -536,7 +539,10 @@ export default function Products() {
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                   <button
                     key={page}
-                    onClick={() => setCurrentPage(page)}
+                    onClick={() => {
+                      setCurrentPage(page)
+                      window.scrollTo({ top: 0, behavior: 'smooth' })
+                    }}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                       currentPage === page
                         ? 'bg-green-600 text-white shadow-sm'
@@ -548,7 +554,10 @@ export default function Products() {
                 ))}
                 <button
                   disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  onClick={() => {
+                    setCurrentPage(prev => Math.min(prev + 1, totalPages))
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
                   className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
                   Próxima

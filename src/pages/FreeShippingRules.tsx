@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Gift, DollarSign, Package, ShoppingBag, X, Edit2 } from 'lucide-react'
+import { Plus, Trash2, Gift, DollarSign, Package, ShoppingBag, Edit2 } from 'lucide-react'
 import { freeShippingRulesService, FreeShippingRule } from '../services/free-shipping-rules.service'
 import { productsService } from '../services/products.service'
 import { Product } from '../types'
 import { confirm } from '../utils/toast'
+import AdminModal from '../components/AdminModal'
 
 export default function FreeShippingRules() {
   const [rules, setRules] = useState<FreeShippingRule[]>([])
@@ -218,7 +219,7 @@ export default function FreeShippingRules() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="w-full flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-300">Carregando regras de frete grátis...</p>
@@ -228,7 +229,7 @@ export default function FreeShippingRules() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-8">
+    <div className="w-full">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Regras de Frete Grátis</h1>
@@ -256,239 +257,191 @@ export default function FreeShippingRules() {
                   <Gift className="w-5 h-5 text-gray-600 mr-2" />
                   <h2 className="text-xl font-semibold text-gray-900">Regras Ativas</h2>
                 </div>
-                {!showForm && (
-                  <button
-                    onClick={() => {
-                      resetForm()
-                      setShowForm(true)
-                    }}
-                    className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nova Regra
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    resetForm()
+                    setShowForm(true)
+                  }}
+                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Regra
+                </button>
               </div>
 
-              {/* Formulário de Nova/Edição */}
-              {showForm && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200 dark:bg-gray-800">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      {editingRule ? 'Editar Regra' : 'Nova Regra'}
-                    </h3>
+              {/* Modal de Criação/Edição de Regra */}
+              <AdminModal
+                isOpen={showForm}
+                onClose={resetForm}
+                title={editingRule ? 'Editar Regra de Frete Grátis' : 'Nova Regra de Frete Grátis'}
+                widthClass="max-w-2xl"
+                footer={
+                  <div className="flex justify-end gap-3">
                     <button
                       onClick={resetForm}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Nome da Regra *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Ex: Promoção Verão, Kit Completo..."
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Tipo de Regra *
-                      </label>
-                      <select
-                        value={formData.type}
-                        onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="value">Valor Mínimo do Pedido</option>
-                        <option value="quantity">Quantidade Mínima de Produtos</option>
-                        <option value="product_kit">Kit/Promoção (Produtos Específicos)</option>
-                      </select>
-                    </div>
-
-                    {/* Campos específicos por tipo */}
-                    {formData.type === 'value' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Valor Mínimo do Pedido (R$) *
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={formData.min_order_value}
-                          onChange={(e) => setFormData({ ...formData, min_order_value: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="200.00"
-                        />
-                      </div>
-                    )}
-
-                    {formData.type === 'quantity' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Quantidade Mínima de Produtos *
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={formData.min_product_quantity}
-                          onChange={(e) => setFormData({ ...formData, min_product_quantity: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="5"
-                        />
-                      </div>
-                    )}
-
-                    {formData.type === 'product_kit' && (
-                      <>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Operador
-                          </label>
-                          <select
-                            value={formData.kit_operator}
-                            onChange={(e) => setFormData({ ...formData, kit_operator: e.target.value as 'all' | 'any' })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          >
-                            <option value="all">Todos os produtos devem estar no carrinho</option>
-                            <option value="any">Qualquer um dos produtos no carrinho</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Produtos do Kit *
-                          </label>
-                          <div className="max-h-60 overflow-y-auto border border-gray-300 rounded-lg p-3">
-                            {products.length === 0 ? (
-                              <p className="text-sm text-gray-500">Nenhum produto disponível</p>
-                            ) : (
-                              <div className="space-y-2">
-                                {products.map((product) => (
-                                  <label
-                                    key={product.id}
-                                    className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={formData.product_ids.includes(product.id)}
-                                      onChange={() => toggleProductSelection(product.id)}
-                                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                    />
-                                    <span className="text-sm text-gray-700">{product.name}</span>
-                                    <span className="text-xs text-gray-500 ml-auto">
-                                      R$ {product.price.toFixed(2).replace('.', ',')}
-                                    </span>
-                                  </label>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          {formData.product_ids.length > 0 && (
-                            <p className="mt-2 text-xs text-gray-500">
-                              {formData.product_ids.length} produto(s) selecionado(s)
-                            </p>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Prioridade
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={formData.priority}
-                        onChange={(e) => setFormData({ ...formData, priority: Number(e.target.value) })}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="0"
-                      />
-                      <p className="mt-1 text-xs text-gray-500">
-                        Regras com maior prioridade são verificadas primeiro
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Descrição
-                      </label>
-                      <textarea
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        rows={2}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        placeholder="Descrição opcional da regra..."
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Data de Início (opcional)
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.start_date}
-                          onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Data de Término (opcional)
-                        </label>
-                        <input
-                          type="date"
-                          value={formData.end_date}
-                          onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="active"
-                        checked={formData.active}
-                        onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <label htmlFor="active" className="ml-2 text-sm text-gray-700">
-                        Regra ativa
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end space-x-3 mt-4">
-                    <button
-                      onClick={resetForm}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg dark:hover:bg-red-500 hover:bg-red-500 transition-colors"
+                      className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
                     >
                       Cancelar
                     </button>
                     <button
                       onClick={handleSaveRule}
                       disabled={saving}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     >
-                      {saving ? 'Salvando...' : 'Salvar'}
+                      {saving ? 'Salvando...' : editingRule ? 'Salvar alterações' : 'Criar regra'}
                     </button>
                   </div>
+                }
+              >
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome da Regra *</label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Ex: Promoção Verão, Kit Completo..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Tipo de Regra *</label>
+                    <select
+                      value={formData.type}
+                      onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="value">Valor Mínimo do Pedido</option>
+                      <option value="quantity">Quantidade Mínima de Produtos</option>
+                      <option value="product_kit">Kit/Promoção (Produtos Específicos)</option>
+                    </select>
+                  </div>
+
+                  {formData.type === 'value' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Valor Mínimo do Pedido (R$) *</label>
+                      <input
+                        type="number" min="0" step="0.01"
+                        value={formData.min_order_value}
+                        onChange={(e) => setFormData({ ...formData, min_order_value: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="200.00"
+                      />
+                    </div>
+                  )}
+
+                  {formData.type === 'quantity' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Quantidade Mínima de Produtos *</label>
+                      <input
+                        type="number" min="1"
+                        value={formData.min_product_quantity}
+                        onChange={(e) => setFormData({ ...formData, min_product_quantity: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="5"
+                      />
+                    </div>
+                  )}
+
+                  {formData.type === 'product_kit' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Operador</label>
+                        <select
+                          value={formData.kit_operator}
+                          onChange={(e) => setFormData({ ...formData, kit_operator: e.target.value as 'all' | 'any' })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="all">Todos os produtos devem estar no carrinho</option>
+                          <option value="any">Qualquer um dos produtos no carrinho</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Produtos do Kit *</label>
+                        <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3">
+                          {products.length === 0 ? (
+                            <p className="text-sm text-gray-500">Nenhum produto disponível</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {products.map((product) => (
+                                <label key={product.id} className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.product_ids.includes(product.id)}
+                                    onChange={() => toggleProductSelection(product.id)}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                  />
+                                  <span className="text-sm text-gray-700">{product.name}</span>
+                                  <span className="text-xs text-gray-500 ml-auto">R$ {product.price.toFixed(2).replace('.', ',')}</span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {formData.product_ids.length > 0 && (
+                          <p className="mt-2 text-xs text-gray-500">{formData.product_ids.length} produto(s) selecionado(s)</p>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Prioridade</label>
+                    <input
+                      type="number" min="0"
+                      value={formData.priority}
+                      onChange={(e) => setFormData({ ...formData, priority: Number(e.target.value) })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="0"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Regras com maior prioridade são verificadas primeiro</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Descrição</label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      rows={2}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Descrição opcional da regra..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data de Início (opcional)</label>
+                      <input
+                        type="date"
+                        value={formData.start_date}
+                        onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Data de Término (opcional)</label>
+                      <input
+                        type="date"
+                        value={formData.end_date}
+                        onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="fs-active"
+                      checked={formData.active}
+                      onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="fs-active" className="ml-2 text-sm text-gray-700 dark:text-gray-300">Regra ativa</label>
+                  </div>
                 </div>
-              )}
+              </AdminModal>
 
               {/* Lista de Regras */}
               <div className="space-y-3">

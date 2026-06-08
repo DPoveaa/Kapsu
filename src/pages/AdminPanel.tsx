@@ -38,7 +38,7 @@ export default function AdminPanel() {
       <div className="mb-8 lg:mb-10 bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] dark:bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-opacity-20 dark:bg-opacity-5 relative overflow-hidden">
         <div className="relative z-10">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Painel Administrativo</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-300 text-lg">Bem-vindo(a) à central de gestão da Sanare.</p>
+          <p className="mt-2 text-gray-600 dark:text-gray-300 text-lg">Bem-vindo(a) à central de gestão da Kapsu.</p>
         </div>
         <div className="hidden sm:block relative z-10">
           <div className="w-16 h-16 bg-primary-100 dark:bg-primary-900/50 rounded-2xl flex items-center justify-center transform rotate-3">
@@ -76,13 +76,7 @@ export default function AdminPanel() {
         ))}
       </div>
 
-      <div className="mt-12 bg-primary-50 dark:bg-primary-900/20 rounded-2xl p-6 sm:p-8 border border-primary-100 dark:border-primary-900/50">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Utilize o Menu Lateral</h2>
-        <p className="text-gray-600 dark:text-gray-300">
-          A partir de agora, toda a navegação principal da sua loja está disponível de forma contínua no menu à esquerda. 
-          Isso permite que você alterne entre pedidos, produtos e configurações sem precisar voltar à tela inicial.
-        </p>
-      </div>
+      {/* Removed "Utilize o Menu Lateral" block */}
     </div>
   )
 }

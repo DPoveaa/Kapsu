@@ -177,7 +177,7 @@ export default function ManageReviews() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="w-full flex items-center justify-center py-12">
         <div className="text-center">
           <Loader2 className="animate-spin text-primary-600 mx-auto mb-4" size={48} />
           <p className="text-gray-600 dark:text-gray-300">Carregando avaliações...</p>
@@ -187,7 +187,7 @@ export default function ManageReviews() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="w-full">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex items-center justify-between">
           <button

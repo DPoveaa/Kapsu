@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Edit, Trash2, Loader2, Image as ImageIcon, X, Save, ArrowUp, ArrowDown } from 'lucide-react'
+import { ArrowLeft, Plus, Edit, Trash2, Loader2, Image as ImageIcon, Save, ArrowUp, ArrowDown } from 'lucide-react'
 import { bannersService, Banner, CreateBannerData } from '../services/banners.service'
 import BannerImageUpload from '../components/BannerImageUpload'
 import { normalizeImagePath } from '../utils/imageUrl'
 import { getImageUrl } from '../utils/imageUrl'
 import { confirm } from '../utils/toast'
+import AdminModal from '../components/AdminModal'
 
 // Componente para preview de imagem com fallback automático via API
 function BannerImagePreview({ banner }: { banner: Banner }) {
@@ -256,7 +257,7 @@ export default function ManageBanners() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="w-full flex items-center justify-center py-12">
         <div className="text-center">
           <Loader2 className="animate-spin text-primary-600 mx-auto mb-4" size={48} />
           <p className="text-gray-600 dark:text-gray-300">Carregando banners...</p>
@@ -266,7 +267,7 @@ export default function ManageBanners() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="w-full">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex items-center justify-between">
           <button
@@ -301,118 +302,96 @@ export default function ManageBanners() {
           </div>
         )}
 
-        {/* Formulário de criação/edição */}
-        {(showCreateForm || editingBanner) && (
-          <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {editingBanner ? 'Editar Banner' : 'Novo Banner'}
-              </h2>
+        {/* Modal de criação/edição de banner */}
+        <AdminModal
+          isOpen={showCreateForm || !!editingBanner}
+          onClose={handleCancel}
+          title={editingBanner ? 'Editar Banner' : 'Novo Banner'}
+          widthClass="max-w-xl"
+          footer={
+            <div className="flex justify-end gap-3">
               <button
                 onClick={handleCancel}
-                className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
               >
-                <X size={20} />
+                Cancelar
+              </button>
+              <button
+                onClick={editingBanner ? handleUpdate : handleCreate}
+                disabled={uploading || !formData.image_url}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+              >
+                {uploading ? (
+                  <><Loader2 className="animate-spin" size={16} />Enviando...</>
+                ) : (
+                  <><Save size={16} />{editingBanner ? 'Salvar alterações' : 'Criar banner'}</>
+                )}
               </button>
             </div>
+          }
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Imagem * <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1">(Recomendado: 1920x1080 - 16:9)</span>
+              </label>
+              <BannerImageUpload
+                value={formData.image_url}
+                onChange={handleImageChange}
+                onError={(err) => { if (err) alert(err) }}
+                disabled={uploading}
+              />
+            </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Imagem * <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1">(Dimensões recomendadas: 1920x1080 - proporção 16:9)</span>
-                </label>
-                <BannerImageUpload
-                  value={formData.image_url}
-                  onChange={handleImageChange}
-                  onError={(err) => {
-                    if (err) alert(err)
-                  }}
-                  disabled={uploading}
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Título (opcional)</label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Título do banner"
+              />
+            </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Título (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
-                  placeholder="Título do banner"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Subtítulo (opcional)</label>
+              <input
+                type="text"
+                value={formData.subtitle}
+                onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value }))}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Subtítulo do banner"
+              />
+            </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Subtítulo (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.subtitle}
-                  onChange={(e) => setFormData(prev => ({ ...prev, subtitle: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
-                  placeholder="Subtítulo do banner"
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Link (opcional)</label>
+              <input
+                type="url"
+                value={formData.link}
+                onChange={(e) => setFormData(prev => ({ ...prev, link: e.target.value }))}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="https://exemplo.com"
+              />
+            </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Link (opcional)
-                </label>
-                <input
-                  type="url"
-                  value={formData.link}
-                  onChange={(e) => setFormData(prev => ({ ...prev, link: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                  placeholder="https://exemplo.com"
-                />
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="active"
-                  checked={formData.active}
-                  onChange={(e) => setFormData(prev => ({ ...prev, active: e.target.checked }))}
-                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                />
-                <label htmlFor="active" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                  Banner ativo
-                </label>
-              </div>
-
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={handleCancel}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={editingBanner ? handleUpdate : handleCreate}
-                  disabled={uploading || !formData.image_url}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                >
-                  {uploading ? (
-                    <>
-                      <Loader2 className="animate-spin mr-2" size={18} />
-                      Enviando...
-                    </>
-                  ) : (
-                    <>
-                      <Save size={18} className="mr-2" />
-                      {editingBanner ? 'Salvar' : 'Criar'}
-                    </>
-                  )}
-                </button>
-              </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="banner-active"
+                checked={formData.active}
+                onChange={(e) => setFormData(prev => ({ ...prev, active: e.target.checked }))}
+                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+              />
+              <label htmlFor="banner-active" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                Banner ativo
+              </label>
             </div>
           </div>
-        )}
+        </AdminModal>
 
-        {/* Lista de banners */}
+
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
           {banners.length === 0 ? (
             <div className="p-8 text-center">
@@ -424,17 +403,17 @@ export default function ManageBanners() {
               {banners.map((banner, index) => (
                 <div
                   key={banner.id}
-                  className={`p-4 hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors ${
+                  className={`p-4 hover:bg-gray-50 dark:hover:bg-[#065084]/20 transition-colors ${
                     !banner.active ? 'opacity-50' : ''
                   }`}
                 >
-                  <div className="flex items-center space-x-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                     {/* Controles de ordem */}
-                    <div className="flex flex-col space-y-1">
+                    <div className="flex flex-row sm:flex-col items-center gap-2 sm:gap-1 flex-shrink-0">
                       <button
                         onClick={() => handleMove(banner, 'up')}
                         disabled={index === 0}
-                        className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
                         title="Mover para cima"
                       >
                         <ArrowUp size={16} />
@@ -442,7 +421,7 @@ export default function ManageBanners() {
                       <button
                         onClick={() => handleMove(banner, 'down')}
                         disabled={index === banners.length - 1}
-                        className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed"
+                        className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
                         title="Mover para baixo"
                       >
                         <ArrowDown size={16} />
@@ -454,28 +433,30 @@ export default function ManageBanners() {
 
                     {/* Informações */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white break-words">
                           {banner.title || 'Sem título'}
                         </h3>
-                        {!banner.active && (
-                          <span className="px-2 py-1 text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">
-                            Inativo
+                        <div className="flex items-center gap-1.5">
+                          {!banner.active && (
+                            <span className="px-2 py-0.5 text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">
+                              Inativo
+                            </span>
+                          )}
+                          <span className="px-2 py-0.5 text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">
+                            Ordem: {banner.order + 1}
                           </span>
-                        )}
-                        <span className="px-2 py-1 text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">
-                          Ordem: {banner.order + 1}
-                        </span>
+                        </div>
                       </div>
                       {banner.subtitle && (
-                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">{banner.subtitle}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-1 break-words">{banner.subtitle}</p>
                       )}
                       {banner.link && (
                         <a
                           href={banner.link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                          className="text-sm text-primary-600 dark:text-primary-400 hover:underline break-all"
                         >
                           {banner.link}
                         </a>
@@ -483,10 +464,10 @@ export default function ManageBanners() {
                     </div>
 
                     {/* Ações */}
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
                       <button
                         onClick={() => handleEdit(banner)}
-                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded transition-colors"
                         title="Editar"
                       >
                         <Edit size={20} />
@@ -494,7 +475,7 @@ export default function ManageBanners() {
                       <button
                         onClick={() => handleDelete(banner.id)}
                         disabled={deletingId === banner.id}
-                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors disabled:opacity-50"
+                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 rounded transition-colors disabled:opacity-50"
                         title="Excluir"
                       >
                         {deletingId === banner.id ? (

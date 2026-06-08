@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Gift, Percent, DollarSign, Truck, ShoppingBag, X, Edit2, Calendar, Users } from 'lucide-react'
+import { Plus, Trash2, Gift, Percent, DollarSign, Truck, ShoppingBag, Edit2, Calendar, Users } from 'lucide-react'
 import { promotionsService, Promotion } from '../services/promotions.service'
 import { productsService } from '../services/products.service'
 import { Product } from '../types'
 import { confirm } from '../utils/toast'
+import AdminModal from '../components/AdminModal'
 
 export default function ManagePromotions() {
   const [promotions, setPromotions] = useState<Promotion[]>([])
@@ -311,7 +312,7 @@ export default function ManagePromotions() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="w-full flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
           <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300">Carregando promoções...</p>
@@ -321,7 +322,7 @@ export default function ManagePromotions() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 sm:py-6 lg:py-8">
+    <div className="w-full">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
         <div className="mb-4 sm:mb-6 lg:mb-8">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Gerenciar Promoções</h1>
@@ -349,36 +350,43 @@ export default function ManagePromotions() {
                   <Gift className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 dark:text-gray-300 mr-1.5 sm:mr-2" />
                   <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Promoções</h2>
                 </div>
-                {!showForm && (
-                  <button
-                    onClick={() => {
-                      resetForm()
-                      setShowForm(true)
-                    }}
-                    className="inline-flex items-center justify-center px-3 sm:px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
-                  >
-                    <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
-                    Nova Promoção
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    resetForm()
+                    setShowForm(true)
+                  }}
+                  className="inline-flex items-center justify-center px-3 sm:px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
+                >
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+                  Nova Promoção
+                </button>
               </div>
 
-              {/* Formulário de Nova/Edição */}
-              {showForm && (
-                <div className="mb-4 sm:mb-5 lg:mb-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 max-h-[85vh] sm:max-h-[80vh] overflow-y-auto">
-                  <div className="flex items-center justify-between mb-3 sm:mb-4">
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                      {editingPromotion ? 'Editar Promoção' : 'Nova Promoção'}
-                    </h3>
+              {/* Modal de Criação/Edição */}
+              <AdminModal
+                isOpen={showForm}
+                onClose={resetForm}
+                title={editingPromotion ? 'Editar Promoção' : 'Nova Promoção'}
+                widthClass="max-w-2xl"
+                footer={
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                     <button
                       onClick={resetForm}
-                      className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white flex-shrink-0 ml-2"
+                      className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
-                      <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleSavePromotion}
+                      disabled={saving}
+                      className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {saving ? 'Salvando...' : editingPromotion ? 'Salvar alterações' : 'Criar promoção'}
                     </button>
                   </div>
-                  
-                  <div className="space-y-3 sm:space-y-4">
+                }
+              >
+                <div className="space-y-3 sm:space-y-4">
                     <div>
                       <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                         Nome da Promoção *
@@ -682,25 +690,8 @@ export default function ManagePromotions() {
                         Promoção ativa
                       </label>
                     </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 mt-4 sm:mt-5 lg:mt-6">
-                    <button
-                      onClick={resetForm}
-                      className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-red-500 dark:hover:bg-red-500 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={handleSavePromotion}
-                      disabled={saving}
-                      className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {saving ? 'Salvando...' : 'Salvar'}
-                    </button>
-                  </div>
-                </div>
-              )}
+                  </div>{/* end space-y-3 */}
+              </AdminModal>
 
               {/* Lista de Promoções */}
               <div className="space-y-2 sm:space-y-3">
@@ -780,17 +771,17 @@ export default function ManagePromotions() {
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
+                          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                             <button
                               onClick={() => handleEditPromotion(promo)}
-                              className="p-1.5 sm:p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                              className="p-1.5 sm:p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
                               title="Editar promoção"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDeletePromotion(promo.id)}
-                              className="p-1.5 sm:p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                              className="p-1.5 sm:p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
                               title="Remover promoção"
                             >
                               <Trash2 className="w-4 h-4" />

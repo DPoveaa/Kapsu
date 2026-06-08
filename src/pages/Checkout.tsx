@@ -576,7 +576,7 @@ export default function Checkout() {
         throw new Error(
           selectedPaymentMethod === 'boleto'
             ? 'Não foi possível obter o link do boleto.'
-            : 'URL de checkout inválida recebida do Mercado Pago'
+            : 'URL de checkout inválida recebida do Asaas'
         )
       }
 
@@ -719,7 +719,7 @@ export default function Checkout() {
               PIX ou cartão
             </div>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1">
-              Pagamento via Mercado Pago (checkout seguro)
+              Pagamento via Asaas (checkout seguro)
             </p>
           </div>
         </label>

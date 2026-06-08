@@ -6,6 +6,7 @@ import { uploadService } from '../services/upload.service'
 import { addressService, SavedAddress } from '../services/address.service'
 import { cepService } from '../services/cep.service'
 import { orderService } from '../services/order.service'
+import { productsService } from '../services/products.service'
 import { User, Camera, Lock, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Package, Calendar, CreditCard, ShoppingBag, Download, ArrowLeft } from 'lucide-react'
 import { env } from '../config/env'
 import { confirm } from '../utils/toast'
@@ -471,7 +472,7 @@ export default function Profile() {
     if (order.items && order.items.length > 0) {
       const itemWithImage = order.items.find(item => item.image_url);
       if (itemWithImage && itemWithImage.image_url) {
-         return itemWithImage.image_url.startsWith('http') ? itemWithImage.image_url : `${env.apiUrl.replace('/api', '')}${itemWithImage.image_url}`;
+         return productsService.getImageUrl(itemWithImage.image_url);
       }
     }
     return null;
@@ -991,7 +992,7 @@ export default function Profile() {
                                        {order.items.map((item, idx) => (
                                           <div key={idx} className="flex items-center gap-4 p-3 border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 rounded-xl">
                                             {item.image_url ? (
-                                              <img src={item.image_url.startsWith('http') ? item.image_url : `${env.apiUrl.replace('/api', '')}${item.image_url}`} alt="Produto" className="w-14 h-14 object-cover rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm flex-shrink-0" />
+                                              <img src={productsService.getImageUrl(item.image_url)} alt="Produto" className="w-14 h-14 object-contain bg-white rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm flex-shrink-0 p-0.5" />
                                             ) : (
                                               <div className="w-14 h-14 bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
                                                 <Package className="w-7 h-7 text-gray-400" />

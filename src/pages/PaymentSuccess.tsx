@@ -9,7 +9,7 @@ export default function PaymentSuccess() {
   const [orderId, setOrderId] = useState<string | null>(null)
 
   useEffect(() => {
-    // Extrai informações da URL - pode vir do Mercado Pago ou do teste sem pagamento
+    // Extrai informações da URL - pode vir do Asaas ou do teste sem pagamento
     const externalReference = searchParams.get('external_reference')
     const orderIdParam = searchParams.get('order_id')
 

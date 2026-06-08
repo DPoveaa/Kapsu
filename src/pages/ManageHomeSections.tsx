@@ -5,6 +5,7 @@ import { homeSectionsService, HomeSection } from '../services/home-sections.serv
 import { productsService } from '../services/products.service'
 import { Product } from '../types'
 import { confirm } from '../utils/toast'
+import AdminModal from '../components/AdminModal'
 
 export default function ManageHomeSections() {
   const navigate = useNavigate()
@@ -19,30 +20,29 @@ export default function ManageHomeSections() {
   const [selectedSectionForProducts, setSelectedSectionForProducts] = useState<string | null>(null)
   const [sectionProducts, setSectionProducts] = useState<Record<string, Product[]>>({})
   const [searchTerm, setSearchTerm] = useState('')
+  const [catSearch, setCatSearch] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     key: '',
-    limit: 8,
-    show_link: true,
     active: true,
     display_type: 'category' as 'manual' | 'best_selling' | 'newest' | 'category' | 'promotions',
-    category: '',
+    categories: [] as string[], // multi-category selection
   })
 
-  // Extrai todas as categorias únicas de forma dinâmica a partir de todos os produtos
-  const dynamicCategories = useMemo(() => {
-    const catsSet = new Set<string>()
+  // Categorias com contagem de produtos, ordenadas por popularidade desc
+  const categoriesWithCount = useMemo(() => {
+    const countMap = new Map<string, number>()
     for (const p of allProducts) {
       if (p.category) {
         p.category.split(',').forEach(c => {
-          const trimmed = c.trim()
-          if (trimmed) {
-            catsSet.add(trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase())
-          }
+          const key = c.trim().charAt(0).toUpperCase() + c.trim().slice(1).toLowerCase()
+          if (key) countMap.set(key, (countMap.get(key) ?? 0) + 1)
         })
       }
     }
-    return Array.from(catsSet).sort((a, b) => a.localeCompare(b))
+    return Array.from(countMap.entries())
+      .sort((a, b) => b[1] - a[1]) // mais produtos primeiro
+      .map(([name, count]) => ({ name, count }))
   }, [allProducts])
 
   // Carrega dados
@@ -89,17 +89,26 @@ export default function ManageHomeSections() {
     }
   }
 
+  const handleToggleSectionActive = async (section: HomeSection) => {
+    setSections(prev => prev.map(s => s.id === section.id ? { ...s, active: !s.active } : s))
+    try {
+      await homeSectionsService.update(section.id, { active: !section.active })
+    } catch (err: any) {
+      // revert on error
+      setSections(prev => prev.map(s => s.id === section.id ? { ...s, active: section.active } : s))
+      alert(err.message || 'Erro ao alterar status da seção')
+    }
+  }
+
   const handleEdit = (section: HomeSection) => {
     setEditingSection(section)
     setCreatingSection(false)
     setFormData({
       name: section.name,
       key: section.key,
-      limit: section.limit,
-      show_link: section.show_link,
       active: section.active,
       display_type: section.display_type || 'category',
-      category: (section.category ?? '') || '',
+      categories: section.category ? section.category.split(',').map(c => c.trim()).filter(Boolean) : [],
     })
   }
 
@@ -115,7 +124,6 @@ export default function ManageHomeSections() {
       return
     }
 
-    // Valida formato da key (apenas letras, números e hífens)
     if (!/^[a-z0-9-]+$/.test(formData.key)) {
       alert('A chave deve conter apenas letras minúsculas, números e hífens')
       return
@@ -125,16 +133,12 @@ export default function ManageHomeSections() {
       const createData: any = {
         key: formData.key,
         name: formData.name,
-        limit: formData.limit,
-        show_link: formData.show_link,
+        limit: 999,       // exibe todos os produtos da categoria
+        show_link: true,  // sempre mostra "Ver todos"
         active: formData.active,
         display_type: formData.display_type,
+        category: formData.categories.join(',') || null,
       }
-      
-      if (formData.category) {
-        createData.category = formData.category
-      }
-      
       await homeSectionsService.create(createData)
       await loadData()
       setCreatingSection(false)
@@ -154,7 +158,14 @@ export default function ManageHomeSections() {
     }
 
     try {
-      await homeSectionsService.update(editingSection.id, formData)
+      await homeSectionsService.update(editingSection.id, {
+        name: formData.name,
+        active: formData.active,
+        display_type: formData.display_type,
+        category: formData.categories.join(',') || null,
+        limit: 999,
+        show_link: true,
+      })
       await loadData()
       setEditingSection(null)
       resetForm()
@@ -234,57 +245,33 @@ export default function ManageHomeSections() {
   }
 
   const resetForm = () => {
+    setCatSearch('')
     setFormData({
       name: '',
       key: '',
-      limit: 8,
-      show_link: true,
       active: true,
       display_type: 'category',
-      category: '',
+      categories: [],
     })
   }
 
   const applyPreset = (preset: 'top-vendidos' | 'top-promocoes' | 'mais-novos' | 'custom') => {
     setCreatingSection(true)
     setEditingSection(null)
-    
+    setCatSearch('')
     switch (preset) {
       case 'top-vendidos':
-        setFormData({
-          name: 'Top Mais Vendidos',
-          key: 'top-vendidos',
-          limit: 8,
-          show_link: true,
-          active: true,
-          display_type: 'best_selling',
-          category: '',
-        })
+        setFormData({ name: 'Top Mais Vendidos', key: 'top-vendidos', active: true, display_type: 'best_selling', categories: [] })
         break
       case 'top-promocoes':
-        setFormData({
-          name: 'Top Promoções',
-          key: 'top-promocoes',
-          limit: 8,
-          show_link: true,
-          active: true,
-          display_type: 'best_selling', // Por enquanto, depois podemos adicionar tipo 'promotions'
-          category: '',
-        })
+        setFormData({ name: 'Top Promoções', key: 'top-promocoes', active: true, display_type: 'promotions', categories: [] })
         break
       case 'mais-novos':
-        setFormData({
-          name: 'Mais Novos',
-          key: 'mais-novos',
-          limit: 8,
-          show_link: true,
-          active: true,
-          display_type: 'newest',
-          category: '',
-        })
+        setFormData({ name: 'Mais Novos', key: 'mais-novos', active: true, display_type: 'newest', categories: [] })
         break
       case 'custom':
         resetForm()
+        setCreatingSection(true)
         break
     }
   }
@@ -390,7 +377,7 @@ export default function ManageHomeSections() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="w-full flex items-center justify-center py-12">
         <div className="text-center">
           <Loader2 className="animate-spin text-primary-600 mx-auto mb-4" size={48} />
           <p className="text-gray-600 dark:text-gray-300">Carregando...</p>
@@ -400,7 +387,7 @@ export default function ManageHomeSections() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="w-full">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6 flex items-center justify-between">
           <button
@@ -459,170 +446,179 @@ export default function ManageHomeSections() {
           </div>
         )}
 
-        {/* Formulário de criação/edição de seção */}
-        {(editingSection || creatingSection) && (
-          <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {creatingSection ? 'Criar Nova Seção' : `Editar Seção: ${editingSection?.key}`}
-              </h2>
+        {/* Modal de criação/edição de seção */}
+        <AdminModal
+          isOpen={!!(editingSection || creatingSection)}
+          onClose={handleCancel}
+          title={creatingSection ? 'Criar Nova Seção' : `Editar Seção: ${editingSection?.key}`}
+          widthClass="max-w-xl"
+          footer={
+            <div className="flex justify-end gap-3">
               <button
                 onClick={handleCancel}
-                className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
               >
-                <X size={20} />
+                Cancelar
               </button>
-            </div>
-
-            <div className="space-y-4">
-              {creatingSection && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Chave da Seção * (identificador único)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.key}
-                    onChange={(e) => setFormData(prev => ({ ...prev, key: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
-                    placeholder="ex: top-vendidos, promocoes, vitaminas"
-                  />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Apenas letras minúsculas, números e hífens. Ex: top-vendidos, promocoes-verao
-                  </p>
-                </div>
+              {creatingSection ? (
+                <button
+                  onClick={handleCreate}
+                  disabled={!formData.name || !formData.key}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                >
+                  <Plus size={16} />
+                  Criar Seção
+                </button>
+              ) : (
+                <button
+                  onClick={handleUpdate}
+                  disabled={!formData.name}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm"
+                >
+                  <Save size={16} />
+                  Salvar alterações
+                </button>
               )}
-
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            {/* Chave (só na criação) */}
+            {creatingSection && (
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Nome da Seção *
-                </label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Chave da Seção *</label>
                 <input
                   type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
-                  placeholder="Ex: Produtos em Destaque"
+                  value={formData.key}
+                  onChange={(e) => setFormData(prev => ({ ...prev, key: e.target.value.toLowerCase().replace(/\s+/g, '-') }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="ex: vitaminas, promocoes"
                 />
+                <p className="text-xs text-gray-500 mt-0.5">Apenas letras minúsculas, números e hífens.</p>
               </div>
+            )}
 
+            {/* Nome */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Nome da Seção *</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Ex: Vitaminas e Suplementos"
+              />
+            </div>
+
+            {/* Tipo de exibição */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Tipo de Exibição</label>
+              <select
+                value={formData.display_type}
+                onChange={(e) => setFormData(prev => ({ ...prev, display_type: e.target.value as any, categories: [] }))}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value="category">Por Categoria</option>
+                <option value="manual">Manual (escolher produtos)</option>
+                <option value="best_selling">Mais Vendidos</option>
+                <option value="newest">Mais Novos</option>
+                <option value="promotions">Promoções</option>
+              </select>
+            </div>
+
+            {/* Seletor de categorias — multi-select visual */}
+            {formData.display_type === 'category' && (
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Tipo de Exibição
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                  Categorias
+                  <span className="ml-1 font-normal text-gray-400 text-xs">(deixe vazio para todas)</span>
                 </label>
-                <select
-                  value={formData.display_type}
-                  onChange={(e) => setFormData(prev => ({ ...prev, display_type: e.target.value as any }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
-                >
-                  <option value="category">Por Categoria (padrão)</option>
-                  <option value="manual">Manual (Escolher Produtos)</option>
-                  <option value="best_selling">Mais Vendidos</option>
-                  <option value="newest">Mais Novos</option>
-                  <option value="promotions">Promoções</option>
-                </select>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {formData.display_type === 'manual' && 'Escolha produtos específicos para esta seção'}
-                  {formData.display_type === 'best_selling' && 'Mostra os produtos mais vendidos'}
-                  {formData.display_type === 'newest' && 'Mostra os produtos mais recentes'}
-                  {formData.display_type === 'category' && 'Mostra produtos da categoria selecionada'}
-                  {formData.display_type === 'promotions' && 'Mostra produtos com preço promocional'}
-                </p>
-              </div>
 
-              {formData.display_type === 'category' && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                    Categoria
-                  </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
-                  >
-                    <option value="">Todas as categorias</option>
-                    {dynamicCategories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
+                {/* Chips das categorias selecionadas */}
+                {formData.categories.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {formData.categories.map(cat => (
+                      <span
+                        key={cat}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-100 dark:bg-primary-900/40 text-primary-800 dark:text-primary-300 text-xs font-semibold rounded-full"
+                      >
+                        {cat}
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, categories: prev.categories.filter(c => c !== cat) }))}
+                          className="hover:text-primary-600 dark:hover:text-white ml-0.5"
+                        >
+                          <X size={11} />
+                        </button>
+                      </span>
                     ))}
-                  </select>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Limite de Produtos
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="20"
-                  value={formData.limit}
-                  onChange={(e) => setFormData(prev => ({ ...prev, limit: parseInt(e.target.value) || 8 }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Quantos produtos exibir (ex: 5 mais vendidos, 5 mais novos)
-                </p>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="show_link"
-                  checked={formData.show_link}
-                  onChange={(e) => setFormData(prev => ({ ...prev, show_link: e.target.checked }))}
-                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                />
-                <label htmlFor="show_link" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                  Mostrar link "Ver todos"
-                </label>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="active"
-                  checked={formData.active}
-                  onChange={(e) => setFormData(prev => ({ ...prev, active: e.target.checked }))}
-                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                />
-                <label htmlFor="active" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                  Seção ativa
-                </label>
-              </div>
-
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={handleCancel}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
-                >
-                  Cancelar
-                </button>
-                {creatingSection ? (
-                  <button
-                    onClick={handleCreate}
-                    disabled={!formData.name || !formData.key}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                  >
-                    <Plus size={18} className="mr-2" />
-                    Criar Seção
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleUpdate}
-                    disabled={!formData.name}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                  >
-                    <Save size={18} className="mr-2" />
-                    Salvar
-                  </button>
+                  </div>
                 )}
+
+                {/* Busca */}
+                <div className="relative mb-1.5">
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={catSearch}
+                    onChange={(e) => setCatSearch(e.target.value)}
+                    placeholder="Filtrar categorias..."
+                    className="w-full pl-8 pr-3 py-1.5 text-xs border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Lista de categorias disponíveis ordenada por qtd de produtos */}
+                <div className="max-h-44 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-100 dark:divide-gray-700">
+                  {categoriesWithCount
+                    .filter(c =>
+                      !formData.categories.includes(c.name) &&
+                      c.name.toLowerCase().includes(catSearch.toLowerCase())
+                    )
+                    .map(({ name, count }) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, categories: [...prev.categories, name] }))}
+                        className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors text-left"
+                      >
+                        <span className="text-gray-800 dark:text-gray-200 font-medium">{name}</span>
+                        <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-full ml-2 flex-shrink-0">
+                          {count} produto{count !== 1 ? 's' : ''}
+                        </span>
+                      </button>
+                    ))
+                  }
+                  {categoriesWithCount.filter(c =>
+                    !formData.categories.includes(c.name) &&
+                    c.name.toLowerCase().includes(catSearch.toLowerCase())
+                  ).length === 0 && (
+                    <p className="text-center text-xs text-gray-400 py-3">
+                      {catSearch ? 'Nenhuma categoria encontrada' : 'Todas as categorias já foram selecionadas'}
+                    </p>
+                  )}
+                </div>
               </div>
+            )}
+
+            {/* Toggle ativo/inativo — padrão da tabela de produtos */}
+            <div className="flex items-center justify-between pt-1">
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Status da seção</span>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, active: !prev.active }))}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${
+                  formData.active
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200'
+                    : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 hover:bg-yellow-200'
+                }`}
+              >
+                {formData.active ? '✓ Ativa' : '✗ Inativa'}
+              </button>
             </div>
           </div>
-        )}
+        </AdminModal>
 
-        {/* Seções */}
+
         <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Seções da Página Inicial</h2>
@@ -663,22 +659,26 @@ export default function ManageHomeSections() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      <div className="flex items-center flex-wrap gap-1.5 mb-1">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white mr-1">
                           {section.name}
                         </h3>
-                        {!section.active && (
-                          <span className="px-2 py-1 text-xs font-semibold bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded">
-                            Inativa
-                          </span>
-                        )}
-                        <span className="px-2 py-1 text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded">
-                          Key: {section.key}
+                        {/* Toggle ativo/inativo inline */}
+                        <button
+                          onClick={() => handleToggleSectionActive(section)}
+                          className={`px-2 py-0.5 text-xs font-semibold rounded-full transition-colors ${
+                            section.active
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200'
+                              : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 hover:bg-yellow-200'
+                          }`}
+                          title={`Clique para ${section.active ? 'desativar' : 'ativar'}`}
+                        >
+                          {section.active ? 'Ativa' : 'Inativa'}
+                        </button>
+                        <span className="px-2 py-0.5 text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full">
+                          {section.key}
                         </span>
-                        <span className="px-2 py-1 text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded">
-                          Limite: {section.limit}
-                        </span>
-                        <span className="px-2 py-1 text-xs font-semibold bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded">
+                        <span className="px-2 py-0.5 text-xs font-semibold bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-full">
                           {section.display_type === 'manual' && 'Manual'}
                           {section.display_type === 'best_selling' && 'Mais Vendidos'}
                           {section.display_type === 'newest' && 'Mais Novos'}
@@ -687,9 +687,13 @@ export default function ManageHomeSections() {
                         </span>
                       </div>
                       {section.category && (
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          Categoria: {section.category}
-                        </p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {section.category.split(',').map(c => c.trim()).filter(Boolean).map(cat => (
+                            <span key={cat} className="text-[11px] bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">
+                              {cat}
+                            </span>
+                          ))}
+                        </div>
                       )}
                     </div>
 

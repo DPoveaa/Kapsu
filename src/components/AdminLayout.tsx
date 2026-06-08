@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { 
   Settings, MessageSquare, Users, Package, ShoppingCart, BarChart3, 
-  Truck, Gift, Tag, Image, Star, Layout, Menu, ChevronLeft, ChevronRight, Menu as MenuIcon, X
+  Truck, Gift, Tag, Image, Star, Layout, Menu, ChevronLeft, ChevronRight, Menu as MenuIcon, X,
+  ShieldCheck
 } from 'lucide-react'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       items: [
         { title: "WhatsApp", icon: MessageSquare, link: "/admin/whatsapp" },
         { title: "Usuários", icon: Users, link: "/admin/users" },
+        { title: "Auditoria", icon: ShieldCheck, link: "/admin/audit" },
         { title: "Relatórios", icon: BarChart3, link: "/admin/reports" },
         { title: "Configurações", icon: Settings, link: "/admin/settings" }
       ]
@@ -113,7 +115,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   )
 
   return (
-    <div className="flex h-[calc(100vh-64px)] md:h-[calc(100vh-80px)] bg-gray-50 dark:bg-gray-900 overflow-hidden relative">
+    <div className="flex h-full w-full bg-gray-50 dark:bg-gray-900 overflow-hidden relative">
       {/* Mobile Menu Button - só aparece em telas pequenas se não estiver aberto */}
       {!mobileMenuOpen && (
         <div className="md:hidden absolute top-4 left-4 z-20">
@@ -148,8 +150,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full overflow-y-auto overflow-x-hidden">
-        <div className="p-4 md:p-6 lg:p-8 mt-12 md:mt-0 w-full max-w-[100vw] md:max-w-none">
+      <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden">
+        <div className="p-4 md:p-6 lg:p-8 mt-12 md:mt-0 w-full md:max-w-none">
           {children}
         </div>
       </main>

@@ -241,39 +241,6 @@
   }
 }
 
-/* Estilos personalizados para o checkout do Mercado Pago */
-.mercado-pago-checkout {
-  @apply bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6;
-}
-
-.mercado-pago-checkout .mp-form-controls {
-  @apply space-y-4;
-}
-
-.mercado-pago-checkout .mp-form-control {
-  @apply mb-4;
-}
-
-.mercado-pago-checkout .mp-form-control label {
-  @apply block text-sm font-medium text-gray-700 dark:text-white mb-2;
-}
-
-.mercado-pago-checkout .mp-form-control input,
-.mercado-pago-checkout .mp-form-control select {
-  @apply w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white;
-}
-
-.mercado-pago-checkout .mp-form-control .mp-error-message {
-  @apply text-red-600 dark:text-red-400 text-sm mt-1;
-}
-
-.mercado-pago-checkout .mp-checkout-button {
-  @apply w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 mt-6;
-}
-
-.mercado-pago-checkout .mp-checkout-button:disabled {
-  @apply opacity-50 cursor-not-allowed;
-}
 
 /* Custom Animations for Product Details */
 @keyframes fadeIn {
@@ -334,6 +301,22 @@
   }
 }
 
+/* Admin Modal entrance animation */
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-modal-in {
+  animation: modalIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Padronização universal dos campos de texto (inputs, textareas, selects) */
 input[type="text"],
 input[type="password"],
@@ -388,4 +371,60 @@ html.dark select:focus {
   box-shadow: 0 0 0 2px rgba(0, 200, 120, 0.2) !important;
   outline: none !important;
 }
+
+/* ─── Add-to-cart animations ─────────────────────────────────────────────── */
+
+/* Regular burst particles */
+@keyframes particle-burst {
+  0%   { transform: translate(-50%, -50%) scale(1.4); opacity: 1; }
+  55%  { opacity: 0.8; }
+  100% {
+    transform: translate(
+      calc(-50% + var(--tx, 0px)),
+      calc(-50% + var(--ty, 0px))
+    ) scale(0);
+    opacity: 0;
+  }
+}
+
+/* Confetti pieces (with rotation) */
+@keyframes confetti-fall {
+  0%   { transform: translate(-50%, -50%) rotate(0deg) scale(1); opacity: 1; }
+  100% {
+    transform:
+      translate(calc(-50% + var(--tx, 0px)), calc(-50% + var(--ty, 0px)))
+      rotate(var(--rot, 360deg))
+      scale(0.05);
+    opacity: 0;
+  }
+}
+
+/* Expanding ring on 5x milestone */
+@keyframes ring-burst {
+  0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(5);   opacity: 0;   }
+}
+
+/* Floating milestone text */
+@keyframes milestone-float {
+  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  15%  { transform: translate(-50%, -75%) scale(1.15); opacity: 1; }
+  65%  { transform: translate(-50%, -115%) scale(1);  opacity: 1; }
+  100% { transform: translate(-50%, -155%) scale(0.9); opacity: 0; }
+}
+
+/* Button bounce */
+@keyframes btn-pop {
+  0%   { transform: scale(1);    }
+  30%  { transform: scale(1.30); }
+  60%  { transform: scale(0.90); }
+  80%  { transform: scale(1.07); }
+  100% { transform: scale(1);    }
+}
+
+.btn-pop-anim {
+  animation: btn-pop 0.38s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
+}
+
+
 

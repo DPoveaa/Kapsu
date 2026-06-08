@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
 import { CartItem, Product } from '../types'
 import { cartService } from '../services/cart.service'
+import { productsService } from '../services/products.service'
 import { useAuth } from './AuthContext'
 
 interface CartContextType {
@@ -44,7 +45,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           name: item.product.name,
           description: item.product.description || '',
           price: Number(item.product.price),
-          image: item.product.image || '',
+          image: productsService.getImageUrl(item.product.image),
           category: (item.product.category as any) || 'outros',
           active: ((item.product as any).active ?? true),
         } : undefined,

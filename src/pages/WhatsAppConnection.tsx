@@ -2291,7 +2291,7 @@ export default function WhatsAppConnection() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="w-full">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4 lg:py-6 xl:py-8">
         {/* Header */}
         <div className="mb-4 sm:mb-6 lg:mb-8">

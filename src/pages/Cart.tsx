@@ -11,6 +11,8 @@ import { shippingService } from '../services/shipping.service'
 import { addressService } from '../services/address.service'
 import { Product } from '../types'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
+import { HorizontalScrollContainer } from '../components/HorizontalScrollContainer'
+import ProductCard from '../components/ProductCard'
 
 export default function Cart() {
   const navigate = useNavigate()
@@ -651,10 +653,10 @@ export default function Cart() {
                       {item.product && (
                         <Link
                           to={`/produtos/${item.product.id}`}
-                          className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-50 dark:bg-gray-900 rounded-xl flex items-center justify-center p-2 flex-shrink-0 relative border border-gray-100 dark:border-gray-700 block"
+                          className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-xl flex items-center justify-center p-2 flex-shrink-0 relative border border-gray-100 dark:border-gray-700 block"
                         >
                           <img
-                            src={item.product.image}
+                            src={productsService.getImageUrl(item.product.image)}
                             alt={item.product.name}
                             className="max-w-full max-h-full object-contain transition-transform duration-300"
                             onError={handleProductImageError}
@@ -1168,68 +1170,18 @@ export default function Cart() {
               </div>
             </div>
 
-            <div
+            <HorizontalScrollContainer
               ref={scrollRef}
-              className="flex gap-4 overflow-x-auto pb-5 scrollbar-hide snap-x scroll-smooth"
+              showArrows={false}
+              className="flex gap-4 pb-5 scrollbar-hide"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               {recommendedProducts.map(product => (
-                <div
-                  key={product.id}
-                  className={`bg-white dark:bg-gray-800 rounded-3xl border p-4 hover:shadow-lg transition-all cursor-pointer group flex flex-col justify-between w-48 sm:w-56 flex-shrink-0 snap-start relative overflow-hidden ${addedProductId === product.id
-                    ? 'border-green-500 dark:border-green-500 shadow-md ring-1 ring-green-500 animate-scale-bounce'
-                    : 'border-gray-200 dark:border-gray-700'
-                    }`}
-                  onClick={() => navigate(`/produtos/${product.id}`)}
-                >
-                  <div>
-                    {/* Image */}
-                    <div className="w-full h-24 sm:h-32 bg-gray-50 dark:bg-gray-900 rounded-2xl flex items-center justify-center p-2 mb-3 relative border border-gray-100 dark:border-gray-700">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="max-w-full max-h-full object-contain transition-transform duration-300"
-                        onError={handleProductImageError}
-                      />
-                    </div>
-
-                    {/* Title */}
-                    <h3 className="text-xs sm:text-sm font-extrabold text-gray-950 dark:text-white mb-1 line-clamp-2 leading-snug group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-                      {product.name}
-                    </h3>
-
-                    {/* Desc */}
-                    <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-3 line-clamp-1">
-                      {product.description || 'Sem descrição cadastrada'}
-                    </p>
-                  </div>
-
-                  {/* Price & Action */}
-                  <div className="flex items-center justify-between gap-1 mt-auto pt-2 border-t border-gray-100 dark:border-gray-700">
-                    <p className="text-sm sm:text-base font-black text-primary-600 dark:text-primary-400">
-                      R$ {product.price.toFixed(2).replace('.', ',')}
-                    </p>
-                    <button
-                      onClick={(e) => handleAddRecommendation(product, e)}
-                      disabled={addingProductId === product.id}
-                      className={`p-2 rounded-xl transition-all duration-300 shadow-sm active:scale-95 flex-shrink-0 ${addedProductId === product.id
-                        ? 'bg-green-600 text-white scale-110'
-                        : 'bg-primary-600 hover:bg-primary-700 text-white'
-                        }`}
-                      title="Adicionar ao carrinho"
-                    >
-                      {addingProductId === product.id ? (
-                        <Loader2 size={14} className="animate-spin" />
-                      ) : addedProductId === product.id ? (
-                        <Check size={14} className="animate-scale-bounce" />
-                      ) : (
-                        <Plus size={14} />
-                      )}
-                    </button>
-                  </div>
+                <div key={product.id} className="w-[calc(80%-8px)] sm:w-[calc(40%-11px)] md:w-[calc(33.33%-12px)] lg:w-[calc(20%-12.8px)] flex-shrink-0">
+                  <ProductCard product={product} />
                 </div>
               ))}
-            </div>
+            </HorizontalScrollContainer>
           </div>
         )}
 

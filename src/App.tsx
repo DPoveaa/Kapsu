@@ -12,9 +12,7 @@ import AdminPanel from './pages/AdminPanel'
 import WhatsAppConnection from './pages/WhatsAppConnection'
 import WhatsAppSupport from './pages/WhatsAppSupport'
 import UserManagement from './pages/UserManagement'
-import CreateProduct from './pages/CreateProduct'
 import ManageProducts from './pages/ManageProducts'
-import EditProduct from './pages/EditProduct'
 import ManageOrders from './pages/ManageOrders'
 import Reports from './pages/Reports'
 import SiteSettings from './pages/SiteSettings'
@@ -22,6 +20,7 @@ import ShippingSettings from './pages/ShippingSettings'
 import FreeShippingRules from './pages/FreeShippingRules'
 import ManagePromotions from './pages/ManagePromotions'
 import ManagePromoCodes from './pages/ManagePromoCodes'
+import AuditLogs from './pages/AuditLogs'
 
 import ManageBanners from './pages/ManageBanners'
 import ManageReviews from './pages/ManageReviews'
@@ -120,7 +119,7 @@ function AppContent() {
           element={
             <ProtectedRoute requireAdmin>
               <AdminLayout>
-                <CreateProduct />
+                <ManageProducts />
               </AdminLayout>
             </ProtectedRoute>
           }
@@ -130,7 +129,7 @@ function AppContent() {
           element={
             <ProtectedRoute requireAdmin>
               <AdminLayout>
-                <EditProduct />
+                <ManageProducts />
               </AdminLayout>
             </ProtectedRoute>
           }
@@ -162,6 +161,16 @@ function AppContent() {
             <ProtectedRoute requireAdmin>
               <AdminLayout>
                 <SiteSettings />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/audit"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <AuditLogs />
               </AdminLayout>
             </ProtectedRoute>
           }

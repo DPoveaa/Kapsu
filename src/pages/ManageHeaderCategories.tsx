@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { Plus, Pencil, Trash2, MoveUp, MoveDown, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, MoveUp, MoveDown } from 'lucide-react'
 import { headerCategoriesService, HeaderCategory } from '../services/header-categories.service'
 import { siteSettingsService } from '../services/site-settings.service'
 import * as LucideIcons from 'lucide-react'
 import { confirm } from '../utils/toast'
+import AdminModal from '../components/AdminModal'
 
 // Array de nomes de ícones comuns para o seletor
 const COMMON_ICONS = [
@@ -289,16 +290,16 @@ export default function ManageHeaderCategories() {
         </div>
       </div>
 
-      {/* Lista de Categorias */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      {/* Lista de Categorias - Tabela Responsiva */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-x-auto relative scrollbar-thin">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-900/50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16">Ordem</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Visualização</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Link</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ações</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-16 whitespace-nowrap">Ordem</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Visualização</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Link</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">Status</th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap sticky right-0 bg-gray-50 dark:bg-[#1f2937] z-10 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.3)]">Ações</th>
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -306,20 +307,20 @@ export default function ManageHeaderCategories() {
               const CatIcon = (LucideIcons as any)[category.icon || 'Tag'] || LucideIcons.Tag;
 
               return (
-                <tr key={category.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                <tr key={category.id} className="group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-col items-center gap-1">
                       <button
                         onClick={() => moveCategory(index, 'up')}
                         disabled={index === 0}
-                        className="text-gray-400 hover:text-primary-600 disabled:opacity-30 disabled:hover:text-gray-400"
+                        className="text-gray-400 hover:text-primary-600 disabled:opacity-30 disabled:hover:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
                       >
                         <MoveUp size={16} />
                       </button>
                       <button
                         onClick={() => moveCategory(index, 'down')}
                         disabled={index === categories.length - 1}
-                        className="text-gray-400 hover:text-primary-600 disabled:opacity-30 disabled:hover:text-gray-400"
+                        className="text-gray-400 hover:text-primary-600 disabled:opacity-30 disabled:hover:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 rounded"
                       >
                         <MoveDown size={16} />
                       </button>
@@ -328,7 +329,7 @@ export default function ManageHeaderCategories() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3 p-2 rounded-lg bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700" style={{ backgroundColor: barBgColor }}>
                       {category.show_icon && <CatIcon size={18} style={{ color: category.icon_color }} />}
-                      <span className="font-medium" style={{ color: category.text_color }}>{category.name}</span>
+                      <span className="font-medium whitespace-nowrap" style={{ color: category.text_color }}>{category.name}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
@@ -339,16 +340,18 @@ export default function ManageHeaderCategories() {
                       {category.active ? 'Ativo' : 'Inativo'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium sticky right-0 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#153e5c] z-10 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] dark:shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.2)] transition-colors">
                     <button
                       onClick={() => openEditModal(category)}
-                      className="text-primary-600 hover:text-primary-900 dark:hover:text-primary-400 mr-4"
+                      className="text-primary-600 hover:text-primary-900 dark:hover:text-primary-400 mr-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 rounded p-1 inline-flex items-center"
+                      title="Editar"
                     >
                       <Pencil size={18} />
                     </button>
                     <button
                       onClick={() => handleDelete(category.id)}
-                      className="text-red-600 hover:text-red-900 dark:hover:text-red-400"
+                      className="text-red-600 hover:text-red-900 dark:hover:text-red-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 rounded p-1 inline-flex items-center"
+                      title="Excluir"
                     >
                       <Trash2 size={18} />
                     </button>
@@ -368,156 +371,139 @@ export default function ManageHeaderCategories() {
       </div>
 
       {/* Modal de Adição/Edição */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 dark:bg-gray-900 opacity-75"></div>
+      <AdminModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
+        widthClass="max-w-3xl"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(false)}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="header-category-form"
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+            >
+              Salvar
+            </button>
+          </div>
+        }
+      >
+        <form id="header-category-form" onSubmit={handleSave} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Texto (Nome)</label>
+              <input
+                type="text"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 text-base py-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="Ex: Ofertas"
+              />
             </div>
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl w-full">
-              <form onSubmit={handleSave}>
-                <div className="bg-white dark:bg-gray-800 px-6 pt-6 pb-4 sm:p-8 sm:pb-6">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl leading-6 font-bold text-gray-900 dark:text-white">
-                      {editingCategory ? 'Editar Categoria' : 'Nova Categoria'}
-                    </h3>
-                    <button type="button" onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-500 transition-colors">
-                      <X size={24} />
-                    </button>
-                  </div>
-
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Texto (Nome)</label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 text-base py-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          placeholder="Ex: Ofertas"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Atalho de Destino</label>
-                        <select
-                          onChange={(e) => {
-                            if (e.target.value === 'promo') {
-                              setFormData({ ...formData, name: formData.name || 'Promoções', url: '/produtos?promocao=true' });
-                            } else if (e.target.value === 'best') {
-                              setFormData({ ...formData, name: formData.name || 'Mais Vendidos', url: '/produtos?ordenar=mais-vendidos' });
-                            }
-                          }}
-                          className="block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 text-base py-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-2"
-                        >
-                          <option value="custom">URL Personalizada</option>
-                          <option value="promo">Página de Promoções</option>
-                          <option value="best">Página de Mais Vendidos</option>
-                        </select>
-                        
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Link (URL)</label>
-                        <input
-                          type="text"
-                          required
-                          value={formData.url}
-                          onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                          className="block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 text-base py-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          placeholder="Ex: /produtos?categoria=ofertas"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center">
-                      <input
-                        id="show_icon"
-                        type="checkbox"
-                        checked={formData.show_icon}
-                        onChange={(e) => setFormData({ ...formData, show_icon: e.target.checked })}
-                        className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor="show_icon" className="ml-2 block text-sm text-gray-900 dark:text-gray-300 font-medium">
-                        Exibir ícone
-                      </label>
-                    </div>
-
-                    {formData.show_icon && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Selecione um Ícone</label>
-                        <div className="grid grid-cols-6 sm:grid-cols-8 gap-3 max-h-48 overflow-y-auto p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900">
-                          {COMMON_ICONS.map(iconName => {
-                            const IconCmp = (LucideIcons as any)[iconName]
-                            if (!IconCmp) return null
-                            return (
-                              <button
-                                key={iconName}
-                                type="button"
-                                onClick={() => setFormData({ ...formData, icon: iconName })}
-                                className={`p-3 rounded-lg flex items-center justify-center hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors ${formData.icon === iconName ? 'bg-primary-200 dark:bg-primary-800 ring-2 ring-primary-500' : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700'}`}
-                                title={iconName}
-                              >
-                                <IconCmp size={24} className="text-gray-700 dark:text-gray-300" />
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <ColorPickerField 
-                        label="Cor do Texto" 
-                        color={formData.text_color} 
-                        onChange={(c) => setFormData({ ...formData, text_color: c })} 
-                      />
-
-                      {formData.show_icon && (
-                        <ColorPickerField 
-                          label="Cor do Ícone" 
-                          color={formData.icon_color} 
-                          onChange={(c) => setFormData({ ...formData, icon_color: c })} 
-                        />
-                      )}
-                    </div>
-
-                    <div className="flex items-center mt-6">
-                      <input
-                        id="active"
-                        type="checkbox"
-                        checked={formData.active}
-                        onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                        className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor="active" className="ml-2 block text-sm text-gray-900 dark:text-gray-300 font-medium">
-                        Ativo (visível no site)
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 dark:bg-gray-700/50 px-6 py-4 sm:px-8 sm:flex sm:flex-row-reverse rounded-b-xl gap-3">
-                  <button
-                    type="submit"
-                    className="w-full inline-flex justify-center rounded-lg border border-transparent shadow-sm px-6 py-2.5 bg-primary-600 text-base font-medium text-white hover:bg-primary-700 focus:outline-none sm:text-sm transition-colors"
-                  >
-                    Salvar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="mt-3 w-full inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-6 py-2.5 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:text-sm dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Atalho de Destino</label>
+              <select
+                onChange={(e) => {
+                  if (e.target.value === 'promo') {
+                    setFormData({ ...formData, name: formData.name || 'Promoções', url: '/produtos?promocao=true' });
+                  } else if (e.target.value === 'best') {
+                    setFormData({ ...formData, name: formData.name || 'Mais Vendidos', url: '/produtos?ordenar=mais-vendidos' });
+                  }
+                }}
+                className="block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 text-base py-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-2"
+              >
+                <option value="custom">URL Personalizada</option>
+                <option value="promo">Página de Promoções</option>
+                <option value="best">Página de Mais Vendidos</option>
+              </select>
+              
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Link (URL)</label>
+              <input
+                type="text"
+                required
+                value={formData.url}
+                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                className="block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 text-base py-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                placeholder="Ex: /produtos?categoria=ofertas"
+              />
             </div>
           </div>
-        </div>
-      )}
+
+          <div className="flex items-center">
+            <input
+              id="show_icon"
+              type="checkbox"
+              checked={formData.show_icon}
+              onChange={(e) => setFormData({ ...formData, show_icon: e.target.checked })}
+              className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            />
+            <label htmlFor="show_icon" className="ml-2 block text-sm text-gray-900 dark:text-gray-300 font-medium">
+              Exibir ícone
+            </label>
+          </div>
+
+          {formData.show_icon && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Selecione um Ícone</label>
+              <div className="grid grid-cols-6 sm:grid-cols-8 gap-3 max-h-48 overflow-y-auto p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900">
+                {COMMON_ICONS.map(iconName => {
+                  const IconCmp = (LucideIcons as any)[iconName]
+                  if (!IconCmp) return null
+                  return (
+                    <button
+                      key={iconName}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, icon: iconName })}
+                      className={`p-3 rounded-lg flex items-center justify-center hover:bg-primary-100 dark:hover:bg-primary-900 transition-colors ${formData.icon === iconName ? 'bg-primary-200 dark:bg-primary-800 ring-2 ring-primary-500' : 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700'}`}
+                      title={iconName}
+                    >
+                      <IconCmp size={24} className="text-gray-700 dark:text-gray-300" />
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ColorPickerField 
+              label="Cor do Texto" 
+              color={formData.text_color} 
+              onChange={(c) => setFormData({ ...formData, text_color: c })} 
+            />
+
+            {formData.show_icon && (
+              <ColorPickerField 
+                label="Cor do Ícone" 
+                color={formData.icon_color} 
+                onChange={(c) => setFormData({ ...formData, icon_color: c })} 
+              />
+            )}
+          </div>
+
+          <div className="flex items-center mt-6">
+            <input
+              id="active"
+              type="checkbox"
+              checked={formData.active}
+              onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+              className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            />
+            <label htmlFor="active" className="ml-2 block text-sm text-gray-900 dark:text-gray-300 font-medium">
+              Ativo (visível no site)
+            </label>
+          </div>
+        </form>
+      </AdminModal>
     </div>
   )
 }

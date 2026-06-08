@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader2, Package, User, MapPin, CreditCard, Calendar, FileText } from 'lucide-react'
 import { adminService } from '../services/admin.service'
+import { productsService } from '../services/products.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 
 interface OrderItem {
@@ -118,7 +119,7 @@ export default function OrderDetail() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-center items-center py-12">
             <Loader2 className="animate-spin text-primary-600" size={48} />
@@ -130,7 +131,7 @@ export default function OrderDetail() {
 
   if (error || !order) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="w-full">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <button
             onClick={() => navigate(-1)}
@@ -159,7 +160,7 @@ export default function OrderDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-12">
+    <div className="w-full pb-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
@@ -196,9 +197,9 @@ export default function OrderDetail() {
                   <div key={item.id} className="p-6 flex items-start space-x-4">
                     {item.product?.image && (
                       <img
-                        src={item.product.image}
+                        src={productsService.getImageUrl(item.product.image)}
                         alt={item.product.name}
-                        className="w-20 h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700 bg-white"
+                        className="w-20 h-20 object-contain rounded-lg border border-gray-200 dark:border-gray-700 bg-white p-1"
                         onError={handleProductImageError}
                       />
                     )}

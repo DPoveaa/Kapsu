@@ -49,6 +49,32 @@ export interface StatisticsResponse {
   }
 }
 
+export interface AuditLog {
+  id: number
+  user_id: string | null
+  user_email: string | null
+  user_role: string | null
+  action: string
+  resource: string
+  resource_id: string | null
+  result: 'SUCCESS' | 'FAILURE'
+  request_id: string | null
+  before_state: string | null
+  after_state: string | null
+  error_message: string | null
+  ip_address: string | null
+  user_agent: string | null
+  created_at: string
+}
+
+export interface AuditLogsResponse {
+  success: boolean
+  data: {
+    logs: AuditLog[]
+    total: number
+  }
+}
+
 class AdminService {
   private baseUrl = `${API_URL}/admin`
 
@@ -840,6 +866,64 @@ class AdminService {
         throw error
       }
       throw new Error('Erro de conexão ao criar pedido como pago')
+    }
+  }
+
+  /**
+   * Busca os logs de auditoria (apenas admin)
+   */
+  async getAuditLogs(params?: {
+    limit?: number
+    offset?: number
+    action?: string
+    resource?: string
+    resourceId?: string
+    userEmail?: string
+    result?: string
+    requestId?: string
+    startDate?: string
+    endDate?: string
+    ipAddress?: string
+    userAgent?: string
+  }): Promise<AuditLogsResponse> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const queryParams = new URLSearchParams()
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            queryParams.append(key, value.toString())
+          }
+        })
+      }
+
+      const response = await fetch(`${this.baseUrl}/audit-logs?${queryParams}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao buscar logs de auditoria')
+      }
+
+      return data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao buscar logs de auditoria')
     }
   }
 }

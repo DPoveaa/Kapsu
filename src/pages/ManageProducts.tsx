@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import {
   ArrowLeft, Plus, Edit, Trash2, Loader2, Search, Upload,
   Archive, ArchiveRestore, TrendingUp, TrendingDown, Minus,
   ChevronDown, ChevronRight, X, BarChart2, ShoppingCart, Tag,
-  Sparkles, Check, AlertCircle
+  Sparkles, Check, AlertCircle, Save
 } from 'lucide-react'
 import { productsService } from '../services/products.service'
 import { siteSettingsService } from '../services/site-settings.service'
@@ -12,6 +12,8 @@ import { Product, ProductPriceHistory } from '../types'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import * as XLSX from 'xlsx'
 import { confirm, toast } from '../utils/toast'
+import AdminModal from '../components/AdminModal'
+import ImageUpload from '../components/ImageUpload'
 
 type Tab = 'active' | 'inactive' | 'archived'
 
@@ -141,6 +143,266 @@ export default function ManageProducts() {
     newPurchasePrice: number | null;
   }[]>([])
   const [isReactivateModalOpen, setIsReactivateModalOpen] = useState(false)
+
+  // ── Product modal form state ──────────────────────────────────────────────
+  const { id: urlProductId } = useParams()
+  const location = useLocation()
+  
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [productFormLoading, setProductFormLoading] = useState(false)
+  const [loadingProductDetails, setLoadingProductDetails] = useState(false)
+  const [productFormError, setProductFormError] = useState<string | null>(null)
+  const [productImageError, setProductImageError] = useState<string | null>(null)
+  
+  const initialProductFormState = {
+    name: '',
+    description: '',
+    price: '',
+    promo_price: '',
+    purchase_price: '',
+    markup: '',
+    image: '',
+    category: 'Outros',
+    active: true,
+    compositions: '',
+    indication: '',
+    contraindication: '',
+    free_shipping: false,
+  }
+  const [productFormData, setProductFormData] = useState(initialProductFormState)
+  const [newCatInput, setNewCatInput] = useState('')
+  const [localAddedCategories, setLocalAddedCategories] = useState<string[]>([])
+
+  const existingCategories = useMemo(() => {
+    const catsSet = new Set<string>(['Vitamina', 'Mineral', 'Fitoterápico', 'Outros'])
+    for (const p of products) {
+      if (p.category) {
+        p.category.split(',').forEach(c => {
+          const trimmed = c.trim()
+          if (trimmed) {
+            catsSet.add(trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase())
+          }
+        })
+      }
+    }
+    return Array.from(catsSet).sort((a, b) => a.localeCompare(b))
+  }, [products])
+
+  const categoriesToDisplay = useMemo(() => {
+    const set = new Set([...existingCategories, ...localAddedCategories])
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [existingCategories, localAddedCategories])
+
+  const handleAddNewCat = () => {
+    const trimmed = newCatInput.trim()
+    if (!trimmed) return
+    const formatted = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase()
+    
+    if (!localAddedCategories.includes(formatted) && !existingCategories.includes(formatted)) {
+      setLocalAddedCategories(prev => [...prev, formatted])
+    }
+    
+    const currentCats = productFormData.category.split(',').map(s => s.trim()).filter(Boolean)
+    if (!currentCats.includes(formatted)) {
+      const updatedCats = [...currentCats, formatted]
+      setProductFormData(prev => ({ ...prev, category: updatedCats.join(', ') }))
+    }
+    setNewCatInput('')
+  }
+
+  const handleProductFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target
+    setProductFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+    }))
+  }
+
+  const handleProductPriceFieldChange = (name: string, value: string) => {
+    setProductFormData(prev => {
+      const updated = { ...prev, [name]: value }
+
+      const cost = name === 'purchase_price' ? Number(value) : Number(prev.purchase_price)
+
+      if (name === 'purchase_price') {
+        const costNum = Number(value)
+        if (costNum > 0) {
+          if (prev.markup && !isNaN(Number(prev.markup))) {
+            const calculatedPrice = costNum * (1 + Number(prev.markup) / 100)
+            updated.price = isNaN(calculatedPrice) ? prev.price : calculatedPrice.toFixed(2)
+          } else if (prev.price && !isNaN(Number(prev.price))) {
+            const calculatedMarkup = ((Number(prev.price) - costNum) / costNum) * 100
+            updated.markup = isNaN(calculatedMarkup) ? prev.markup : calculatedMarkup.toFixed(1)
+          }
+        } else {
+          updated.markup = ''
+        }
+      } else if (name === 'markup') {
+        const markupNum = Number(value)
+        if (cost > 0 && value !== '') {
+          const calculatedPrice = cost * (1 + markupNum / 100)
+          updated.price = isNaN(calculatedPrice) ? prev.price : calculatedPrice.toFixed(2)
+        }
+      } else if (name === 'price') {
+        const priceNum = Number(value)
+        if (cost > 0 && priceNum > 0) {
+          const calculatedMarkup = ((priceNum - cost) / cost) * 100
+          updated.markup = isNaN(calculatedMarkup) ? prev.markup : calculatedMarkup.toFixed(1)
+        }
+      }
+
+      return updated
+    })
+  }
+
+  const productMarginInfo = useMemo(() => {
+    const cost = Number(productFormData.purchase_price)
+    const sale = Number(productFormData.price)
+    if (!isNaN(cost) && !isNaN(sale) && cost > 0 && sale > 0) {
+      const profit = sale - cost
+      const margin = (profit / sale) * 100
+      return {
+        margin: margin.toFixed(1).replace('.', ','),
+        profit: profit.toFixed(2).replace('.', ','),
+        isPositive: profit >= 0
+      }
+    }
+    return null
+  }, [productFormData.purchase_price, productFormData.price])
+
+  const loadProductForEditing = useCallback(async (productId: string) => {
+    try {
+      setLoadingProductDetails(true)
+      setProductFormError(null)
+      const productRaw = await (productsService as any).getByIdForAdminRaw(productId)
+      const product = await productsService.getByIdForAdmin(productId)
+      setEditingProduct(product)
+      setProductFormData({
+        name: product.name,
+        description: product.description || '',
+        price: product.price.toString(),
+        promo_price: productRaw.promo_price ? productRaw.promo_price.toString() : '',
+        purchase_price: productRaw.purchase_price ? productRaw.purchase_price.toString() : '',
+        markup: productRaw.markup ? productRaw.markup.toString() : '',
+        image: product.image || '',
+        category: product.category || 'Outros',
+        active: productRaw.active ?? true,
+        compositions: productRaw.compositions || '',
+        indication: productRaw.indication || '',
+        contraindication: productRaw.contraindication || '',
+        free_shipping: productRaw.free_shipping ?? false,
+      })
+      setLocalAddedCategories([])
+      setIsProductModalOpen(true)
+    } catch (err: any) {
+      console.error('Erro ao carregar produto para edição:', err)
+      toast.error('Erro ao carregar produto para edição')
+      navigate('/admin/products')
+    } finally {
+      setLoadingProductDetails(false)
+    }
+  }, [navigate])
+
+  const openCreateProductModal = () => {
+    setEditingProduct(null)
+    setProductFormData(initialProductFormState)
+    setLocalAddedCategories([])
+    setProductFormError(null)
+    setProductImageError(null)
+    setIsProductModalOpen(true)
+  }
+
+  const closeProductModal = () => {
+    setIsProductModalOpen(false)
+    setEditingProduct(null)
+    navigate('/admin/products')
+  }
+
+  useEffect(() => {
+    if (location.pathname === '/admin/products/create') {
+      if (!isProductModalOpen || editingProduct !== null) {
+        openCreateProductModal()
+      }
+    } else if (urlProductId) {
+      if (!isProductModalOpen || editingProduct?.id !== urlProductId) {
+        loadProductForEditing(urlProductId)
+      }
+    } else if (location.pathname === '/admin/products') {
+      if (isProductModalOpen) {
+        setIsProductModalOpen(false)
+        setEditingProduct(null)
+      }
+    }
+  }, [location.pathname, urlProductId, isProductModalOpen, editingProduct])
+
+  const handleProductFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setProductFormError(null)
+
+    // Validação
+    if (!productFormData.name.trim()) {
+      setProductFormError('O nome do produto é obrigatório')
+      return
+    }
+
+    if (!productFormData.price || isNaN(Number(productFormData.price)) || Number(productFormData.price) <= 0) {
+      setProductFormError('O preço de venda deve ser um número positivo')
+      return
+    }
+
+    if (productFormData.purchase_price && (isNaN(Number(productFormData.purchase_price)) || Number(productFormData.purchase_price) <= 0)) {
+      setProductFormError('O preço de compra deve ser um número positivo')
+      return
+    }
+
+    if (productFormData.promo_price && (isNaN(Number(productFormData.promo_price)) || Number(productFormData.promo_price) <= 0)) {
+      setProductFormError('O preço promocional deve ser um número positivo')
+      return
+    }
+
+    if (productFormData.promo_price && Number(productFormData.promo_price) >= Number(productFormData.price)) {
+      setProductFormError('O preço promocional deve ser menor que o preço de venda')
+      return
+    }
+
+    try {
+      setProductFormLoading(true)
+      const payload = {
+        name: productFormData.name.trim(),
+        description: productFormData.description.trim() || undefined,
+        price: Number(productFormData.price),
+        promo_price: productFormData.promo_price ? Number(productFormData.promo_price) : null,
+        purchase_price: productFormData.purchase_price ? Number(productFormData.purchase_price) : null,
+        markup: productFormData.markup ? Number(productFormData.markup) : null,
+        image: productFormData.image.trim() || undefined,
+        category: productFormData.category || undefined,
+        active: productFormData.active,
+        compositions: productFormData.compositions.trim() || undefined,
+        indication: productFormData.indication.trim() || undefined,
+        contraindication: productFormData.contraindication.trim() || undefined,
+        free_shipping: productFormData.free_shipping,
+      }
+
+      if (editingProduct) {
+        await productsService.update(editingProduct.id, payload)
+        toast.success('Produto atualizado com sucesso!')
+      } else {
+        await productsService.create(payload)
+        toast.success('Produto criado com sucesso!')
+      }
+
+      setIsProductModalOpen(false)
+      setEditingProduct(null)
+      navigate('/admin/products')
+      await loadProducts()
+    } catch (err: any) {
+      console.error('Erro ao salvar produto:', err)
+      setProductFormError(err.message || 'Erro ao salvar produto')
+    } finally {
+      setProductFormLoading(false)
+    }
+  }
 
   // ── Price history modal state ─────────────────────────────────────────────
   const [isHistoryOpen, setIsHistoryOpen]     = useState(false)
@@ -644,18 +906,18 @@ export default function ManageProducts() {
   // ── Sub-renders ───────────────────────────────────────────────────────────
   const renderStatusBadge = (p: Product) => p.archived
     ? <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"><Archive size={11}/>Arquivado</span>
-    : <button onClick={() => handleToggleActive(p)} className={`px-2 py-1 text-xs font-medium rounded-full transition-colors ${p.active ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 hover:bg-yellow-200'}`} title={`Clique para ${p.active ? 'desativar' : 'ativar'}`}>{p.active ? 'Ativo' : 'Inativo'}</button>
+    : <button onClick={() => handleToggleActive(p)} className={`px-2 py-1 text-xs font-medium rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${p.active ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 hover:bg-yellow-200'}`} title={`Clique para ${p.active ? 'desativar' : 'ativar'}`}>{p.active ? 'Ativo' : 'Inativo'}</button>
 
   const renderActions = (p: Product) => p.archived
-    ? <div className="flex justify-end"><button onClick={() => handleUnarchive(p)} className="text-blue-600 dark:text-blue-400 hover:text-blue-900" title="Desarquivar"><ArchiveRestore size={18}/></button></div>
+    ? <div className="flex justify-end"><button onClick={() => handleUnarchive(p)} className="text-blue-600 dark:text-blue-400 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded p-1" title="Desarquivar"><ArchiveRestore size={18}/></button></div>
     : <div className="flex justify-end space-x-2">
-        <button onClick={() => navigate(`/admin/products/edit/${p.id}`)} className="text-blue-600 dark:text-blue-400 hover:text-blue-900" title="Editar"><Edit size={18}/></button>
-        <button onClick={() => handleDelete(p.id)} disabled={deletingId === p.id} className="text-red-600 dark:text-red-400 hover:text-red-900 disabled:opacity-50" title="Excluir">{deletingId === p.id ? <Loader2 className="animate-spin" size={18}/> : <Trash2 size={18}/>}</button>
+        <button onClick={() => navigate(`/admin/products/edit/${p.id}`)} className="text-blue-600 dark:text-blue-400 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded p-1" title="Editar"><Edit size={18}/></button>
+        <button onClick={() => handleDelete(p.id)} disabled={deletingId === p.id} className="text-red-600 dark:text-red-400 hover:text-red-900 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded p-1" title="Excluir">{deletingId === p.id ? <Loader2 className="animate-spin" size={18}/> : <Trash2 size={18}/>}</button>
       </div>
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="w-full">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
 
         {/* Header */}
@@ -751,14 +1013,14 @@ export default function ManageProducts() {
               </div>
             )}
 
-            {/* Desktop table */}
-            <div className="hidden lg:block bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="overflow-x-auto">
+            {/* Table wrapper with horizontal scroll and responsive design */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="overflow-x-auto relative">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-800/80">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">
-                        <input type="checkbox" checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0} onChange={e => setSelectedIds(e.target.checked ? filteredProducts.map(p => p.id) : [])} className="h-4 w-4 text-primary-600 border-gray-300 rounded"/>
+                        <input type="checkbox" checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0} onChange={e => setSelectedIds(e.target.checked ? filteredProducts.map(p => p.id) : [])} className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 focus-visible:ring-2 focus-visible:ring-blue-500"/>
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Produto</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Categoria</th>
@@ -766,16 +1028,16 @@ export default function ManageProducts() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Markup / Margem</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Venda</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Status</th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Ações</th>
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap sticky right-0 bg-gray-50 dark:bg-gray-800 z-10 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.3)]">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {filteredProducts.length === 0 ? (
                       <tr><td colSpan={8} className="px-6 py-10 text-center text-gray-500 dark:text-gray-400 text-sm">Nenhum produto encontrado.</td></tr>
                     ) : filteredProducts.map(p => (
-                      <tr key={p.id} className={`hover:bg-gray-50 dark:hover:bg-[#065084]/40 transition-colors ${p.archived ? 'opacity-70' : ''}`}>
+                      <tr key={p.id} className={`group hover:bg-gray-50 dark:hover:bg-[#065084]/40 transition-colors ${p.archived ? 'opacity-70' : ''}`}>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={e => setSelectedIds(e.target.checked ? [...selectedIds, p.id] : selectedIds.filter(x => x !== p.id))} className="h-4 w-4 text-primary-600 border-gray-300 rounded"/>
+                          <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={e => setSelectedIds(e.target.checked ? [...selectedIds, p.id] : selectedIds.filter(x => x !== p.id))} className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 focus-visible:ring-2 focus-visible:ring-blue-500"/>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
@@ -859,88 +1121,12 @@ export default function ManageProducts() {
                         </td>
                         <td className="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white whitespace-nowrap">{fmt(p.price)}</td>
                         <td className="px-4 py-3 whitespace-nowrap">{renderStatusBadge(p)}</td>
-                        <td className="px-4 py-3 text-right whitespace-nowrap">{renderActions(p)}</td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap sticky right-0 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#153e5c] z-10 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] dark:shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.2)] transition-colors">{renderActions(p)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </div>
-
-            {/* Mobile cards */}
-            <div className="lg:hidden space-y-3">
-              {filteredProducts.length === 0 ? (
-                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 text-center">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Nenhum produto encontrado.</p>
-                </div>
-              ) : filteredProducts.map(p => (
-                <div key={p.id} className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 ${p.archived ? 'opacity-75' : ''}`}>
-                  <div className="flex items-start gap-3">
-                    <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={e => setSelectedIds(e.target.checked ? [...selectedIds, p.id] : selectedIds.filter(x => x !== p.id))} className="h-5 w-5 text-primary-600 border-gray-300 rounded mt-1 flex-shrink-0"/>
-                    <img src={p.image} alt={p.name} className={`h-16 w-16 rounded-lg object-contain bg-gray-50 dark:bg-gray-700 p-0.5 flex-shrink-0 ${p.archived ? 'grayscale' : ''}`} onError={e => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}/>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1 break-words flex items-center gap-1.5">
-                        {p.name}{p.archived && <Archive size={12} className="text-gray-400 flex-shrink-0"/>}
-                      </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-300 mb-2 line-clamp-2">{p.description || 'Sem descrição'}</p>
-                      <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                        {(p.category || 'outros').split(',').map(cat => {
-                          const c = cat.trim();
-                          return (
-                            <span key={c} className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                              {c.charAt(0).toUpperCase() + c.slice(1)}
-                            </span>
-                          );
-                        })}
-                        {renderStatusBadge(p)}
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex flex-col">
-                          {p.purchase_price != null && (
-                            <div className="flex flex-wrap items-center gap-x-2 text-[10px] text-purple-600 dark:text-purple-400 font-medium">
-                              <span>Compra: {fmt(p.purchase_price)}</span>
-                              {Number(p.purchase_price) > 0 && (
-                                <span className="text-green-600 dark:text-green-400 font-semibold">
-                                  Mkp: {p.markup != null ? `${Number(p.markup).toFixed(0)}%` : (() => {
-                                    const cost = Number(p.purchase_price);
-                                    const sale = Number(p.price);
-                                    return `${((sale - cost) / cost * 100).toFixed(0)}%`;
-                                  })()}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-semibold text-gray-900 dark:text-white">Venda: {fmt(p.price)}</span>
-                            {p.purchase_price != null && Number(p.purchase_price) > 0 && (() => {
-                              const cost = Number(p.purchase_price);
-                              const sale = Number(p.price);
-                              if (cost > 0 && sale > 0) {
-                                const margin = ((sale - cost) / sale) * 100;
-                                return (
-                                  <span className="text-[10px] font-medium px-1.5 py-0.2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full">
-                                    Margem: {margin.toFixed(0)}%
-                                  </span>
-                                );
-                              }
-                              return null;
-                            })()}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {p.archived
-                            ? <button onClick={() => handleUnarchive(p)} className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Desarquivar"><ArchiveRestore size={16}/></button>
-                            : <>
-                                <button onClick={() => navigate(`/admin/products/edit/${p.id}`)} className="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Editar"><Edit size={16}/></button>
-                                <button onClick={() => handleDelete(p.id)} disabled={deletingId === p.id} className="p-1.5 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50" title="Excluir">{deletingId === p.id ? <Loader2 className="animate-spin w-4 h-4"/> : <Trash2 size={16}/>}</button>
-                              </>
-                          }
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
             </div>
           </>
         )}
@@ -1384,6 +1570,327 @@ export default function ManageProducts() {
           </div>
         </div>
       )}
+
+      {/* ═══════════════ PRODUCT CREATE/EDIT MODAL ═════════════════════════ */}
+      <AdminModal
+        isOpen={isProductModalOpen}
+        onClose={closeProductModal}
+        title={editingProduct ? 'Editar Produto' : 'Criar Novo Produto'}
+        widthClass="max-w-4xl"
+        footer={
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={closeProductModal}
+              className="px-5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
+              disabled={productFormLoading}
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="product-form"
+              disabled={productFormLoading}
+              className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
+            >
+              {productFormLoading ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={16} />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save size={16} className="mr-2" />
+                  {editingProduct ? 'Salvar Alterações' : 'Criar Produto'}
+                </>
+              )}
+            </button>
+          </div>
+        }
+      >
+        {loadingProductDetails ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="animate-spin text-primary-600 w-12 h-12" />
+          </div>
+        ) : (
+          <form id="product-form" onSubmit={handleProductFormSubmit} className="space-y-6">
+            {productFormError && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-300">{productFormError}</p>
+              </div>
+            )}
+
+            {productImageError && (
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p className="text-sm text-yellow-600 dark:text-yellow-300">{productImageError}</p>
+              </div>
+            )}
+
+            {/* Nome */}
+            <div>
+              <label htmlFor="product-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Nome do Produto <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="product-name"
+                name="name"
+                value={productFormData.name}
+                onChange={handleProductFormChange}
+                required
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                placeholder="Ex: Vitamina D3 2000UI"
+              />
+            </div>
+
+            {/* Descrição */}
+            <div>
+              <label htmlFor="product-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Descrição
+              </label>
+              <textarea
+                id="product-description"
+                name="description"
+                value={productFormData.description}
+                onChange={handleProductFormChange}
+                rows={4}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                placeholder="Descreva o produto..."
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+              {/* Preço de Compra */}
+              <div>
+                <label htmlFor="product-purchase_price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Preço de Compra (Custo) (R$)
+                </label>
+                <input
+                  type="number"
+                  id="product-purchase_price"
+                  name="purchase_price"
+                  value={productFormData.purchase_price}
+                  onChange={(e) => handleProductPriceFieldChange('purchase_price', e.target.value)}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                  placeholder="0.00"
+                />
+                <p className="text-[10px] text-gray-500 mt-1">Custo pago pelo produto.</p>
+              </div>
+
+              {/* Markup (%) */}
+              <div>
+                <label htmlFor="product-markup" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Markup (%)
+                </label>
+                <input
+                  type="number"
+                  id="product-markup"
+                  name="markup"
+                  value={productFormData.markup}
+                  onChange={(e) => handleProductPriceFieldChange('markup', e.target.value)}
+                  min="0"
+                  step="0.1"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  placeholder="Ex: 50"
+                  disabled={!productFormData.purchase_price || Number(productFormData.purchase_price) <= 0}
+                  title={(!productFormData.purchase_price || Number(productFormData.purchase_price) <= 0) ? "Preencha o Preço de Compra para utilizar o markup" : ""}
+                />
+                <p className="text-[10px] text-gray-500 mt-1">Margem sobre o custo.</p>
+              </div>
+
+              {/* Preço de Venda */}
+              <div>
+                <label htmlFor="product-price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Preço de Venda (R$) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  id="product-price"
+                  name="price"
+                  value={productFormData.price}
+                  onChange={(e) => handleProductPriceFieldChange('price', e.target.value)}
+                  required
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                  placeholder="0.00"
+                />
+                {productMarginInfo && (
+                  <p className={`text-[10px] font-semibold mt-1 ${productMarginInfo.isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
+                    Margem: {productMarginInfo.margin}% (R$ {productMarginInfo.profit})
+                  </p>
+                )}
+              </div>
+
+              {/* Preço Promocional */}
+              <div>
+                <label htmlFor="product-promo_price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Preço Promocional (R$)
+                </label>
+                <input
+                  type="number"
+                  id="product-promo_price"
+                  name="promo_price"
+                  value={productFormData.promo_price}
+                  onChange={handleProductFormChange}
+                  min="0"
+                  step="0.01"
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                  placeholder="0.00"
+                />
+                <p className="text-[10px] text-gray-500 mt-1">Deixe vazio se sem promoção.</p>
+              </div>
+            </div>
+
+            {/* Categoria */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Categorias do Produto
+              </label>
+              <div className="flex flex-wrap gap-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                {categoriesToDisplay.map(cat => {
+                  const isChecked = productFormData.category.split(',').map(s => s.trim().toLowerCase()).includes(cat.toLowerCase())
+                  return (
+                    <label key={cat} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={e => {
+                          const currentCats = productFormData.category.split(',').map(s => s.trim()).filter(Boolean)
+                          let newCats: string[]
+                          if (e.target.checked) {
+                            if (currentCats.length === 1 && currentCats[0].toLowerCase() === 'outros' && cat.toLowerCase() !== 'outros') {
+                              newCats = [cat]
+                            } else {
+                              newCats = [...currentCats, cat]
+                            }
+                          } else {
+                            newCats = currentCats.filter(c => c.toLowerCase() !== cat.toLowerCase())
+                          }
+                          if (newCats.length === 0) newCats = ['Outros']
+                          setProductFormData(prev => ({ ...prev, category: newCats.join(', ') }))
+                        }}
+                        className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                      />
+                      {cat}
+                    </label>
+                  )
+                })}
+              </div>
+              
+              {/* Add Custom Category Input */}
+              <div className="mt-3 flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Nova categoria..."
+                  value={newCatInput}
+                  onChange={e => setNewCatInput(e.target.value)}
+                  className="px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-750 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddNewCat}
+                  className="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors"
+                >
+                  + Adicionar Categoria
+                </button>
+              </div>
+            </div>
+
+            {/* Imagem */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Imagem do Produto
+              </label>
+              <ImageUpload
+                value={productFormData.image}
+                onChange={(url) => setProductFormData(prev => ({ ...prev, image: url }))}
+                onError={(err) => setProductImageError(err || null)}
+                disabled={productFormLoading}
+              />
+            </div>
+
+            {/* Composições */}
+            <div>
+              <label htmlFor="product-compositions" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Formulação / Composição
+              </label>
+              <textarea
+                id="product-compositions"
+                name="compositions"
+                value={productFormData.compositions}
+                onChange={handleProductFormChange}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                placeholder="Informe as composições do produto..."
+              />
+            </div>
+
+            {/* Indicação */}
+            <div>
+              <label htmlFor="product-indication" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Indicação
+              </label>
+              <textarea
+                id="product-indication"
+                name="indication"
+                value={productFormData.indication}
+                onChange={handleProductFormChange}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                placeholder="Informe as indicações do produto..."
+              />
+            </div>
+
+            {/* Contraindicação */}
+            <div>
+              <label htmlFor="product-contraindication" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Contraindicação
+              </label>
+              <textarea
+                id="product-contraindication"
+                name="contraindication"
+                value={productFormData.contraindication}
+                onChange={handleProductFormChange}
+                rows={3}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                placeholder="Informe as contraindicações do produto..."
+              />
+            </div>
+
+            {/* Frete Grátis */}
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="product-free_shipping"
+                name="free_shipping"
+                checked={productFormData.free_shipping}
+                onChange={handleProductFormChange}
+                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 dark:border-gray-750 dark:border-gray-700"
+              />
+              <label htmlFor="product-free_shipping" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                Oferecer frete grátis para este produto
+              </label>
+            </div>
+
+            {/* Ativo */}
+            <div>
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="active"
+                  checked={productFormData.active}
+                  onChange={handleProductFormChange}
+                  className="mr-2 dark:border-gray-750 dark:border-gray-700"
+                />
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Produto ativo</span>
+              </label>
+            </div>
+          </form>
+        )}
+      </AdminModal>
     </div>
   )
 }

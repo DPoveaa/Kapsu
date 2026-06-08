@@ -51,7 +51,7 @@ class ProductsService {
   /**
    * Converte URL de imagem relativa para URL completa
    */
-  private getImageUrl(image: string | null): string {
+  public getImageUrl(image: string | null | undefined): string {
     if (!image || image.trim() === '') {
       return PRODUCT_IMAGE_FALLBACK
     }

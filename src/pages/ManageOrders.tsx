@@ -94,7 +94,7 @@ export default function ManageOrders() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="w-full">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         <div className="mb-4 sm:mb-6 flex items-center justify-between">
           <button
@@ -194,9 +194,9 @@ export default function ManageOrders() {
         {/* Tabela de Pedidos - Desktop / Cards - Mobile */}
         {!loading && !error && (
           <>
-            {/* Desktop: Tabela */}
-            <div className="hidden lg:block bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-              <div className="overflow-x-auto">
+            {/* Table wrapper with horizontal scroll and responsive design */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+              <div className="overflow-x-auto relative">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
@@ -218,7 +218,7 @@ export default function ManageOrders() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         Data
                       </th>
-                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider sticky right-0 bg-gray-50 dark:bg-gray-800 z-10 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.3)]">
                         Ações
                       </th>
                     </tr>
@@ -232,7 +232,7 @@ export default function ManageOrders() {
                       </tr>
                     ) : (
                       filteredOrders.map((order) => (
-                        <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-[#065084]">
+                        <tr key={order.id} className="group hover:bg-gray-50 dark:hover:bg-[#065084]/40 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900 dark:text-white">
                               #{order.id.substring(0, 8)}
@@ -269,10 +269,10 @@ export default function ManageOrders() {
                               {formatDate(order.created_at)}
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium sticky right-0 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#153e5c] z-10 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] dark:shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.2)] transition-colors">
                             <button
                               onClick={() => navigate(`/admin/orders/${order.id}`)}
-                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 inline-flex items-center"
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded px-1.5 py-0.5"
                               title="Ver detalhes"
                             >
                               <Eye size={18} className="mr-1" />
@@ -285,76 +285,6 @@ export default function ManageOrders() {
                   </tbody>
                 </table>
               </div>
-            </div>
-
-            {/* Mobile: Cards */}
-            <div className="lg:hidden space-y-3">
-              {filteredOrders.length === 0 ? (
-                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg border border-gray-200 dark:border-gray-700 p-6 text-center">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {orders.length === 0 ? 'Nenhum pedido encontrado' : 'Nenhum pedido corresponde à busca'}
-                  </p>
-                </div>
-              ) : (
-                filteredOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg border border-gray-200 dark:border-gray-700 p-3 sm:p-4"
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400">ID:</span>
-                          <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">#{order.id.substring(0, 8)}</span>
-                        </div>
-                        {order.user ? (
-                          <div className="mb-2">
-                            <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-white break-words">{order.user.name}</p>
-                            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 break-words">{order.user.email}</p>
-                            {order.user.phone && (
-                              <p className="text-xs text-gray-400 dark:text-gray-400">{order.user.phone}</p>
-                            )}
-                          </div>
-                        ) : (
-                          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 mb-2">Usuário não encontrado</p>
-                        )}
-                      </div>
-                      <div className="ml-2 flex-shrink-0">
-                        {getStatusBadge(order.status)}
-                      </div>
-                    </div>
-                    <div className="space-y-1.5 sm:space-y-2 mb-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-                      <div className="flex items-center justify-between text-xs sm:text-sm">
-                        <span className="text-gray-500 dark:text-gray-400">Total:</span>
-                        <span className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white">
-                          R$ {Number(order.total).toFixed(2).replace('.', ',')}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs sm:text-sm">
-                        <span className="text-gray-500 dark:text-gray-400">Pagamento:</span>
-                        <span className="text-gray-900 dark:text-white break-words text-right">
-                          {order.payment_method || 'Não informado'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs sm:text-sm">
-                        <span className="text-gray-500 dark:text-gray-400">Data:</span>
-                        <span className="text-gray-900 dark:text-white">
-                          {formatDate(order.created_at)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
-                      <button
-                        onClick={() => navigate(`/admin/orders/${order.id}`)}
-                        className="w-full flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-xs sm:text-sm bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
-                      >
-                        <Eye size={14} className="sm:w-4 sm:h-4" />
-                        Ver Detalhes
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
             </div>
           </>
         )}

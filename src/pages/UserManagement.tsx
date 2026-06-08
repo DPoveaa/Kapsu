@@ -148,7 +148,7 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="w-full">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 lg:py-8">
         {/* Header */}
         <div className="mb-4 sm:mb-6 lg:mb-8">
@@ -238,11 +238,19 @@ export default function UserManagement() {
                 const userDetails = selectedUser && selectedUser.id === user.id ? selectedUser : null
 
                 return (
-                  <div key={user.id} className="p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors">
+                  <div key={user.id} className="p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-[#065084]/20 transition-colors">
                     {/* Cabeçalho do Usuário */}
                     <div
-                      className="flex items-center justify-between cursor-pointer"
+                      role="button"
+                      tabIndex={0}
+                      className="flex items-center justify-between cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded p-1.5"
                       onClick={() => toggleUserExpansion(user.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          toggleUserExpansion(user.id)
+                        }
+                      }}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
@@ -284,7 +292,10 @@ export default function UserManagement() {
                                 <span className="whitespace-nowrap">{formatDate(user.last_login)}</span>
                               </div>
                             )}
-                            <button className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0">
+                            <button
+                              tabIndex={-1}
+                              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0"
+                            >
                               {isExpanded ? (
                                 <ChevronUp className="w-4 h-4 sm:w-5 sm:h-5" />
                               ) : (
@@ -295,7 +306,7 @@ export default function UserManagement() {
                         </div>
                       </div>
                     </div>
-
+ 
                     {/* Detalhes Expandidos */}
                     {isExpanded && userDetails && (
                       <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3 sm:space-y-4">
@@ -325,7 +336,7 @@ export default function UserManagement() {
                             )}
                           </div>
                         </div>
-
+ 
                         {/* Estatísticas */}
                         {userDetails.statistics && (
                           <div>
@@ -369,7 +380,7 @@ export default function UserManagement() {
                             </div>
                           </div>
                         )}
-
+ 
                         {/* Alterar Cargo */}
                         <div>
                           <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2">Alterar Cargo</h4>
@@ -386,7 +397,7 @@ export default function UserManagement() {
                                   user.role === role
                                     ? 'bg-blue-600 text-white cursor-default'
                                     : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                } disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2`}
                               >
                                 {updatingRole === user.id ? (
                                   <>
