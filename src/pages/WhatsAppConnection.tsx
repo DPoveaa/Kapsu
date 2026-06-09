@@ -76,7 +76,13 @@ interface Conversation {
 export default function WhatsAppConnection() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const [activeTab, setActiveTab] = useState<'connection' | 'settings' | 'simulation' | 'conversations' | 'tests'>('connection')
+  const [activeTab, setActiveTab] = useState<'connection' | 'settings' | 'simulation' | 'conversations' | 'tests' | 'failed_messages'>('connection')
+  const [failedMessages, setFailedMessages] = useState<any[]>([])
+  const [loadingFailedMessages, setLoadingFailedMessages] = useState(false)
+  const [retryMode, setRetryMode] = useState<'manual' | 'auto'>('manual')
+  const [updatingRetryMode, setUpdatingRetryMode] = useState(false)
+  const [retryingMessageId, setRetryingMessageId] = useState<string | null>(null)
+  const [retryingAll, setRetryingAll] = useState(false)
   const [testActivePanel, setTestActivePanel] = useState<'free' | 'client_sale' | 'distributor'>('free')
   const [sendingDistributorOrder, setSendingDistributorOrder] = useState(false)
   const [status, setStatus] = useState<WhatsAppStatus | null>(null)
@@ -302,6 +308,14 @@ export default function WhatsAppConnection() {
 
     return () => clearInterval(statusInterval)
   }, [status?.connected, status?.status])
+
+  // Carrega mensagens falhas e configurações ao ativar a aba correspondente
+  useEffect(() => {
+    if (activeTab === 'failed_messages') {
+      loadFailedMessages()
+      loadRetrySettings()
+    }
+  }, [activeTab])
 
   // Busca conversas quando conectado
   useEffect(() => {
@@ -711,6 +725,95 @@ export default function WhatsAppConnection() {
       setAllowedNumberId(null)
     } finally {
       setLoadingAllowedCheck(false)
+    }
+  }
+
+  const loadFailedMessages = async () => {
+    try {
+      setLoadingFailedMessages(true)
+      const data = await whatsappService.getFailedMessages()
+      if (data.success) {
+        setFailedMessages(data.failedMessages)
+      }
+    } catch (error: any) {
+      console.error('Erro ao carregar mensagens falhas:', error)
+    } finally {
+      setLoadingFailedMessages(false)
+    }
+  }
+
+  const loadRetrySettings = async () => {
+    try {
+      const data = await whatsappService.getRetrySettings()
+      if (data.success) {
+        setRetryMode(data.mode)
+      }
+    } catch (error: any) {
+      console.error('Erro ao carregar configurações de reenvio:', error)
+    }
+  }
+
+  const handleUpdateRetryMode = async (mode: 'manual' | 'auto') => {
+    try {
+      setUpdatingRetryMode(true)
+      const data = await whatsappService.updateRetrySettings(mode)
+      if (data.success) {
+        setRetryMode(mode)
+      }
+    } catch (error: any) {
+      console.error('Erro ao atualizar modo de reenvio:', error)
+      alert('Erro ao atualizar modo de reenvio: ' + error.message)
+    } finally {
+      setUpdatingRetryMode(false)
+    }
+  }
+
+  const handleRetryMessage = async (id: string) => {
+    try {
+      setRetryingMessageId(id)
+      const data = await whatsappService.retryFailedMessage(id)
+      if (data.success) {
+        loadFailedMessages()
+      }
+    } catch (error: any) {
+      console.error(`Erro ao reenviar mensagem ${id}:`, error)
+      alert('Erro ao reenviar mensagem: ' + error.message)
+      loadFailedMessages()
+    } finally {
+      setRetryingMessageId(null)
+    }
+  }
+
+  const handleRetryAllMessages = async () => {
+    try {
+      setRetryingAll(true)
+      const data = await whatsappService.retryAllFailedMessages()
+      if (data.success) {
+        alert('Reenvio em massa iniciado! Acompanhe o status atualizando a lista.')
+        setTimeout(() => {
+          loadFailedMessages()
+        }, 3000)
+      }
+    } catch (error: any) {
+      console.error('Erro ao reenviar todas as mensagens:', error)
+      alert('Erro ao iniciar reenvio em massa: ' + error.message)
+    } finally {
+      setRetryingAll(false)
+    }
+  }
+
+  const handleDeleteFailedMessage = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja remover esta mensagem da lista de falhas?')) {
+      return
+    }
+    try {
+      const data = await whatsappService.deleteFailedMessage(id)
+      if (data.success) {
+        setFailedMessages(prev => prev.filter(msg => msg.id !== id))
+      }
+    } catch (error: any) {
+      console.error(`Erro ao deletar mensagem falha ${id}:`, error)
+      alert('Erro ao deletar mensagem: ' + error.message)
     }
   }
 
@@ -2332,6 +2435,18 @@ export default function WhatsAppConnection() {
             <Settings className="w-4 h-4" />
             Configurações
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('failed_messages')}
+            className={`pb-3 px-4 text-sm font-semibold border-b-2 transition-all duration-200 flex items-center gap-2 whitespace-nowrap ${
+              activeTab === 'failed_messages'
+                ? 'border-red-550 text-red-550 dark:text-red-400 dark:border-red-400 font-bold'
+                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4 text-red-500" />
+            Falhas de Envio
+          </button>
           {status?.connected && (
             <>
               <button
@@ -3403,6 +3518,218 @@ export default function WhatsAppConnection() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ============ ABA: FALHAS DE ENVIO ============ */}
+        {activeTab === 'failed_messages' && (
+          <div className="space-y-6 animate-fade-in">
+            {/* Header / Config Card */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md p-4 sm:p-6">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-1">
+                    <AlertTriangle className="w-5 h-5 text-red-500" />
+                    Fila de Reenvio e Falhas
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                    Gerencie mensagens que não puderam ser entregues. Configure o reenvio automático ou envie manualmente.
+                  </p>
+                </div>
+                
+                <div className="flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={loadFailedMessages}
+                    disabled={loadingFailedMessages}
+                    className="flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm border border-gray-300 dark:border-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loadingFailedMessages ? 'animate-spin' : ''}`} />
+                    Atualizar Lista
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleRetryAllMessages}
+                    disabled={retryingAll || failedMessages.length === 0 || !status?.connected}
+                    className="flex items-center gap-1.5 px-4 py-2 text-xs sm:text-sm bg-red-650 hover:bg-red-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
+                    title={!status?.connected ? 'Conecte o WhatsApp para reenviar' : ''}
+                  >
+                    {retryingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    Reenviar Todas Falhas
+                  </button>
+                </div>
+              </div>
+
+              {/* Modo de Reenvio */}
+              <div className="mt-6 pt-6 border-t border-gray-250 dark:border-gray-700">
+                <div className="bg-gray-50 dark:bg-gray-750/30 rounded-xl p-4 border border-gray-250 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <Clock className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Modo de Reenvio das Mensagens</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Defina se as mensagens que falharem devem ser reenviadas automaticamente pelo sistema em segundo plano ou apenas manualmente.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex bg-gray-200 dark:bg-gray-700 p-1 rounded-lg self-start sm:self-center shrink-0">
+                    <button
+                      type="button"
+                      disabled={updatingRetryMode}
+                      onClick={() => handleUpdateRetryMode('manual')}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+                        retryMode === 'manual'
+                          ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                          : 'text-gray-500 hover:text-gray-905 dark:hover:text-white'
+                      }`}
+                    >
+                      Manualmente (Padrão)
+                    </button>
+                    <button
+                      type="button"
+                      disabled={updatingRetryMode}
+                      onClick={() => handleUpdateRetryMode('auto')}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+                        retryMode === 'auto'
+                          ? 'bg-white dark:bg-gray-650 text-gray-900 dark:text-white shadow-sm'
+                          : 'text-gray-500 hover:text-gray-905 dark:hover:text-white'
+                      }`}
+                    >
+                      Automaticamente (5 min)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Failed Messages Table / Cards */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
+              {loadingFailedMessages ? (
+                <div className="p-12 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+                  <span className="text-sm">Carregando fila de falhas...</span>
+                </div>
+              ) : failedMessages.length === 0 ? (
+                <div className="p-12 flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 gap-4">
+                  <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-full border border-green-200 dark:border-green-800">
+                    <CheckCircle2 className="w-8 h-8 text-green-500 dark:text-green-400" />
+                  </div>
+                  <div className="text-center space-y-1">
+                    <h3 className="text-base font-bold text-gray-900 dark:text-white">Excelente! Nenhuma falha encontrada</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                      Todas as mensagens enviadas foram entregues com sucesso e nenhuma pendência foi registrada no banco de dados.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 dark:bg-gray-750/50 border-b border-gray-150 dark:border-gray-700 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        <th className="py-3.5 px-4 sm:px-6">Destinatário</th>
+                        <th className="py-3.5 px-4 sm:px-6">Mensagem / Tipo</th>
+                        <th className="py-3.5 px-4 sm:px-6">Motivo da Falha</th>
+                        <th className="py-3.5 px-4 sm:px-6">Tentativas</th>
+                        <th className="py-3.5 px-4 sm:px-6">Horário</th>
+                        <th className="py-3.5 px-4 sm:px-6 text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-150 dark:divide-gray-700 text-sm">
+                      {failedMessages.map((msg) => (
+                        <tr key={msg.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-750/30 transition">
+                          {/* Destinatário */}
+                          <td className="py-4 px-4 sm:px-6 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <Phone className="w-4 h-4 text-gray-400 shrink-0" />
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                {formatPhone(msg.phone)}
+                              </span>
+                            </div>
+                          </td>
+
+                          {/* Mensagem / Tipo */}
+                          <td className="py-4 px-4 sm:px-6 max-w-xs sm:max-w-md">
+                            <div className="space-y-1">
+                              {msg.media_type ? (
+                                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium">
+                                  <Paperclip className="w-3.5 h-3.5" />
+                                  <span>Mídia: {msg.media_type}</span>
+                                </div>
+                              ) : null}
+                              {msg.is_ai_message ? (
+                                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-medium ml-1.5">
+                                  <Bot className="w-3.5 h-3.5" />
+                                  <span>IA</span>
+                                </div>
+                              ) : null}
+                              <p className="text-gray-700 dark:text-gray-300 line-clamp-2 break-words text-xs sm:text-sm">
+                                {msg.body || <span className="text-gray-400 italic">Sem legenda / Sem texto</span>}
+                              </p>
+                            </div>
+                          </td>
+
+                          {/* Motivo da Falha */}
+                          <td className="py-4 px-4 sm:px-6">
+                            <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40 rounded-lg p-2 max-w-xs text-xs text-red-700 dark:text-red-400 break-words">
+                              {msg.error_message || 'Erro de envio desconhecido'}
+                            </div>
+                          </td>
+
+                          {/* Tentativas */}
+                          <td className="py-4 px-4 sm:px-6 whitespace-nowrap">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-semibold text-gray-900 dark:text-white">{msg.attempts}</span>
+                              {msg.last_attempt && (
+                                <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                                  Última: {new Date(msg.last_attempt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Horário */}
+                          <td className="py-4 px-4 sm:px-6 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                            <div>{new Date(msg.created_at).toLocaleDateString('pt-BR')}</div>
+                            <div className="mt-0.5 font-medium">{new Date(msg.created_at).toLocaleTimeString('pt-BR')}</div>
+                          </td>
+
+                          {/* Ações */}
+                          <td className="py-4 px-4 sm:px-6 whitespace-nowrap text-right text-xs">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                disabled={retryingMessageId === msg.id || !status?.connected}
+                                onClick={() => handleRetryMessage(msg.id)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-green-50 hover:bg-green-100 dark:bg-green-900/20 dark:hover:bg-green-900/40 text-green-700 dark:text-green-400 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed font-medium transition"
+                                title={!status?.connected ? 'Conecte o WhatsApp para reenviar' : 'Reenviar agora'}
+                              >
+                                {retryingMessageId === msg.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="w-3.5 h-3.5" />
+                                )}
+                                <span>Reenviar</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteFailedMessage(msg.id)}
+                                className="p-1.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 rounded-lg transition"
+                                title="Excluir falha"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

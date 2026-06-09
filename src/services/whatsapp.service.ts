@@ -1133,6 +1133,138 @@ class WhatsAppService {
       throw new Error(error.message || 'Erro ao enviar notificação de pedido para a distribuidora')
     }
   }
+
+  /**
+   * Obtém todas as mensagens que falharam no envio
+   */
+  async getFailedMessages(): Promise<{ success: boolean; failedMessages: any[] }> {
+    try {
+      const response = await this.fetchWithAuth('/failed-messages')
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao obter mensagens falhas')
+      }
+      return data
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro de conexão ao obter mensagens falhas')
+    }
+  }
+
+  /**
+   * Reenvia uma mensagem falha específica
+   */
+  async retryFailedMessage(id: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.fetchWithAuth(`/failed-messages/${id}/retry`, {
+        method: 'POST',
+      })
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao reenviar mensagem')
+      }
+      return data
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro de conexão ao reenviar mensagem')
+    }
+  }
+
+  /**
+   * Reenvia todas as mensagens falhas
+   */
+  async retryAllFailedMessages(): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.fetchWithAuth('/failed-messages/retry-all', {
+        method: 'POST',
+      })
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao iniciar reenvio de todas as mensagens')
+      }
+      return data
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro de conexão ao reenviar todas as mensagens')
+    }
+  }
+
+  /**
+   * Deleta uma mensagem falha da lista
+   */
+  async deleteFailedMessage(id: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.fetchWithAuth(`/failed-messages/${id}`, {
+        method: 'DELETE',
+      })
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao remover mensagem falha')
+      }
+      return data
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro de conexão ao remover mensagem falha')
+    }
+  }
+
+  /**
+   * Obtém a configuração de reenvio
+   */
+  async getRetrySettings(): Promise<{ success: boolean; mode: 'manual' | 'auto' }> {
+    try {
+      const response = await this.fetchWithAuth('/retry-settings')
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao obter configurações de reenvio')
+      }
+      return data
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro de conexão ao obter configurações de reenvio')
+    }
+  }
+
+  /**
+   * Atualiza a configuração de reenvio
+   */
+  async updateRetrySettings(mode: 'manual' | 'auto'): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await this.fetchWithAuth('/retry-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ mode }),
+      })
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao atualizar configurações de reenvio')
+      }
+      return data
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro de conexão ao atualizar configurações de reenvio')
+    }
+  }
 }
 
 export const whatsappService = new WhatsAppService()
