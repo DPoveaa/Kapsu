@@ -55,6 +55,7 @@ export default function ManageHeaderCategories() {
   const [categories, setCategories] = useState<HeaderCategory[]>([])
   const [loading, setLoading] = useState(true)
   const [barBgColor, setBarBgColor] = useState('#1F2937')
+  const [barBgColorDark, setBarBgColorDark] = useState('#111827')
   const [savingBgColor, setSavingBgColor] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<HeaderCategory | null>(null)
@@ -66,6 +67,8 @@ export default function ManageHeaderCategories() {
     url: '',
     text_color: '#FFFFFF',
     icon_color: '#FFFFFF',
+    text_color_dark: '#FFFFFF',
+    icon_color_dark: '#FFFFFF',
     active: true
   })
 
@@ -83,6 +86,9 @@ export default function ManageHeaderCategories() {
       if ((settings as any).header_bar_bg_color) {
         setBarBgColor((settings as any).header_bar_bg_color)
       }
+      if ((settings as any).header_bar_bg_color_dark) {
+        setBarBgColorDark((settings as any).header_bar_bg_color_dark)
+      }
     } catch (error) {
       console.error('Error fetching header categories:', error)
       alert('Erro ao carregar os dados.')
@@ -94,11 +100,14 @@ export default function ManageHeaderCategories() {
   const handleSaveBgColor = async () => {
     try {
       setSavingBgColor(true)
-      await siteSettingsService.updateSettings({ header_bar_bg_color: barBgColor } as any)
+      await siteSettingsService.updateSettings({
+        header_bar_bg_color: barBgColor,
+        header_bar_bg_color_dark: barBgColorDark
+      } as any)
       window.dispatchEvent(new Event('header-settings-updated'))
     } catch (error) {
       console.error('Error saving bg color:', error)
-      alert('Erro ao salvar cor da faixa.')
+      alert('Erro ao salvar cores da faixa.')
     } finally {
       setSavingBgColor(false)
     }
@@ -113,6 +122,8 @@ export default function ManageHeaderCategories() {
       url: '',
       text_color: '#FFFFFF',
       icon_color: '#FFFFFF',
+      text_color_dark: '#FFFFFF',
+      icon_color_dark: '#FFFFFF',
       active: true
     })
     setIsModalOpen(true)
@@ -127,6 +138,8 @@ export default function ManageHeaderCategories() {
       url: category.url,
       text_color: category.text_color,
       icon_color: category.icon_color,
+      text_color_dark: category.text_color_dark || '#FFFFFF',
+      icon_color_dark: category.icon_color_dark || '#FFFFFF',
       active: category.active
     })
     setIsModalOpen(true)
@@ -209,7 +222,7 @@ export default function ManageHeaderCategories() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Gerenciar Categorias do Cabeçalho</h1>
         <button
           onClick={openAddModal}
-          className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center gap-2"
+          className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-sm text-sm font-medium hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
         >
           <Plus size={20} />
           <span>Nova Categoria</span>
@@ -219,73 +232,140 @@ export default function ManageHeaderCategories() {
       {/* Configurações Globais */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Configurações da Faixa</h2>
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div className="space-y-4 flex-1">
-            <div className="flex items-center">
-              <input
-                id="use_header_color"
-                type="checkbox"
-                checked={barBgColor === 'transparent'}
-                onChange={(e) => setBarBgColor(e.target.checked ? 'transparent' : '#1F2937')}
-                className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-              />
-              <label htmlFor="use_header_color" className="ml-2 block text-sm text-gray-900 dark:text-gray-300 font-medium">
-                Herdar cor do cabeçalho (Fundo transparente)
-              </label>
+        
+        <div className="flex flex-col gap-6">
+          {/* Herdar Cor Switch */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Herdar cor do cabeçalho (Fundo transparente)</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">Usa o fundo padrão do cabeçalho da loja</span>
             </div>
-
-            {barBgColor !== 'transparent' && (
-              <div className="flex items-center gap-2">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mr-2">
-                  Cor de Fundo:
-                </label>
-                <input
-                  type="color"
-                  value={barBgColor}
-                  onChange={(e) => setBarBgColor(e.target.value)}
-                  className="w-8 h-8 rounded border border-gray-300 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={barBgColor}
-                  onChange={(e) => setBarBgColor(e.target.value)}
-                  className="rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white w-28 text-sm"
-                />
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() => {
+                const isTransparent = barBgColor === 'transparent'
+                setBarBgColor(isTransparent ? '#1F2937' : 'transparent')
+                setBarBgColorDark(isTransparent ? '#111827' : 'transparent')
+              }}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                barBgColor === 'transparent' ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                  barBgColor === 'transparent' ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
           </div>
 
-          <button
-            onClick={handleSaveBgColor}
-            disabled={savingBgColor}
-            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 transition-colors h-10 flex items-center justify-center whitespace-nowrap"
-          >
-            {savingBgColor ? 'Salvando...' : 'Salvar Configurações'}
-          </button>
+          {barBgColor !== 'transparent' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Light Mode Color */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-950/20 rounded-xl border border-gray-200 dark:border-gray-700">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Cor de Fundo (Modo Claro)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={barBgColor}
+                    onChange={(e) => setBarBgColor(e.target.value)}
+                    className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={barBgColor}
+                    onChange={(e) => setBarBgColor(e.target.value)}
+                    className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-950 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Dark Mode Color */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-950/20 rounded-xl border border-gray-200 dark:border-gray-700">
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Cor de Fundo (Modo Escuro)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={barBgColorDark}
+                    onChange={(e) => setBarBgColorDark(e.target.value)}
+                    className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={barBgColorDark}
+                    onChange={(e) => setBarBgColorDark(e.target.value)}
+                    className="flex-1 rounded-lg border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-950 dark:text-white px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end mt-2">
+            <button
+              onClick={handleSaveBgColor}
+              disabled={savingBgColor}
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-all duration-200 shadow-sm font-medium hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center whitespace-nowrap text-sm h-10 animate-pulse-subtle"
+            >
+              {savingBgColor ? 'Salvando...' : 'Salvar Configurações'}
+            </button>
+          </div>
         </div>
 
-        {/* Preview da faixa */}
-        <div className="mt-6 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-          <div className="bg-white dark:bg-gray-900 p-2 text-xs text-gray-500 text-center border-b border-gray-200 dark:border-gray-700">
-            Preview do Cabeçalho (Header Principal acima)
+        {/* Previews da faixa */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-200 dark:border-gray-700 pt-6">
+          {/* Preview Modo Claro */}
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <div className="bg-gray-50 dark:bg-gray-900/60 p-2 text-xs text-gray-500 font-semibold text-center border-b border-gray-200 dark:border-gray-700">
+              Preview da Faixa (Modo Claro)
+            </div>
+            <div
+              className="w-full flex items-center justify-center gap-6 py-3 px-4 overflow-x-auto min-h-[50px]"
+              style={{ backgroundColor: barBgColor === 'transparent' ? '#FFFFFF' : barBgColor }}
+            >
+              {categories.filter(c => c.active).length === 0 ? (
+                <span className="text-sm opacity-60 text-gray-500 py-1">Nenhuma categoria ativa</span>
+              ) : (
+                categories.filter(c => c.active).map(cat => {
+                  const CatIcon = (LucideIcons as any)[cat.icon || 'Tag'] || LucideIcons.Tag
+                  return (
+                    <div key={cat.id} className="flex items-center gap-1.5 px-2.5 py-0.5 cursor-pointer hover:bg-black/5 rounded-full transition-colors whitespace-nowrap">
+                      {cat.show_icon && <CatIcon size={14} style={{ color: cat.icon_color }} />}
+                      <span className="text-xs font-medium" style={{ color: cat.text_color }}>{cat.name}</span>
+                    </div>
+                  )
+                })
+              )}
+            </div>
           </div>
-          <div
-            className="w-full flex items-center justify-center gap-6 py-2 px-4 overflow-x-auto"
-            style={{ backgroundColor: barBgColor }}
-          >
-            {categories.filter(c => c.active).length === 0 ? (
-              <span className="text-sm opacity-70 py-1" style={{ color: '#fff' }}>Nenhuma categoria ativa</span>
-            ) : (
-              categories.filter(c => c.active).map(cat => {
-                const CatIcon = (LucideIcons as any)[cat.icon || 'Tag'] || LucideIcons.Tag
-                return (
-                  <div key={cat.id} className="flex items-center gap-2 px-3 py-1 cursor-pointer hover:bg-black/10 rounded-full transition-colors whitespace-nowrap">
-                    {cat.show_icon && <CatIcon size={16} style={{ color: cat.icon_color }} />}
-                    <span className="text-sm font-medium" style={{ color: cat.text_color }}>{cat.name}</span>
-                  </div>
-                )
-              })
-            )}
+
+          {/* Preview Modo Escuro */}
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <div className="bg-gray-50 dark:bg-gray-900/60 p-2 text-xs text-gray-500 font-semibold text-center border-b border-gray-200 dark:border-gray-700">
+              Preview da Faixa (Modo Escuro)
+            </div>
+            <div
+              className="w-full flex items-center justify-center gap-6 py-3 px-4 overflow-x-auto min-h-[50px]"
+              style={{ backgroundColor: barBgColorDark === 'transparent' ? '#111827' : barBgColorDark }}
+            >
+              {categories.filter(c => c.active).length === 0 ? (
+                <span className="text-sm opacity-60 text-gray-400 py-1">Nenhuma categoria ativa</span>
+              ) : (
+                categories.filter(c => c.active).map(cat => {
+                  const CatIcon = (LucideIcons as any)[cat.icon || 'Tag'] || LucideIcons.Tag
+                  return (
+                    <div key={cat.id} className="flex items-center gap-1.5 px-2.5 py-0.5 cursor-pointer hover:bg-white/10 rounded-full transition-colors whitespace-nowrap">
+                      {cat.show_icon && <CatIcon size={14} style={{ color: cat.icon_color_dark || '#FFFFFF' }} />}
+                      <span className="text-xs font-medium" style={{ color: cat.text_color_dark || '#FFFFFF' }}>{cat.name}</span>
+                    </div>
+                  )
+                })
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -327,9 +407,17 @@ export default function ManageHeaderCategories() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3 p-2 rounded-lg bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700" style={{ backgroundColor: barBgColor }}>
-                      {category.show_icon && <CatIcon size={18} style={{ color: category.icon_color }} />}
-                      <span className="font-medium whitespace-nowrap" style={{ color: category.text_color }}>{category.name}</span>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      {/* Light Preview */}
+                      <div className="flex items-center gap-2 p-1.5 px-3 rounded-full border border-gray-200" style={{ backgroundColor: barBgColor === 'transparent' ? '#FFFFFF' : barBgColor }}>
+                        {category.show_icon && <CatIcon size={14} style={{ color: category.icon_color }} />}
+                        <span className="text-xs font-medium whitespace-nowrap" style={{ color: category.text_color }}>{category.name}</span>
+                      </div>
+                      {/* Dark Preview */}
+                      <div className="flex items-center gap-2 p-1.5 px-3 rounded-full border border-gray-700" style={{ backgroundColor: barBgColorDark === 'transparent' ? '#111827' : barBgColorDark }}>
+                        {category.show_icon && <CatIcon size={14} style={{ color: category.icon_color_dark || '#FFFFFF' }} />}
+                        <span className="text-xs font-medium whitespace-nowrap" style={{ color: category.text_color_dark || '#FFFFFF' }}>{category.name}</span>
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
@@ -388,7 +476,7 @@ export default function ManageHeaderCategories() {
             <button
               type="submit"
               form="header-category-form"
-              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+              className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-all duration-200 shadow-sm text-sm font-medium hover:scale-[1.02] active:scale-[0.98]"
             >
               Salvar
             </button>
@@ -398,19 +486,19 @@ export default function ManageHeaderCategories() {
         <form id="header-category-form" onSubmit={handleSave} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Texto (Nome)</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Texto (Nome) *</label>
               <input
                 type="text"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 text-base py-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 placeholder="Ex: Ofertas"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Atalho de Destino</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Atalho de Destino</label>
               <select
                 onChange={(e) => {
                   if (e.target.value === 'promo') {
@@ -419,41 +507,46 @@ export default function ManageHeaderCategories() {
                     setFormData({ ...formData, name: formData.name || 'Mais Vendidos', url: '/produtos?ordenar=mais-vendidos' });
                   }
                 }}
-                className="block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 text-base py-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-2"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white mb-2"
               >
                 <option value="custom">URL Personalizada</option>
                 <option value="promo">Página de Promoções</option>
                 <option value="best">Página de Mais Vendidos</option>
               </select>
               
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Link (URL)</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Link (URL) *</label>
               <input
                 type="text"
                 required
                 value={formData.url}
                 onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                className="block w-full border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-primary-500 focus:border-primary-500 text-base py-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                 placeholder="Ex: /produtos?categoria=ofertas"
               />
             </div>
           </div>
 
-          <div className="flex items-center">
-            <input
-              id="show_icon"
-              type="checkbox"
-              checked={formData.show_icon}
-              onChange={(e) => setFormData({ ...formData, show_icon: e.target.checked })}
-              className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-            />
-            <label htmlFor="show_icon" className="ml-2 block text-sm text-gray-900 dark:text-gray-300 font-medium">
-              Exibir ícone
-            </label>
+          {/* Toggle Exibir Ícone */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800 animate-fade-in">
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Exibir ícone na categoria</span>
+            <button
+              type="button"
+              onClick={() => setFormData(prev => ({ ...prev, show_icon: !prev.show_icon }))}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                formData.show_icon ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                  formData.show_icon ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
           </div>
 
           {formData.show_icon && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Selecione um Ícone</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Selecione um Ícone</label>
               <div className="grid grid-cols-6 sm:grid-cols-8 gap-3 max-h-48 overflow-y-auto p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900">
                 {COMMON_ICONS.map(iconName => {
                   const IconCmp = (LucideIcons as any)[iconName]
@@ -474,33 +567,66 @@ export default function ManageHeaderCategories() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <ColorPickerField 
-              label="Cor do Texto" 
-              color={formData.text_color} 
-              onChange={(c) => setFormData({ ...formData, text_color: c })} 
-            />
-
-            {formData.show_icon && (
+          {/* Cores por Tema */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+            {/* Tema Claro */}
+            <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-900/30 rounded-xl border border-gray-100 dark:border-gray-800">
+              <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200">Modo Claro</h4>
+              
               <ColorPickerField 
-                label="Cor do Ícone" 
-                color={formData.icon_color} 
-                onChange={(c) => setFormData({ ...formData, icon_color: c })} 
+                label="Cor do Texto (Modo Claro)" 
+                color={formData.text_color} 
+                onChange={(c) => setFormData(prev => ({ ...prev, text_color: c }))} 
               />
-            )}
+
+              {formData.show_icon && (
+                <ColorPickerField 
+                  label="Cor do Ícone (Modo Claro)" 
+                  color={formData.icon_color} 
+                  onChange={(c) => setFormData(prev => ({ ...prev, icon_color: c }))} 
+                />
+              )}
+            </div>
+
+            {/* Tema Escuro */}
+            <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-900/30 rounded-xl border border-gray-100 dark:border-gray-800">
+              <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200">Modo Escuro</h4>
+              
+              <ColorPickerField 
+                label="Cor do Texto (Modo Escuro)" 
+                color={formData.text_color_dark} 
+                onChange={(c) => setFormData(prev => ({ ...prev, text_color_dark: c }))} 
+              />
+
+              {formData.show_icon && (
+                <ColorPickerField 
+                  label="Cor do Ícone (Modo Escuro)" 
+                  color={formData.icon_color_dark} 
+                  onChange={(c) => setFormData(prev => ({ ...prev, icon_color_dark: c }))} 
+                />
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center mt-6">
-            <input
-              id="active"
-              type="checkbox"
-              checked={formData.active}
-              onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-              className="h-5 w-5 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-            />
-            <label htmlFor="active" className="ml-2 block text-sm text-gray-900 dark:text-gray-300 font-medium">
-              Ativo (visível no site)
-            </label>
+          {/* Toggle Status Ativo */}
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-gray-900 dark:text-gray-200">Ativo (visível no site)</span>
+              <span className="text-xs text-gray-400">Exibir esta categoria na faixa do topo da loja</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormData(prev => ({ ...prev, active: !prev.active }))}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                formData.active ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                  formData.active ? 'translate-x-5' : 'translate-x-0'
+                }`}
+              />
+            </button>
           </div>
         </form>
       </AdminModal>

@@ -10,6 +10,8 @@ export interface HeaderCategory {
   url: string;
   text_color: string;
   icon_color: string;
+  text_color_dark: string;
+  icon_color_dark: string;
   order_index: number;
   active: boolean;
   created_at?: string;

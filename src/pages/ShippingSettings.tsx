@@ -3,6 +3,7 @@ import { Save, Plus, Trash2, Truck, DollarSign, Gift } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { shippingService, ShippingRegion, ShippingSettings as ShippingSettingsType } from '../services/shipping.service'
 import { confirm } from '../utils/toast'
+import AdminModal from '../components/AdminModal'
 
 export default function ShippingSettings() {
   const [regions, setRegions] = useState<ShippingRegion[]>([])
@@ -228,7 +229,7 @@ export default function ShippingSettings() {
                 <button
                   onClick={handleSaveSettings}
                   disabled={saving}
-                  className="w-full inline-flex items-center justify-center px-3 sm:px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full flex items-center justify-center px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-all duration-200 shadow-sm font-medium hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Save className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
                   <span>{saving ? 'Salvando...' : 'Salvar Configurações'}</span>
@@ -248,7 +249,7 @@ export default function ShippingSettings() {
                 {!editingRegion && (
                   <button
                     onClick={() => setEditingRegion({} as ShippingRegion)}
-                    className="inline-flex items-center justify-center px-3 sm:px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
+                    className="flex items-center justify-center px-4 py-2 text-sm bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-all duration-200 shadow-sm font-medium hover:scale-[1.02] active:scale-[0.98] w-full sm:w-auto"
                   >
                     <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
                     Nova Região
@@ -256,29 +257,48 @@ export default function ShippingSettings() {
                 )}
               </div>
 
-              {/* Formulário de Nova/Edição */}
-              {(editingRegion !== null) && (
-                <div className="mb-4 sm:mb-5 lg:mb-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
-                    {editingRegion.id ? 'Editar Região' : 'Nova Região'}
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
-                        Município *
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.municipality}
-                        onChange={(e) => setFormData({ ...formData, municipality: e.target.value })}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                        placeholder="Ex: São Paulo"
-                      />
-                    </div>
+              {/* Modal de Nova/Edição */}
+              <AdminModal
+                isOpen={editingRegion !== null}
+                onClose={handleCancelEdit}
+                title={editingRegion?.id ? 'Editar Região' : 'Nova Região'}
+                widthClass="max-w-xl"
+                footer={
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={handleCancelEdit}
+                      className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleSaveRegion}
+                      disabled={saving}
+                      className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm font-medium hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <Save className="w-4 h-4 mr-1.5" />
+                      {saving ? 'Salvando...' : 'Salvar'}
+                    </button>
+                  </div>
+                }
+              >
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      Município *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.municipality}
+                      onChange={(e) => setFormData({ ...formData, municipality: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      placeholder="Ex: São Paulo"
+                    />
+                  </div>
 
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
                         CEP Inicial *
                       </label>
                       <input
@@ -289,13 +309,13 @@ export default function ShippingSettings() {
                           setFormData({ ...formData, cepFrom: formatted })
                         }}
                         maxLength={9}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                         placeholder="00000-000"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
                         CEP Final *
                       </label>
                       <input
@@ -306,57 +326,46 @@ export default function ShippingSettings() {
                           setFormData({ ...formData, cepTo: formatted })
                         }}
                         maxLength={9}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                         placeholder="00000-000"
                       />
                     </div>
-
-                    <div>
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
-                        Valor do Frete (R$) *
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={formData.shippingFee}
-                        onChange={(e) => setFormData({ ...formData, shippingFee: e.target.value })}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                        placeholder="18.00"
-                      />
-                    </div>
-
-                    <div className="sm:col-span-2 flex items-center">
-                      <input
-                        type="checkbox"
-                        id="active"
-                        checked={formData.active}
-                        onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                      />
-                      <label htmlFor="active" className="ml-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-                        Região ativa
-                      </label>
-                    </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 mt-3 sm:mt-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      Valor do Frete (R$) *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={formData.shippingFee}
+                      onChange={(e) => setFormData({ ...formData, shippingFee: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                      placeholder="18.00"
+                    />
+                  </div>
+
+                  {/* Switch Toggle */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">Região ativa</span>
                     <button
-                      onClick={handleCancelEdit}
-                      className="px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, active: !prev.active }))}
+                      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        formData.active ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700'
+                      }`}
                     >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={handleSaveRegion}
-                      disabled={saving}
-                      className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {saving ? 'Salvando...' : 'Salvar'}
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                          formData.active ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
                     </button>
                   </div>
                 </div>
-              )}
+              </AdminModal>
 
               {/* Lista de Regiões - Tabela Responsiva */}
               <div className="overflow-x-auto relative scrollbar-thin">

@@ -22,6 +22,8 @@ export interface SiteSettings {
   }
   banner_height_mobile?: number
   banner_height_desktop?: number
+  header_bar_bg_color?: string
+  header_bar_bg_color_dark?: string
 }
 
 export interface SiteSettingsResponse {

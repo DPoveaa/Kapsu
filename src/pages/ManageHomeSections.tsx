@@ -410,41 +410,7 @@ export default function ManageHomeSections() {
           </div>
         )}
 
-        {/* Botão para criar nova seção */}
-        {!editingSection && !creatingSection && (
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Criar Nova Seção</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-300">Escolha um preset ou crie uma seção customizada</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => applyPreset('top-vendidos')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-              >
-                📊 Top Mais Vendidos
-              </button>
-              <button
-                onClick={() => applyPreset('top-promocoes')}
-                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
-              >
-                🎯 Top Promoções
-              </button>
-              <button
-                onClick={() => applyPreset('mais-novos')}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-              >
-                ⭐ Mais Novos
-              </button>
-              <button
-                onClick={() => applyPreset('custom')}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
-              >
-                ✨ Customizado
-              </button>
-            </div>
-          </div>
-        )}
+
 
         {/* Modal de criação/edição de seção */}
         <AdminModal
@@ -515,8 +481,33 @@ export default function ManageHomeSections() {
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Tipo de Exibição</label>
               <select
                 value={formData.display_type}
-                onChange={(e) => setFormData(prev => ({ ...prev, display_type: e.target.value as any, categories: [] }))}
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                onChange={(e) => {
+                  const val = e.target.value as any
+                  setFormData(prev => {
+                    const updates: Partial<typeof formData> = { display_type: val, categories: [] }
+                    if (creatingSection) {
+                      const isKeyEmptyOrDefault = !prev.key || ['top-vendidos', 'top-promocoes', 'mais-novos', 'manual', 'categoria', ''].includes(prev.key)
+                      const isNameEmptyOrDefault = !prev.name || ['Top Mais Vendidos', 'Top Promoções', 'Mais Novos', 'Seção Manual', 'Seção Categoria', ''].includes(prev.name)
+                      
+                      if (isKeyEmptyOrDefault) {
+                        if (val === 'best_selling') updates.key = 'top-vendidos'
+                        else if (val === 'promotions') updates.key = 'top-promocoes'
+                        else if (val === 'newest') updates.key = 'mais-novos'
+                        else if (val === 'manual') updates.key = 'manual'
+                        else if (val === 'category') updates.key = ''
+                      }
+                      if (isNameEmptyOrDefault) {
+                        if (val === 'best_selling') updates.name = 'Top Mais Vendidos'
+                        else if (val === 'promotions') updates.name = 'Top Promoções'
+                        else if (val === 'newest') updates.name = 'Mais Novos'
+                        else if (val === 'manual') updates.name = 'Seção Manual'
+                        else if (val === 'category') updates.name = ''
+                      }
+                    }
+                    return { ...prev, ...updates }
+                  })
+                }}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               >
                 <option value="category">Por Categoria</option>
                 <option value="manual">Manual (escolher produtos)</option>
@@ -620,9 +611,18 @@ export default function ManageHomeSections() {
 
 
         <div className="mb-8 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Seções da Página Inicial</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Gerencie os nomes e configurações das seções</p>
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Seções da Página Inicial</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">Gerencie os nomes e configurações das seções</p>
+            </div>
+            <button
+              onClick={() => applyPreset('custom')}
+              className="flex items-center bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-sm text-sm font-medium hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <Plus size={20} className="mr-2" />
+              Adicionar Seção
+            </button>
           </div>
           {sections.length === 0 ? (
             <div className="p-8 text-center">
@@ -794,7 +794,7 @@ export default function ManageHomeSections() {
             </div>
             <button
               onClick={() => setShowAddProductModal(true)}
-              className="flex items-center bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+              className="flex items-center bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-sm text-sm font-medium hover:scale-[1.02] active:scale-[0.98]"
             >
               <Plus size={20} className="mr-2" />
               Adicionar Produto
@@ -869,101 +869,92 @@ export default function ManageHomeSections() {
         </div>
 
         {/* Modal para adicionar produto */}
-        {showAddProductModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {selectedSectionForProducts 
-                    ? `Adicionar Produto à Seção: ${sections.find(s => s.id === selectedSectionForProducts)?.name || ''}`
-                    : 'Adicionar Produto em Destaque'}
-                </h3>
-                <button
-                  onClick={() => {
-                    setShowAddProductModal(false)
-                    setSearchTerm('')
-                    setSelectedSectionForProducts(null)
-                  }}
-                  className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white"
-                >
-                  <X size={20} />
-                </button>
-              </div>
+        <AdminModal
+          isOpen={showAddProductModal}
+          onClose={() => {
+            setShowAddProductModal(false)
+            setSearchTerm('')
+            setSelectedSectionForProducts(null)
+          }}
+          title={
+            selectedSectionForProducts 
+              ? `Adicionar Produto à Seção: ${sections.find(s => s.id === selectedSectionForProducts)?.name || ''}`
+              : 'Adicionar Produto em Destaque'
+          }
+          widthClass="max-w-2xl"
+        >
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar produtos..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              />
+            </div>
 
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Buscar produtos..."
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
-                  />
+            <div className="max-h-[50vh] overflow-y-auto pr-1">
+              {availableProducts.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 dark:text-gray-400">
+                    {searchTerm 
+                      ? 'Nenhum produto encontrado' 
+                      : selectedSectionForProducts
+                        ? 'Todos os produtos já estão nesta seção'
+                        : 'Todos os produtos já estão em destaque'}
+                  </p>
                 </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4">
-                {availableProducts.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500 dark:text-gray-400">
-                      {searchTerm 
-                        ? 'Nenhum produto encontrado' 
-                        : selectedSectionForProducts
-                          ? 'Todos os produtos já estão nesta seção'
-                          : 'Todos os produtos já estão em destaque'}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {availableProducts.map(product => (
-                      <div
-                        key={product.id}
-                        className="flex items-center space-x-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] cursor-pointer"
-                        onClick={() => {
+              ) : (
+                <div className="space-y-2">
+                  {availableProducts.map(product => (
+                    <div
+                      key={product.id}
+                      className="flex items-center space-x-3 p-3 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-primary-950/20 cursor-pointer transition-colors"
+                      onClick={() => {
+                        if (selectedSectionForProducts) {
+                          handleAddSectionProduct(selectedSectionForProducts, product.id)
+                        } else {
+                          handleAddProduct(product.id)
+                        }
+                      }}
+                    >
+                      <img
+                        src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'}
+                        alt={product.name}
+                        className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-gray-700"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 dark:text-white truncate">{product.name}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                          R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
+                        </p>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
                           if (selectedSectionForProducts) {
                             handleAddSectionProduct(selectedSectionForProducts, product.id)
                           } else {
                             handleAddProduct(product.id)
                           }
                         }}
+                        className="p-2 text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-950/30 rounded transition-colors"
                       >
-                        <img
-                          src={product.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'}
-                          alt={product.name}
-                          className="w-12 h-12 object-cover rounded border border-gray-200 dark:border-gray-700"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.src = 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400'
-                          }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-900 dark:text-white truncate">{product.name}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
-                            R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
-                          </p>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            if (selectedSectionForProducts) {
-                              handleAddSectionProduct(selectedSectionForProducts, product.id)
-                            } else {
-                              handleAddProduct(product.id)
-                            }
-                          }}
-                          className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors"
-                        >
-                          <Plus size={20} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                        <Plus size={20} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        )}
+        </AdminModal>
       </div>
     </div>
   )

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Edit, Trash2, Loader2, Star, X, Save, ArrowUp, ArrowDown, User } from 'lucide-react'
+import { ArrowLeft, Plus, Edit, Trash2, Loader2, Star, Save, ArrowUp, ArrowDown, User } from 'lucide-react'
 import { reviewsService, Review, CreateReviewData } from '../services/reviews.service'
 import ImageUpload from '../components/ImageUpload'
 import { confirm } from '../utils/toast'
+import AdminModal from '../components/AdminModal'
 
 export default function ManageReviews() {
   const navigate = useNavigate()
@@ -203,7 +204,7 @@ export default function ManageReviews() {
               setShowCreateForm(true)
               setEditingReview(null)
             }}
-            className="flex items-center bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-sm text-sm font-medium hover:scale-[1.02] active:scale-[0.98]"
           >
             <Plus size={20} className="mr-2" />
             Adicionar Avaliação
@@ -221,213 +222,236 @@ export default function ManageReviews() {
           </div>
         )}
 
-        {/* Formulário de criação/edição */}
-        {(showCreateForm || editingReview) && (
-          <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                {editingReview ? 'Editar Avaliação' : 'Nova Avaliação'}
-              </h2>
+        {/* Modal de criação/edição */}
+        <AdminModal
+          isOpen={!!(showCreateForm || editingReview)}
+          onClose={handleCancel}
+          title={editingReview ? 'Editar Avaliação' : 'Nova Avaliação'}
+          widthClass="max-w-2xl"
+          footer={
+            <div className="flex justify-end space-x-3">
               <button
                 onClick={handleCancel}
-                className="text-gray-400 dark:text-gray-300 hover:text-gray-600 dark:hover:text-white"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
               >
-                <X size={20} />
+                Cancelar
+              </button>
+              <button
+                onClick={editingReview ? handleUpdate : handleCreate}
+                disabled={!formData.comment || formData.rating === undefined || uploading}
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm font-medium hover:scale-[1.02] active:scale-[0.98]"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="animate-spin mr-2" size={18} />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Save size={18} className="mr-2" />
+                    {editingReview ? 'Salvar' : 'Criar'}
+                  </>
+                )}
               </button>
             </div>
+          }
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Imagem do Avatar (opcional)
+              </label>
+              <ImageUpload
+                value={formData.avatar || ''}
+                onChange={handleImageChange}
+                onError={(err) => {
+                  if (err) alert(err)
+                }}
+                disabled={uploading}
+              />
+            </div>
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Imagem do Avatar (opcional)
-                </label>
-                <ImageUpload
-                  value={formData.avatar || ''}
-                  onChange={handleImageChange}
-                  onError={(err) => {
-                    if (err) alert(err)
-                  }}
-                  disabled={uploading}
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Nome do Cliente (opcional)
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder="Ex: Maria Silva"
+              />
+            </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Nome do Cliente (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="Ex: Maria Silva"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Avaliação (estrelas) *
-                </label>
-                <div className="flex items-center space-x-2">
-                  {[1, 2, 3, 4, 5].map((rating) => (
-                    <button
-                      key={rating}
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, rating }))}
-                      className={`p-2 rounded transition-colors ${
-                        formData.rating >= rating
-                          ? 'text-yellow-400'
-                          : 'text-gray-300 dark:text-gray-600'
-                      }`}
-                    >
-                      <Star
-                        size={24}
-                        className={formData.rating >= rating ? 'fill-current' : ''}
-                      />
-                    </button>
-                  ))}
-                  <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
-                    {formData.rating} estrelas
-                  </span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Comentário *
-                </label>
-                <textarea
-                  value={formData.comment}
-                  onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="Ex: Excelente qualidade! Os medicamentos manipulados são perfeitos..."
-                  rows={4}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Produto (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.product}
-                  onChange={(e) => setFormData(prev => ({ ...prev, product: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="Ex: Vitamina D3"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                  Há quanto tempo foi enviada (opcional)
-                </label>
-                <input
-                  type="text"
-                  value={formData.date}
-                  onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="Ex: Há 2 semanas, Há 1 mês, Há 3 dias"
-                />
-              </div>
-
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  O que exibir na página inicial:
-                </label>
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="show_image"
-                      checked={formData.show_image !== undefined ? formData.show_image : true}
-                      onChange={(e) => setFormData(prev => ({ ...prev, show_image: e.target.checked }))}
-                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Avaliação (estrelas) *
+              </label>
+              <div className="flex items-center space-x-2">
+                {[1, 2, 3, 4, 5].map((rating) => (
+                  <button
+                    key={rating}
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, rating }))}
+                    className={`p-2 rounded transition-colors ${
+                      formData.rating >= rating
+                        ? 'text-yellow-400'
+                        : 'text-gray-300 dark:text-gray-600'
+                    }`}
+                  >
+                    <Star
+                      size={24}
+                      className={formData.rating >= rating ? 'fill-current' : ''}
                     />
-                    <label htmlFor="show_image" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                      Mostrar imagem do avatar
-                    </label>
-                  </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="show_name"
-                      checked={formData.show_name !== undefined ? formData.show_name : true}
-                      onChange={(e) => setFormData(prev => ({ ...prev, show_name: e.target.checked }))}
-                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                    />
-                    <label htmlFor="show_name" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                      Mostrar nome do cliente
-                    </label>
-                  </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="show_date"
-                      checked={formData.show_date !== undefined ? formData.show_date : true}
-                      onChange={(e) => setFormData(prev => ({ ...prev, show_date: e.target.checked }))}
-                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                    />
-                    <label htmlFor="show_date" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                      Mostrar data (há quanto tempo)
-                    </label>
-                  </div>
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="show_product"
-                      checked={formData.show_product !== undefined ? formData.show_product : true}
-                      onChange={(e) => setFormData(prev => ({ ...prev, show_product: e.target.checked }))}
-                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                    />
-                    <label htmlFor="show_product" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                      Mostrar produto
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="active"
-                  checked={formData.active}
-                  onChange={(e) => setFormData(prev => ({ ...prev, active: e.target.checked }))}
-                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                />
-                <label htmlFor="active" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                  Avaliação ativa
-                </label>
-              </div>
-
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={handleCancel}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-white rounded-lg hover:bg-gray-50 dark:hover:bg-[#065084] transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={editingReview ? handleUpdate : handleCreate}
-                  disabled={!formData.comment || formData.rating === undefined || uploading}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                >
-                  {uploading ? (
-                    <>
-                      <Loader2 className="animate-spin mr-2" size={18} />
-                      Enviando...
-                    </>
-                  ) : (
-                    <>
-                      <Save size={18} className="mr-2" />
-                      {editingReview ? 'Salvar' : 'Criar'}
-                    </>
-                  )}
-                </button>
+                  </button>
+                ))}
+                <span className="ml-2 text-sm text-gray-600 dark:text-gray-300">
+                  {formData.rating} estrelas
+                </span>
               </div>
             </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Comentário *
+              </label>
+              <textarea
+                value={formData.comment}
+                onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder="Ex: Excelente qualidade! Os medicamentos manipulados são perfeitos..."
+                rows={4}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Produto (opcional)
+              </label>
+              <input
+                type="text"
+                value={formData.product}
+                onChange={(e) => setFormData(prev => ({ ...prev, product: e.target.value }))}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder="Ex: Vitamina D3"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Há quanto tempo foi enviada (opcional)
+              </label>
+              <input
+                type="text"
+                value={formData.date}
+                onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                placeholder="Ex: Há 2 semanas, Há 1 mês, Há 3 dias"
+              />
+            </div>
+
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                O que exibir na página inicial:
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* show_image */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Mostrar imagem do avatar</span>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, show_image: prev.show_image !== undefined ? !prev.show_image : false }))}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      (formData.show_image !== false) ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                        (formData.show_image !== false) ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* show_name */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Mostrar nome do cliente</span>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, show_name: prev.show_name !== undefined ? !prev.show_name : false }))}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      (formData.show_name !== false) ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                        (formData.show_name !== false) ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* show_date */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Mostrar data (tempo decorrido)</span>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, show_date: prev.show_date !== undefined ? !prev.show_date : false }))}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      (formData.show_date !== false) ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                        (formData.show_date !== false) ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* show_product */}
+                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Mostrar produto avaliado</span>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, show_product: prev.show_product !== undefined ? !prev.show_product : false }))}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      (formData.show_product !== false) ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                        (formData.show_product !== false) ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Status Ativo */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800 mt-2">
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-gray-900 dark:text-gray-200">Avaliação Ativa</span>
+                <span className="text-xs text-gray-500">Se inativa, não será mostrada no site</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, active: !prev.active }))}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  formData.active ? 'bg-primary-600' : 'bg-gray-300 dark:bg-gray-700'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${
+                    formData.active ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
-        )}
+        </AdminModal>
 
         {/* Lista de reviews */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
