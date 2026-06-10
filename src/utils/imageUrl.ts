@@ -104,15 +104,16 @@ export function getImageUrl(imagePath: string | null | undefined): string {
       })
     }
     
-    // Retorna a URL direta primeiro (mais eficiente se funcionar)
-    // Se não funcionar, o navegador vai tentar a API como fallback
-    return directUrl
+    // Retorna a URL via API para garantir que funcione mesmo com proxy reverso (Nginx)
+    // interceptando rotas estáticas na raiz.
+    return apiUrl
   }
 
   // Se não começa com /, assume que é apenas o nome do arquivo
   // e adiciona /uploads/banners/ (padrão para banners)
-  // Exemplo: image.jpg -> https://kapsu.com.br/uploads/banners/image.jpg
-  const fullUrl = `${baseUrl}/uploads/banners/${trimmedPath}`
+  // Exemplo: image.jpg -> https://kapsu.com.br/api/uploads/banners/image.jpg
+  const apiUrlBase = env.apiUrl.replace(/\/api\/?$/, '')
+  const fullUrl = `${apiUrlBase}/api/uploads/banners/${trimmedPath}`
   if (env.isProd) {
     console.log('🔗 URL da imagem gerada (sem /):', {
       original: trimmedPath,
