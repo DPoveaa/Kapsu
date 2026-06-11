@@ -78,12 +78,12 @@ class ProductsService {
 
     // Se é um caminho relativo (começa com /), converte para URL completa
     if (isPath) {
-      // Remove a barra inicial e adiciona a URL da API
-      return `${API_URL.replace('/api', '')}${trimmedImage}`
+      // Mantém a URL da API incluindo o /api
+      return `${API_URL}${trimmedImage}`
     }
 
     // Se não começa com /, assume que é um caminho relativo e adiciona /uploads/products/
-    return `${API_URL.replace('/api', '')}/uploads/products/${trimmedImage}`
+    return `${API_URL}/uploads/products/${trimmedImage}`
   }
 
   /**

@@ -175,7 +175,7 @@ export default function ProductDetail() {
     if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
       return imagePath
     }
-    return `${env.apiUrl.replace('/api', '')}${imagePath}`
+    return `${env.apiUrl}${imagePath}`
   }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
