@@ -14,6 +14,7 @@ export interface Product {
   contraindication?: string | null;
   compositions?: string | null;
   markup?: number | null;
+  benefits?: string | null;
 }
 
 export type PriceHistoryType = 'purchase' | 'sale' | 'promo';

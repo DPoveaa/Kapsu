@@ -30,15 +30,17 @@ import OrderDetail from './pages/OrderDetail'
 import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentFailure from './pages/PaymentFailure'
 import Profile from './pages/Profile'
+import RecoverPassword from './pages/RecoverPassword'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { FavoritesProvider } from './context/FavoritesContext'
 import FloatingChat from './components/FloatingChat'
 import ToastContainer from './components/ToastContainer'
 
 function AppContent() {
   const location = useLocation()
-  const hideChat = ['/login', '/cadastro'].includes(location.pathname)
+  const hideChat = ['/login', '/cadastro', '/recuperar-senha'].includes(location.pathname)
 
   return (
     <Layout>
@@ -56,6 +58,7 @@ function AppContent() {
         <Route path="/payment-failure" element={<PaymentFailure />} />
         <Route path="/login" element={<Login />} />
         <Route path="/cadastro" element={<Login />} />
+        <Route path="/recuperar-senha" element={<RecoverPassword />} />
         <Route
           path="/perfil"
           element={
@@ -275,9 +278,11 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <CartProvider>
-          <Router>
-            <AppContent />
-          </Router>
+          <FavoritesProvider>
+            <Router>
+              <AppContent />
+            </Router>
+          </FavoritesProvider>
         </CartProvider>
       </AuthProvider>
     </ThemeProvider>
