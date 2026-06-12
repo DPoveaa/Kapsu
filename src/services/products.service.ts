@@ -621,6 +621,28 @@ class ProductsService {
       throw new Error('Erro de conexão ao aplicar markup global.')
     }
   }
+
+  /**
+   * Busca a quantidade de pedidos para uma lista de IDs de produtos (apenas admin)
+   */
+  async checkProductsOrders(productIds: string[]): Promise<Record<string, number>> {
+    try {
+      const response = await fetch(`${this.baseUrl}/admin/check-orders`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ productIds }),
+      })
+
+      const text = await response.text()
+      if (!text) throw new Error('Resposta vazia do servidor')
+      const data = JSON.parse(text)
+      if (!response.ok) throw new Error(data.message || 'Erro ao verificar pedidos dos produtos')
+      return data.data || {}
+    } catch (error: any) {
+      if (error.message) throw error
+      throw new Error('Erro de conexão ao verificar pedidos dos produtos.')
+    }
+  }
 }
 
 export const productsService = new ProductsService()

@@ -833,6 +833,79 @@ class AdminService {
   }
 
   /**
+   * Exclui um pedido de teste específico por ID (apenas admin)
+   */
+  async deleteOrder(orderId: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const response = await fetch(`${this.baseUrl}/orders/${orderId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao excluir pedido')
+      }
+
+      return data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao excluir pedido')
+    }
+  }
+
+  /**
+   * Exclui todos os pedidos de teste (apenas admin)
+   */
+  async deleteTestOrders(): Promise<{ success: boolean; message: string; deletedCount: number }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const response = await fetch(`${this.baseUrl}/orders/test-payments`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao excluir pedidos de teste')
+      }
+
+      return data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao excluir pedidos de teste')
+    }
+  }
+
+
+  /**
    * Cria um pedido e marca como pago diretamente (apenas admin)
    */
   async createOrderAsPaid(shippingAddress?: string, subscriptionPlan?: 'monthly' | 'quarterly'): Promise<{ orderId: string; subscriptionId?: string; isSubscription: boolean }> {

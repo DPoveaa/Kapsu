@@ -210,6 +210,8 @@ export default function ManageProducts() {
 
   const [dbDuplicates, setDbDuplicates] = useState<DuplicationGroup[]>([])
   const [isDbDuplicatesOpen, setIsDbDuplicatesOpen] = useState(false)
+  const [productsOrdersCount, setProductsOrdersCount] = useState<Record<string, number>>({})
+  const [loadingOrdersCount, setLoadingOrdersCount] = useState(false)
 
   // ── Reactivate modal state ────────────────────────────────────────────────
   const [reactivateCandidates, setReactivateCandidates] = useState<{
@@ -982,6 +984,32 @@ export default function ManageProducts() {
       setDbDuplicates(groups)
     }
   }, [products, isDbDuplicatesOpen])
+
+  useEffect(() => {
+    const fetchOrdersCounts = async () => {
+      if (!isDbDuplicatesOpen || dbDuplicates.length === 0) return
+
+      // Collect all unique product IDs from all groups
+      const allIds = new Set<string>()
+      dbDuplicates.forEach((group) => {
+        allIds.add(group.primaryProduct.id)
+        group.similarProducts.forEach((p) => allIds.add(p.id))
+      })
+
+      try {
+        setLoadingOrdersCount(true)
+        const counts = await productsService.checkProductsOrders(Array.from(allIds))
+        setProductsOrdersCount(prev => ({ ...prev, ...counts }))
+      } catch (err) {
+        console.error('Erro ao buscar quantidade de pedidos dos produtos:', err)
+      } finally {
+        setLoadingOrdersCount(false)
+      }
+    }
+
+    fetchOrdersCounts()
+  }, [dbDuplicates, isDbDuplicatesOpen])
+
 
   const resetImport = () => {
     setImportHeaders([]); setImportRows([]); setImportProgress(0)
@@ -2028,9 +2056,35 @@ export default function ManageProducts() {
                                         <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
                                           {p.category || 'Outros'}
                                         </span>
-                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 font-semibold">
                                           Custo: {p.purchase_price != null ? fmt(p.purchase_price) : '—'} | Venda: {fmt(p.price)}
                                         </span>
+                                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                                          loadingOrdersCount
+                                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 animate-pulse'
+                                            : (productsOrdersCount[p.id] || 0) > 0
+                                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-900/40'
+                                              : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                                        }`}>
+                                          {loadingOrdersCount ? (
+                                            'Carregando vendas...'
+                                          ) : (
+                                            `${productsOrdersCount[p.id] || 0} ${productsOrdersCount[p.id] === 1 ? 'venda' : 'vendas'}`
+                                          )}
+                                        </span>
+                                      </div>
+                                      {/* Timestamps */}
+                                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[10px] sm:text-xs text-gray-400 dark:text-gray-500">
+                                        {p.created_at && (
+                                          <span>
+                                            Criado em: <strong className="text-gray-600 dark:text-gray-300">{new Date(p.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</strong>
+                                          </span>
+                                        )}
+                                        {p.updated_at && (
+                                          <span>
+                                            Atualizado: <strong className="text-gray-600 dark:text-gray-300">{new Date(p.updated_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</strong>
+                                          </span>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
