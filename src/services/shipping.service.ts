@@ -13,6 +13,13 @@ export interface ShippingCalculation {
     name: string
     type: string
   }
+  deliveryTime?: number | null
+  deliveryTimeType?: 'business' | 'calendar'
+  estimatedDate?: string | null
+  estimatedDateFormatted?: string | null
+  externalShipping?: boolean
+  carrier?: string | null
+  service?: string | null
 }
 
 export interface ShippingRegion {
@@ -21,6 +28,8 @@ export interface ShippingRegion {
   cep_from: string
   cep_to: string
   shipping_fee: number
+  delivery_time?: number | null
+  delivery_time_type?: 'business' | 'calendar'
   active: boolean
   created_at: string
   updated_at: string
@@ -28,9 +37,30 @@ export interface ShippingRegion {
 
 export interface ShippingSettings {
   free_shipping_threshold: number
+  general_delivery_time?: number
+  general_delivery_time_type?: 'business' | 'calendar'
 }
 
 class ShippingService {
+  /**
+   * Verifica de forma rápida se o CEP está cadastrado nas regiões locais
+   */
+  async checkRegion(cep: string): Promise<{ success: boolean; isLocal: boolean }> {
+    const response = await fetch(`${API_URL}/shipping/check-region/${cep}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.message || 'Erro ao verificar região')
+    }
+
+    return response.json()
+  }
+
   private getAuthHeaders() {
     const token = localStorage.getItem('sanare_token')
     return {
@@ -99,6 +129,8 @@ class ShippingService {
       cepFrom: string
       cepTo: string
       shippingFee: number
+      deliveryTime?: number | null
+      deliveryTimeType?: string
       active?: boolean
     }
   ): Promise<void> {
@@ -111,6 +143,8 @@ class ShippingService {
         cepFrom: region.cepFrom,
         cepTo: region.cepTo,
         shippingFee: region.shippingFee,
+        deliveryTime: region.deliveryTime,
+        deliveryTimeType: region.deliveryTimeType,
         active: region.active !== undefined ? region.active : true,
       }),
     })

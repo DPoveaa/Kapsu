@@ -283,6 +283,20 @@ export default function SiteSettings() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <Phone className="w-4 h-4 inline mr-1" />
+                  WhatsApp de Suporte (Apenas DDD e Número)
+                </label>
+                <input
+                  type="tel"
+                  value={settings.whatsapp_number || ''}
+                  onChange={(e) => handleInputChange('whatsapp_number', e.target.value.replace(/\D/g, '').slice(0, 11))}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                  placeholder="Ex: 11999999999"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   <MapPin className="w-4 h-4 inline mr-1" />
                   Endereço
                 </label>

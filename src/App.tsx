@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminLayout from './components/AdminLayout'
@@ -6,7 +7,6 @@ import Home from './pages/Home'
 import Products from './pages/Products'
 import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
-import Checkout from './pages/Checkout'
 import Login from './pages/Login'
 import AdminPanel from './pages/AdminPanel'
 import WhatsAppConnection from './pages/WhatsAppConnection'
@@ -37,21 +37,57 @@ import { ThemeProvider } from './context/ThemeContext'
 import { FavoritesProvider } from './context/FavoritesContext'
 import FloatingChat from './components/FloatingChat'
 import ToastContainer from './components/ToastContainer'
+import { siteSettingsService, SiteSettings as SiteSettingsType } from './services/site-settings.service'
 
 function AppContent() {
   const location = useLocation()
+  const [chatbotEnabled, setChatbotEnabled] = useState(true)
   const hideChat = ['/login', '/cadastro', '/recuperar-senha'].includes(location.pathname)
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadChatbotSettings = async () => {
+      try {
+        const settings = await siteSettingsService.getSettings()
+        localStorage.setItem('site_settings', JSON.stringify(settings))
+        if (isMounted) {
+          setChatbotEnabled(settings.chatbot_enabled !== false)
+        }
+      } catch (error) {
+        if (isMounted) {
+          setChatbotEnabled(true)
+        }
+      }
+    }
+
+    const handleSettingsUpdated = (event: Event) => {
+      const settings = (event as CustomEvent<SiteSettingsType>).detail
+      if (settings) {
+        localStorage.setItem('site_settings', JSON.stringify(settings))
+        setChatbotEnabled(settings.chatbot_enabled !== false)
+      }
+    }
+
+    loadChatbotSettings()
+    window.addEventListener('site-settings-updated', handleSettingsUpdated)
+
+    return () => {
+      isMounted = false
+      window.removeEventListener('site-settings-updated', handleSettingsUpdated)
+    }
+  }, [])
 
   return (
     <Layout>
       <ToastContainer />
-      {!hideChat && <FloatingChat />}
+      {!hideChat && chatbotEnabled && <FloatingChat />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/produtos" element={<Products />} />
         <Route path="/produtos/:id" element={<ProductDetail />} />
         <Route path="/carrinho" element={<Cart />} />
-        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/checkout" element={<Navigate to="/carrinho?step=delivery" replace />} />
         <Route path="/checkout/success" element={<PaymentSuccess />} />
         <Route path="/checkout/failure" element={<PaymentFailure />} />
         <Route path="/payment-success" element={<PaymentSuccess />} />

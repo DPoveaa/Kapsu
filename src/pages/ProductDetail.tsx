@@ -65,7 +65,7 @@ const getProductBenefits = (productName: string, category: string | null) => {
 export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { addProduct } = useCart()
+  const { addProduct, items } = useCart()
   const { isFavorite, toggleFavorite } = useFavorites()
   const [quantity, setQuantity] = useState(1)
   const [product, setProduct] = useState<Product | null>(null)
@@ -212,10 +212,13 @@ export default function ProductDetail() {
     }
   }
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (product) {
-      addProduct(product, quantity)
-      navigate('/checkout')
+      const isAlreadyInCart = items.some(item => item.product?.id === product.id)
+      if (!isAlreadyInCart) {
+        await addProduct(product, quantity)
+      }
+      navigate('/carrinho')
     }
   }
 

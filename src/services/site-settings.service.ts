@@ -24,6 +24,8 @@ export interface SiteSettings {
   banner_height_desktop?: number
   header_bar_bg_color?: string
   header_bar_bg_color_dark?: string
+  chatbot_enabled?: boolean
+  whatsapp_number?: string
 }
 
 export interface SiteSettingsResponse {

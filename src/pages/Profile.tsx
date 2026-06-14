@@ -418,7 +418,6 @@ export default function Profile() {
       try {
         setLoading(true)
         await addressService.deleteSavedAddress(id)
-        setMessage({ type: 'success', text: 'Endereço removido com sucesso!' })
         await loadAddresses()
       } catch (error: any) {
         setMessage({ type: 'error', text: error.message || 'Erro ao remover endereço' })
@@ -1616,7 +1615,7 @@ export default function Profile() {
                         <h4 className="font-bold text-gray-900 dark:text-white text-sm">Suporte via WhatsApp</h4>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">Atendimento rápido e personalizado diretamente no celular.</p>
                         <a
-                          href="https://wa.me/551153042534"
+                          href={env.supportWhatsAppUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-all shadow-md hover:scale-[1.02] active:scale-[0.98]"
@@ -1643,7 +1642,7 @@ export default function Profile() {
                     </div>
 
                     <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center text-xs text-gray-500 dark:text-gray-400 mt-4 leading-relaxed">
-                      Respondemos em 1 dia util.
+                      Respondemos em até 1 dia útil.
                     </div>
                   </div>
                 </div>
