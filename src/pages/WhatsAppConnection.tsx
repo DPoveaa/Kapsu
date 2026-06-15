@@ -2871,30 +2871,30 @@ export default function WhatsAppConnection() {
                               <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
                                 {/* Dados Extraídos */}
                                 {msg.metadata.extractedMessage && (
-                                  <div className="bg-blue-50 rounded p-3 border border-blue-200">
-                                    <h4 className="text-xs font-semibold text-blue-900 mb-2 flex items-center">
+                                  <div className="bg-blue-50 dark:bg-blue-950/20 rounded p-3 border border-blue-200 dark:border-blue-800/40">
+                                    <h4 className="text-xs font-semibold text-blue-900 dark:text-blue-200 mb-2 flex items-center">
                                       <span className="mr-1">🔍</span>
                                       Dados Extraídos pela IA
                                     </h4>
                                     <div className="text-xs space-y-2">
                                       <div>
-                                        <span className="font-medium text-blue-800">Intenção:</span>{' '}
-                                        <span className="text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
+                                        <span className="font-medium text-blue-800 dark:text-blue-300">Intenção:</span>{' '}
+                                        <span className="text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 rounded">
                                           {msg.metadata.extractedMessage.intent || 'N/A'}
                                         </span>
                                       </div>
                                       {msg.metadata.extractedMessage.entities && (
                                         <div>
-                                          <span className="font-medium text-blue-800 block mb-1">Entidades Extraídas:</span>
-                                          <div className="bg-white p-2 rounded border border-blue-100 max-h-48 overflow-auto">
+                                          <span className="font-medium text-blue-800 dark:text-blue-300 block mb-1">Entidades Extraídas:</span>
+                                          <div className="bg-white dark:bg-gray-900 p-2 rounded border border-blue-100 dark:border-blue-900/40 text-gray-900 dark:text-gray-100 max-h-48 overflow-auto">
                                             {Object.keys(msg.metadata.extractedMessage.entities).length > 0 ? (
                                               <div className="space-y-1">
                                                 {Object.entries(msg.metadata.extractedMessage.entities).map(([key, value]: [string, any]) => {
                                                   if (!value || (typeof value === 'object' && Object.keys(value).length === 0)) return null
                                                   return (
                                                     <div key={key} className="flex items-start">
-                                                      <span className="font-medium text-blue-700 min-w-[100px]">{key}:</span>
-                                                      <span className="text-blue-900 break-words">
+                                                      <span className="font-medium text-blue-700 dark:text-blue-400 min-w-[100px]">{key}:</span>
+                                                      <span className="text-blue-900 dark:text-blue-200 break-words">
                                                         {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
                                                       </span>
                                                     </div>
@@ -2913,36 +2913,36 @@ export default function WhatsAppConnection() {
                                 
                                 {/* Detalhes do Processamento */}
                                 {msg.metadata.processingDetails && (
-                                  <div className="bg-green-50 rounded p-3 border border-green-200">
-                                    <h4 className="text-xs font-semibold text-green-900 mb-2 flex items-center">
+                                  <div className="bg-green-50 dark:bg-green-950/20 rounded p-3 border border-green-200 dark:border-green-800/40">
+                                    <h4 className="text-xs font-semibold text-green-900 dark:text-green-200 mb-2 flex items-center">
                                       <span className="mr-1">⚙️</span>
                                       Detalhes do Processamento
                                     </h4>
                                     <div className="text-xs space-y-1.5">
                                       <div className="flex items-center justify-between">
-                                        <span className="font-medium text-green-800">Extração realizada:</span>
+                                        <span className="font-medium text-green-800 dark:text-green-300">Extração realizada:</span>
                                         <span className={`px-2 py-0.5 rounded ${
                                           msg.metadata.processingDetails.hasExtractedMessage 
-                                            ? 'bg-green-200 text-green-800' 
-                                            : 'bg-gray-200 text-gray-600'
+                                            ? 'bg-green-200 dark:bg-green-900/50 text-green-800 dark:text-green-300' 
+                                            : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                                         }`}>
                                           {msg.metadata.processingDetails.hasExtractedMessage ? '✓ Sim' : '✗ Não'}
                                         </span>
                                       </div>
                                       {msg.metadata.processingDetails.extractedIntent && (
                                         <div className="flex items-center justify-between">
-                                          <span className="font-medium text-green-800">Intenção detectada:</span>
-                                          <span className="text-green-700 bg-green-100 px-2 py-0.5 rounded">
+                                          <span className="font-medium text-green-800 dark:text-green-300">Intenção detectada:</span>
+                                          <span className="text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded">
                                             {msg.metadata.processingDetails.extractedIntent}
                                           </span>
                                         </div>
                                       )}
                                       <div className="flex items-center justify-between">
-                                        <span className="font-medium text-green-800">Resposta gerada:</span>
+                                        <span className="font-medium text-green-800 dark:text-green-300">Resposta gerada:</span>
                                         <span className={`px-2 py-0.5 rounded ${
                                           msg.metadata.processingDetails.aiResponseGenerated 
-                                            ? 'bg-green-200 text-green-800' 
-                                            : 'bg-gray-200 text-gray-600'
+                                            ? 'bg-green-200 dark:bg-green-900/50 text-green-800 dark:text-green-300' 
+                                            : 'bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
                                         }`}>
                                           {msg.metadata.processingDetails.aiResponseGenerated ? '✓ Sim' : '✗ Não'}
                                           {msg.metadata.processingDetails.aiResponseLength > 0 && (
@@ -2963,8 +2963,8 @@ export default function WhatsAppConnection() {
                                       <span className="mr-1">📝</span>
                                       Prompt Final Enviado para a IA
                                     </h4>
-                                    <div className="bg-white dark:bg-gray-800 p-2 rounded border border-gray-100 dark:border-gray-700 max-h-96 overflow-auto">
-                                      <pre className="text-xs text-gray-800 whitespace-pre-wrap break-words font-mono">
+                                    <div className="bg-white dark:bg-gray-900 p-2 rounded border border-gray-100 dark:border-gray-700 max-h-96 overflow-auto">
+                                      <pre className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words font-mono">
                                         {msg.metadata.processingDetails.finalPrompt}
                                       </pre>
                                     </div>
@@ -2972,31 +2972,31 @@ export default function WhatsAppConnection() {
                                 )}
 
                                 {/* Resposta Completa da IA */}
-                                <div className="bg-purple-50 rounded p-3 border border-purple-200">
-                                  <h4 className="text-xs font-semibold text-purple-900 mb-2 flex items-center">
+                                <div className="bg-purple-50 dark:bg-purple-950/20 rounded p-3 border border-purple-200 dark:border-purple-800/40">
+                                  <h4 className="text-xs font-semibold text-purple-900 dark:text-purple-200 mb-2 flex items-center">
                                     <span className="mr-1">🤖</span>
                                     Resposta Final da IA
                                   </h4>
-                                  <p className="text-xs text-purple-800 whitespace-pre-wrap break-words bg-white p-2 rounded border border-purple-100">
+                                  <p className="text-xs text-purple-800 dark:text-purple-300 whitespace-pre-wrap break-words bg-white dark:bg-gray-900 p-2 rounded border border-purple-100 dark:border-purple-900/40">
                                     {msg.content}
                                   </p>
                                 </div>
                                 
                                 {/* Informações de Medicamento Controlado */}
                                 {msg.metadata.isControlled && (
-                                  <div className="bg-red-50 rounded p-3 border border-red-200">
-                                    <h4 className="text-xs font-semibold text-red-900 mb-2 flex items-center">
+                                  <div className="bg-red-50 dark:bg-red-950/20 rounded p-3 border border-red-200 dark:border-red-800/40">
+                                    <h4 className="text-xs font-semibold text-red-900 dark:text-red-200 mb-2 flex items-center">
                                       <span className="mr-1">⚠️</span>
                                       Medicamento Controlado
                                     </h4>
                                     <div className="text-xs space-y-1">
                                       <div>
-                                        <span className="font-medium text-red-800">Substância:</span>{' '}
-                                        <span className="text-red-700">{msg.metadata.controlledSubstance || 'N/A'}</span>
+                                        <span className="font-medium text-red-800 dark:text-red-300">Substância:</span>{' '}
+                                        <span className="text-red-700 dark:text-red-300 font-semibold">{msg.metadata.controlledSubstance || 'N/A'}</span>
                                       </div>
                                       <div>
-                                        <span className="font-medium text-red-800">Status:</span>{' '}
-                                        <span className={msg.metadata.needsPharmacist ? 'text-green-700' : 'text-orange-700'}>
+                                        <span className="font-medium text-red-800 dark:text-red-300">Status:</span>{' '}
+                                        <span className={msg.metadata.needsPharmacist ? 'text-green-700 dark:text-green-400 font-semibold' : 'text-orange-700 dark:text-orange-400 font-semibold'}>
                                           {msg.metadata.needsPharmacist ? '✓ Redirecionado para farmacêutico' : '⏳ Aguardando confirmação'}
                                         </span>
                                       </div>
@@ -3006,34 +3006,34 @@ export default function WhatsAppConnection() {
 
                                 {/* Informações do Carrinho */}
                                 {msg.metadata.cartInfo && (
-                                  <div className="bg-orange-50 rounded p-3 border border-orange-200">
-                                    <h4 className="text-xs font-semibold text-orange-900 mb-2 flex items-center">
+                                  <div className="bg-orange-50 dark:bg-orange-950/20 rounded p-3 border border-orange-200 dark:border-orange-800/40">
+                                    <h4 className="text-xs font-semibold text-orange-900 dark:text-orange-200 mb-2 flex items-center">
                                       <span className="mr-1">🛒</span>
                                       Carrinho Após Esta Mensagem
                                     </h4>
                                     <div className="text-xs space-y-2">
                                       <div className="flex items-center justify-between">
-                                        <span className="font-medium text-orange-800">Itens:</span>
-                                        <span className="text-orange-700 bg-orange-100 px-2 py-0.5 rounded">
+                                        <span className="font-medium text-orange-800 dark:text-orange-300">Itens:</span>
+                                        <span className="text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/40 px-2 py-0.5 rounded">
                                           {msg.metadata.cartInfo.itemCount} item(ns)
                                         </span>
                                       </div>
                                       <div className="flex items-center justify-between">
-                                        <span className="font-medium text-orange-800">Total:</span>
-                                        <span className="text-orange-700 font-bold">
+                                        <span className="font-medium text-orange-800 dark:text-orange-300">Total:</span>
+                                        <span className="text-orange-700 dark:text-orange-300 font-bold">
                                           R$ {msg.metadata.cartInfo.total.toFixed(2)}
                                         </span>
                                       </div>
                                       {msg.metadata.cartInfo.items && msg.metadata.cartInfo.items.length > 0 && (
                                         <div>
-                                          <span className="font-medium text-orange-800 block mb-1">Produtos:</span>
-                                          <div className="bg-white p-2 rounded border border-orange-100 space-y-1">
+                                          <span className="font-medium text-orange-800 dark:text-orange-300 block mb-1">Produtos:</span>
+                                          <div className="bg-white dark:bg-gray-900 p-2 rounded border border-orange-100 dark:border-orange-900/40 space-y-1">
                                             {msg.metadata.cartInfo.items.map((item: { name: string; quantity: number; price: number }, idx: number) => (
                                               <div key={idx} className="flex justify-between items-center text-xs">
-                                                <span className="text-orange-900">
+                                                <span className="text-orange-900 dark:text-orange-300">
                                                   {item.name} ({item.quantity}x)
                                                 </span>
-                                                <span className="text-orange-700 font-medium">
+                                                <span className="text-orange-700 dark:text-orange-300 font-medium">
                                                   R$ {(item.price * item.quantity).toFixed(2)}
                                                 </span>
                                               </div>
@@ -3042,13 +3042,13 @@ export default function WhatsAppConnection() {
                                         </div>
                                       )}
                                       {msg.metadata.purchaseLink && (
-                                        <div className="mt-2 pt-2 border-t border-orange-200">
-                                          <span className="font-medium text-orange-800 block mb-1">Link de Finalização:</span>
+                                        <div className="mt-2 pt-2 border-t border-orange-200 dark:border-orange-800/40">
+                                          <span className="font-medium text-orange-800 dark:text-orange-300 block mb-1">Link de Finalização:</span>
                                           <a 
                                             href={msg.metadata.purchaseLink} 
                                             target="_blank" 
                                             rel="noopener noreferrer"
-                                            className="text-blue-600 hover:text-blue-700 underline break-all text-xs"
+                                            className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 underline break-all text-xs"
                                           >
                                             {msg.metadata.purchaseLink}
                                           </a>

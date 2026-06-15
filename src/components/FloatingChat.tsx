@@ -1,19 +1,33 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { MessageSquare, X, Send, Loader2, CheckCircle, XCircle } from 'lucide-react'
+import { MessageSquare, X, Send, Loader2, Phone, Mail } from 'lucide-react'
 import { whatsappService } from '../services/whatsapp.service'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
 import { productsService } from '../services/products.service'
 import { useNavigate } from 'react-router-dom'
+import { env } from '../config/env'
+
+interface ChatAction {
+  label: string
+  href: string
+  type: 'primary' | 'secondary'
+}
 
 interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   timestamp: number
-  actionResult?: {
-    type: 'added' | 'removed' | 'error'
-    productName?: string
-    message?: string
+  actions?: ChatAction[]
+  metadata?: {
+    recommendedProducts?: Array<{
+      id: string
+      name: string
+      price: number
+      originalPrice?: number
+      category?: string
+      description?: string
+      url: string
+    }>
   }
 }
 
@@ -27,6 +41,14 @@ const FloatingChat: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [escalationStatus, setEscalationStatus] = useState<'none' | 'human_needed' | 'human_assigned'>('none')
+  const [showEscalationForm, setShowEscalationForm] = useState(false)
+  const [escalationChannel, setEscalationChannel] = useState<'site' | 'whatsapp' | 'email' | null>(null)
+  // Controle de contexto: rastreia o que o bot está aguardando como resposta numérica
+  const [pendingContext, setPendingContext] = useState<'none' | 'awaiting_support_channel'>("none")
+  const [contactName, setContactName] = useState(user?.name || '')
+  const [contactPhone, setContactPhone] = useState(user?.phone || '')
+  const [contactEmail, setContactEmail] = useState(user?.email || '')
 
   // Posições pré-definidas para as 4 quinas
   const getCornerPosition = (corner: CornerPosition) => {
@@ -176,6 +198,71 @@ const FloatingChat: React.FC = () => {
     }
   }, [messages])
 
+  // Carrega e sincroniza o status da conversa com o backend
+  useEffect(() => {
+    const syncConversation = async () => {
+      const sessionId = localStorage.getItem('sanare_site_session')
+      if (!sessionId) return
+
+      try {
+        const response = await fetch(`${env.apiUrl}/chat/site/conversation/${sessionId}`)
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success && result.data && result.data.conversation) {
+            const conv = result.data.conversation
+            if (conv.status === 'human_needed' || conv.status === 'human_assigned') {
+              setEscalationStatus(conv.status)
+              if (conv.preferred_contact) {
+                setEscalationChannel(conv.preferred_contact)
+              } else {
+                setEscalationChannel('site')
+              }
+            } else {
+              setEscalationStatus('none')
+              setEscalationChannel(null)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao sincronizar conversa com backend:', err)
+      }
+    }
+
+    if (isOpen) {
+      syncConversation()
+      
+      const interval = setInterval(() => {
+        if (escalationStatus !== 'none' && escalationChannel === 'site') {
+          syncConversation()
+          
+          const fetchHistory = async () => {
+            const sessionId = localStorage.getItem('sanare_site_session')
+            if (!sessionId) return
+            try {
+              const response = await fetch(`${env.apiUrl}/chat/site/conversation/${sessionId}`)
+              if (response.ok) {
+                const result = await response.json()
+                if (result.success && result.data && Array.isArray(result.data.history)) {
+                  setMessages(result.data.history.map((h: any) => ({
+                    role: h.role,
+                    content: h.content,
+                    timestamp: h.timestamp || Date.now(),
+                    actionResult: h.metadata?.actionResult || undefined
+                  })))
+                }
+              }
+            } catch (err) {
+              console.error('Erro ao buscar histórico de mensagens:', err)
+            }
+          }
+          fetchHistory()
+        }
+      }, 5000)
+
+      return () => clearInterval(interval)
+    }
+  }, [isOpen, escalationStatus, escalationChannel])
+
   // Função auxiliar para buscar produto pelo nome
   const findProductByName = async (productName: string): Promise<any | null> => {
     try {
@@ -215,12 +302,8 @@ const FloatingChat: React.FC = () => {
   }
 
   // Função para processar ações da IA (adicionar/remover produtos)
-  const processAIActions = async (aiData: any): Promise<ChatMessage[]> => {
-    const actionMessages: ChatMessage[] = []
-
-    if (!isAuthenticated) {
-      return actionMessages // Não processa ações se não estiver logado
-    }
+  const processAIActions = async (aiData: any): Promise<Array<{ type: 'added' | 'removed' | 'error'; message: string }>> => {
+    const actionMessages: Array<{ type: 'added' | 'removed' | 'error'; message: string }> = []
 
     const extractedMessage = aiData.extractedMessage
     if (!extractedMessage) return actionMessages
@@ -230,18 +313,15 @@ const FloatingChat: React.FC = () => {
     const produto = entities.produto
 
     // Processa adição de produtos
-    // IMPORTANTE: Se há produto mencionado, mesmo que a intenção seja pedir_recomendacao ou pedido_de_orcamento, deve adicionar ao carrinho
     const shouldAddProduct = produto && (
       intent === 'iniciar_compra' ||
       intent === 'adicionar_ao_carrinho' ||
-      (intent === 'pedir_recomendacao' && produto) || // Se tem produto E pediu recomendação, adiciona o produto também
-      (intent === 'pedido_de_orcamento' && produto) // Se tem produto E pediu orçamento, adiciona ao carrinho também
+      (intent === 'pedir_recomendacao' && produto) ||
+      (intent === 'pedido_de_orcamento' && produto)
     );
 
     if (shouldAddProduct) {
       const productsToAdd = Array.isArray(produto) ? produto : [produto]
-
-      // Extrai quantidade da mensagem ou usa padrão 1
       let quantity = 1
       if (entities.quantidade) {
         const qty = parseInt(String(entities.quantidade))
@@ -259,8 +339,10 @@ const FloatingChat: React.FC = () => {
         try {
           const product = await findProductByName(productName)
           if (product) {
-            // Adiciona produto (a função addProduct já lida com produtos existentes)
-            await addProduct(product, quantity)
+            // Se for convidado, atualiza o carrinho local
+            if (!isAuthenticated) {
+              await addProduct(product, quantity)
+            }
             results.push(`${product.name} (${quantity}x)`)
           } else {
             errors.push(`"${productName}"`)
@@ -271,36 +353,22 @@ const FloatingChat: React.FC = () => {
         }
       }
 
-      // Recarrega carrinho após processar todos os produtos
-      if (results.length > 0) {
+      // Se autenticado, recarrega o estado do carrinho atualizado do banco
+      if (isAuthenticated && results.length > 0) {
         await refreshCart()
       }
 
-      // Cria mensagem de sucesso se houver produtos adicionados
       if (results.length > 0) {
         actionMessages.push({
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          actionResult: {
-            type: 'added',
-            productName: results.join(', '),
-            message: `✅ ${results.length === 1 ? 'Produto' : 'Produtos'} adicionado${results.length > 1 ? 's' : ''} ao carrinho: ${results.join(', ')}`,
-          },
+          type: 'added',
+          message: `✅ ${results.length === 1 ? 'Produto' : 'Produtos'} adicionado${results.length > 1 ? 's' : ''} ao carrinho: ${results.join(', ')}`,
         })
       }
 
-      // Cria mensagem de erro se houver produtos não encontrados
       if (errors.length > 0) {
         actionMessages.push({
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          actionResult: {
-            type: 'error',
-            productName: errors.join(', '),
-            message: `❌ Não encontrei ${errors.length === 1 ? 'o produto' : 'os produtos'}: ${errors.join(', ')}`,
-          },
+          type: 'error',
+          message: `❌ Não encontrei ${errors.length === 1 ? 'o produto' : 'os produtos'}: ${errors.join(', ')}`,
         })
       }
     }
@@ -308,54 +376,36 @@ const FloatingChat: React.FC = () => {
     // Processa limpeza do carrinho
     if (intent === 'limpar_contexto') {
       try {
-        await clearCart()
-        await refreshCart()
+        if (!isAuthenticated) {
+          await clearCart()
+        } else {
+          await refreshCart()
+        }
         actionMessages.push({
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          actionResult: {
-            type: 'removed',
-            message: '✅ Carrinho limpo com sucesso!',
-          },
+          type: 'removed',
+          message: '✅ Carrinho limpo com sucesso!',
         })
       } catch (error: any) {
         console.error('Erro ao limpar carrinho:', error)
         actionMessages.push({
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          actionResult: {
-            type: 'error',
-            message: `❌ Erro ao limpar carrinho: ${error.message}`,
-          },
+          type: 'error',
+          message: `❌ Erro ao limpar carrinho: ${error.message}`,
         })
       }
     }
 
-    // Processa finalização da compra (redireciona para checkout)
+    // Processa finalização da compra
     if (intent === 'finalizar_compra') {
       if (items.length === 0) {
         actionMessages.push({
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          actionResult: {
-            type: 'error',
-            message: '❌ Seu carrinho está vazio. Adicione produtos antes de finalizar.',
-          },
+          type: 'error',
+          message: '❌ Seu carrinho está vazio. Adicione produtos antes de finalizar.',
         })
       } else {
-        // Redireciona para checkout
         navigate('/checkout')
         actionMessages.push({
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          actionResult: {
-            type: 'added',
-            message: '✅ Redirecionando para finalizar sua compra...',
-          },
+          type: 'added',
+          message: '✅ Redirecionando para finalizar sua compra...',
         })
       }
     }
@@ -367,13 +417,8 @@ const FloatingChat: React.FC = () => {
 
       if (isNaN(newQuantity) || newQuantity <= 0) {
         actionMessages.push({
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          actionResult: {
-            type: 'error',
-            message: '❌ Quantidade inválida. Por favor, informe um número maior que zero.',
-          },
+          type: 'error',
+          message: '❌ Quantidade inválida. Por favor, informe um número maior que zero.',
         })
         return actionMessages
       }
@@ -388,9 +433,10 @@ const FloatingChat: React.FC = () => {
           const product = await findProductByName(productName)
           if (product) {
             const cartItem = items.find(item => item.product?.id === product.id)
-
             if (cartItem) {
-              await updateQuantity(cartItem.id, newQuantity)
+              if (!isAuthenticated) {
+                await updateQuantity(cartItem.id, newQuantity)
+              }
               results.push(`${product.name} (${newQuantity}x)`)
             } else {
               errors.push(`"${productName}" (não está no carrinho)`)
@@ -404,53 +450,38 @@ const FloatingChat: React.FC = () => {
         }
       }
 
-      if (results.length > 0) {
+      if (isAuthenticated && results.length > 0) {
         await refreshCart()
+      }
+
+      if (results.length > 0) {
         actionMessages.push({
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          actionResult: {
-            type: 'added',
-            productName: results.join(', '),
-            message: `✅ Quantidade atualizada: ${results.join(', ')}`,
-          },
+          type: 'added',
+          message: `✅ Quantidade atualizada: ${results.join(', ')}`,
         })
       }
 
       if (errors.length > 0) {
         actionMessages.push({
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          actionResult: {
-            type: 'error',
-            productName: errors.join(', '),
-            message: `❌ Não foi possível atualizar: ${errors.join(', ')}`,
-          },
+          type: 'error',
+          message: `❌ Não foi possível atualizar: ${errors.join(', ')}`,
         })
       }
     }
 
-    // Processa troca de produtos (remove o antigo e adiciona o novo)
+    // Processa troca de produtos
     if (intent === 'trocar_produto') {
       const produtoAntigo = entities.produto_antigo
       const produtoNovo = entities.produto_novo
 
       if (!produtoAntigo || !produtoNovo) {
         actionMessages.push({
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          actionResult: {
-            type: 'error',
-            message: '❌ Não consegui identificar qual produto trocar. Por favor, seja mais específico (ex: "troque X por Y").',
-          },
+          type: 'error',
+          message: '❌ Não consegui identificar qual produto trocar. Por favor, seja mais específico (ex: "troque X por Y").',
         })
         return actionMessages
       }
 
-      // Extrai quantidade do novo produto ou usa padrão 1
       let quantity = 1
       if (entities.quantidade) {
         const qty = parseInt(String(entities.quantidade))
@@ -460,80 +491,52 @@ const FloatingChat: React.FC = () => {
       }
 
       try {
-        // Busca produtos
         const oldProduct = await findProductByName(produtoAntigo)
         const newProduct = await findProductByName(produtoNovo)
 
         if (!oldProduct) {
           actionMessages.push({
-            role: 'assistant',
-            content: '',
-            timestamp: Date.now(),
-            actionResult: {
-              type: 'error',
-              message: `❌ Não encontrei o produto "${produtoAntigo}" no sistema.`,
-            },
+            type: 'error',
+            message: `❌ Não encontrei o produto "${produtoAntigo}" no sistema.`,
           })
           return actionMessages
         }
 
         if (!newProduct) {
           actionMessages.push({
-            role: 'assistant',
-            content: '',
-            timestamp: Date.now(),
-            actionResult: {
-              type: 'error',
-              message: `❌ Não encontrei o produto "${produtoNovo}" no sistema.`,
-            },
+            type: 'error',
+            message: `❌ Não encontrei o produto "${produtoNovo}" no sistema.`,
           })
           return actionMessages
         }
 
-        // Encontra o item antigo no carrinho
         const oldCartItem = items.find(item => item.product?.id === oldProduct.id)
-
         if (!oldCartItem) {
           actionMessages.push({
-            role: 'assistant',
-            content: '',
-            timestamp: Date.now(),
-            actionResult: {
-              type: 'error',
-              message: `❌ O produto "${oldProduct.name}" não está no seu carrinho.`,
-            },
+            type: 'error',
+            message: `❌ O produto "${oldProduct.name}" não está no seu carrinho.`,
           })
           return actionMessages
         }
 
-        // Remove o produto antigo
-        await removeItem(oldCartItem.id)
+        if (!isAuthenticated) {
+          await removeItem(oldCartItem.id)
+          await addProduct(newProduct, quantity)
+        }
 
-        // Adiciona o produto novo
-        await addProduct(newProduct, quantity)
-
-        // Recarrega carrinho
-        await refreshCart()
+        if (isAuthenticated) {
+          await refreshCart()
+        }
 
         actionMessages.push({
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          actionResult: {
-            type: 'added',
-            message: `✅ Produto trocado: removido "${oldProduct.name}" e adicionado "${newProduct.name}" (${quantity}x)`,
-          },
+          type: 'added',
+          message: `✅ Produto trocado: removido "${oldProduct.name}" e adicionado "${newProduct.name}" (${quantity}x)`,
         })
       } catch (error: any) {
         console.error('Erro ao trocar produto:', error)
         actionMessages.push({
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          actionResult: {
-            type: 'error',
-            message: `❌ Erro ao trocar produto: ${error.message}`,
-          },
+          type: 'error',
+          message: `❌ Erro ao trocar produto: ${error.message}`,
         })
       }
     }
@@ -541,7 +544,6 @@ const FloatingChat: React.FC = () => {
     // Processa remoção de produtos
     if (intent === 'remover_produto' && produto) {
       const productsToRemove = Array.isArray(produto) ? produto : [produto]
-
       const results: string[] = []
       const errors: string[] = []
 
@@ -551,11 +553,11 @@ const FloatingChat: React.FC = () => {
         try {
           const product = await findProductByName(productName)
           if (product) {
-            // Encontra o item no carrinho
             const cartItem = items.find(item => item.product?.id === product.id)
-
             if (cartItem) {
-              await removeItem(cartItem.id)
+              if (!isAuthenticated) {
+                await removeItem(cartItem.id)
+              }
               results.push(product.name)
             } else {
               errors.push(`"${productName}" (não está no carrinho)`)
@@ -569,36 +571,21 @@ const FloatingChat: React.FC = () => {
         }
       }
 
-      // Recarrega carrinho após processar todos os produtos
-      if (results.length > 0) {
+      if (isAuthenticated && results.length > 0) {
         await refreshCart()
       }
 
-      // Cria mensagem de sucesso se houver produtos removidos
       if (results.length > 0) {
         actionMessages.push({
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          actionResult: {
-            type: 'removed',
-            productName: results.join(', '),
-            message: `✅ ${results.length === 1 ? 'Produto' : 'Produtos'} removido${results.length > 1 ? 's' : ''} do carrinho: ${results.join(', ')}`,
-          },
+          type: 'removed',
+          message: `✅ ${results.length === 1 ? 'Produto' : 'Produtos'} removido${results.length > 1 ? 's' : ''} do carrinho: ${results.join(', ')}`,
         })
       }
 
-      // Cria mensagem de erro se houver problemas
       if (errors.length > 0) {
         actionMessages.push({
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          actionResult: {
-            type: 'error',
-            productName: errors.join(', '),
-            message: `❌ ${errors.length === 1 ? 'Não foi possível remover' : 'Não foi possível remover'}: ${errors.join(', ')}`,
-          },
+          type: 'error',
+          message: `❌ Não foi possível remover: ${errors.join(', ')}`,
         })
       }
     }
@@ -623,13 +610,42 @@ const FloatingChat: React.FC = () => {
     }
     setMessages(prev => [...prev, userMessageEntry])
 
+    // ── CONTROLE DE CONTEXTO: intercept respostas numéricas para escolha de canal de suporte ──
+    if (pendingContext === 'awaiting_support_channel') {
+      const trimmed = userMessage.trim()
+      const channelMap: Record<string, 'site' | 'whatsapp' | 'email'> = {
+        '1': 'site', 'chat': 'site', 'chat do site': 'site',
+        '2': 'whatsapp', 'whatsapp': 'whatsapp', 'zap': 'whatsapp', 'zap zap': 'whatsapp', 'wpp': 'whatsapp',
+        '3': 'email', 'email': 'email', 'e-mail': 'email',
+      }
+      const chosen = channelMap[trimmed.toLowerCase()]
+      if (chosen) {
+        setPendingContext('none')
+        setEscalationChannel(chosen)
+        setShowEscalationForm(true)
+        setEscalationStatus('human_needed')
+        const channelLabel = chosen === 'site' ? 'Chat do Site' : chosen === 'whatsapp' ? 'WhatsApp' : 'E-mail'
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          content: `Ótimo! Vou te conectar via ${channelLabel}. Por favor, confirme seus dados abaixo para continuar.`,
+          timestamp: Date.now(),
+        }])
+        setIsLoading(false)
+        return
+      }
+      // Se não mapeou, limpa o contexto e continua normal
+      setPendingContext('none')
+    }
+
     try {
       // Prepara histórico para a API
-      const historyForAPI = messages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-        timestamp: msg.timestamp,
-      }))
+      const conversationHistory = messages
+        .filter(msg => msg.content)
+        .map(msg => ({
+          role: msg.role,
+          content: msg.content,
+          timestamp: msg.timestamp,
+        }))
 
       // Prepara informações do carrinho para enviar à IA (sempre envia, mesmo se vazio)
       const cartInfoForAI = {
@@ -643,31 +659,89 @@ const FloatingChat: React.FC = () => {
       }
 
       // Chama a API do chat do site (passa informações de autenticação)
-      const result = await whatsappService.siteChat(
+      const result = await whatsappService.sendSiteMessage(
         userMessage,
-        historyForAPI,
-        cartInfoForAI,
         user?.id,
+        cartInfoForAI,
+        conversationHistory,
         isAuthenticated,
         user ? { id: user.id, name: user.name, email: user.email, phone: user.phone } : undefined
       )
-      const aiData = result.data
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Erro ao processar mensagem')
+      }
+      
+      const aiData = result.data || {}
 
-      // Processa ações da IA (adicionar/remover produtos, finalizar, limpar) se estiver logado
+      // Sincroniza o carrinho se o backend retornar o estado do carrinho atualizado do banco
+      if (aiData.currentCart && isAuthenticated) {
+        await refreshCart()
+      }
+
+      if (aiData.shouldEscalateHuman) {
+        setShowEscalationForm(true)
+        setEscalationStatus('human_needed')
+        // Marca que a próxima mensagem numérica será uma escolha de canal
+        setPendingContext('awaiting_support_channel')
+        
+        const aiMessageEntry: ChatMessage = {
+          role: 'assistant',
+          content: aiData.aiResponse || 'Para esse atendimento, vou encaminhar você para um atendente humano. Como você prefere continuar?',
+          timestamp: Date.now(),
+        }
+        setMessages(prev => [...prev, aiMessageEntry])
+        return
+      }
+
+      // Processa ações da IA (adicionar/remover produtos, finalizar, limpar)
       const actionMessages = await processAIActions(aiData)
 
-      // Adiciona mensagens de ação se houver
-      if (actionMessages.length > 0) {
-        setMessages(prev => [...prev, ...actionMessages])
+      let consolidatedContent = '';
+      let actions: ChatAction[] = [];
+
+      // Combine action messages content
+      for (const actionInfo of actionMessages) {
+        if (actionInfo.message) {
+          consolidatedContent += actionInfo.message + '\n\n';
+          
+          if (actionInfo.type === 'added') {
+            actions.push({ label: 'Ir para o carrinho 🛒', href: '/carrinho', type: 'primary' })
+            actions.push({ label: 'Continuar comprando', href: '/produtos', type: 'secondary' })
+          } else if (actionInfo.type === 'removed') {
+            actions.push({ label: 'Ir para produtos', href: '/produtos', type: 'primary' })
+          }
+        }
       }
 
-      // Adiciona resposta da IA
-      const aiMessageEntry: ChatMessage = {
-        role: 'assistant',
-        content: aiData.aiResponse || 'Desculpe, não consegui processar sua mensagem.',
-        timestamp: Date.now(),
+      // Add AI response content
+      if (aiData.aiResponse) {
+        consolidatedContent += aiData.aiResponse;
       }
-      setMessages(prev => [...prev, aiMessageEntry])
+      
+      // Intent specific actions overrides
+      const intent = aiData.extractedMessage?.intent;
+      if (intent === 'finalizar_compra') {
+        actions = [{ label: 'Finalizar Compra 💳', href: '/checkout', type: 'primary' }];
+      } else if (intent === 'pergunta_carrinho') {
+        actions = [
+          { label: 'Ir para o carrinho 🛒', href: '/carrinho', type: 'primary' },
+          { label: 'Finalizar Compra 💳', href: '/checkout', type: 'secondary' }
+        ];
+      }
+
+      if (consolidatedContent.trim()) {
+        const aiMessageEntry: ChatMessage = {
+          role: 'assistant',
+          content: consolidatedContent.trim(),
+          timestamp: Date.now(),
+          actions: actions.length > 0 ? actions : undefined,
+          metadata: aiData.recommendedProducts && aiData.recommendedProducts.length > 0
+            ? { recommendedProducts: aiData.recommendedProducts }
+            : undefined
+        }
+        setMessages(prev => [...prev, aiMessageEntry])
+      }
     } catch (error: any) {
       console.error('Erro ao enviar mensagem:', error)
       const errorMessage: ChatMessage = {
@@ -676,6 +750,74 @@ const FloatingChat: React.FC = () => {
         timestamp: Date.now(),
       }
       setMessages(prev => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleEscalationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!escalationChannel) return
+    setIsLoading(true)
+    try {
+      const result = await whatsappService.escalateSiteChat(
+        escalationChannel,
+        contactName || undefined,
+        contactPhone || undefined,
+        contactEmail || undefined,
+        'Cliente solicitou atendimento humano via widget do site.'
+      )
+      if (result.success) {
+        setEscalationStatus('human_needed')
+        setShowEscalationForm(false)
+        
+        const channelLabel = escalationChannel === 'site' 
+          ? 'Chat do Site' 
+          : escalationChannel === 'whatsapp' 
+            ? 'WhatsApp' 
+            : 'E-mail';
+            
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `Solicitação registrada com sucesso! Você escolheu atendimento via ${channelLabel}. Nosso time entrará em contato em breve.`,
+            timestamp: Date.now()
+          }
+        ])
+
+        if (escalationChannel === 'whatsapp') {
+          const cleanPhone = contactPhone.replace(/\D/g, '') || env.supportWhatsAppUrl.replace(/\D/g, '');
+          window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}`, '_blank', 'noopener,noreferrer')
+        }
+      }
+    } catch (err: any) {
+      console.error('Erro ao registrar atendimento humano:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDeEscalate = async () => {
+    setIsLoading(true)
+    try {
+      const result = await whatsappService.deEscalateSiteChat()
+      if (result.success) {
+        setEscalationStatus('none')
+        setShowEscalationForm(false)
+        setEscalationChannel(null)
+        setPendingContext('none')
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: 'Atendimento por IA retomado. Como posso ajudar você?',
+            timestamp: Date.now()
+          }
+        ])
+      }
+    } catch (err: any) {
+      console.error('Erro ao retornar para atendimento por IA:', err)
     } finally {
       setIsLoading(false)
     }
@@ -975,33 +1117,98 @@ const FloatingChat: React.FC = () => {
     setIsOpen(!isOpen)
   }
 
-  // Função para processar formatação de texto (converter *texto* em negrito)
+  const handleAddProductDirectly = async (product: { id: string; name: string; price: number }) => {
+    try {
+      setIsLoading(true)
+      const fullProduct = await productsService.getById(product.id)
+      if (fullProduct) {
+        await addProduct(fullProduct, 1)
+        await refreshCart()
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant' as const,
+            content: `✅ Produto adicionado ao carrinho: ${fullProduct.name} (1x)\n\nDeseja continuar comprando ou ir para o carrinho?`,
+            timestamp: Date.now(),
+            actions: [
+              { label: 'Ir para o carrinho 🛒', href: '/carrinho', type: 'primary' as const },
+              { label: 'Continuar comprando', href: '/produtos', type: 'secondary' as const },
+            ]
+          }
+        ])
+      } else {
+        throw new Error('Produto não encontrado')
+      }
+    } catch (error) {
+      console.error('Erro ao adicionar produto diretamente:', error)
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant' as const,
+          content: `❌ Não foi possível adicionar "${product.name}" ao carrinho. Tente novamente.`,
+          timestamp: Date.now(),
+        }
+      ])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const formatMessage = (text: string): React.ReactNode => {
     if (!text) return text
 
-    // Regex para encontrar *texto* (negrito)
-    // Não captura asteriscos que estão no início/fim da linha ou seguidos de espaço
+    let cleanText = text.replace(/^[ \t]*[*+-][ \t]+/gm, '• ')
+    cleanText = cleanText.replace(/\*\*/g, '*')
+
+    // Match [text](url) or *bold*
+    const tokenRegex = /\[([^\]]+)\]\(([^)]+)\)|(\*[^*]+\*)/g
+    
     const parts: React.ReactNode[] = []
     let lastIndex = 0
-    const regex = /\*([^*]+)\*/g
     let match
 
-    while ((match = regex.exec(text)) !== null) {
-      // Adiciona texto antes do match
-      if (match.index > lastIndex) {
-        parts.push(text.substring(lastIndex, match.index))
+    while ((match = tokenRegex.exec(cleanText)) !== null) {
+      const matchIndex = match.index
+      
+      if (matchIndex > lastIndex) {
+        parts.push(cleanText.substring(lastIndex, matchIndex))
       }
-      // Adiciona o texto em negrito
-      parts.push(<strong key={match.index}>{match[1]}</strong>)
-      lastIndex = regex.lastIndex
+
+      const [, linkText, linkUrl, boldMatch] = match
+
+      if (boldMatch) {
+        const content = boldMatch.substring(1, boldMatch.length - 1)
+        parts.push(<strong key={`bold-${matchIndex}`} className="font-bold text-gray-900 dark:text-white">{content}</strong>)
+      } else if (linkText && linkUrl) {
+        const isInternal = linkUrl.startsWith('/') || linkUrl.startsWith('http://localhost') || linkUrl.startsWith(env.apiUrl)
+        const cleanUrl = linkUrl.replace(/^http:\/\/localhost(:\d+)?/, '')
+        
+        parts.push(
+          <button
+            key={`link-${matchIndex}`}
+            onClick={() => {
+              if (isInternal) {
+                navigate(cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`)
+                setIsOpen(false)
+              } else {
+                window.open(linkUrl, '_blank', 'noopener,noreferrer')
+              }
+            }}
+            className="inline-flex items-center mx-1 my-0.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium transition-colors cursor-pointer"
+          >
+            {linkText}
+          </button>
+        )
+      }
+
+      lastIndex = tokenRegex.lastIndex
     }
 
-    // Adiciona o restante do texto
-    if (lastIndex < text.length) {
-      parts.push(text.substring(lastIndex))
+    if (lastIndex < cleanText.length) {
+      parts.push(cleanText.substring(lastIndex))
     }
 
-    return parts.length > 0 ? parts : text
+    return parts.length > 0 ? parts : cleanText
   }
 
   return (
@@ -1084,34 +1291,10 @@ const FloatingChat: React.FC = () => {
               ) : (
                 messages.map((msg, index) => (
                   <div key={index}>
-                    {/* Mensagem de ação (feedback de adicionar/remover) */}
-                    {msg.actionResult && (
-                      <div className="flex justify-center my-1.5 sm:my-2">
-                        <div
-                          className={`flex items-center space-x-1.5 sm:space-x-2 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm ${msg.actionResult.type === 'added'
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-300 dark:border-green-700'
-                            : msg.actionResult.type === 'removed'
-                              ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-300 dark:border-orange-700'
-                              : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-700'
-                            }`}
-                        >
-                          {msg.actionResult.type === 'added' && (
-                            <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                          )}
-                          {msg.actionResult.type === 'removed' && (
-                            <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                          )}
-                          {msg.actionResult.type === 'error' && (
-                            <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                          )}
-                          <span className="break-words">{formatMessage(msg.actionResult.message || '')}</span>
-                        </div>
-                      </div>
-                    )}
                     {/* Mensagem normal */}
                     {msg.content && (
                       <div
-                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                        className={`flex flex-col ${msg.role === 'user' ? 'items-end justify-end' : 'items-start justify-start'}`}
                       >
                         <div
                           className={`max-w-[85%] sm:max-w-[80%] rounded-lg px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 ${msg.role === 'user'
@@ -1121,6 +1304,83 @@ const FloatingChat: React.FC = () => {
                         >
                           <p className="text-xs sm:text-sm whitespace-pre-wrap break-words">{formatMessage(msg.content)}</p>
                         </div>
+                        {msg.actions && msg.actions.length > 0 && (
+                          <div className={`mt-2 flex flex-wrap gap-2 w-full max-w-[85%] sm:max-w-[80%] ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            {msg.actions.map((action, actionIdx) => (
+                              <button
+                                key={`action-${index}-${actionIdx}`}
+                                onClick={() => {
+                                  if (action.href.startsWith('http')) {
+                                    window.open(action.href, '_blank', 'noopener,noreferrer');
+                                  } else {
+                                    navigate(action.href);
+                                    setIsOpen(false);
+                                  }
+                                }}
+                                className={`px-3 py-1.5 rounded text-xs font-semibold shadow transition-colors cursor-pointer flex-grow text-center ${
+                                  action.type === 'primary' 
+                                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                    : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'
+                                }`}
+                              >
+                                {action.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {msg.role === 'assistant' && msg.metadata?.recommendedProducts && msg.metadata.recommendedProducts.length > 0 && (
+                          <div className="mt-2 space-y-2 w-full max-w-[85%] sm:max-w-[80%]">
+                            {msg.metadata.recommendedProducts.map((prod: any) => (
+                              <div 
+                                key={prod.id} 
+                                className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow transition-shadow flex flex-col space-y-2 text-left"
+                              >
+                                <div className="flex justify-between items-center">
+                                  <span className="text-[10px] bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 font-semibold px-1.5 py-0.5 rounded">
+                                    {prod.category || 'Geral'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <h4 className="font-semibold text-xs text-gray-800 dark:text-gray-100 line-clamp-1">
+                                    {prod.name}
+                                  </h4>
+                                  {prod.description && (
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5 leading-snug">
+                                      {prod.description}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="flex items-baseline space-x-1.5">
+                                  <span className="text-xs font-bold text-green-600 dark:text-green-400">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.price)}
+                                  </span>
+                                  {prod.originalPrice && prod.originalPrice > prod.price && (
+                                    <span className="text-[10px] text-gray-400 dark:text-gray-500 line-through">
+                                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.originalPrice)}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                                  <button
+                                    onClick={() => {
+                                      navigate(prod.url)
+                                      setIsOpen(false)
+                                    }}
+                                    className="py-1 text-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-[10px] font-semibold transition-colors cursor-pointer"
+                                  >
+                                    Ver Produto
+                                  </button>
+                                  <button
+                                    onClick={() => handleAddProductDirectly(prod)}
+                                    className="py-1 text-center bg-green-600 hover:bg-green-700 text-white rounded text-[10px] font-semibold transition-colors flex items-center justify-center space-x-1 cursor-pointer"
+                                  >
+                                    <span>Adicionar</span>
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1136,30 +1396,136 @@ const FloatingChat: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <form onSubmit={handleSendMessage} className="p-2 sm:p-3 lg:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-              <div className="flex space-x-1.5 sm:space-x-2">
-                <input
-                  type="text"
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  placeholder="Digite sua mensagem..."
-                  className="flex-1 px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-primary-500 focus:border-transparent outline-none"
-                  disabled={isLoading}
-                />
+            {/* Informações de status de atendimento humano */}
+            {(escalationStatus === 'human_assigned' || escalationStatus === 'human_needed') && (
+              <div className="bg-green-50 dark:bg-green-950/20 px-3 py-1.5 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between text-[11px] sm:text-xs text-green-700 dark:text-green-300 flex-shrink-0">
+                <div className="flex items-center space-x-1.5">
+                  <span className="flex items-center space-x-1 relative">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping absolute"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                  </span>
+                  <span className="font-medium">
+                    {escalationChannel === 'site' 
+                      ? 'Aguardando atendente (Chat do Site)' 
+                      : escalationChannel === 'email' 
+                        ? 'Atendimento por E-mail registrado' 
+                        : 'Atendimento pelo WhatsApp'}
+                  </span>
+                </div>
                 <button
-                  type="submit"
-                  disabled={isLoading || !inputMessage.trim()}
-                  className="px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 bg-green-600 dark:bg-primary-600 text-white rounded-lg hover:bg-green-700 dark:hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
+                  type="button"
+                  onClick={handleDeEscalate}
+                  className="text-red-500 hover:text-red-700 font-semibold px-2 py-0.5 border border-red-200 rounded text-[10px]"
                 >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4 sm:w-5 sm:h-5" />
-                  )}
+                  Voltar para IA
                 </button>
               </div>
-            </form>
+            )}
+
+            {/* Input / Saida para Atendimento */}
+            {showEscalationForm || (escalationStatus === 'human_needed' && escalationChannel !== 'site') ? (
+              <form onSubmit={handleEscalationSubmit} className="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
+                {showEscalationForm ? (
+                  <>
+                    <div className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
+                      Como você prefere falar com nosso suporte humano?
+                    </div>
+                    
+                    {escalationChannel === null ? (
+                      <div className="grid grid-cols-3 gap-2 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => setEscalationChannel('site')}
+                          className="py-2.5 px-1 text-center bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 text-xs font-medium border border-blue-200 dark:border-blue-800 flex flex-col items-center justify-center space-y-1.5 transition-colors"
+                        >
+                          <MessageSquare className="w-4 h-4 mx-auto" />
+                          <span>Chat do Site</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEscalationChannel('whatsapp')}
+                          className="py-2.5 px-1 text-center bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/40 text-xs font-medium border border-green-200 dark:border-green-800 flex flex-col items-center justify-center space-y-1.5 transition-colors"
+                        >
+                          <Phone className="w-4 h-4 mx-auto" />
+                          <span>WhatsApp</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEscalationChannel('email')}
+                          className="py-2.5 px-1 text-center bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/40 text-xs font-medium border border-purple-200 dark:border-purple-800 flex flex-col items-center justify-center space-y-1.5 transition-colors"
+                        >
+                          <Mail className="w-4 h-4 mx-auto" />
+                          <span>E-mail</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                            Via {escalationChannel === 'site' ? 'Chat do Site' : escalationChannel === 'whatsapp' ? 'WhatsApp' : 'E-mail'}
+                          </span>
+                          <button type="button" onClick={() => setEscalationChannel(null)} className="text-[10px] text-green-600 hover:underline">Mudar</button>
+                        </div>
+                        {(escalationChannel === 'whatsapp' || escalationChannel === 'email') && (
+                          <input type="text" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Seu Nome" required className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-white" />
+                        )}
+                        {escalationChannel === 'whatsapp' && (
+                          <input type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="Seu WhatsApp" required className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-white" />
+                        )}
+                        {escalationChannel === 'email' && (
+                          <input type="email" value={contactEmail} onChange={e => setContactEmail(e.target.value)} placeholder="Seu E-mail" required className="w-full text-xs p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-white" />
+                        )}
+                        <div className="flex space-x-2 pt-1">
+                          <button type="button" onClick={() => { setShowEscalationForm(false); setEscalationChannel(null); }} className="flex-1 py-1.5 text-xs text-gray-600 bg-gray-100 dark:bg-gray-700 rounded hover:bg-gray-200 dark:hover:bg-gray-600">Cancelar</button>
+                          <button type="submit" className="flex-1 py-1.5 text-xs text-white bg-green-600 rounded hover:bg-green-700">Confirmar</button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  // Já escalonado via WhatsApp ou E-mail (IA pausada)
+                  <div className="text-center py-2">
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mb-3">
+                      Seu atendimento humano via <strong>{escalationChannel === 'whatsapp' ? 'WhatsApp' : 'E-mail'}</strong> está ativo.
+                    </p>
+                    {escalationChannel === 'whatsapp' && (
+                      <button
+                        type="button"
+                        onClick={() => window.open(`https://api.whatsapp.com/send?phone=${contactPhone.replace(/\D/g, '') || env.supportWhatsAppUrl.replace(/\D/g, '')}`, '_blank')}
+                        className="py-1.5 px-3 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-semibold inline-flex items-center space-x-1.5 transition-colors mb-2"
+                      >
+                        <Phone className="w-3.5 h-3.5 mr-1.5" />
+                        <span>Abrir WhatsApp</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </form>
+            ) : (
+              <form onSubmit={handleSendMessage} className="p-2 sm:p-3 lg:p-4 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                <div className="flex space-x-1.5 sm:space-x-2">
+                  <input
+                    type="text"
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    placeholder={escalationStatus !== 'none' ? "Mensagem para o atendente..." : "Digite sua mensagem..."}
+                    className="flex-1 px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-primary-500 focus:border-transparent outline-none"
+                    disabled={isLoading}
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading || !inputMessage.trim()}
+                    className="px-2.5 sm:px-3 lg:px-4 py-1.5 sm:py-2 bg-green-600 dark:bg-primary-600 text-white rounded-lg hover:bg-green-700 dark:hover:bg-primary-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center transition-colors flex-shrink-0"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       </div>

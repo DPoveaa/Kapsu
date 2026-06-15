@@ -535,7 +535,7 @@ class ProductsService {
   /**
    * Verifica se o usuário é elegível para avaliar o produto
    */
-  async checkReviewEligibility(productId: string): Promise<{ eligible: boolean; message?: string }> {
+  async checkReviewEligibility(productId: string): Promise<{ eligible: boolean; message?: string; hasReviewed?: boolean; existingReview?: any }> {
     try {
       const response = await fetch(`${this.baseUrl}/${productId}/reviews/eligibility`, {
         method: 'GET',
@@ -545,9 +545,9 @@ class ProductsService {
       if (!text) throw new Error('Resposta vazia do servidor')
       const data = JSON.parse(text)
       if (!response.ok) {
-        return { eligible: false, message: data.message || 'Faça login para avaliar' }
+        return { eligible: false, message: data.message || 'Faça login para avaliar', hasReviewed: data.hasReviewed, existingReview: data.existingReview }
       }
-      return { eligible: data.eligible, message: data.message }
+      return { eligible: data.eligible, message: data.message, hasReviewed: data.hasReviewed, existingReview: data.existingReview }
     } catch (error: any) {
       return { eligible: false, message: 'Não foi possível verificar a elegibilidade.' }
     }
@@ -558,7 +558,7 @@ class ProductsService {
    */
   async createProductReview(
     productId: string,
-    review: { rating: number; comment: string; image?: string | null }
+    review: { rating: number; comment: string; image?: string | null; is_anonymous?: boolean }
   ): Promise<any> {
     try {
       const response = await fetch(`${this.baseUrl}/${productId}/reviews`, {
@@ -574,6 +574,30 @@ class ProductsService {
     } catch (error: any) {
       if (error.message) throw error
       throw new Error('Erro de conexão ao enviar avaliação.')
+    }
+  }
+
+  /**
+   * Atualiza uma avaliação para o produto
+   */
+  async updateProductReview(
+    productId: string,
+    review: { rating: number; comment: string; image?: string | null; is_anonymous?: boolean }
+  ): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/${productId}/reviews`, {
+        method: 'PUT',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(review),
+      })
+      const text = await response.text()
+      if (!text) throw new Error('Resposta vazia do servidor')
+      const data = JSON.parse(text)
+      if (!response.ok) throw new Error(data.message || 'Erro ao atualizar avaliação')
+      return data.data
+    } catch (error: any) {
+      if (error.message) throw error
+      throw new Error('Erro de conexão ao atualizar avaliação.')
     }
   }
 
@@ -595,6 +619,28 @@ class ProductsService {
     } catch (error: any) {
       if (error.message) throw error
       throw new Error('Erro de conexão ao aplicar markup global.')
+    }
+  }
+
+  /**
+   * Busca a quantidade de pedidos para uma lista de IDs de produtos (apenas admin)
+   */
+  async checkProductsOrders(productIds: string[]): Promise<Record<string, number>> {
+    try {
+      const response = await fetch(`${this.baseUrl}/admin/check-orders`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify({ productIds }),
+      })
+
+      const text = await response.text()
+      if (!text) throw new Error('Resposta vazia do servidor')
+      const data = JSON.parse(text)
+      if (!response.ok) throw new Error(data.message || 'Erro ao verificar pedidos dos produtos')
+      return data.data || {}
+    } catch (error: any) {
+      if (error.message) throw error
+      throw new Error('Erro de conexão ao verificar pedidos dos produtos.')
     }
   }
 }

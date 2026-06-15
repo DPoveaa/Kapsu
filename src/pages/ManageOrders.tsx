@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Search, Eye, Package, Plus } from 'lucide-react'
+import { ArrowLeft, Loader2, Search, Eye, Package, Plus, Trash2 } from 'lucide-react'
 import { adminService } from '../services/admin.service'
 import CreateOrderModal from '../components/CreateOrderModal'
+import { useAuth } from '../context/AuthContext'
+import { confirm, toast } from '../utils/toast'
 
 interface Order {
   id: string
@@ -23,11 +25,58 @@ interface Order {
 
 export default function ManageOrders() {
   const navigate = useNavigate()
+  const { isAdmin } = useAuth()
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+
+  const handleDeleteOrder = (orderId: string) => {
+    confirm.show(
+      'Tem certeza de que deseja excluir este pedido de teste? Esta ação não pode ser desfeita e removerá permanentemente os itens e registros relacionados.',
+      async () => {
+        try {
+          setDeletingId(orderId)
+          await adminService.deleteOrder(orderId)
+          toast.success('Pedido de teste excluído com sucesso!')
+          loadOrders()
+        } catch (err: any) {
+          console.error('Erro ao excluir pedido:', err)
+          toast.error(err.message || 'Erro ao excluir pedido')
+        } finally {
+          setDeletingId(null)
+        }
+      },
+      undefined,
+      'Excluir',
+      'Cancelar'
+    )
+  }
+
+  const handleDeleteAllTestOrders = () => {
+    confirm.show(
+      'Tem certeza de que deseja excluir TODOS os pedidos de teste de uma vez? Esta ação removerá permanentemente todos os registros de pedidos com método de pagamento de teste.',
+      async () => {
+        try {
+          setBulkDeleting(true)
+          const result = await adminService.deleteTestOrders()
+          toast.success(`${result.deletedCount || 0} pedido(s) de teste excluído(s) com sucesso!`)
+          loadOrders()
+        } catch (err: any) {
+          console.error('Erro ao excluir pedidos de teste:', err)
+          toast.error(err.message || 'Erro ao excluir pedidos de teste')
+        } finally {
+          setBulkDeleting(false)
+        }
+      },
+      undefined,
+      'Excluir Todos',
+      'Cancelar'
+    )
+  }
 
   // Carrega pedidos
   useEffect(() => {
@@ -106,18 +155,34 @@ export default function ManageOrders() {
           </button>
         </div>
 
-        <div className="mb-4 sm:mb-6 lg:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+        <div className="mb-4 sm:mb-6 lg:mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex-1">
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-1.5 sm:mb-2">Gerenciar Pedidos</h1>
             <p className="text-xs sm:text-sm lg:text-base text-gray-600 dark:text-gray-300">Visualize e gerencie todos os pedidos do sistema</p>
           </div>
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto"
-          >
-            <Plus size={18} className="sm:w-5 sm:h-5" />
-            Criar Pedido Manual
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2.5 w-full sm:w-auto">
+            {isAdmin && orders.some(o => o.payment_method && (o.payment_method.toLowerCase() === 'test_payment' || o.payment_method.toLowerCase() === 'test payment')) && (
+              <button
+                onClick={handleDeleteAllTestOrders}
+                disabled={bulkDeleting}
+                className="flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 py-2 text-sm sm:text-base bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors w-full sm:w-auto disabled:opacity-50 shadow-sm shadow-red-500/20"
+              >
+                {bulkDeleting ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Trash2 size={18} />
+                )}
+                Limpar Pedidos de Teste
+              </button>
+            )}
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 py-2 text-sm sm:text-base bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto shadow-sm shadow-green-500/20"
+            >
+              <Plus size={18} className="sm:w-5 sm:h-5" />
+              Criar Pedido Manual
+            </button>
+          </div>
         </div>
 
         {/* Busca */}
@@ -270,14 +335,31 @@ export default function ManageOrders() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium sticky right-0 bg-white dark:bg-gray-800 group-hover:bg-gray-50 dark:group-hover:bg-[#153e5c] z-10 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.05)] dark:shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.2)] transition-colors">
-                            <button
-                              onClick={() => navigate(`/admin/orders/${order.id}`)}
-                              className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded px-1.5 py-0.5"
-                              title="Ver detalhes"
-                            >
-                              <Eye size={18} className="mr-1" />
-                              Detalhes
-                            </button>
+                            <div className="inline-flex items-center gap-3">
+                              <button
+                                onClick={() => navigate(`/admin/orders/${order.id}`)}
+                                className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded px-1.5 py-0.5"
+                                title="Ver detalhes"
+                              >
+                                <Eye size={18} className="mr-1" />
+                                Detalhes
+                              </button>
+                              {isAdmin && order.payment_method && (order.payment_method.toLowerCase() === 'test_payment' || order.payment_method.toLowerCase() === 'test payment') && (
+                                <button
+                                  onClick={() => handleDeleteOrder(order.id)}
+                                  disabled={deletingId === order.id}
+                                  className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 rounded px-1.5 py-0.5 disabled:opacity-50 transition-colors"
+                                  title="Excluir pedido de teste"
+                                >
+                                  {deletingId === order.id ? (
+                                    <Loader2 size={18} className="animate-spin mr-1" />
+                                  ) : (
+                                    <Trash2 size={18} className="mr-1" />
+                                  )}
+                                  Excluir
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))
