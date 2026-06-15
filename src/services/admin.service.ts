@@ -833,6 +833,44 @@ class AdminService {
   }
 
   /**
+   * Atualiza o status de um pedido manualmente (apenas admin)
+   */
+  async updateOrderStatus(orderId: string, status: string): Promise<{ success: boolean; message: string; data: any }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const response = await fetch(`${this.baseUrl}/orders/${orderId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status }),
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao atualizar status do pedido')
+      }
+
+      return data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao atualizar status do pedido')
+    }
+  }
+
+  /**
    * Exclui um pedido de teste específico por ID (apenas admin)
    */
   async deleteOrder(orderId: string): Promise<{ success: boolean; message: string }> {

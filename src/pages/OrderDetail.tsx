@@ -5,6 +5,8 @@ import { adminService } from '../services/admin.service'
 import { productsService } from '../services/products.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import { getOrderStatusLabel, getOrderStatusBadgeClass } from '../utils/orderStatus'
+import { useAuth } from '../context/AuthContext'
+import { toast } from '../utils/toast'
 
 interface OrderItem {
   id: string
@@ -40,10 +42,22 @@ interface OrderDetail {
   items: OrderItem[]
 }
 
+const ORDER_STATUS_OPTIONS = [
+  'PENDING',
+  'CONFIRMED',
+  'PROCESSING',
+  'SHIPPED',
+  'DELIVERED',
+  'CANCELLED',
+]
+
 export default function OrderDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { isAdmin } = useAuth()
   const [order, setOrder] = useState<OrderDetail | null>(null)
+  const [pendingStatus, setPendingStatus] = useState('')
+  const [updatingStatus, setUpdatingStatus] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -66,6 +80,7 @@ export default function OrderDetail() {
       const response = await adminService.getOrderDetails(id)
       if (response.success) {
         setOrder(response.data)
+        setPendingStatus(response.data.status)
       }
     } catch (err: any) {
       console.error('Erro ao carregar detalhes do pedido:', err)
@@ -103,6 +118,26 @@ export default function OrderDetail() {
       cash: 'Dinheiro',
     }
     return methods[method] || method
+  }
+
+  const handleUpdateStatus = async () => {
+    if (!id || !order || pendingStatus === order.status) return
+
+    try {
+      setUpdatingStatus(true)
+      const response = await adminService.updateOrderStatus(id, pendingStatus)
+      if (response.success) {
+        setOrder(response.data)
+        setPendingStatus(response.data.status)
+        toast.success('Status do pedido atualizado com sucesso')
+      }
+    } catch (err: any) {
+      console.error('Erro ao atualizar status do pedido:', err)
+      toast.error(err.message || 'Erro ao atualizar status do pedido')
+      setPendingStatus(order.status)
+    } finally {
+      setUpdatingStatus(false)
+    }
   }
 
   if (loading) {
@@ -168,6 +203,42 @@ export default function OrderDetail() {
           </div>
           <p className="text-gray-600 dark:text-gray-400">Pedido #{order.id.substring(0, 8)}</p>
         </div>
+
+        {isAdmin && (
+          <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md p-4">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <div className="flex-1">
+                <label htmlFor="order-status" className="block text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">
+                  Status do pedido
+                </label>
+                <select
+                  id="order-status"
+                  value={pendingStatus}
+                  onChange={(e) => setPendingStatus(e.target.value)}
+                  disabled={updatingStatus}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-60"
+                >
+                  {ORDER_STATUS_OPTIONS.map((status) => (
+                    <option key={status} value={status}>
+                      {getOrderStatusLabel(status)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button
+                type="button"
+                onClick={handleUpdateStatus}
+                disabled={updatingStatus || pendingStatus === order.status}
+                className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 dark:disabled:bg-gray-700 text-white rounded-lg transition-colors min-w-[140px]"
+              >
+                {updatingStatus ? (
+                  <Loader2 size={18} className="animate-spin mr-2" />
+                ) : null}
+                Salvar status
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Informações Principais */}
