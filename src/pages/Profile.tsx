@@ -10,6 +10,7 @@ import { productsService } from '../services/products.service'
 import { User, Camera, Lock, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Package, Calendar, CreditCard, ShoppingBag, Download, ArrowLeft } from 'lucide-react'
 import { env } from '../config/env'
 import { confirm } from '../utils/toast'
+import { paymentService } from '../services/payment.service'
 
 type ProfileSection = 'info' | 'password' | 'image' | 'addresses' | 'orders' | null
 
@@ -89,6 +90,26 @@ export default function Profile() {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
   const [invoices, setInvoices] = useState<Record<string, any>>({})
   const [loadingInvoices, setLoadingInvoices] = useState<Record<string, boolean>>({})
+  const [updatingPaymentLoading, setUpdatingPaymentLoading] = useState<Record<string, boolean>>({})
+
+  const handleChangePaymentMethod = async (orderId: string, method: 'pix' | 'boleto') => {
+    try {
+      setUpdatingPaymentLoading(prev => ({ ...prev, [orderId]: true }))
+      const result = await paymentService.changePaymentMethod(orderId, method)
+      
+      if (result.redirectUrl) {
+        window.open(result.redirectUrl, '_blank')
+      }
+      
+      await loadOrders()
+      setMessage({ type: 'success', text: 'Método de pagamento alterado com sucesso!' })
+    } catch (error: any) {
+      console.error('Erro ao alterar método de pagamento:', error)
+      setMessage({ type: 'error', text: error.message || 'Erro ao alterar método de pagamento' })
+    } finally {
+      setUpdatingPaymentLoading(prev => ({ ...prev, [orderId]: false }))
+    }
+  }
 
   useEffect(() => {
     if (user) {
@@ -934,9 +955,48 @@ export default function Profile() {
                                          </span>
                                        </div>
                                        <div className="flex justify-between items-center text-sm">
-                                         <span className="text-gray-500 dark:text-gray-400">Status Financeiro:</span>
-                                         <span className="font-semibold text-gray-900 dark:text-white">{translateStatus(order.status)}</span>
-                                       </div>
+                                          <span className="text-gray-500 dark:text-gray-400">Status Financeiro:</span>
+                                          <span className="font-semibold text-gray-900 dark:text-white">{translateStatus(order.status)}</span>
+                                        </div>
+                                        {((order.status || '').toUpperCase() === 'PENDING') && (
+                                          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold mb-2">Alterar Método de Pagamento</p>
+                                            <div className="flex gap-2">
+                                              <button
+                                                onClick={() => handleChangePaymentMethod(order.id, 'pix')}
+                                                disabled={!!updatingPaymentLoading[order.id]}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
+                                                  order.payment_method === 'pix' || order.payment_method === 'credit_card'
+                                                    ? 'bg-primary-50 border-primary-200 text-primary-600 dark:bg-primary-900/20 dark:border-primary-800 dark:text-primary-400'
+                                                    : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                                                }`}
+                                              >
+                                                {updatingPaymentLoading[order.id] ? (
+                                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                ) : (
+                                                  <CreditCard className="w-3.5 h-3.5" />
+                                                )}
+                                                PIX ou Cartão
+                                              </button>
+                                              <button
+                                                onClick={() => handleChangePaymentMethod(order.id, 'boleto')}
+                                                disabled={!!updatingPaymentLoading[order.id]}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
+                                                  order.payment_method === 'boleto'
+                                                    ? 'bg-primary-50 border-primary-200 text-primary-600 dark:bg-primary-900/20 dark:border-primary-800 dark:text-primary-400'
+                                                    : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                                                }`}
+                                              >
+                                                {updatingPaymentLoading[order.id] ? (
+                                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                ) : (
+                                                  <Download className="w-3.5 h-3.5 text-primary-650 dark:text-primary-400" />
+                                                )}
+                                                Boleto Bancário
+                                              </button>
+                                            </div>
+                                          </div>
+                                        )}
                                        {order.boleto_url && (
                                           <div className="flex justify-between items-center text-sm mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
                                              <span className="text-gray-500 dark:text-gray-400">Boleto Bancário:</span>

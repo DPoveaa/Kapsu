@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, MapPin, Loader2, Truck, Plus, Edit2, Trash2, X, TestTube, CreditCard, Barcode } from 'lucide-react'
+import { ArrowLeft, MapPin, Loader2, Truck, Plus, Edit2, Trash2, X, TestTube } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { paymentService, buildShippingAddress } from '../services/payment.service'
@@ -9,6 +9,8 @@ import { addressService, SavedAddress } from '../services/address.service'
 import { orderService } from '../services/order.service'
 import { MultiplePromoCodesValidation } from '../services/promo-codes.service'
 import { cepService } from '../services/cep.service'
+import { CheckoutPayment } from '../components/Checkout/CheckoutPayment'
+import { Copy, Download, CheckCircle } from 'lucide-react'
 
 export default function Checkout() {
   const navigate = useNavigate()
@@ -17,8 +19,64 @@ export default function Checkout() {
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [creatingOrderWithoutPayment, setCreatingOrderWithoutPayment] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'pix' | 'boleto'>('pix')
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'pix' | 'boleto' | 'credit_card'>('pix')
   const [subscriptionPlan] = useState<'monthly' | 'quarterly'>('monthly')
+
+
+  const [paymentResult, setPaymentResult] = useState<any>(null)
+  const [copiedPix, setCopiedPix] = useState(false)
+  const [timeLeft, setTimeLeft] = useState<string>('')
+  const [existingOrderId, setExistingOrderId] = useState<string | null>(null)
+
+  // Efeito para o contador do PIX
+  useEffect(() => {
+    if (paymentResult?.paymentMethod === 'pix' && paymentResult.expirationDate) {
+      const expirationTime = new Date(paymentResult.expirationDate).getTime()
+
+      const interval = setInterval(() => {
+        const now = new Date().getTime()
+        const distance = expirationTime - now
+
+        if (distance < 0) {
+          clearInterval(interval)
+          setTimeLeft('Expirado')
+          return
+        }
+
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000)
+
+        setTimeLeft(
+          `${hours > 0 ? hours + 'h ' : ''}${minutes.toString().padStart(2, '0')}m ${seconds.toString().padStart(2, '0')}s`
+        )
+      }, 1000)
+
+      return () => clearInterval(interval)
+    }
+  }, [paymentResult])
+
+  // Polling para verificar se o PIX foi pago via Webhook
+  useEffect(() => {
+    if (paymentResult?.paymentMethod === 'pix' && paymentResult.orderId) {
+      const pollInterval = setInterval(async () => {
+        try {
+          const order = await orderService.getOrder(paymentResult.orderId)
+          const successStatuses = ['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'PAID']
+          
+          if (successStatuses.includes(order.status)) {
+            clearInterval(pollInterval)
+            await clearCart()
+            navigate(`/payment-success?order_id=${paymentResult.orderId}`)
+          }
+        } catch (err) {
+          console.error('Erro ao consultar status do PIX:', err)
+        }
+      }, 5000) // Consulta a cada 5 segundos
+
+      return () => clearInterval(pollInterval)
+    }
+  }, [paymentResult, clearCart, navigate])
 
   // Estados para endereços salvos
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([])
@@ -461,6 +519,8 @@ export default function Checkout() {
     const base = {
       ...(isSubscription ? { subscriptionPlan } : {}),
       ...(shippingCost > 0 ? { shippingFee: shippingCost } : {}),
+      paymentMethod: selectedPaymentMethod,
+      ...(existingOrderId ? { orderId: existingOrderId } : {})
     }
 
     if (canUseSavedAddressId()) {
@@ -559,41 +619,55 @@ export default function Checkout() {
         await handleUpdateAddress()
       }
 
-      const preference =
-        selectedPaymentMethod === 'boleto'
-          ? await paymentService.createPreference({
-            paymentMethod: 'boleto',
-            ...buildCreatePreferenceParams(),
-          })
-          : await paymentService.createPreference({
-            shippingAddress: buildShippingAddress(formData),
-            ...(isSubscription ? { subscriptionPlan } : {}),
-            ...(shippingCost > 0 ? { shippingFee: shippingCost } : {}),
-          })
+      const params = buildCreatePreferenceParams()
 
-      const { redirectUrl } = preference
-      if (!redirectUrl.startsWith('http')) {
-        throw new Error(
-          selectedPaymentMethod === 'boleto'
-            ? 'Não foi possível obter o link do boleto.'
-            : 'URL de checkout inválida recebida do Asaas'
-        )
+      const preference = await paymentService.createPreference(params as any)
+
+      // Em vez de esvaziar o carrinho, salvamos o ID do pedido gerado
+      if (preference.orderId) {
+        setExistingOrderId(preference.orderId)
       }
 
-      // Esvazia o carrinho antes de redirecionar
-      await clearCart()
+      const pref = preference as any;
+      // Se for cartão de crédito e já estiver pago, podemos esvaziar o carrinho
+      if (preference.paymentMethod === 'credit_card' && pref.status !== 'FAILED' && pref.status !== 'PENDING_CARD_DETAILS') {
+        await clearCart()
+      }
 
-      // Abre o link (Boleto ou Mercado Pago) em nova guia
-      window.open(redirectUrl, '_blank')
+      // Redireciona para a nova tela de cartão de crédito
+      if (preference.paymentMethod === 'credit_card' && pref.status === 'PENDING_CARD_DETAILS') {
+        setCreatingOrder(false)
+        navigate(`/checkout/payment/card?orderId=${pref.orderId}`)
+        return
+      }
 
-      // Redireciona a aba atual da Kapsu para Meus Pedidos
-      navigate('/perfil?section=orders', { state: { section: 'orders' } })
+      // Define o resultado na tela
+      setPaymentResult(preference)
+      setCreatingOrder(false)
 
     } catch (error: any) {
       console.error('Erro ao criar preferência de pagamento:', error)
       setCheckoutError(error.message || 'Erro ao processar pagamento. Tente novamente.')
       setCreatingOrder(false)
     }
+  }
+
+  const handleCopyPix = () => {
+    if (paymentResult?.pixPayload) {
+      navigator.clipboard.writeText(paymentResult.pixPayload)
+      setCopiedPix(true)
+      setTimeout(() => setCopiedPix(false), 2000)
+    }
+  }
+
+  const handleResetPayment = () => {
+    // Invalidate the current payment attempt UI locally to allow selecting a new one.
+    // The existing order context is kept since the cart is already empty.
+    // Wait, if the cart is already empty, how do we recreate the payment?
+    // We must pass the orderId to the new createPreference call if we want to reuse the order.
+    // Let's assume we store the orderId in a state.
+    setPaymentResult(null)
+    setCheckoutError(null)
   }
 
   // Função para criar pedido sem pagamento (apenas para admins)
@@ -677,7 +751,91 @@ export default function Checkout() {
     )
   }
 
-  if (items.length === 0) {
+  // Se já tivermos o resultado do pagamento, mostramos a tela de sucesso/instruções
+  if (paymentResult) {
+    return (
+      <div className="container mx-auto px-4 py-16 max-w-2xl text-center">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 border border-gray-100 dark:border-gray-700">
+          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-6" />
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">Pedido Confirmado!</h2>
+          <p className="text-gray-600 dark:text-gray-300 mb-8">Seu pedido foi registrado com sucesso.</p>
+
+          {/* Renderização condicional baseada no método */}
+          {paymentResult.paymentMethod === 'pix' && (
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 mb-8 inline-block max-w-sm w-full border border-gray-200 dark:border-gray-700">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-4">Pague via PIX</h3>
+              {timeLeft && (
+                <div className="mb-4 inline-block bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400 px-3 py-1.5 rounded-full text-sm font-semibold">
+                  Expira em: {timeLeft}
+                </div>
+              )}
+              <div className="bg-white p-2 rounded-lg inline-block mb-4">
+                <img src={`data:image/png;base64,${paymentResult.pixQrCode}`} alt="QR Code PIX" className="w-48 h-48 mx-auto" />
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Abra o app do seu banco, escolha PIX e aponte a câmera para o QR Code, ou copie a chave abaixo:
+              </p>
+              <div className="flex flex-col gap-2">
+                <input type="text" readOnly value={paymentResult.pixPayload} className="w-full text-xs p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-500" />
+                <button onClick={handleCopyPix} className="btn-primary flex items-center justify-center gap-2 py-3">
+                  <Copy size={16} />
+                  {copiedPix ? 'Copiado!' : 'Copiar Código PIX'}
+                </button>
+                <button onClick={handleResetPayment} className="btn-secondary flex items-center justify-center gap-2 py-3 mt-2">
+                  Trocar forma de pagamento
+                </button>
+              </div>
+            </div>
+          )}
+
+          {paymentResult.paymentMethod === 'boleto' && (
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 mb-8 border border-gray-200 dark:border-gray-700">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-4">Boleto Gerado</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                O seu boleto foi gerado com sucesso. O pagamento pode demorar até 3 dias úteis para ser confirmado.
+              </p>
+              <div className="flex flex-col gap-2">
+                <a href={paymentResult.bankSlipUrl} target="_blank" rel="noreferrer" className="btn-primary flex items-center justify-center gap-2 py-3 w-full sm:w-auto sm:px-8 mx-auto">
+                  <Download size={16} />
+                  Baixar Boleto
+                </a>
+                <button onClick={handleResetPayment} className="btn-secondary flex items-center justify-center gap-2 py-3 w-full sm:w-auto sm:px-8 mx-auto mt-2">
+                  Trocar forma de pagamento
+                </button>
+              </div>
+            </div>
+          )}
+
+          {paymentResult.paymentMethod === 'credit_card' && (
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 mb-8 border border-gray-200 dark:border-gray-700">
+              <h3 className="font-bold text-green-600 dark:text-green-400 mb-2">Pagamento Aprovado</h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                Seu pagamento no cartão de crédito foi confirmado e seu pedido já está sendo preparado!
+              </p>
+            </div>
+          )}
+
+          {/* Fallback para redirect */}
+          {paymentResult.redirectUrl && !['pix', 'boleto', 'credit_card'].includes(paymentResult.paymentMethod) && (
+            <div className="mb-8">
+              <a href={paymentResult.redirectUrl} target="_blank" rel="noreferrer" className="btn-primary inline-flex items-center justify-center gap-2 py-3 px-8">
+                Continuar Pagamento
+              </a>
+            </div>
+          )}
+
+          <div className="pt-6 border-t border-gray-100 dark:border-gray-700">
+            <button onClick={() => navigate('/perfil?section=orders')} className="text-primary-600 dark:text-primary-400 font-medium hover:underline">
+              Acompanhar meus pedidos
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Permite renderizar a tela de pagamento se houver um orderId gerado (mesmo se itens == 0)
+  if (items.length === 0 && !existingOrderId) {
     return (
       <div className="container mx-auto px-3 sm:px-4 py-12 sm:py-16 min-h-[60vh] flex items-center justify-center">
         <div className="text-center">
@@ -694,62 +852,10 @@ export default function Checkout() {
   const isEditingSelected = editingAddressId === selectedAddressId
 
   const renderPaymentMethodSelector = () => (
-    <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700">
-      <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
-        Forma de pagamento
-      </h3>
-      <div className="space-y-2 sm:space-y-3">
-        <label
-          className={`flex items-start gap-3 p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedPaymentMethod === 'pix'
-            ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-gray-800'
-            : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-400'
-            }`}
-        >
-          <input
-            type="radio"
-            name="paymentMethod"
-            value="pix"
-            checked={selectedPaymentMethod === 'pix'}
-            onChange={() => setSelectedPaymentMethod('pix')}
-            className="mt-1"
-          />
-          <div className="flex-1">
-            <div className="flex items-center gap-2 font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
-              <CreditCard className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 dark:text-primary-400" />
-              PIX ou cartão
-            </div>
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1">
-              Pagamento via Asaas (checkout seguro)
-            </p>
-          </div>
-        </label>
-
-        <label
-          className={`flex items-start gap-3 p-3 sm:p-4 border-2 rounded-lg cursor-pointer transition-all ${selectedPaymentMethod === 'boleto'
-            ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-gray-800'
-            : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-400'
-            }`}
-        >
-          <input
-            type="radio"
-            name="paymentMethod"
-            value="boleto"
-            checked={selectedPaymentMethod === 'boleto'}
-            onChange={() => setSelectedPaymentMethod('boleto')}
-            className="mt-1"
-          />
-          <div className="flex-1">
-            <div className="flex items-center gap-2 font-semibold text-sm sm:text-base text-gray-900 dark:text-white">
-              <Barcode className="w-4 h-4 sm:w-5 sm:h-5 text-primary-600 dark:text-primary-400" />
-              Boleto bancário
-            </div>
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1">
-              Emitido via Asaas — pague em qualquer banco ou lotérica
-            </p>
-          </div>
-        </label>
-      </div>
-    </div>
+    <CheckoutPayment
+      selectedMethod={selectedPaymentMethod}
+      onSelectMethod={(method) => setSelectedPaymentMethod(method)}
+    />
   )
 
   const renderCheckoutActions = () => (
@@ -788,13 +894,8 @@ export default function Checkout() {
               <Loader2 className="animate-spin mr-2" size={18} />
               <span>Processando...</span>
             </>
-          ) : selectedPaymentMethod === 'boleto' ? (
-            <span>Continuar</span>
           ) : (
-            <>
-              <span className="hidden sm:inline">Continuar</span>
-              <span className="sm:hidden">Continuar</span>
-            </>
+            <span>{selectedPaymentMethod === 'credit_card' ? 'Continuar para Cartão' : 'Finalizar Compra'}</span>
           )}
         </button>
       </div>
@@ -810,7 +911,7 @@ export default function Checkout() {
           <div className="flex items-start justify-between w-full max-w-lg relative">
             {/* Progress Bar Line Container */}
             <div className="absolute top-4 left-[16.667%] right-[16.667%] h-0.5 bg-gray-200 dark:bg-gray-800 -translate-y-1/2 z-0">
-              <div 
+              <div
                 className={`h-full bg-gradient-to-r ${checkoutStep === 1 ? 'from-green-500 to-primary-600' : 'from-green-500 via-green-600 to-primary-600'} transition-all duration-500 ease-in-out`}
                 style={{ width: `${checkoutStep === 1 ? 50 : 100}%` }}
               ></div>

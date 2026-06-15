@@ -233,7 +233,7 @@ export default function ManageProducts() {
             updated.price = isNaN(calculatedPrice) ? prev.price : calculatedPrice.toFixed(2)
           } else if (prev.price && !isNaN(Number(prev.price))) {
             const calculatedMarkup = ((Number(prev.price) - costNum) / costNum) * 100
-            updated.markup = isNaN(calculatedMarkup) ? prev.markup : calculatedMarkup.toFixed(1)
+            updated.markup = isNaN(calculatedMarkup) ? prev.markup : calculatedMarkup.toFixed(2)
           }
         } else {
           updated.markup = ''
@@ -248,7 +248,7 @@ export default function ManageProducts() {
         const priceNum = Number(value)
         if (cost > 0 && priceNum > 0) {
           const calculatedMarkup = ((priceNum - cost) / cost) * 100
-          updated.markup = isNaN(calculatedMarkup) ? prev.markup : calculatedMarkup.toFixed(1)
+          updated.markup = isNaN(calculatedMarkup) ? prev.markup : calculatedMarkup.toFixed(2)
         }
       }
 
@@ -1071,6 +1071,7 @@ export default function ManageProducts() {
                               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                 <input
                                   type="number"
+                                  step="0.01"
                                   value={tempMarkupValue}
                                   onChange={(e) => setTempMarkupValue(e.target.value)}
                                   onKeyDown={(e) => handleKeyPressMarkup(e, p.id)}
@@ -1092,10 +1093,10 @@ export default function ManageProducts() {
                               >
                                 <div className="flex items-center gap-1">
                                   <span className="font-semibold text-green-600 dark:text-green-400 text-sm">
-                                    {p.markup != null ? `${Number(p.markup).toFixed(1).replace('.', ',')}%` : (() => {
+                                    {p.markup != null ? `${Number(p.markup).toFixed(2).replace('.', ',')}%` : (() => {
                                       const cost = Number(p.purchase_price);
                                       const sale = Number(p.price);
-                                      return `${((sale - cost) / cost * 100).toFixed(1).replace('.', ',')}%`;
+                                      return `${((sale - cost) / cost * 100).toFixed(2).replace('.', ',')}%`;
                                     })()}
                                   </span>
                                   <Edit size={11} className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1531,7 +1532,7 @@ export default function ManageProducts() {
                     onChange={(e) => setGlobalMarkupInput(e.target.value)}
                     placeholder="Ex: 50"
                     min="0"
-                    step="0.1"
+                    step="0.01"
                     disabled={isApplyingGlobalMarkup}
                     className="w-full pl-3 pr-8 py-2.5 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
@@ -1691,7 +1692,7 @@ export default function ManageProducts() {
                   value={productFormData.markup}
                   onChange={(e) => handleProductPriceFieldChange('markup', e.target.value)}
                   min="0"
-                  step="0.1"
+                  step="0.01"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="Ex: 50"
                   disabled={!productFormData.purchase_price || Number(productFormData.purchase_price) <= 0}

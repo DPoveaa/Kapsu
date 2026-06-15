@@ -7,6 +7,7 @@ import Products from './pages/Products'
 import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
+import CheckoutCardPayment from './pages/CheckoutCardPayment'
 import Login from './pages/Login'
 import AdminPanel from './pages/AdminPanel'
 import WhatsAppConnection from './pages/WhatsAppConnection'
@@ -50,6 +51,7 @@ function AppContent() {
         <Route path="/produtos/:id" element={<ProductDetail />} />
         <Route path="/carrinho" element={<Cart />} />
         <Route path="/checkout" element={<Checkout />} />
+        <Route path="/checkout/payment/card" element={<CheckoutCardPayment />} />
         <Route path="/checkout/success" element={<PaymentSuccess />} />
         <Route path="/checkout/failure" element={<PaymentFailure />} />
         <Route path="/payment-success" element={<PaymentSuccess />} />
