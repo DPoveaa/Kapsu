@@ -164,7 +164,7 @@ class SiteSettingsService {
   /**
    * Sincroniza todos os produtos com o Google Merchant Center (apenas admin)
    */
-  async syncAllMerchantProducts(): Promise<{ success: boolean; message: string; data?: any }> {
+  async syncAllMerchantProducts(): Promise<{ success: boolean; message: string; data?: { synced?: number; failed?: number; errors?: string[] } }> {
     const response = await fetch(`${API_URL}/admin/merchant/sync-all`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
@@ -175,7 +175,20 @@ class SiteSettingsService {
       throw new Error(error.message || 'Erro ao sincronizar produtos com Google Merchant Center')
     }
 
-    return await response.json()
+    const data = await response.json()
+
+    if (data?.data?.failed > 0) {
+      const details = Array.isArray(data.data.errors)
+        ? data.data.errors.slice(0, 5).join('\n')
+        : ''
+      const suffix = data.data.errors?.length > 5
+        ? `\n...e mais ${data.data.errors.length - 5} erro(s).`
+        : ''
+
+      throw new Error(`${data.message || 'Sincronização concluída com falhas.'}${details ? `\n${details}${suffix}` : ''}`)
+    }
+
+    return data
   }
 }
 
