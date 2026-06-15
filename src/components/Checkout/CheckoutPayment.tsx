@@ -1,4 +1,3 @@
-import React from 'react'
 import { CreditCard, Barcode, QrCode } from 'lucide-react'
 
 export interface CreditCardData {
@@ -12,20 +11,6 @@ export interface CreditCardData {
 interface CheckoutPaymentProps {
   selectedMethod: 'pix' | 'boleto' | 'credit_card'
   onSelectMethod: (method: 'pix' | 'boleto' | 'credit_card') => void
-}
-
-// Funções de máscara
-const formatCardNumber = (val: string) => {
-  const v = val.replace(/\D/g, '').substring(0, 16)
-  return v.replace(/(\d{4})(?=\d)/g, '$1 ')
-}
-
-const formatExpiry = (val: string) => {
-  const v = val.replace(/\D/g, '').substring(0, 4)
-  if (v.length >= 2) {
-    return `${v.substring(0, 2)}/${v.substring(2)}`
-  }
-  return v
 }
 
 export function CheckoutPayment({

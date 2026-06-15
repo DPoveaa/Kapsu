@@ -828,8 +828,14 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
             ...(shippingCost > 0 ? { shippingFee: shippingCost } : {}),
           })
 
-      const { redirectUrl } = preference
-      if (!redirectUrl.startsWith('http')) {
+      let redirectUrl: string | undefined
+      if ('bankSlipUrl' in preference) {
+        redirectUrl = preference.bankSlipUrl
+      } else if ('redirectUrl' in preference) {
+        redirectUrl = preference.redirectUrl
+      }
+
+      if (!redirectUrl?.startsWith('http')) {
         throw new Error(
           selectedPaymentMethod === 'boleto'
             ? 'Não foi possível obter o link do boleto.'
