@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, Upload, Trash2, Image as ImageIcon, Mail, Phone, MapPin, Palette, Globe } from 'lucide-react'
+import { Save, Upload, Trash2, Image as ImageIcon, Mail, Phone, MapPin, Palette, Globe, ShoppingBag } from 'lucide-react'
 import { siteSettingsService, SiteSettings as SiteSettingsType } from '../services/site-settings.service'
 import { env } from '../config/env'
 import { confirm } from '../utils/toast'
@@ -441,6 +441,45 @@ export default function SiteSettings() {
                     className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                     placeholder="#F59E0B"
                   />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Seção: Google Merchant Center */}
+          <div className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
+            <div className="flex items-center mb-4">
+              <ShoppingBag className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Google Merchant Center</h2>
+            </div>
+            
+            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 border border-gray-100 dark:border-gray-800">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 mr-4">
+                  <label className="text-base font-semibold text-gray-950 dark:text-white mb-1 block">
+                    Sincronização Automática
+                  </label>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Quando ativado, qualquer alteração nos produtos (preço, estoque, descrição, imagens) ou exclusões físicas/lógicas será enviada e atualizada no Google Merchant Center em tempo real de forma automática.
+                  </p>
+                </div>
+                <div className="flex items-center h-5 mt-1">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={settings.google_merchant_sync_enabled || false}
+                    onClick={() => handleInputChange('google_merchant_sync_enabled', !settings.google_merchant_sync_enabled)}
+                    className={`${
+                      settings.google_merchant_sync_enabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
+                    } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`${
+                        settings.google_merchant_sync_enabled ? 'translate-x-5' : 'translate-x-0'
+                      } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+                    />
+                  </button>
                 </div>
               </div>
             </div>

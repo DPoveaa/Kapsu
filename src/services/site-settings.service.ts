@@ -26,6 +26,7 @@ export interface SiteSettings {
   header_bar_bg_color_dark?: string
   chatbot_enabled?: boolean
   whatsapp_number?: string
+  google_merchant_sync_enabled?: boolean
 }
 
 export interface SiteSettingsResponse {
