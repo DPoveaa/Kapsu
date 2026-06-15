@@ -21,9 +21,7 @@ import { toast } from '../utils/toast'
 import {
   clearPendingCheckoutOrderId,
   getPendingCheckoutOrderId,
-  isCancelledOrderStatus,
   isPaidOrderStatus,
-  isPendingPaymentOrderStatus,
   setPendingCheckoutOrderId,
 } from '../utils/checkout'
 
@@ -128,25 +126,42 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   const [saveAddressToProfile, setSaveAddressToProfile] = useState(true)
 
   useEffect(() => {
+    if (items.length === 0 && !paymentResult) return
+
     const urlOrderId = searchParams.get('orderId')
     const storedOrderId = getPendingCheckoutOrderId()
     const resolvedOrderId = urlOrderId || storedOrderId
     if (resolvedOrderId) {
       setExistingOrderId(resolvedOrderId)
     }
-  }, [searchParams])
+  }, [searchParams, items.length, paymentResult])
 
-  // Resolve pedido pendente quando o carrinho foi esvaziado pelo webhook
+  // Carrinho vazio: limpa checkout e só redireciona se o pedido pendente já foi pago
   useEffect(() => {
-    if (authLoading || cartLoading || paymentResult || resolvingPendingOrderRef.current) return
+    if (authLoading || cartLoading || items.length > 0 || paymentResult) return
 
-    const pendingOrderId = existingOrderId || getPendingCheckoutOrderId()
-    if (!pendingOrderId || items.length > 0) return
+    const pendingOrderId = getPendingCheckoutOrderId() || existingOrderId || searchParams.get('orderId')
+
+    const clearCheckoutUi = () => {
+      setExistingOrderId(null)
+      clearPendingCheckoutOrderId()
+      setCheckoutStep('cart')
+      if (searchParams.get('step') || searchParams.get('orderId')) {
+        setSearchParams({}, { replace: true })
+      }
+    }
+
+    if (!pendingOrderId) {
+      clearCheckoutUi()
+      return
+    }
+
+    if (resolvingPendingOrderRef.current) return
 
     let cancelled = false
     resolvingPendingOrderRef.current = true
 
-    const resolvePendingOrder = async () => {
+    const verifyPaidOrder = async () => {
       setResolvingPendingOrder(true)
       try {
         const order = await orderService.getOrder(pendingOrderId)
@@ -159,58 +174,22 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
           return
         }
 
-        if (isCancelledOrderStatus(order.status)) {
-          clearPendingCheckoutOrderId()
-          setExistingOrderId(null)
-          setCheckoutStep('cart')
-          setSearchParams({}, { replace: true })
-          return
-        }
-
-        if (!isPendingPaymentOrderStatus(order.status)) {
-          clearPendingCheckoutOrderId()
-          setExistingOrderId(null)
-          return
-        }
-
-        setExistingOrderId(pendingOrderId)
-        setPendingCheckoutOrderId(pendingOrderId)
-
-        const paymentMethod = (order.payment_method || 'pix').toLowerCase()
-        if (paymentMethod === 'credit_card') {
-          navigate(`/carrinho/payment/card?orderId=${pendingOrderId}`, { replace: true })
-          return
-        }
-
-        if (paymentMethod === 'pix' || paymentMethod === 'boleto') {
-          const result = await paymentService.changePaymentMethod(
-            pendingOrderId,
-            paymentMethod as 'pix' | 'boleto'
-          )
-          if (cancelled) return
-          setPaymentResult(result)
-        }
-
-        setCheckoutStep('payment')
-        setSearchParams({ step: 'payment', orderId: pendingOrderId }, { replace: true })
+        clearCheckoutUi()
       } catch (err) {
         console.error('Erro ao verificar pedido pendente:', err)
-        clearPendingCheckoutOrderId()
-        setExistingOrderId(null)
+        if (!cancelled) clearCheckoutUi()
       } finally {
         resolvingPendingOrderRef.current = false
-        if (!cancelled) {
-          setResolvingPendingOrder(false)
-        }
+        if (!cancelled) setResolvingPendingOrder(false)
       }
     }
 
-    void resolvePendingOrder()
+    void verifyPaidOrder()
 
     return () => {
       cancelled = true
     }
-  }, [authLoading, cartLoading, items.length, existingOrderId, paymentResult, navigate, setSearchParams])
+  }, [authLoading, cartLoading, items.length, paymentResult, existingOrderId, navigate, searchParams, setSearchParams])
 
   useEffect(() => {
     if ((checkoutStep === 'delivery' || checkoutStep === 'payment') && isAuthenticated) {
@@ -944,13 +923,15 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
   // Efeito para escutar mudanças no histórico do navegador
   useEffect(() => {
+    if (items.length === 0 && !paymentResult) return
+
     const stepParam = searchParams.get('step') as 'cart' | 'delivery' | 'payment' | null
     if (stepParam && stepParam !== checkoutStep) {
       setCheckoutStep(stepParam)
     } else if (!stepParam && checkoutStep !== 'cart') {
       setCheckoutStep('cart')
     }
-  }, [searchParams])
+  }, [searchParams, items.length, paymentResult, checkoutStep])
 
   const handleCopyPix = () => {
     if (paymentResult?.pixPayload) {
@@ -962,12 +943,22 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
   const handleResetPayment = () => {
     const orderId = paymentResult?.orderId || existingOrderId || getPendingCheckoutOrderId()
+
+    setPaymentResult(null)
+    setCheckoutError(null)
+
+    if (items.length === 0) {
+      setExistingOrderId(null)
+      clearPendingCheckoutOrderId()
+      setCheckoutStep('cart')
+      setSearchParams({}, { replace: true })
+      return
+    }
+
     if (orderId) {
       setExistingOrderId(orderId)
       setPendingCheckoutOrderId(orderId)
     }
-    setPaymentResult(null)
-    setCheckoutError(null)
     setCheckoutStep('payment')
     setSearchParams(orderId ? { step: 'payment', orderId } : { step: 'payment' })
   }
@@ -1388,7 +1379,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     }
   }, [recommendationsByCategory, activeRecommendationTab])
 
-  if (authLoading || resolvingPendingOrder || (cartLoading && items.length === 0 && !existingOrderId && !paymentResult && !getPendingCheckoutOrderId())) {
+  if (authLoading || resolvingPendingOrder || (cartLoading && items.length === 0 && !paymentResult)) {
     return (
       <div className="bg-gray-50 dark:bg-gray-950 min-h-[75vh] flex items-center justify-center py-12 px-4 animate-fade-in">
         <div className="text-center">
@@ -1423,13 +1414,13 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 text-center">
                 Abra o app do seu banco, escolha PIX e aponte a câmera para o QR Code, ou copie a chave abaixo:
               </p>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 items-stretch">
                 <input type="text" readOnly value={paymentResult.pixPayload} className="w-full text-xs p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-500" />
-                <button onClick={handleCopyPix} className="btn-primary flex items-center justify-center gap-2 py-3">
+                <button onClick={handleCopyPix} className="btn-primary flex items-center justify-center gap-2 py-3 w-full">
                   <Copy size={16} />
                   {copiedPix ? 'Copiado!' : 'Copiar Código PIX'}
                 </button>
-                <button onClick={handleResetPayment} className="btn-secondary flex items-center justify-center gap-2 py-3 mt-2">
+                <button onClick={handleResetPayment} className="btn-secondary flex items-center justify-center gap-2 py-3 w-full">
                   Trocar forma de pagamento
                 </button>
               </div>
@@ -1437,17 +1428,17 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
           )}
 
           {paymentResult.paymentMethod === 'boleto' && (
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 mb-8 border border-gray-200 dark:border-gray-700">
-              <h3 className="font-bold text-gray-900 dark:text-white mb-4">Boleto Gerado</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 mb-8 inline-block max-w-sm w-full border border-gray-200 dark:border-gray-700 text-left">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-center">Boleto Gerado</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 text-center">
                 O seu boleto foi gerado com sucesso. O pagamento pode demorar até 3 dias úteis para ser confirmado.
               </p>
-              <div className="flex flex-col gap-2">
-                <a href={paymentResult.bankSlipUrl} target="_blank" rel="noreferrer" className="btn-primary flex items-center justify-center gap-2 py-3 w-full sm:w-auto sm:px-8 mx-auto">
+              <div className="flex flex-col gap-2 items-stretch">
+                <a href={paymentResult.bankSlipUrl} target="_blank" rel="noreferrer" className="btn-primary flex items-center justify-center gap-2 py-3 w-full">
                   <Download size={16} />
                   Baixar Boleto
                 </a>
-                <button onClick={handleResetPayment} className="btn-secondary flex items-center justify-center gap-2 py-3 w-full sm:w-auto sm:px-8 mx-auto mt-2">
+                <button onClick={handleResetPayment} className="btn-secondary flex items-center justify-center gap-2 py-3 w-full">
                   Trocar forma de pagamento
                 </button>
               </div>
@@ -1481,7 +1472,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     )
   }
 
-  if (items.length === 0 && !existingOrderId && !paymentResult) {
+  if (items.length === 0 && !paymentResult) {
     return (
       <div className="bg-gray-50 dark:bg-gray-950 min-h-[75vh] flex items-center justify-center py-12 px-4 animate-fade-in">
         <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 p-8 text-center shadow-xl">
