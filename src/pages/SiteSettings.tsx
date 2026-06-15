@@ -12,6 +12,7 @@ export default function SiteSettings() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [syncing, setSyncing] = useState(false)
 
   const API_URL = env.apiUrl
 
@@ -125,6 +126,23 @@ export default function SiteSettings() {
       setError(err.message || 'Erro ao salvar configurações')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSyncAll = async () => {
+    try {
+      setSyncing(true)
+      setError(null)
+      setSuccess(null)
+      
+      const response = await siteSettingsService.syncAllMerchantProducts()
+      setSuccess(response.message || 'Sincronização com o Google Merchant Center concluída!')
+      
+      setTimeout(() => setSuccess(null), 5000)
+    } catch (err: any) {
+      setError(err.message || 'Erro ao sincronizar produtos com o Google Merchant Center')
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -453,7 +471,7 @@ export default function SiteSettings() {
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Google Merchant Center</h2>
             </div>
             
-            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 border border-gray-100 dark:border-gray-800">
+            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 border border-gray-100 dark:border-gray-800 space-y-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1 mr-4">
                   <label className="text-base font-semibold text-gray-950 dark:text-white mb-1 block">
@@ -479,6 +497,27 @@ export default function SiteSettings() {
                         settings.google_merchant_sync_enabled ? 'translate-x-5' : 'translate-x-0'
                       } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
                     />
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-200 dark:border-gray-800 pt-4 flex items-center justify-between">
+                <div className="flex-1 mr-4">
+                  <label className="text-sm font-semibold text-gray-900 dark:text-white mb-1 block">
+                    Sincronizar Tudo Manualmente
+                  </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Suba todos os produtos ativos do banco de dados de uma vez e atualize suas fotos, preços e descrições no Merchant Center.
+                  </p>
+                </div>
+                <div>
+                  <button
+                    type="button"
+                    disabled={syncing}
+                    onClick={handleSyncAll}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
+                  >
+                    {syncing ? 'Sincronizando...' : 'Sincronizar Agora'}
                   </button>
                 </div>
               </div>

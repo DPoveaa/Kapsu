@@ -160,6 +160,23 @@ class SiteSettingsService {
       throw new Error(error.message || 'Erro ao remover logo')
     }
   }
+
+  /**
+   * Sincroniza todos os produtos com o Google Merchant Center (apenas admin)
+   */
+  async syncAllMerchantProducts(): Promise<{ success: boolean; message: string; data?: any }> {
+    const response = await fetch(`${API_URL}/admin/merchant/sync-all`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.message || 'Erro ao sincronizar produtos com Google Merchant Center')
+    }
+
+    return await response.json()
+  }
 }
 
 export const siteSettingsService = new SiteSettingsService()
