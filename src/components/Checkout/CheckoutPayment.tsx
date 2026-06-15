@@ -18,10 +18,9 @@ export function CheckoutPayment({
   onSelectMethod,
 }: CheckoutPaymentProps) {
   const optionClass = (method: 'pix' | 'boleto' | 'credit_card') =>
-    `w-full text-left flex items-start gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${
-      selectedMethod === method
-        ? 'border-primary-500 bg-primary-50 dark:bg-gray-800'
-        : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-400 bg-white dark:bg-gray-800'
+    `w-full text-left flex items-start gap-3 p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedMethod === method
+      ? 'border-primary-500 bg-primary-50 dark:bg-gray-800'
+      : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-400 bg-white dark:bg-gray-800'
     }`
 
   return (
@@ -36,9 +35,8 @@ export function CheckoutPayment({
           className={optionClass('pix')}
         >
           <span
-            className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
-              selectedMethod === 'pix' ? 'border-primary-600' : 'border-gray-300'
-            }`}
+            className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${selectedMethod === 'pix' ? 'border-primary-600' : 'border-gray-300'
+              }`}
           >
             {selectedMethod === 'pix' && <span className="h-2 w-2 rounded-full bg-primary-600" />}
           </span>
@@ -51,20 +49,18 @@ export function CheckoutPayment({
           </div>
         </button>
 
-        <div className={`border-2 rounded-xl transition-all overflow-hidden ${
-          selectedMethod === 'credit_card'
-            ? 'border-primary-500 bg-primary-50 dark:bg-gray-800'
-            : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 bg-white dark:bg-gray-800'
-        }`}>
+        <div className={`border-2 rounded-xl transition-all overflow-hidden ${selectedMethod === 'credit_card'
+          ? 'border-primary-500 bg-primary-50 dark:bg-gray-800'
+          : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 bg-white dark:bg-gray-800'
+          }`}>
           <button
             type="button"
             onClick={() => onSelectMethod('credit_card')}
             className="w-full text-left flex items-start gap-3 p-4 cursor-pointer"
           >
             <span
-              className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
-                selectedMethod === 'credit_card' ? 'border-primary-600' : 'border-gray-300'
-              }`}
+              className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${selectedMethod === 'credit_card' ? 'border-primary-600' : 'border-gray-300'
+                }`}
             >
               {selectedMethod === 'credit_card' && <span className="h-2 w-2 rounded-full bg-primary-600" />}
             </span>
@@ -77,14 +73,6 @@ export function CheckoutPayment({
             </div>
           </button>
 
-          {selectedMethod === 'credit_card' && (
-            <div className="px-4 pb-4 border-t border-primary-200 dark:border-gray-700">
-              <p className="text-sm text-gray-700 dark:text-gray-300 mt-4 text-center">
-                Você será redirecionado para inserir os dados do cartão após clicar em{' '}
-                <strong>Continuar para Cartão</strong>.
-              </p>
-            </div>
-          )}
         </div>
 
         <button
@@ -93,9 +81,8 @@ export function CheckoutPayment({
           className={optionClass('boleto')}
         >
           <span
-            className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
-              selectedMethod === 'boleto' ? 'border-primary-600' : 'border-gray-300'
-            }`}
+            className={`mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${selectedMethod === 'boleto' ? 'border-primary-600' : 'border-gray-300'
+              }`}
           >
             {selectedMethod === 'boleto' && <span className="h-2 w-2 rounded-full bg-primary-600" />}
           </span>

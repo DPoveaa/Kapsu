@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, Package, Home, Loader2 } from 'lucide-react'
+import { clearPendingCheckoutOrderId } from '../utils/checkout'
+import { useCart } from '../context/CartContext'
 
 export default function PaymentSuccess() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { refreshCart } = useCart()
   const [loading, setLoading] = useState(true)
   const [orderId, setOrderId] = useState<string | null>(null)
 
   useEffect(() => {
+    clearPendingCheckoutOrderId()
+    void refreshCart()
     // Extrai informações da URL - pode vir do Asaas ou do teste sem pagamento
     const externalReference = searchParams.get('external_reference')
     const orderIdParam = searchParams.get('order_id')
@@ -23,7 +28,7 @@ export default function PaymentSuccess() {
     setTimeout(() => {
       setLoading(false)
     }, 1000)
-  }, [searchParams])
+  }, [searchParams, refreshCart])
 
   if (loading) {
     return (

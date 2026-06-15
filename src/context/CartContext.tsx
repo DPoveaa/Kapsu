@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react'
 import { CartItem, Product } from '../types'
 import { cartService } from '../services/cart.service'
 import { productsService } from '../services/products.service'
@@ -23,17 +23,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Carrega carrinho quando usuário está autenticado
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadCart()
-    } else {
-      setItems([])
-      setLoading(false)
-    }
-  }, [isAuthenticated])
-
-  const loadCart = async (showLoading = true) => {
+  const loadCart = useCallback(async (showLoading = true) => {
     try {
       if (showLoading) {
         setLoading(true)
@@ -67,7 +57,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setLoading(false)
       }
     }
-  }
+  }, [])
+
+  // Carrega carrinho quando usuário está autenticado
+  useEffect(() => {
+    if (isAuthenticated) {
+      void loadCart()
+    } else {
+      setItems([])
+      setLoading(false)
+    }
+  }, [isAuthenticated, loadCart])
+
+  // Sincroniza carrinho quando a aba volta ao foco (ex.: após webhook limpar o carrinho)
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void loadCart(false)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [isAuthenticated, loadCart])
 
   const addProduct = async (product: Product, quantity: number) => {
     // SEMPRE adiciona como 'one-time' - assinatura só pode ser definida globalmente no carrinho
@@ -157,10 +171,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      setItems([])
       await cartService.clearCart()
-      await loadCart(false) // Sincroniza carrinho sem trocar a tela inteira por loading
+      await loadCart(false)
     } catch (error) {
       console.error('Erro ao limpar carrinho:', error)
+      await loadCart(false)
       throw error
     }
   }
@@ -186,7 +202,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       clearCart,
       getTotal,
       getItemCount,
-      refreshCart: loadCart,
+      refreshCart: () => loadCart(false),
     }}>
       {children}
     </CartContext.Provider>

@@ -12,6 +12,15 @@ import { Product, ProductPriceHistory } from '../types'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import * as XLSX from 'xlsx'
 import { confirm, toast } from '../utils/toast'
+import {
+  calcPriceFromMarkup,
+  findMarkupForTargetPrice,
+  formatMarkupDisplay,
+  formatMarkupInput,
+  formatPriceInput,
+  parseDecimalInput,
+  roundCurrency,
+} from '../utils/pricing'
 import AdminModal from '../components/AdminModal'
 import ImageUpload from '../components/ImageUpload'
 
@@ -250,6 +259,7 @@ export default function ManageProducts() {
     free_shipping: false,
   }
   const [productFormData, setProductFormData] = useState(initialProductFormState)
+  const priceEditSourceRef = useRef<'price' | 'markup' | 'purchase_price'>('price')
   const [newCatInput, setNewCatInput] = useState('')
   const [localAddedCategories, setLocalAddedCategories] = useState<string[]>([])
 
@@ -301,33 +311,40 @@ export default function ManageProducts() {
   const handleProductPriceFieldChange = (name: string, value: string) => {
     setProductFormData(prev => {
       const updated = { ...prev, [name]: value }
-
-      const cost = name === 'purchase_price' ? Number(value) : Number(prev.purchase_price)
+      const cost = roundCurrency(Number(name === 'purchase_price' ? value : prev.purchase_price))
 
       if (name === 'purchase_price') {
-        const costNum = Number(value)
-        if (costNum > 0) {
-          if (prev.markup && !isNaN(Number(prev.markup))) {
-            const calculatedPrice = costNum * (1 + Number(prev.markup) / 100)
-            updated.price = isNaN(calculatedPrice) ? prev.price : calculatedPrice.toFixed(2)
-          } else if (prev.price && !isNaN(Number(prev.price))) {
-            const calculatedMarkup = ((Number(prev.price) - costNum) / costNum) * 100
-            updated.markup = isNaN(calculatedMarkup) ? prev.markup : calculatedMarkup.toFixed(2)
+        const previousDriver = priceEditSourceRef.current
+        priceEditSourceRef.current = 'purchase_price'
+        const costNum = parseDecimalInput(value)
+
+        if (costNum != null && costNum > 0) {
+          const markupNum = parseDecimalInput(prev.markup)
+          const priceNum = parseDecimalInput(prev.price)
+
+          if (previousDriver === 'markup' && markupNum != null) {
+            updated.price = formatPriceInput(calcPriceFromMarkup(costNum, markupNum))
+          } else if (priceNum != null && priceNum > 0) {
+            updated.markup = formatMarkupInput(findMarkupForTargetPrice(costNum, priceNum))
+          } else if (markupNum != null) {
+            updated.price = formatPriceInput(calcPriceFromMarkup(costNum, markupNum))
           }
         } else {
           updated.markup = ''
         }
       } else if (name === 'markup') {
-        const markupNum = Number(value)
-        if (cost > 0 && value !== '') {
-          const calculatedPrice = cost * (1 + markupNum / 100)
-          updated.price = isNaN(calculatedPrice) ? prev.price : calculatedPrice.toFixed(2)
+        priceEditSourceRef.current = 'markup'
+        const markupNum = parseDecimalInput(value)
+
+        if (cost > 0 && markupNum != null && value.trim() !== '') {
+          updated.price = formatPriceInput(calcPriceFromMarkup(cost, markupNum))
         }
       } else if (name === 'price') {
-        const priceNum = Number(value)
-        if (cost > 0 && priceNum > 0) {
-          const calculatedMarkup = ((priceNum - cost) / cost) * 100
-          updated.markup = isNaN(calculatedMarkup) ? prev.markup : calculatedMarkup.toFixed(2)
+        priceEditSourceRef.current = 'price'
+        const priceNum = parseDecimalInput(value)
+
+        if (cost > 0 && priceNum != null && priceNum > 0) {
+          updated.markup = formatMarkupInput(findMarkupForTargetPrice(cost, priceNum))
         }
       }
 
@@ -336,10 +353,10 @@ export default function ManageProducts() {
   }
 
   const productMarginInfo = useMemo(() => {
-    const cost = Number(productFormData.purchase_price)
-    const sale = Number(productFormData.price)
-    if (!isNaN(cost) && !isNaN(sale) && cost > 0 && sale > 0) {
-      const profit = sale - cost
+    const cost = parseDecimalInput(productFormData.purchase_price)
+    const sale = parseDecimalInput(productFormData.price)
+    if (cost != null && sale != null && cost > 0 && sale > 0) {
+      const profit = roundCurrency(sale - cost)
       const margin = (profit / sale) * 100
       return {
         margin: margin.toFixed(1).replace('.', ','),
@@ -356,14 +373,23 @@ export default function ManageProducts() {
       setProductFormError(null)
       const productRaw = await (productsService as any).getByIdForAdminRaw(productId)
       const product = await productsService.getByIdForAdmin(productId)
+      priceEditSourceRef.current = 'price'
       setEditingProduct(product)
+
+      const cost = productRaw.purchase_price != null ? roundCurrency(Number(productRaw.purchase_price)) : null
+      const salePrice = roundCurrency(product.price)
+      const storedMarkup = productRaw.markup != null ? Number(productRaw.markup) : null
+      const compatibleMarkup = cost && cost > 0
+        ? findMarkupForTargetPrice(cost, salePrice)
+        : storedMarkup
+
       setProductFormData({
         name: product.name,
         description: product.description || '',
-        price: product.price.toString(),
-        promo_price: productRaw.promo_price ? productRaw.promo_price.toString() : '',
-        purchase_price: productRaw.purchase_price ? productRaw.purchase_price.toString() : '',
-        markup: productRaw.markup ? productRaw.markup.toString() : '',
+        price: formatPriceInput(salePrice),
+        promo_price: productRaw.promo_price ? formatPriceInput(Number(productRaw.promo_price)) : '',
+        purchase_price: cost ? formatPriceInput(cost) : '',
+        markup: compatibleMarkup != null ? formatMarkupInput(compatibleMarkup) : '',
         image: product.image || '',
         category: product.category || 'Outros',
         active: productRaw.active ?? true,
@@ -385,6 +411,7 @@ export default function ManageProducts() {
   }, [navigate])
 
   const openCreateProductModal = () => {
+    priceEditSourceRef.current = 'price'
     setEditingProduct(null)
     setProductFormData(initialProductFormState)
     setLocalAddedCategories([])
@@ -448,13 +475,38 @@ export default function ManageProducts() {
 
     try {
       setProductFormLoading(true)
+
+      const cost = productFormData.purchase_price
+        ? roundCurrency(Number(productFormData.purchase_price))
+        : null
+      const saleInput = roundCurrency(Number(productFormData.price))
+
+      let finalPrice = saleInput
+      let finalMarkup: number | null = null
+
+      if (cost && cost > 0) {
+        if (priceEditSourceRef.current === 'markup' && productFormData.markup) {
+          const markupNum = parseDecimalInput(productFormData.markup)
+          if (markupNum != null) {
+            finalMarkup = markupNum
+            finalPrice = calcPriceFromMarkup(cost, markupNum)
+          }
+        } else {
+          finalPrice = saleInput
+          finalMarkup = findMarkupForTargetPrice(cost, saleInput)
+        }
+      } else if (productFormData.markup) {
+        const markupNum = parseDecimalInput(productFormData.markup)
+        finalMarkup = markupNum
+      }
+
       const payload = {
         name: productFormData.name.trim(),
         description: productFormData.description.trim() || undefined,
-        price: Number(productFormData.price),
-        promo_price: productFormData.promo_price ? Number(productFormData.promo_price) : null,
-        purchase_price: productFormData.purchase_price ? Number(productFormData.purchase_price) : null,
-        markup: productFormData.markup ? Number(productFormData.markup) : null,
+        price: finalPrice,
+        promo_price: productFormData.promo_price ? roundCurrency(Number(productFormData.promo_price)) : null,
+        purchase_price: cost,
+        markup: finalMarkup,
         image: productFormData.image.trim() || undefined,
         category: productFormData.category || undefined,
         active: productFormData.active,
@@ -541,16 +593,32 @@ export default function ManageProducts() {
   }
 
   const saveMarkup = async (productId: string) => {
-    const markupVal = tempMarkupValue === '' ? null : Number(tempMarkupValue)
+    const markupVal = tempMarkupValue === '' ? null : parseDecimalInput(tempMarkupValue)
     if (markupVal !== null && (isNaN(markupVal) || markupVal < 0)) {
       toast.error('O markup deve ser um número positivo ou zero.')
       return
     }
 
+    const product = products.find(p => p.id === productId)
+    const cost = product?.purchase_price != null ? roundCurrency(Number(product.purchase_price)) : null
+    const calculatedPrice = cost && markupVal != null
+      ? calcPriceFromMarkup(cost, markupVal)
+      : undefined
+
     try {
-      // Optimistic update
-      setProducts(prev => prev.map(p => p.id === productId ? { ...p, markup: markupVal } : p))
-      await productsService.update(productId, { markup: markupVal })
+      setProducts(prev => prev.map(p => {
+        if (p.id !== productId) return p
+        return {
+          ...p,
+          markup: markupVal,
+          ...(calculatedPrice != null ? { price: calculatedPrice } : {}),
+        }
+      }))
+
+      await productsService.update(productId, {
+        markup: markupVal,
+        ...(calculatedPrice != null ? { price: calculatedPrice } : {}),
+      })
       toast.success('Markup do produto atualizado com sucesso!')
       setEditingMarkupId(null)
       await loadProducts() // Reload to get newly calculated selling price
@@ -1356,7 +1424,7 @@ export default function ManageProducts() {
                               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                 <input
                                   type="number"
-                                  step="0.01"
+                                  step="0.0001"
                                   value={tempMarkupValue}
                                   onChange={(e) => setTempMarkupValue(e.target.value)}
                                   onKeyDown={(e) => handleKeyPressMarkup(e, p.id)}
@@ -1378,11 +1446,16 @@ export default function ManageProducts() {
                               >
                                 <div className="flex items-center gap-1">
                                   <span className="font-semibold text-green-600 dark:text-green-400 text-sm">
-                                    {p.markup != null ? `${Number(p.markup).toFixed(2).replace('.', ',')}%` : (() => {
-                                      const cost = Number(p.purchase_price);
-                                      const sale = Number(p.price);
-                                      return `${((sale - cost) / cost * 100).toFixed(2).replace('.', ',')}%`;
-                                    })()}
+                                    {p.markup != null
+                                      ? `${formatMarkupDisplay(Number(p.markup))}%`
+                                      : (() => {
+                                        const cost = Number(p.purchase_price)
+                                        const sale = Number(p.price)
+                                        if (cost > 0 && sale > 0) {
+                                          return `${formatMarkupDisplay(findMarkupForTargetPrice(cost, sale))}%`
+                                        }
+                                        return '—'
+                                      })()}
                                   </span>
                                   <Edit size={11} className="text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                                 </div>
@@ -2269,7 +2342,7 @@ export default function ManageProducts() {
                   value={productFormData.markup}
                   onChange={(e) => handleProductPriceFieldChange('markup', e.target.value)}
                   min="0"
-                  step="0.01"
+                  step="0.0001"
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="Ex: 50"
                   disabled={!productFormData.purchase_price || Number(productFormData.purchase_price) <= 0}

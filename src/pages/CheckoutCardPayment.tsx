@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { orderService } from '../services/order.service'
 import { paymentService } from '../services/payment.service'
 import { useCart } from '../context/CartContext'
+import { clearPendingCheckoutOrderId, isPaidOrderStatus } from '../utils/checkout'
 
 // Luhn Algorithm validation
 const isValidLuhn = (number: string) => {
@@ -83,8 +84,14 @@ export default function CheckoutCardPayment() {
       try {
         setLoadingOrder(true)
         const orderData = await orderService.getOrder(orderId)
+        if (isPaidOrderStatus(orderData.status)) {
+          clearPendingCheckoutOrderId()
+          navigate(`/payment-success?order_id=${orderId}`, { replace: true })
+          return
+        }
         if (orderData.status !== 'PENDING' && orderData.status !== 'PENDING_PAYMENT') {
-          navigate('/perfil?section=orders')
+          clearPendingCheckoutOrderId()
+          navigate('/perfil?section=orders', { replace: true })
           return
         }
         setOrder(orderData)
@@ -179,13 +186,15 @@ export default function CheckoutCardPayment() {
       const declinedStatuses  = ['DECLINED', 'REFUSED', 'CHARGEBACK_REQUESTED', 'REFUNDED', 'REFUND_REQUESTED']
 
       if (confirmedStatuses.includes(response.status)) {
+        clearPendingCheckoutOrderId()
         await clearCart()
-        navigate(`/checkout/success?orderId=${orderId}`)
+        navigate(`/payment-success?order_id=${orderId}`)
       } else if (pendingStatuses.includes(response.status) || !declinedStatuses.includes(response.status)) {
         // Qualquer status não explicitamente recusado é tratado como pendente (pagamento criado com sucesso)
         console.log('[CheckoutCardPayment] Pagamento criado, status:', response.status, '→ redirecionando para sucesso com status=pending')
+        clearPendingCheckoutOrderId()
         await clearCart()
-        navigate(`/checkout/success?orderId=${orderId}&status=pending`)
+        navigate(`/payment-success?order_id=${orderId}`)
       } else {
         console.warn('[CheckoutCardPayment] Pagamento recusado. Status:', response.status)
         setError('O pagamento foi recusado. Por favor, verifique os dados ou tente outro cartão.')
