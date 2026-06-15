@@ -1,6 +1,7 @@
 import { Package, DollarSign, TrendingUp, XCircle, CheckCircle, AlertCircle, Truck, Calendar } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { TooltipValue, TooltipName, formatTooltipNumber } from '../types/recharts'
+import { getOrderStatusLabel } from '../utils/orderStatus'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
@@ -91,26 +92,29 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
       {/* Cards de Status */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 lg:gap-4 mb-4 sm:mb-5 lg:mb-6">
         {Object.entries(ordersStats.byStatus).map(([status, data]: [string, any]) => {
-          const statusConfig: Record<string, { label: string; icon: any; color: string; bgColor: string; darkColor: string; darkBgColor: string }> = {
-            AWAITING_PAYMENT: { label: 'Aguardando Pagamento', icon: AlertCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-100', darkColor: 'dark:text-yellow-400', darkBgColor: 'dark:bg-yellow-900/30' },
-            PENDING: { label: 'Aguardando Pagamento', icon: AlertCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-100', darkColor: 'dark:text-yellow-400', darkBgColor: 'dark:bg-yellow-900/30' },
-            PAID: { label: 'Pago', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100', darkColor: 'dark:text-green-400', darkBgColor: 'dark:bg-green-900/30' },
-            CONFIRMED: { label: 'Pago', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100', darkColor: 'dark:text-green-400', darkBgColor: 'dark:bg-green-900/30' },
-            DISTRIBUTOR_INFORMED: { label: 'Solicitado na Distribuidora', icon: Package, color: 'text-blue-600', bgColor: 'bg-blue-100', darkColor: 'dark:text-blue-400', darkBgColor: 'dark:bg-blue-900/30' },
-            PROCESSING: { label: 'Processando', icon: Package, color: 'text-purple-600', bgColor: 'bg-purple-100', darkColor: 'dark:text-purple-400', darkBgColor: 'dark:bg-purple-900/30' },
-            SHIPPED: { label: 'Enviado', icon: Truck, color: 'text-indigo-600', bgColor: 'bg-indigo-100', darkColor: 'dark:text-indigo-400', darkBgColor: 'dark:bg-indigo-900/30' },
-            DELIVERED: { label: 'Entregue', icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100', darkColor: 'dark:text-green-400', darkBgColor: 'dark:bg-green-900/30' },
-            CANCELLED: { label: 'Cancelado', icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-100', darkColor: 'dark:text-red-400', darkBgColor: 'dark:bg-red-900/30' },
+          const statusConfig: Record<string, { icon: any; color: string; bgColor: string; darkColor: string; darkBgColor: string }> = {
+            AWAITING_PAYMENT: { icon: AlertCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-100', darkColor: 'dark:text-yellow-400', darkBgColor: 'dark:bg-yellow-900/30' },
+            PENDING: { icon: AlertCircle, color: 'text-yellow-600', bgColor: 'bg-yellow-100', darkColor: 'dark:text-yellow-400', darkBgColor: 'dark:bg-yellow-900/30' },
+            PAID: { icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100', darkColor: 'dark:text-green-400', darkBgColor: 'dark:bg-green-900/30' },
+            CONFIRMED: { icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100', darkColor: 'dark:text-green-400', darkBgColor: 'dark:bg-green-900/30' },
+            RECEIVED: { icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100', darkColor: 'dark:text-green-400', darkBgColor: 'dark:bg-green-900/30' },
+            RECEIVED_IN_CASH: { icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100', darkColor: 'dark:text-green-400', darkBgColor: 'dark:bg-green-900/30' },
+            DISTRIBUTOR_INFORMED: { icon: Package, color: 'text-purple-600', bgColor: 'bg-purple-100', darkColor: 'dark:text-purple-400', darkBgColor: 'dark:bg-purple-900/30' },
+            PROCESSING: { icon: Package, color: 'text-purple-600', bgColor: 'bg-purple-100', darkColor: 'dark:text-purple-400', darkBgColor: 'dark:bg-purple-900/30' },
+            SHIPPED: { icon: Truck, color: 'text-indigo-600', bgColor: 'bg-indigo-100', darkColor: 'dark:text-indigo-400', darkBgColor: 'dark:bg-indigo-900/30' },
+            DELIVERED: { icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100', darkColor: 'dark:text-green-400', darkBgColor: 'dark:bg-green-900/30' },
+            CANCELLED: { icon: XCircle, color: 'text-red-600', bgColor: 'bg-red-100', darkColor: 'dark:text-red-400', darkBgColor: 'dark:bg-red-900/30' },
           }
-          const config = statusConfig[status] || { label: status, icon: Package, color: 'text-gray-600', bgColor: 'bg-gray-100', darkColor: 'dark:text-gray-400', darkBgColor: 'dark:bg-gray-900/30' }
+          const config = statusConfig[status] || { icon: Package, color: 'text-gray-600', bgColor: 'bg-gray-100', darkColor: 'dark:text-gray-400', darkBgColor: 'dark:bg-gray-900/30' }
           const Icon = config.icon
+          const label = getOrderStatusLabel(status)
 
           return (
             <div key={status} className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-2.5 sm:p-3 lg:p-4 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-1.5 sm:mb-2">
                 <Icon className={`w-3 h-3 sm:w-4 sm:h-5 lg:w-5 lg:h-5 ${config.color} ${config.darkColor}`} />
                 <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full ${config.bgColor} ${config.color} ${config.darkBgColor} ${config.darkColor} break-words`}>
-                  {config.label}
+                  {label}
                 </span>
               </div>
               <p className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-white break-words">{data.count}</p>
@@ -133,13 +137,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
               <PieChart>
                 <Pie
                   data={Object.entries(ordersStats.byStatus).map(([status, data]: [string, any]) => ({
-                    name: status === 'AWAITING_PAYMENT' || status === 'PENDING' ? 'Aguardando Pagamento' :
-                          status === 'PAID' || status === 'CONFIRMED' ? 'Pago' :
-                          status === 'DISTRIBUTOR_INFORMED' ? 'Solicitado na Distribuidora' :
-                          status === 'PROCESSING' ? 'Processando' :
-                          status === 'SHIPPED' ? 'Enviado' :
-                          status === 'DELIVERED' ? 'Entregue' :
-                          status === 'CANCELLED' ? 'Cancelado' : status,
+                    name: getOrderStatusLabel(status),
                     value: data.count,
                     totalValue: data.totalValue,
                   }))}
@@ -238,20 +236,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
                   dataKey="status" 
-                  tickFormatter={(value) => {
-                    const statusMap: Record<string, string> = {
-                      AWAITING_PAYMENT: 'Aguardando Pagamento',
-                      PENDING: 'Aguardando Pagamento',
-                      PAID: 'Pago',
-                      CONFIRMED: 'Pago',
-                      DISTRIBUTOR_INFORMED: 'Solicitado na Distribuidora',
-                      PROCESSING: 'Processando',
-                      SHIPPED: 'Enviado',
-                      DELIVERED: 'Entregue',
-                      CANCELLED: 'Cancelado',
-                    }
-                    return statusMap[value] || value
-                  }}
+                  tickFormatter={(value) => getOrderStatusLabel(value)}
                   angle={-45}
                   textAnchor="end"
                   height={60}

@@ -5,6 +5,7 @@ import { adminService } from '../services/admin.service'
 import CreateOrderModal from '../components/CreateOrderModal'
 import { useAuth } from '../context/AuthContext'
 import { confirm, toast } from '../utils/toast'
+import { getOrderStatusLabel, getOrderStatusBadgeClass } from '../utils/orderStatus'
 
 interface Order {
   id: string
@@ -110,22 +111,9 @@ export default function ManageOrders() {
 
   // Formata status
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; className: string }> = {
-      AWAITING_PAYMENT: { label: 'Aguardando Pagamento', className: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' },
-      PENDING: { label: 'Aguardando Pagamento', className: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' },
-      PAID: { label: 'Pago', className: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' },
-      CONFIRMED: { label: 'Pago', className: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' },
-      DISTRIBUTOR_INFORMED: { label: 'Solicitado na Distribuidora', className: 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' },
-      PROCESSING: { label: 'Processando', className: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300' },
-      SHIPPED: { label: 'Enviado', className: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300' },
-      DELIVERED: { label: 'Entregue', className: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' },
-      CANCELLED: { label: 'Cancelado', className: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' },
-    }
-
-    const statusInfo = statusMap[status] || { label: status, className: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300' }
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusInfo.className}`}>
-        {statusInfo.label}
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getOrderStatusBadgeClass(status)}`}>
+        {getOrderStatusLabel(status)}
       </span>
     )
   }

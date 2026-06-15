@@ -14,6 +14,7 @@ import { Product } from '../types'
 import { User, Camera, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Package, Calendar, CreditCard, ShoppingBag, Download, ArrowLeft, Mail, FileText, Heart, Bell, HelpCircle, LogOut, Copy, QrCode, Barcode } from 'lucide-react'
 import { env } from '../config/env'
 import { confirm, toast } from '../utils/toast'
+import { getOrderStatusLabel, getOrderStatusBadgeClass, isInvoiceEligibleStatus } from '../utils/orderStatus'
 
 type ProfileSection = 'info' | 'password' | 'image' | 'addresses' | 'orders' | 'favorites' | 'reviews' | 'notifications' | 'help' | null
 
@@ -545,48 +546,6 @@ export default function Profile() {
     }
   }
 
-  const translateStatus = (status: string) => {
-    const normalized = (status || '').toUpperCase()
-    const statusMap: Record<string, string> = {
-      'PENDING': 'Pendente',
-      'RECEIVED': 'Recebido',
-      'CONFIRMED': 'Confirmado',
-      'OVERDUE': 'Vencido',
-      'REFUNDED': 'Reembolsado',
-      'RECEIVED_IN_CASH': 'Recebido em Dinheiro',
-      'REFUND_REQUESTED': 'Reembolso Solicitado',
-      'REFUND_IN_PROGRESS': 'Reembolso em Andamento',
-      'CHARGEBACK_REQUESTED': 'Chargeback Solicitado',
-      'CHARGEBACK_DISPUTE': 'Chargeback em Disputa',
-      'AWAITING_CHARGEBACK_REVERSAL': 'Aguardando Reversão de Chargeback',
-      'DUNNING_REQUESTED': 'Cobrança Solicitada',
-      'DUNNING_RECEIVED': 'Cobrança Recebida',
-      'AWAITING_RISK_ANALYSIS': 'Aguardando Análise de Risco',
-      'PAID': 'Pago',
-      'SHIPPED': 'Enviado',
-      'DELIVERED': 'Entregue',
-      'CANCELLED': 'Cancelado',
-      'PROCESSING': 'Processando'
-    }
-    return statusMap[normalized] || status
-  }
-
-  const getStatusColor = (status: string) => {
-    const normalized = (status || '').toUpperCase()
-    switch (normalized) {
-      case 'RECEIVED': case 'CONFIRMED': case 'RECEIVED_IN_CASH': case 'PAID': case 'DELIVERED':
-        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-      case 'PENDING': case 'AWAITING_RISK_ANALYSIS': case 'PROCESSING':
-        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-      case 'OVERDUE': case 'REFUND_REQUESTED': case 'REFUND_IN_PROGRESS': case 'CHARGEBACK_REQUESTED': case 'CHARGEBACK_DISPUTE': case 'AWAITING_CHARGEBACK_REVERSAL': case 'REFUNDED': case 'CANCELLED':
-        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-      case 'DUNNING_REQUESTED': case 'DUNNING_RECEIVED':
-        return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-      default:
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-    }
-  }
-
   const getOrderImage = (order: Order) => {
     if (order.items && order.items.length > 0) {
       const itemWithImage = order.items.find(item => item.image_url);
@@ -621,7 +580,7 @@ export default function Profile() {
       body += `- Código do Pedido: ${latestOrder.id}\n`
       body += `- Data: ${formatDate(latestOrder.created_at)}\n`
       body += `- Valor Total: ${formatCurrency(latestOrder.total)}\n`
-      body += `- Status: ${translateStatus(latestOrder.status)}\n\n`
+      body += `- Status: ${getOrderStatusLabel(latestOrder.status)}\n\n`
     }
 
     body += `[Descreva sua dúvida ou problema aqui]`
@@ -647,7 +606,7 @@ export default function Profile() {
       return (
         <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-900">
           <p className="text-red-600 dark:text-red-400 font-medium flex items-center gap-2">
-            <X className="w-5 h-5" /> {translateStatus(normalized)}
+            <X className="w-5 h-5" /> {getOrderStatusLabel(normalized)}
           </p>
         </div>
       )
@@ -664,7 +623,7 @@ export default function Profile() {
     const mapIndex: Record<string, number> = {
       'PENDING': 0, 'AWAITING_RISK_ANALYSIS': 0, 'DUNNING_REQUESTED': 0, 'DUNNING_RECEIVED': 0,
       'PAID': 1, 'CONFIRMED': 1, 'RECEIVED': 1, 'RECEIVED_IN_CASH': 1,
-      'PROCESSING': 2, 'SHIPPED': 3, 'DELIVERED': 4
+      'PROCESSING': 2, 'DISTRIBUTOR_INFORMED': 2, 'SHIPPED': 3, 'DELIVERED': 4
     };
 
     const currentIndex = mapIndex[normalized] !== undefined ? mapIndex[normalized] : 0;
@@ -1188,8 +1147,8 @@ export default function Profile() {
                                 <p className="text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mb-0.5">Total</p>
                                 <p className="font-bold text-gray-900 dark:text-white text-base">{formatCurrency(order.total)}</p>
                               </div>
-                              <div className={`px-2.5 py-1 rounded-full text-xs font-bold ${getStatusColor(order.status)}`}>
-                                {translateStatus(order.status)}
+                              <div className={`px-2.5 py-1 rounded-full text-xs font-bold ${getOrderStatusBadgeClass(order.status)}`}>
+                                {getOrderStatusLabel(order.status)}
                               </div>
                               <div className={`p-1.5 rounded-full bg-gray-100 dark:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-600 transition-transform ${expandedOrder === order.id ? 'rotate-90 bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800 text-primary-500' : 'text-gray-400'}`}>
                                 <ChevronRight className="w-4 h-4" />
@@ -1224,7 +1183,7 @@ export default function Profile() {
                                     </div>
                                     <div className="flex justify-between items-center">
                                       <span className="text-gray-500 dark:text-gray-400">Status Financeiro:</span>
-                                      <span className="font-semibold text-gray-700 dark:text-gray-300">{translateStatus(order.status)}</span>
+                                      <span className="font-semibold text-gray-700 dark:text-gray-300">{getOrderStatusLabel(order.status)}</span>
                                     </div>
 
                                     {(order.status || '').toUpperCase() === 'PENDING' && (
@@ -1344,13 +1303,13 @@ export default function Profile() {
                                         </a>
                                       </div>
                                     )}
-                                    {['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'PAID', 'DISTRIBUTOR_INFORMED'].includes((order.status || '').toUpperCase()) && loadingInvoices[order.id] && (
+                                    {isInvoiceEligibleStatus(order.status) && loadingInvoices[order.id] && (
                                       <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
                                         <span className="text-gray-500 dark:text-gray-400">Nota Fiscal:</span>
                                         <span className="text-gray-400 dark:text-gray-500 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Buscando...</span>
                                       </div>
                                     )}
-                                    {['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'PAID', 'DISTRIBUTOR_INFORMED'].includes((order.status || '').toUpperCase()) && !loadingInvoices[order.id] && invoices[order.id] && (
+                                    {isInvoiceEligibleStatus(order.status) && !loadingInvoices[order.id] && invoices[order.id] && (
                                       <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
                                         <span className="text-gray-500 dark:text-gray-400">Nota Fiscal:</span>
                                         {invoices[order.id].status === 'AUTHORIZED' && invoices[order.id].pdfUrl ? (

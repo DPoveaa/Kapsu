@@ -181,11 +181,10 @@ export default function CheckoutCardPayment() {
       // DEBUG: loga a resposta completa da API para diagnóstico
       console.log('[CheckoutCardPayment] Resposta da API payWithCard:', JSON.stringify(response, null, 2))
 
-      const confirmedStatuses = ['CONFIRMED', 'RECEIVED', 'APPROVED', 'AUTHORIZED', 'RECEIVED_IN_CASH']
       const pendingStatuses   = ['PENDING', 'AWAITING_RISK_ANALYSIS', 'AWAITING_CHARGEBACK_REVERSAL', 'IN_ANALYSIS']
       const declinedStatuses  = ['DECLINED', 'REFUSED', 'CHARGEBACK_REQUESTED', 'REFUNDED', 'REFUND_REQUESTED']
 
-      if (confirmedStatuses.includes(response.status)) {
+      if (isPaidOrderStatus(response.status)) {
         clearPendingCheckoutOrderId()
         await clearCart()
         navigate(`/payment-success?order_id=${orderId}`)

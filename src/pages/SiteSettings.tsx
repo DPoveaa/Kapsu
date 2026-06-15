@@ -1,20 +1,14 @@
 import { useState, useEffect } from 'react'
-import { Save, Upload, Trash2, Image as ImageIcon, Mail, Phone, MapPin, Palette, Globe, ShoppingBag } from 'lucide-react'
+import { Save, Mail, Phone, Globe, ShoppingBag, MessageCircle } from 'lucide-react'
 import { siteSettingsService, SiteSettings as SiteSettingsType } from '../services/site-settings.service'
-import { env } from '../config/env'
-import { confirm } from '../utils/toast'
 
 export default function SiteSettings() {
   const [settings, setSettings] = useState<SiteSettingsType>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [syncing, setSyncing] = useState(false)
-
-  const API_URL = env.apiUrl
 
   useEffect(() => {
     loadSettings()
@@ -24,12 +18,14 @@ export default function SiteSettings() {
     try {
       setLoading(true)
       const data = await siteSettingsService.getSettings()
-      setSettings(data)
-      
-      // Carrega preview da logo se existir
-      if (data.logo_url) {
-        setLogoPreview(`${API_URL}/${data.logo_url}`)
-      }
+      setSettings({
+        ...data,
+        chatbot_enabled: data.chatbot_enabled !== false,
+        social_media: {
+          facebook: data.social_media?.facebook || '',
+          instagram: data.social_media?.instagram || '',
+        },
+      })
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar configurações')
     } finally {
@@ -44,7 +40,7 @@ export default function SiteSettings() {
     }))
   }
 
-  const handleSocialMediaChange = (platform: string, value: string) => {
+  const handleSocialMediaChange = (platform: 'facebook' | 'instagram', value: string) => {
     setSettings(prev => ({
       ...prev,
       social_media: {
@@ -54,73 +50,25 @@ export default function SiteSettings() {
     }))
   }
 
-  const handleThemeColorChange = (colorKey: string, value: string) => {
-    setSettings(prev => ({
-      ...prev,
-      theme_colors: {
-        ...prev.theme_colors,
-        [colorKey]: value,
-      },
-    }))
-  }
-
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Valida tipo de arquivo
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml']
-    if (!allowedTypes.includes(file.type)) {
-      setError('Apenas imagens são permitidas (JPEG, PNG, GIF, WEBP, SVG)')
-      return
-    }
-
-    // Valida tamanho (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('A imagem deve ter no máximo 5MB')
-      return
-    }
-
-    try {
-      setUploading(true)
-      setError(null)
-      
-      const logoUrl = await siteSettingsService.uploadLogo(file)
-      setSettings(prev => ({ ...prev, logo_url: logoUrl }))
-      setLogoPreview(`${API_URL}/${logoUrl}`)
-      setSuccess('Logo enviada com sucesso!')
-      
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (err: any) {
-      setError(err.message || 'Erro ao fazer upload da logo')
-    } finally {
-      setUploading(false)
-    }
-  }
-
-  const handleDeleteLogo = () => {
-    confirm.show('Tem certeza que deseja remover a logo?', async () => {
-      try {
-        setError(null)
-        await siteSettingsService.deleteLogo()
-        setSettings(prev => ({ ...prev, logo_url: undefined }))
-        setLogoPreview(null)
-        setSuccess('Logo removida com sucesso!')
-        
-        setTimeout(() => setSuccess(null), 3000)
-      } catch (err: any) {
-        setError(err.message || 'Erro ao remover logo')
-      }
-    })
-  }
+  const buildSettingsPayload = (): Partial<SiteSettingsType> => ({
+    contact_email: settings.contact_email,
+    contact_phone: settings.contact_phone,
+    whatsapp_number: settings.whatsapp_number,
+    social_media: {
+      facebook: settings.social_media?.facebook || '',
+      instagram: settings.social_media?.instagram || '',
+    },
+    chatbot_enabled: settings.chatbot_enabled !== false,
+    google_merchant_sync_enabled: settings.google_merchant_sync_enabled || false,
+  })
 
   const handleSave = async () => {
     try {
       setSaving(true)
       setError(null)
-      await siteSettingsService.updateSettings(settings)
+      await siteSettingsService.updateSettings(buildSettingsPayload())
       setSuccess('Configurações salvas com sucesso!')
-      
+
       setTimeout(() => setSuccess(null), 3000)
     } catch (err: any) {
       setError(err.message || 'Erro ao salvar configurações')
@@ -134,10 +82,10 @@ export default function SiteSettings() {
       setSyncing(true)
       setError(null)
       setSuccess(null)
-      
+
       const response = await siteSettingsService.syncAllMerchantProducts()
       setSuccess(response.message || 'Sincronização com o Google Merchant Center concluída!')
-      
+
       setTimeout(() => setSuccess(null), 5000)
     } catch (err: any) {
       setError(err.message || 'Erro ao sincronizar produtos com o Google Merchant Center')
@@ -178,87 +126,41 @@ export default function SiteSettings() {
             </div>
           )}
 
-          {/* Seção: Logo */}
+          {/* Seção: Chatbot */}
           <div className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
             <div className="flex items-center mb-4">
-              <ImageIcon className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Logo do Site</h2>
+              <MessageCircle className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Chatbot Flutuante</h2>
             </div>
-            
-            <div className="space-y-4">
-              {logoPreview && (
-                <div className="relative inline-block">
-                  <img
-                    src={logoPreview}
-                    alt="Logo atual"
-                    className="max-h-32 max-w-full object-contain border border-gray-200 dark:border-gray-700 rounded p-2"
-                  />
+
+            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 border border-gray-100 dark:border-gray-800">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 mr-4">
+                  <label className="text-base font-semibold text-gray-950 dark:text-white mb-1 block">
+                    Exibir chatbot no site
+                  </label>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Ative ou desative o botão flutuante da Kaia em todas as páginas públicas do site. A alteração entra em vigor imediatamente após salvar.
+                  </p>
+                </div>
+                <div className="flex items-center h-5 mt-1">
                   <button
-                    onClick={handleDeleteLogo}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                    title="Remover logo"
+                    type="button"
+                    role="switch"
+                    aria-checked={settings.chatbot_enabled !== false}
+                    onClick={() => handleInputChange('chatbot_enabled', settings.chatbot_enabled === false)}
+                    className={`${
+                      settings.chatbot_enabled !== false ? 'bg-green-600' : 'bg-gray-200 dark:bg-gray-700'
+                    } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2`}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <span
+                      aria-hidden="true"
+                      className={`${
+                        settings.chatbot_enabled !== false ? 'translate-x-5' : 'translate-x-0'
+                      } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+                    />
                   </button>
                 </div>
-              )}
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Enviar Nova Logo
-                </label>
-                <div className="flex items-center space-x-4">
-                  <label className="cursor-pointer inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                    <Upload className="w-4 h-4 mr-2" />
-                    {uploading ? 'Enviando...' : 'Selecionar Logo'}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      className="hidden"
-                      disabled={uploading}
-                    />
-                  </label>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    Formatos: JPEG, PNG, GIF, WEBP, SVG (máx. 5MB)
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Seção: Informações Básicas */}
-          <div className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
-            <div className="flex items-center mb-4">
-              <Globe className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Informações Básicas</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Nome do Site
-                </label>
-                <input
-                  type="text"
-                  value={settings.site_name || ''}
-                  onChange={(e) => handleInputChange('site_name', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="Ex: Kapsu Farmácia"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Descrição do Site
-                </label>
-                <textarea
-                  value={settings.site_description || ''}
-                  onChange={(e) => handleInputChange('site_description', e.target.value)}
-                  rows={3}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="Descrição breve do site"
-                />
               </div>
             </div>
           </div>
@@ -269,7 +171,7 @@ export default function SiteSettings() {
               <Phone className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Informações de Contato</h2>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -283,6 +185,7 @@ export default function SiteSettings() {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="contato@kapsu.com"
                 />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Exibido no rodapé do site.</p>
               </div>
 
               <div>
@@ -297,6 +200,7 @@ export default function SiteSettings() {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="(11) 99999-9999"
                 />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Exibido no rodapé do site.</p>
               </div>
 
               <div>
@@ -312,20 +216,6 @@ export default function SiteSettings() {
                   placeholder="Ex: 11999999999"
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <MapPin className="w-4 h-4 inline mr-1" />
-                  Endereço
-                </label>
-                <textarea
-                  value={settings.address || ''}
-                  onChange={(e) => handleInputChange('address', e.target.value)}
-                  rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="Endereço completo"
-                />
-              </div>
             </div>
           </div>
 
@@ -335,7 +225,7 @@ export default function SiteSettings() {
               <Globe className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Redes Sociais</h2>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -361,105 +251,7 @@ export default function SiteSettings() {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="https://instagram.com/kapsu"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Twitter
-                </label>
-                <input
-                  type="url"
-                  value={settings.social_media?.twitter || ''}
-                  onChange={(e) => handleSocialMediaChange('twitter', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="https://twitter.com/kapsu"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  LinkedIn
-                </label>
-                <input
-                  type="url"
-                  value={settings.social_media?.linkedin || ''}
-                  onChange={(e) => handleSocialMediaChange('linkedin', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="https://linkedin.com/company/kapsu"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Seção: Cores do Tema */}
-          <div className="mb-8">
-            <div className="flex items-center mb-4">
-              <Palette className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Cores do Tema</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Cor Primária
-                </label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="color"
-                    value={settings.theme_colors?.primary || '#3B82F6'}
-                    onChange={(e) => handleThemeColorChange('primary', e.target.value)}
-                    className="h-10 w-20 border border-gray-300 dark:border-gray-700 rounded cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={settings.theme_colors?.primary || '#3B82F6'}
-                    onChange={(e) => handleThemeColorChange('primary', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                    placeholder="#3B82F6"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Cor Secundária
-                </label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="color"
-                    value={settings.theme_colors?.secondary || '#10B981'}
-                    onChange={(e) => handleThemeColorChange('secondary', e.target.value)}
-                    className="h-10 w-20 border border-gray-300 dark:border-gray-700 rounded cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={settings.theme_colors?.secondary || '#10B981'}
-                    onChange={(e) => handleThemeColorChange('secondary', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                    placeholder="#10B981"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Cor de Destaque
-                </label>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="color"
-                    value={settings.theme_colors?.accent || '#F59E0B'}
-                    onChange={(e) => handleThemeColorChange('accent', e.target.value)}
-                    className="h-10 w-20 border border-gray-300 dark:border-gray-700 rounded cursor-pointer"
-                  />
-                  <input
-                    type="text"
-                    value={settings.theme_colors?.accent || '#F59E0B'}
-                    onChange={(e) => handleThemeColorChange('accent', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                    placeholder="#F59E0B"
-                  />
-                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Links exibidos no rodapé quando preenchidos.</p>
               </div>
             </div>
           </div>
@@ -470,7 +262,7 @@ export default function SiteSettings() {
               <ShoppingBag className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Google Merchant Center</h2>
             </div>
-            
+
             <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 border border-gray-100 dark:border-gray-800 space-y-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1 mr-4">
@@ -524,7 +316,6 @@ export default function SiteSettings() {
             </div>
           </div>
 
-          {/* Botão Salvar */}
           <div className="mt-8 flex justify-end">
             <button
               onClick={handleSave}
@@ -540,4 +331,3 @@ export default function SiteSettings() {
     </div>
   )
 }
-

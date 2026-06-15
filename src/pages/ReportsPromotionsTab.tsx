@@ -2,6 +2,7 @@ import { Gift, DollarSign, TrendingDown, CheckCircle, XCircle, Truck } from 'luc
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Link } from 'react-router-dom'
 import { TooltipValue, TooltipName, formatTooltipNumber } from '../types/recharts'
+import { getOrderStatusLabel, getOrderStatusBadgeClass } from '../utils/orderStatus'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 
@@ -62,22 +63,11 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
     return typeMap[type] || type
   }
 
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; color: string; bgColor: string; darkColor: string; darkBgColor: string }> = {
-      PENDING: { label: 'Pendente', color: 'text-yellow-600', bgColor: 'bg-yellow-100', darkColor: 'dark:text-yellow-400', darkBgColor: 'dark:bg-yellow-900/30' },
-      CONFIRMED: { label: 'Confirmado', color: 'text-blue-600', bgColor: 'bg-blue-100', darkColor: 'dark:text-blue-400', darkBgColor: 'dark:bg-blue-900/30' },
-      PROCESSING: { label: 'Processando', color: 'text-purple-600', bgColor: 'bg-purple-100', darkColor: 'dark:text-purple-400', darkBgColor: 'dark:bg-purple-900/30' },
-      SHIPPED: { label: 'Enviado', color: 'text-indigo-600', bgColor: 'bg-indigo-100', darkColor: 'dark:text-indigo-400', darkBgColor: 'dark:bg-indigo-900/30' },
-      DELIVERED: { label: 'Entregue', color: 'text-green-600', bgColor: 'bg-green-100', darkColor: 'dark:text-green-400', darkBgColor: 'dark:bg-green-900/30' },
-      CANCELLED: { label: 'Cancelado', color: 'text-red-600', bgColor: 'bg-red-100', darkColor: 'dark:text-red-400', darkBgColor: 'dark:bg-red-900/30' },
-    }
-    const config = statusMap[status] || { label: status, color: 'text-gray-600', bgColor: 'bg-gray-100', darkColor: 'dark:text-gray-400', darkBgColor: 'dark:bg-gray-900/30' }
-    return (
-      <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full ${config.bgColor} ${config.color} ${config.darkBgColor} ${config.darkColor}`}>
-        {config.label}
-      </span>
-    )
-  }
+  const getStatusBadge = (status: string) => (
+    <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs font-medium rounded-full ${getOrderStatusBadgeClass(status)}`}>
+      {getOrderStatusLabel(status)}
+    </span>
+  )
 
   return (
     <>

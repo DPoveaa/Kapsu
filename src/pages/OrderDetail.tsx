@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, Package, User, MapPin, CreditCard, Calendar, FileTe
 import { adminService } from '../services/admin.service'
 import { productsService } from '../services/products.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
+import { getOrderStatusLabel, getOrderStatusBadgeClass } from '../utils/orderStatus'
 
 interface OrderItem {
   id: string
@@ -75,22 +76,9 @@ export default function OrderDetail() {
   }
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; className: string }> = {
-      AWAITING_PAYMENT: { label: 'Aguardando Pagamento', className: 'bg-yellow-100 dark:bg-yellow-950/30 text-yellow-800 dark:text-yellow-350' },
-      PENDING: { label: 'Aguardando Pagamento', className: 'bg-yellow-100 dark:bg-yellow-950/30 text-yellow-800 dark:text-yellow-350' },
-      PAID: { label: 'Pago', className: 'bg-green-100 dark:bg-green-950/30 text-green-800 dark:text-green-300' },
-      CONFIRMED: { label: 'Pago', className: 'bg-green-100 dark:bg-green-950/30 text-green-800 dark:text-green-300' },
-      DISTRIBUTOR_INFORMED: { label: 'Solicitado na Distribuidora', className: 'bg-blue-100 dark:bg-blue-950/30 text-blue-800 dark:text-blue-300' },
-      PROCESSING: { label: 'Processando', className: 'bg-purple-100 dark:bg-purple-950/30 text-purple-800 dark:text-purple-300' },
-      SHIPPED: { label: 'Enviado', className: 'bg-indigo-100 dark:bg-indigo-950/30 text-indigo-800 dark:text-indigo-300' },
-      DELIVERED: { label: 'Entregue', className: 'bg-green-100 dark:bg-green-950/30 text-green-800 dark:text-green-300' },
-      CANCELLED: { label: 'Cancelado', className: 'bg-red-100 dark:bg-red-950/30 text-red-800 dark:text-red-300' },
-    }
-
-    const statusInfo = statusMap[status] || { label: status, className: 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300' }
     return (
-      <span className={`px-3 py-1 text-sm font-medium rounded-full ${statusInfo.className}`}>
-        {statusInfo.label}
+      <span className={`px-3 py-1 text-sm font-medium rounded-full ${getOrderStatusBadgeClass(status)}`}>
+        {getOrderStatusLabel(status)}
       </span>
     )
   }

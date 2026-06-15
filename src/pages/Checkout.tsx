@@ -11,6 +11,7 @@ import { MultiplePromoCodesValidation } from '../services/promo-codes.service'
 import { cepService } from '../services/cep.service'
 import { CheckoutPayment } from '../components/Checkout/CheckoutPayment'
 import { Copy, Download, CheckCircle } from 'lucide-react'
+import { isPaidOrderStatus } from '../utils/orderStatus'
 
 export default function Checkout() {
   const navigate = useNavigate()
@@ -62,9 +63,8 @@ export default function Checkout() {
       const pollInterval = setInterval(async () => {
         try {
           const order = await orderService.getOrder(paymentResult.orderId)
-          const successStatuses = ['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'PAID']
           
-          if (successStatuses.includes(order.status)) {
+          if (isPaidOrderStatus(order.status)) {
             clearInterval(pollInterval)
             await clearCart()
             navigate(`/payment-success?order_id=${paymentResult.orderId}`)

@@ -24,10 +24,9 @@ const paymentMethods = [
 ]
 
 const orderStatuses = [
-  { value: 'PENDING', label: 'Pendente' },
-  { value: 'CONFIRMED', label: 'Confirmado' },
-  { value: 'DISTRIBUTOR_INFORMED', label: 'Solicitado na Distribuidora' },
-  { value: 'PROCESSING', label: 'Processando' },
+  { value: 'PENDING', label: 'Aguardando pagamento' },
+  { value: 'CONFIRMED', label: 'Pago' },
+  { value: 'PROCESSING', label: 'Preparação' },
   { value: 'SHIPPED', label: 'Enviado' },
   { value: 'DELIVERED', label: 'Entregue' },
   { value: 'CANCELLED', label: 'Cancelado' },

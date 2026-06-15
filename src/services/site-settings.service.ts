@@ -12,8 +12,6 @@ export interface SiteSettings {
   social_media?: {
     facebook?: string
     instagram?: string
-    twitter?: string
-    linkedin?: string
   }
   theme_colors?: {
     primary?: string
@@ -95,7 +93,7 @@ class SiteSettingsService {
   /**
    * Atualiza configurações do site (apenas admin)
    */
-  async updateSettings(settings: Partial<SiteSettings>): Promise<void> {
+  async updateSettings(settings: Partial<SiteSettings>): Promise<SiteSettings> {
     const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
     if (!token) {
       throw new Error('Sessão expirada. Faça login novamente para salvar as configurações.')
@@ -119,6 +117,15 @@ class SiteSettingsService {
       const error = await response.json()
       throw new Error(error.message || 'Erro ao atualizar configurações')
     }
+
+    const updated = await this.getSettings()
+    this.publishSettings(updated)
+    return updated
+  }
+
+  publishSettings(settings: SiteSettings): void {
+    localStorage.setItem('site_settings', JSON.stringify(settings))
+    window.dispatchEvent(new CustomEvent('site-settings-updated', { detail: settings }))
   }
 
   /**

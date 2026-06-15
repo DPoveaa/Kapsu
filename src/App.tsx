@@ -51,7 +51,7 @@ function AppContent() {
     const loadChatbotSettings = async () => {
       try {
         const settings = await siteSettingsService.getSettings()
-        localStorage.setItem('site_settings', JSON.stringify(settings))
+        siteSettingsService.publishSettings(settings)
         if (isMounted) {
           setChatbotEnabled(settings.chatbot_enabled !== false)
         }
@@ -65,7 +65,6 @@ function AppContent() {
     const handleSettingsUpdated = (event: Event) => {
       const settings = (event as CustomEvent<SiteSettingsType>).detail
       if (settings) {
-        localStorage.setItem('site_settings', JSON.stringify(settings))
         setChatbotEnabled(settings.chatbot_enabled !== false)
       }
     }
