@@ -603,13 +603,7 @@ export default function Profile() {
     const isCancelled = ['CANCELLED', 'REJECTED', 'OVERDUE', 'REFUNDED', 'REFUND_REQUESTED', 'REFUND_IN_PROGRESS', 'CHARGEBACK_REQUESTED', 'CHARGEBACK_DISPUTE', 'AWAITING_CHARGEBACK_REVERSAL'].includes(normalized);
 
     if (isCancelled) {
-      return (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-900">
-          <p className="text-red-600 dark:text-red-400 font-medium flex items-center gap-2">
-            <X className="w-5 h-5" /> {getOrderStatusLabel(normalized)}
-          </p>
-        </div>
-      )
+      return null
     }
 
     const steps = [
