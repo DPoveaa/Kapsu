@@ -24,6 +24,11 @@ export interface AuthResponse {
     phone?: string
     profile_image?: string
     isAdmin?: boolean
+    whatsapp_notifications_enabled?: boolean
+    email_notifications_enabled?: boolean
+    order_status_notifications_enabled?: boolean
+    promotions_notifications_enabled?: boolean
+    whatsapp_order_confirmation_enabled?: boolean
   }
   token?: string
   message?: string
@@ -155,6 +160,11 @@ class AuthService {
     phone?: string
     currentPassword?: string
     newPassword?: string
+    whatsapp_notifications_enabled?: boolean
+    email_notifications_enabled?: boolean
+    order_status_notifications_enabled?: boolean
+    promotions_notifications_enabled?: boolean
+    whatsapp_order_confirmation_enabled?: boolean
   }): Promise<AuthResponse> {
     try {
       const token = localStorage.getItem('sanare_token')
@@ -230,6 +240,68 @@ class AuthService {
         throw error
       }
       throw new Error('Erro de conexão ao atualizar imagem de perfil')
+    }
+  }
+
+  /**
+   * Envia solicitação de recuperação de senha (Forgot Password)
+   */
+  async forgotPassword(identifier: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ identifier }),
+      })
+
+      const text = await response.text()
+      let result
+      try {
+        result = text ? JSON.parse(text) : {}
+      } catch (e) {
+        throw new Error('Resposta inválida do servidor')
+      }
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Erro ao solicitar recuperação de senha')
+      }
+
+      return result
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro de conexão ao solicitar recuperação de senha')
+    }
+  }
+
+  /**
+   * Envia redefinição de senha com o token (Reset Password)
+   */
+  async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ token, password: newPassword }),
+      })
+
+      const text = await response.text()
+      let result
+      try {
+        result = text ? JSON.parse(text) : {}
+      } catch (e) {
+        throw new Error('Resposta inválida do servidor')
+      }
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Erro ao redefinir senha')
+      }
+
+      return result
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro de conexão ao redefinir senha')
     }
   }
 }

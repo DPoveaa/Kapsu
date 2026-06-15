@@ -90,6 +90,20 @@ export default function Checkout() {
   const [saveAddressToProfile, setSaveAddressToProfile] = useState(false)
   const [newAddressNickname, setNewAddressNickname] = useState('')
   const [checkoutStep, setCheckoutStep] = useState<1 | 2>(1)
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false)
+
+  const isFieldInvalid = (name: 'cep' | 'address' | 'number' | 'bairro' | 'city' | 'state') => {
+    if (!attemptedSubmit) return false
+    if (name === 'cep') {
+      const cleanCep = formData.cep.replace(/\D/g, '')
+      return !formData.cep || cleanCep.length !== 8
+    }
+    return !formData[name]
+  }
+
+  useEffect(() => {
+    setAttemptedSubmit(false)
+  }, [checkoutStep, showNewAddressForm, selectedAddressId, editingAddressId])
 
   const [formData, setFormData] = useState({
     cep: localStorage.getItem('simulated_cep') || '',
@@ -374,6 +388,7 @@ export default function Checkout() {
         address: formData.address,
         number: formData.number,
         complement: formData.complement || undefined,
+        bairro: formData.bairro || undefined,
         city: formData.city,
         state: formData.state,
       })
@@ -412,6 +427,7 @@ export default function Checkout() {
         address: editAddressData.address,
         number: editAddressData.number,
         complement: editAddressData.complement || undefined,
+        bairro: editAddressData.bairro || undefined,
         city: editAddressData.city,
         state: editAddressData.state,
         isDefault: editAddressData.is_default,
@@ -485,7 +501,7 @@ export default function Checkout() {
   const isAddressValid = () => {
     const cleanCep = formData.cep.replace(/\D/g, '')
     const hasCompleteCep = cleanCep.length === 8
-    const hasRequiredFields = formData.address && formData.number && formData.city && formData.state && formData.cep
+    const hasRequiredFields = formData.address && formData.number && formData.city && formData.state && formData.cep && formData.bairro
 
     // Se o CEP está completo mas não há frete disponível (e não está calculando), não é válido
     // IMPORTANTE: CEPs inválidos são sempre inválidos, mesmo com cupom de frete grátis
@@ -532,10 +548,17 @@ export default function Checkout() {
 
   const handleContinueToPayment = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
+    setAttemptedSubmit(true)
 
     // Valida endereço
-    if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep) {
+    if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep || !formData.bairro) {
       alert('Por favor, preencha todos os campos do endereço')
+      return
+    }
+
+    const cleanCep = formData.cep.replace(/\D/g, '')
+    if (cleanCep.length !== 8) {
+      alert('Por favor, insira um CEP válido')
       return
     }
 
@@ -557,6 +580,7 @@ export default function Checkout() {
           address: formData.address,
           number: formData.number,
           complement: formData.complement || undefined,
+          bairro: formData.bairro,
           city: formData.city,
           state: formData.state,
         })
@@ -570,7 +594,10 @@ export default function Checkout() {
   }
 
   const handleContinueWithSavedAddress = () => {
-    if (!canProceedToPayment()) return
+    if (!selectedAddressId) {
+      alert('Por favor, selecione um endereço de entrega')
+      return
+    }
     setCheckoutStep(2)
   }
 
@@ -579,7 +606,7 @@ export default function Checkout() {
     if (creatingOrder) return
 
     // Valida endereço
-    if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep) {
+    if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep || !formData.bairro) {
       alert('Por favor, preencha todos os campos do endereço')
       return
     }
@@ -603,6 +630,7 @@ export default function Checkout() {
           address: formData.address,
           number: formData.number,
           complement: formData.complement || undefined,
+          bairro: formData.bairro,
           city: formData.city,
           state: formData.state,
         })
@@ -673,7 +701,7 @@ export default function Checkout() {
   // Função para criar pedido sem pagamento (apenas para admins)
   const handleCreateOrderWithoutPayment = async () => {
     // Valida endereço
-    if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep) {
+    if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep || !formData.bairro) {
       alert('Por favor, preencha todos os campos do endereço')
       return
     }
@@ -697,6 +725,7 @@ export default function Checkout() {
           address: formData.address,
           number: formData.number,
           complement: formData.complement || undefined,
+          bairro: formData.bairro,
           city: formData.city,
           state: formData.state,
         })
@@ -1161,8 +1190,8 @@ export default function Checkout() {
                               required
                               placeholder="00000-000"
                               maxLength={9}
-                              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-white ${hasInvalidCep()
-                                ? 'border-red-500 dark:border-red-400 text-red-600 dark:text-red-400'
+                              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-white ${hasInvalidCep() || isFieldInvalid('cep')
+                                ? 'border-red-500 dark:border-red-400 text-red-600 dark:text-red-400 focus:ring-red-500'
                                 : 'border-gray-300 dark:border-gray-700'
                                 }`}
                             />
@@ -1195,7 +1224,10 @@ export default function Checkout() {
                             onChange={handleInputChange}
                             required
                             placeholder="Rua, Avenida, etc."
-                            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                            className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-white ${isFieldInvalid('address')
+                              ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
+                              : 'border-gray-300 dark:border-gray-700'
+                              }`}
                           />
                         </div>
                         <div className="grid grid-cols-2 gap-3 sm:gap-4">
@@ -1210,7 +1242,10 @@ export default function Checkout() {
                               onChange={handleInputChange}
                               required
                               placeholder="123"
-                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-white ${isFieldInvalid('number')
+                                ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
+                                : 'border-gray-300 dark:border-gray-700'
+                                }`}
                             />
                           </div>
                           <div>
@@ -1239,7 +1274,10 @@ export default function Checkout() {
                               onChange={handleInputChange}
                               required
                               placeholder="Bairro"
-                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-800 dark:text-white ${isFieldInvalid('bairro')
+                                ? 'border-red-500 dark:border-red-400 focus:ring-red-500'
+                                : 'border-gray-300 dark:border-gray-700'
+                                }`}
                             />
                           </div>
                           <div className="col-span-1">
@@ -1254,7 +1292,10 @@ export default function Checkout() {
                               required
                               disabled
                               placeholder="Cidade"
-                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-gray-300 rounded-lg cursor-not-allowed"
+                              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border bg-gray-50 dark:bg-gray-800 dark:text-gray-300 rounded-lg cursor-not-allowed ${isFieldInvalid('city')
+                                ? 'border-red-500 dark:border-red-400'
+                                : 'border-gray-300 dark:border-gray-700'
+                                }`}
                             />
                           </div>
                           <div className="col-span-1">
@@ -1269,7 +1310,10 @@ export default function Checkout() {
                               required
                               disabled
                               placeholder="UF"
-                              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 dark:text-gray-300 rounded-lg cursor-not-allowed"
+                              className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border bg-gray-55 dark:bg-gray-800 dark:text-gray-300 rounded-lg cursor-not-allowed ${isFieldInvalid('state')
+                                ? 'border-red-500 dark:border-red-400'
+                                : 'border-gray-300 dark:border-gray-700'
+                                }`}
                             />
                           </div>
                         </div>
@@ -1324,7 +1368,7 @@ export default function Checkout() {
                             <button
                               type="submit"
                               className="btn-primary flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3 px-6"
-                              disabled={!canProceedToPayment()}
+                              disabled={creatingOrder}
                             >
                               Continuar
                             </button>
@@ -1351,7 +1395,7 @@ export default function Checkout() {
                               type="button"
                               onClick={handleContinueWithSavedAddress}
                               className="btn-primary flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3 px-6"
-                              disabled={!canProceedToPayment()}
+                              disabled={creatingOrder}
                             >
                               Continuar
                             </button>

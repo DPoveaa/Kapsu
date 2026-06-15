@@ -21,7 +21,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined)
 export function CartProvider({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth()
   const [items, setItems] = useState<CartItem[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   // Carrega carrinho quando usuário está autenticado
   useEffect(() => {
@@ -29,12 +29,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
       loadCart()
     } else {
       setItems([])
+      setLoading(false)
     }
   }, [isAuthenticated])
 
-  const loadCart = async () => {
+  const loadCart = async (showLoading = true) => {
     try {
-      setLoading(true)
+      if (showLoading) {
+        setLoading(true)
+      }
       const cartData = await cartService.getCart()
       
       // Converte itens do backend para formato do frontend
@@ -56,9 +59,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setItems(cartItems)
     } catch (error) {
       console.error('Erro ao carregar carrinho:', error)
-      setItems([])
+      if (showLoading) {
+        setItems([])
+      }
     } finally {
-      setLoading(false)
+      if (showLoading) {
+        setLoading(false)
+      }
     }
   }
 
@@ -84,7 +91,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     try {
       await cartService.addItem(product.id, quantity, purchaseType)
-      await loadCart() // Recarrega carrinho
+      await loadCart(false) // Sincroniza carrinho sem trocar a tela inteira por loading
     } catch (error) {
       console.error('Erro ao adicionar produto:', error)
       throw error
@@ -97,11 +104,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    const previousItems = items
+
     try {
+      setItems(prev => prev.filter(item => item.id !== id))
       await cartService.removeItem(id)
-      await loadCart() // Recarrega carrinho
+      await loadCart(false) // Sincroniza carrinho sem trocar a tela inteira por loading
     } catch (error) {
       console.error('Erro ao remover item:', error)
+      setItems(previousItems)
+      await loadCart(false)
       throw error
     }
   }
@@ -119,11 +131,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    const previousItems = items
+
     try {
+      setItems(prev => prev.map(item =>
+        item.id === id ? { ...item, quantity } : item
+      ))
       await cartService.updateItem(id, quantity)
-      await loadCart() // Recarrega carrinho
+      await loadCart(false) // Sincroniza carrinho sem trocar a tela inteira por loading
     } catch (error) {
       console.error('Erro ao atualizar quantidade:', error)
+      setItems(previousItems)
+      await loadCart(false)
       throw error
     }
   }
@@ -139,7 +158,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     try {
       await cartService.clearCart()
-      await loadCart() // Recarrega carrinho
+      await loadCart(false) // Sincroniza carrinho sem trocar a tela inteira por loading
     } catch (error) {
       console.error('Erro ao limpar carrinho:', error)
       throw error

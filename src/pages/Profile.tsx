@@ -7,12 +7,15 @@ import { addressService, SavedAddress } from '../services/address.service'
 import { cepService } from '../services/cep.service'
 import { orderService } from '../services/order.service'
 import { productsService } from '../services/products.service'
-import { User, Camera, Lock, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Package, Calendar, CreditCard, ShoppingBag, Download, ArrowLeft } from 'lucide-react'
+import { paymentService, PaymentResult } from '../services/payment.service'
+import { useFavorites } from '../context/FavoritesContext'
+import { reviewsService, Review } from '../services/reviews.service'
+import { Product } from '../types'
+import { User, Camera, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Package, Calendar, CreditCard, ShoppingBag, Download, ArrowLeft, Mail, FileText, Heart, Bell, HelpCircle, LogOut, Copy, QrCode, Barcode } from 'lucide-react'
 import { env } from '../config/env'
-import { confirm } from '../utils/toast'
-import { paymentService } from '../services/payment.service'
+import { confirm, toast } from '../utils/toast'
 
-type ProfileSection = 'info' | 'password' | 'image' | 'addresses' | 'orders' | null
+type ProfileSection = 'info' | 'password' | 'image' | 'addresses' | 'orders' | 'favorites' | 'reviews' | 'notifications' | 'help' | null
 
 interface OrderItem {
   product_id?: string;
@@ -38,35 +41,39 @@ interface Order {
 
 export default function Profile() {
   const navigate = useNavigate()
-  const { user, updateUser } = useAuth()
+  const { user, logout, updateUser } = useAuth()
+  const { favorites } = useFavorites()
   const [searchParams] = useSearchParams()
   const location = useLocation()
-  
-  const initialSection = (searchParams.get('section') as ProfileSection) || 
-                         (location.state?.section as ProfileSection) || 
-                         null
-                         
-  const [activeSection, setActiveSection] = useState<ProfileSection>(initialSection)
+
+  const initialSection = (searchParams.get('section') as ProfileSection) ||
+    (location.state?.section as ProfileSection) ||
+    null
+
+  const [activeSection, setActiveSection] = useState<ProfileSection>(() => {
+    if (initialSection) return initialSection
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) return 'info'
+    return null
+  })
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // Atualiza activeSection quando searchParams ou location.state mudar
   useEffect(() => {
-    const section = (searchParams.get('section') as ProfileSection) || 
-                    (location.state?.section as ProfileSection)
+    const section = (searchParams.get('section') as ProfileSection) ||
+      (location.state?.section as ProfileSection)
     if (section) {
       setActiveSection(section)
     }
   }, [searchParams, location.state])
 
   // Form states
-  const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [profileImage, setProfileImage] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [editPhone, setEditPhone] = useState('')
 
   // Address states
   const [addresses, setAddresses] = useState<SavedAddress[]>([])
@@ -90,46 +97,93 @@ export default function Profile() {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null)
   const [invoices, setInvoices] = useState<Record<string, any>>({})
   const [loadingInvoices, setLoadingInvoices] = useState<Record<string, boolean>>({})
+  const [ordersPage, setOrdersPage] = useState(1)
+  const ordersPerPage = 5
   const [updatingPaymentLoading, setUpdatingPaymentLoading] = useState<Record<string, boolean>>({})
+  const [orderPaymentPreview, setOrderPaymentPreview] = useState<Record<string, PaymentResult>>({})
+  const [copiedPixOrderId, setCopiedPixOrderId] = useState<string | null>(null)
 
-  const handleChangePaymentMethod = async (orderId: string, method: 'pix' | 'boleto') => {
+  // Favorites & Reviews states
+  const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([])
+  const [loadingFavorites, setLoadingFavorites] = useState(false)
+  const [myReviews, setMyReviews] = useState<Review[]>([])
+  const [loadingReviews, setLoadingReviews] = useState(false)
+
+  // Notification states derived from auth context user settings
+  const notifWhatsApp = user?.whatsapp_notifications_enabled ?? true
+  const notifEmail = user?.email_notifications_enabled ?? true
+  const notifOrderStatus = user?.order_status_notifications_enabled ?? true
+  const notifPromotions = user?.promotions_notifications_enabled ?? true
+  const notifWhatsAppOrder = user?.whatsapp_order_confirmation_enabled ?? false
+
+  const updatePreference = async (key: string, value: boolean) => {
     try {
-      setUpdatingPaymentLoading(prev => ({ ...prev, [orderId]: true }))
-      const result = await paymentService.changePaymentMethod(orderId, method)
-      
-      if (result.redirectUrl) {
-        window.open(result.redirectUrl, '_blank')
+      const updates: any = { [key]: value }
+
+      // If turning off WhatsApp globally, disable WhatsApp order confirmation
+      if (key === 'whatsapp_notifications_enabled' && !value) {
+        updates.whatsapp_order_confirmation_enabled = false
       }
-      
-      await loadOrders()
-      setMessage({ type: 'success', text: 'Método de pagamento alterado com sucesso!' })
+
+      // Synchronize WhatsApp order updates to match the global order notification setting
+      if (key === 'order_status_notifications_enabled') {
+        updates.whatsapp_order_confirmation_enabled = value
+      }
+
+      const result = await authService.updateProfile(updates)
+      if (result.success && result.user) {
+        updateUser(result.user)
+      }
     } catch (error: any) {
-      console.error('Erro ao alterar método de pagamento:', error)
-      setMessage({ type: 'error', text: error.message || 'Erro ao alterar método de pagamento' })
-    } finally {
-      setUpdatingPaymentLoading(prev => ({ ...prev, [orderId]: false }))
+      setMessage({ type: 'error', text: error.message || 'Erro ao atualizar preferências' })
     }
   }
 
   useEffect(() => {
     if (user) {
-      setName(user.name || '')
-      
+      setEditName(user.name || '')
+
       const userPhone = user.phone || ''
+      let formattedPhone = ''
       if (userPhone.startsWith('55') && userPhone.length > 11) {
-        setPhone(userPhone.substring(2))
+        formattedPhone = userPhone.substring(2)
       } else {
-        setPhone(userPhone)
+        formattedPhone = userPhone
       }
+      setPhone(formattedPhone)
+      setEditPhone(formattedPhone)
+
       if (user.profile_image) {
         const baseUrl = env.apiUrl.replace('/api', '')
-        const imageUrl = user.profile_image.startsWith('http') 
-          ? user.profile_image 
+        const imageUrl = user.profile_image.startsWith('http')
+          ? user.profile_image
           : `${baseUrl}${user.profile_image}`
         setProfileImage(imageUrl)
       } else {
         setProfileImage(null)
       }
+    }
+  }, [user])
+
+  // Garante que no desktop tenhamos sempre uma seção ativa
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024 && activeSection === null) {
+        setActiveSection('info')
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    handleResize()
+    return () => window.removeEventListener('resize', handleResize)
+  }, [activeSection])
+
+  // Carrega dados iniciais
+  useEffect(() => {
+    if (user) {
+      loadOrders()
+      loadFavorites()
+      loadReviews()
+      loadAddresses()
     }
   }, [user])
 
@@ -140,13 +194,16 @@ export default function Profile() {
       loadAddresses()
     } else if (activeSection === 'orders') {
       loadOrders()
-      
-      // Auto-refresh orders every 10 seconds silently
+
       intervalId = setInterval(() => {
         orderService.getOrders()
           .then(data => setOrders(data))
           .catch(err => console.error('Erro ao atualizar pedidos:', err))
       }, 10000)
+    } else if (activeSection === 'favorites') {
+      loadFavorites()
+    } else if (activeSection === 'reviews') {
+      loadReviews()
     }
 
     return () => {
@@ -177,10 +234,64 @@ export default function Profile() {
       setLoadingOrders(true)
       const data = await orderService.getOrders()
       setOrders(data)
+      setOrdersPage(1)
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Erro ao carregar pedidos' })
     } finally {
       setLoadingOrders(false)
+    }
+  }
+
+  const handleChangePaymentMethod = async (
+    orderId: string,
+    method: 'pix' | 'boleto' | 'credit_card'
+  ) => {
+    try {
+      setUpdatingPaymentLoading(prev => ({ ...prev, [orderId]: true }))
+
+      if (method === 'credit_card') {
+        navigate(`/carrinho/payment/card?orderId=${orderId}`)
+        return
+      }
+
+      const result = await paymentService.changePaymentMethod(orderId, method)
+      setOrderPaymentPreview(prev => ({ ...prev, [orderId]: result }))
+      await loadOrders()
+      toast.success('Forma de pagamento atualizada para este pedido.')
+    } catch (error: any) {
+      console.error('Erro ao alterar método de pagamento:', error)
+      setMessage({ type: 'error', text: error.message || 'Erro ao alterar método de pagamento' })
+    } finally {
+      setUpdatingPaymentLoading(prev => ({ ...prev, [orderId]: false }))
+    }
+  }
+
+  const handleCopyOrderPix = (orderId: string, payload: string) => {
+    navigator.clipboard.writeText(payload)
+    setCopiedPixOrderId(orderId)
+    setTimeout(() => setCopiedPixOrderId(null), 2000)
+  }
+
+  const loadFavorites = async () => {
+    setLoadingFavorites(true)
+    setFavoriteProducts(favorites)
+    setLoadingFavorites(false)
+  }
+
+  useEffect(() => {
+    setFavoriteProducts(favorites)
+  }, [favorites])
+
+  const loadReviews = async () => {
+    if (!user?.name) return
+    try {
+      setLoadingReviews(true)
+      const allReviews = await reviewsService.getAll(false)
+      setMyReviews(allReviews.filter(r => r.name === user.name))
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Erro ao carregar avaliações' })
+    } finally {
+      setLoadingReviews(false)
     }
   }
 
@@ -198,22 +309,42 @@ export default function Profile() {
     }
   }
 
-  const handleSaveInfo = async () => {
+  const maskCPF = (cpf: string) => {
+    if (!cpf) return 'Não cadastrado'
+    const clean = cpf.replace(/\D/g, '')
+    if (clean.length < 11) return cpf
+    return `${clean.substring(0, 3)}.***.***-${clean.substring(9, 11)}`
+  }
+
+  const maskPhone = (phone: string) => {
+    if (!phone) return 'Não cadastrado'
+    const clean = phone.replace(/\D/g, '')
+    const number = clean.startsWith('55') ? clean.substring(2) : clean
+    if (number.length === 11) {
+      return `(${number.substring(0, 2)}) ${number.substring(2, 7)}-${number.substring(7)}`
+    } else if (number.length === 10) {
+      return `(${number.substring(0, 2)}) ${number.substring(2, 6)}-${number.substring(6)}`
+    }
+    return phone
+  }
+
+  const handleSaveInfoModal = async () => {
     try {
       setLoading(true)
       setMessage(null)
 
-      const cleanPhone = phone.replace(/\D/g, '')
+      const cleanPhone = editPhone.replace(/\D/g, '')
       const finalPhone = cleanPhone ? (cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`) : ''
 
       const result = await authService.updateProfile({
-        name: name.trim(),
+        name: editName.trim(),
         phone: finalPhone,
       })
 
       if (result.success && result.user) {
         updateUser(result.user)
         setMessage({ type: 'success', text: 'Informações atualizadas com sucesso!' })
+        setIsEditModalOpen(false)
       }
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Erro ao atualizar informações' })
@@ -222,38 +353,7 @@ export default function Profile() {
     }
   }
 
-  const handleSavePassword = async () => {
-    try {
-      setLoading(true)
-      setMessage(null)
 
-      if (newPassword !== confirmPassword) {
-        setMessage({ type: 'error', text: 'As senhas não coincidem' })
-        return
-      }
-
-      if (newPassword.length < 6) {
-        setMessage({ type: 'error', text: 'A senha deve ter pelo menos 6 caracteres' })
-        return
-      }
-
-      const result = await authService.updateProfile({
-        currentPassword,
-        newPassword,
-      })
-
-      if (result.success) {
-        setMessage({ type: 'success', text: 'Senha atualizada com sucesso!' })
-        setCurrentPassword('')
-        setNewPassword('')
-        setConfirmPassword('')
-      }
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Erro ao atualizar senha' })
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const handleSaveImage = async () => {
     try {
@@ -271,12 +371,12 @@ export default function Profile() {
 
       if (result.success && result.user) {
         const baseUrl = env.apiUrl.replace('/api', '')
-        const imageUrl = result.user.profile_image 
-          ? (result.user.profile_image.startsWith('http') 
-              ? result.user.profile_image 
-              : `${baseUrl}${result.user.profile_image}`)
+        const imageUrl = result.user.profile_image
+          ? (result.user.profile_image.startsWith('http')
+            ? result.user.profile_image
+            : `${baseUrl}${result.user.profile_image}`)
           : null
-        
+
         setProfileImage(imageUrl)
         setImageFile(null)
         updateUser(result.user)
@@ -352,7 +452,6 @@ export default function Profile() {
       try {
         setLoading(true)
         await addressService.deleteSavedAddress(id)
-        setMessage({ type: 'success', text: 'Endereço removido com sucesso!' })
         await loadAddresses()
       } catch (error: any) {
         setMessage({ type: 'error', text: error.message || 'Erro ao remover endereço' })
@@ -380,12 +479,12 @@ export default function Profile() {
     if (value.length <= 8) {
       const formatted = value.length > 5 ? `${value.substring(0, 5)}-${value.substring(5)}` : value
       setAddressForm({ ...addressForm, cep: formatted })
-      
+
       if (value.length === 8) {
         try {
           setSearchingCep(true)
           const cepData = await cepService.searchCep(value)
-          
+
           if (cepData && !cepData.erro) {
             setAddressForm(prev => ({
               ...prev,
@@ -441,8 +540,8 @@ export default function Profile() {
     try {
       const addr = JSON.parse(addressStr)
       return `${addr.address}, ${addr.number}${addr.complement ? ` - ${addr.complement}` : ''}\n${addr.bairro ? addr.bairro + ' - ' : ''}${addr.city} - ${addr.state}\nCEP: ${addr.cep}`
-    } catch(e) {
-      return addressStr 
+    } catch (e) {
+      return addressStr
     }
   }
 
@@ -463,7 +562,6 @@ export default function Profile() {
       'DUNNING_REQUESTED': 'Cobrança Solicitada',
       'DUNNING_RECEIVED': 'Cobrança Recebida',
       'AWAITING_RISK_ANALYSIS': 'Aguardando Análise de Risco',
-      // Maintain older generic ones
       'PAID': 'Pago',
       'SHIPPED': 'Enviado',
       'DELIVERED': 'Entregue',
@@ -476,16 +574,16 @@ export default function Profile() {
   const getStatusColor = (status: string) => {
     const normalized = (status || '').toUpperCase()
     switch (normalized) {
-      case 'RECEIVED': case 'CONFIRMED': case 'RECEIVED_IN_CASH': case 'PAID': case 'DELIVERED': 
-        return { bg: 'bg-green-100', text: 'text-green-600', badge: 'bg-green-100 text-green-700' }
+      case 'RECEIVED': case 'CONFIRMED': case 'RECEIVED_IN_CASH': case 'PAID': case 'DELIVERED':
+        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
       case 'PENDING': case 'AWAITING_RISK_ANALYSIS': case 'PROCESSING':
-        return { bg: 'bg-yellow-100', text: 'text-yellow-600', badge: 'bg-yellow-100 text-yellow-700' }
-      case 'OVERDUE': case 'REFUND_REQUESTED': case 'REFUND_IN_PROGRESS': case 'CHARGEBACK_REQUESTED': case 'CHARGEBACK_DISPUTE': case 'AWAITING_CHARGEBACK_REVERSAL': case 'REFUNDED': case 'CANCELLED': 
-        return { bg: 'bg-red-100', text: 'text-red-600', badge: 'bg-red-100 text-red-700' }
-      case 'DUNNING_REQUESTED': case 'DUNNING_RECEIVED': 
-        return { bg: 'bg-orange-100', text: 'text-orange-600', badge: 'bg-orange-100 text-orange-700' }
-      default: 
-        return { bg: 'bg-blue-100', text: 'text-blue-600', badge: 'bg-blue-100 text-blue-700' }
+        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+      case 'OVERDUE': case 'REFUND_REQUESTED': case 'REFUND_IN_PROGRESS': case 'CHARGEBACK_REQUESTED': case 'CHARGEBACK_DISPUTE': case 'AWAITING_CHARGEBACK_REVERSAL': case 'REFUNDED': case 'CANCELLED':
+        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+      case 'DUNNING_REQUESTED': case 'DUNNING_RECEIVED':
+        return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+      default:
+        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
     }
   }
 
@@ -493,21 +591,61 @@ export default function Profile() {
     if (order.items && order.items.length > 0) {
       const itemWithImage = order.items.find(item => item.image_url);
       if (itemWithImage && itemWithImage.image_url) {
-         return productsService.getImageUrl(itemWithImage.image_url);
+        return productsService.getImageUrl(itemWithImage.image_url);
       }
     }
     return null;
   }
 
+  const handleSendEmail = () => {
+    if (!user) return
+    const email = 'kapsultda@gmail.com'
+    const latestOrder = orders && orders.length > 0 ? orders[0] : null
+
+    let subject = `Suporte Sanare - Cliente: ${user.name}`
+    if (latestOrder) {
+      subject = `Ajuda com o Pedido #${latestOrder.id.substring(0, 8)} - Sanare`
+    }
+
+    let body = `Olá Suporte Sanare,\n\nPreciso de ajuda com o meu pedido.\n\n`
+    body += `Dados do Cliente:\n`
+    body += `- Nome: ${user.name}\n`
+    body += `- E-mail: ${user.email}\n`
+    if (user.phone) {
+      body += `- Telefone: ${maskPhone(user.phone)}\n`
+    }
+    body += `\n`
+
+    if (latestOrder) {
+      body += `Dados do Último Pedido:\n`
+      body += `- Código do Pedido: ${latestOrder.id}\n`
+      body += `- Data: ${formatDate(latestOrder.created_at)}\n`
+      body += `- Valor Total: ${formatCurrency(latestOrder.total)}\n`
+      body += `- Status: ${translateStatus(latestOrder.status)}\n\n`
+    }
+
+    body += `[Descreva sua dúvida ou problema aqui]`
+
+    const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+
+    try {
+      navigator.clipboard.writeText(email)
+      toast.success('E-mail copiado para a área de transferência! Abrindo seu aplicativo...')
+    } catch (err) {
+      console.error('Erro ao copiar e-mail:', err)
+    }
+
+    window.location.href = mailtoUrl
+  }
+
   const renderTimeline = (status: string) => {
     const normalized = (status || '').toUpperCase()
-    
-    // Statuses that represent cancellation or failure
+
     const isCancelled = ['CANCELLED', 'REJECTED', 'OVERDUE', 'REFUNDED', 'REFUND_REQUESTED', 'REFUND_IN_PROGRESS', 'CHARGEBACK_REQUESTED', 'CHARGEBACK_DISPUTE', 'AWAITING_CHARGEBACK_REVERSAL'].includes(normalized);
 
     if (isCancelled) {
       return (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-100 dark:border-red-900">
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-900">
           <p className="text-red-600 dark:text-red-400 font-medium flex items-center gap-2">
             <X className="w-5 h-5" /> {translateStatus(normalized)}
           </p>
@@ -528,14 +666,14 @@ export default function Profile() {
       'PAID': 1, 'CONFIRMED': 1, 'RECEIVED': 1, 'RECEIVED_IN_CASH': 1,
       'PROCESSING': 2, 'SHIPPED': 3, 'DELIVERED': 4
     };
-    
+
     const currentIndex = mapIndex[normalized] !== undefined ? mapIndex[normalized] : 0;
 
     return (
       <div className="mt-4 mb-10 px-4 sm:px-8">
         <div className="relative flex items-center justify-between">
           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
-          <div 
+          <div
             className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary-500 rounded-full transition-all duration-500"
             style={{ width: `${(currentIndex / (steps.length - 1)) * 100}%` }}
           ></div>
@@ -544,14 +682,12 @@ export default function Profile() {
             const isActive = idx === currentIndex;
             return (
               <div key={step.key} className="relative z-10 flex flex-col items-center">
-                <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-colors duration-300 ${
-                  isCompleted ? 'bg-primary-500 text-white shadow-md shadow-primary-500/30' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
-                }`}>
+                <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-colors duration-300 ${isCompleted ? 'bg-primary-500 text-white shadow-md' : 'bg-gray-200 dark:bg-gray-700 text-gray-400'
+                  }`}>
                   {isCompleted ? <Check className="w-3 h-3 sm:w-4 sm:h-4" /> : <div className="w-2 h-2 rounded-full bg-white dark:bg-gray-800"></div>}
                 </div>
-                <p className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs text-center w-24 sm:w-28 ${
-                  isActive ? 'text-primary-600 dark:text-primary-400 font-bold' : isCompleted ? 'text-gray-800 dark:text-gray-200 font-medium' : 'text-gray-400'
-                }`}>
+                <p className={`absolute top-8 sm:top-10 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs text-center w-20 sm:w-28 ${isActive ? 'text-primary-600 dark:text-primary-400 font-bold' : isCompleted ? 'text-gray-700 dark:text-gray-300 font-medium' : 'text-gray-400 dark:text-gray-500'
+                  }`}>
                   {step.label}
                 </p>
               </div>
@@ -563,292 +699,419 @@ export default function Profile() {
   }
 
   const menuItems = [
-    { id: 'info', label: 'Minha Conta', icon: User, description: 'Dados pessoais' },
-    { id: 'image', label: 'Foto de Perfil', icon: Camera, description: 'Atualizar foto' },
-    { id: 'password', label: 'Segurança', icon: Lock, description: 'Alterar senha' },
-    { id: 'addresses', label: 'Endereços', icon: MapPin, description: 'Locais de entrega' },
-    { id: 'orders', label: 'Meus Pedidos', icon: Package, description: 'Histórico de compras' },
+    { id: 'info', label: 'Meu Perfil', icon: User, desc: 'Suas informações cadastrais e dados de contato' },
+    { id: 'addresses', label: 'Endereços', icon: MapPin, desc: 'Gerencie seus endereços salvos de entrega' },
+    { id: 'orders', label: 'Meus Pedidos', icon: Package, desc: 'Acompanhe suas compras e histórico de pedidos' },
+    { id: 'favorites', label: 'Favoritos', icon: Heart, desc: 'Produtos salvos na sua lista de desejos' },
+    { id: 'reviews', label: 'Avaliações', icon: Star, desc: 'Seu histórico de comentários e notas enviadas' },
+    { id: 'notifications', label: 'Notificações', icon: Bell, desc: 'Avisos sobre seus pedidos e ofertas exclusivas' },
+    { id: 'help', label: 'Ajuda', icon: HelpCircle, desc: 'Perguntas frequentes e central de suporte' },
   ]
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500 flex items-center gap-2"><Loader2 className="animate-spin w-5 h-5"/> Carregando...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <p className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
+          <Loader2 className="animate-spin w-5 h-5 text-primary-500" /> Carregando...
+        </p>
       </div>
     )
   }
 
+  // Estatísticas de pedidos reais
+  const stats = (() => {
+    const delivered = orders.filter(o => ['DELIVERED', 'PAID', 'CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'].includes((o.status || '').toUpperCase())).length;
+    const pending = orders.filter(o => ['PENDING', 'PROCESSING', 'SHIPPED', 'AWAITING_RISK_ANALYSIS'].includes((o.status || '').toUpperCase())).length;
+    const cancelled = orders.filter(o => ['CANCELLED', 'OVERDUE', 'REFUNDED'].includes((o.status || '').toUpperCase())).length;
+    const total = orders.length;
+    return {
+      delivered, pending, cancelled, total,
+      deliveredPct: Math.round((delivered / total) * 100) || 0,
+      pendingPct: Math.round((pending / total) * 100) || 0,
+      cancelledPct: Math.round((cancelled / total) * 100) || 0,
+    }
+  })();
+
+  const getFormattedJoinDate = () => {
+    const userCreatedAt = (user as any).created_at;
+    if (!userCreatedAt) return 'Janeiro de 2026';
+    try {
+      const date = new Date(userCreatedAt);
+      const month = date.toLocaleDateString('pt-BR', { month: 'long' });
+      const capitalizedMonth = month.charAt(0).toUpperCase() + month.slice(1);
+      return `${capitalizedMonth} de ${date.getFullYear()}`;
+    } catch (e) {
+      return 'Janeiro de 2026';
+    }
+  }
+
+  // ─── Input field base class ───────────────────────────────────────────────
+  const inputClass = "w-full px-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none text-sm transition-all"
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] dark:bg-gray-900 py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-6 sm:py-10 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
       <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col lg:flex-row gap-6 relative">
-          
-          {/* Sidebar Menu */}
-          <div className={`w-full lg:w-1/3 xl:w-1/4 ${activeSection ? 'hidden lg:block' : 'block'}`}>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden lg:sticky lg:top-8">
-              {/* User Header */}
-              <div className="bg-gradient-to-br from-primary-50 to-primary-100 dark:from-gray-800 dark:to-[#0F828C] p-6 flex flex-col items-center text-center border-b border-gray-100 dark:border-gray-700">
-                <div className="relative mb-4">
-                  {profileImage ? (
-                    <img src={profileImage} alt={user.name} className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-800 shadow-md" />
-                  ) : (
-                    <div className="w-24 h-24 rounded-full flex items-center justify-center text-white text-3xl font-bold border-4 border-white dark:border-gray-800 shadow-md bg-[#00A86B]">
-                      {getInitials(user.name)}
-                    </div>
-                  )}
-                </div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white break-words">{user.name}</h1>
-                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">{user.email}</p>
+
+        {/* ── Cabeçalho / Profile Banner ─────────────────────────── */}
+        <div className="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 sm:p-6 shadow-sm dark:shadow-xl overflow-hidden relative">
+          {/* Faixa topo */}
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary-500 to-primary-400" />
+
+          <div className="flex flex-col lg:flex-row items-center lg:items-center justify-between gap-5">
+            {/* Avatar + dados */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-center gap-5 text-center sm:text-left w-full lg:w-auto">
+              <div className="relative flex-shrink-0">
+                {imageFile ? (
+                  <img src={URL.createObjectURL(imageFile)} alt="Preview" className="w-[72px] h-[72px] rounded-full object-cover border-2 border-primary-400 shadow-lg" />
+                ) : profileImage ? (
+                  <img src={profileImage} alt={user?.name} className="w-[72px] h-[72px] rounded-full object-cover border-2 border-primary-400 shadow-lg" />
+                ) : (
+                  <div className="w-[72px] h-[72px] rounded-full flex items-center justify-center text-white text-2xl font-extrabold bg-primary-500 border-2 border-primary-400 shadow-lg">
+                    {user ? getInitials(user.name) : '?'}
+                  </div>
+                )}
+                <label className="absolute bottom-0 right-0 w-6 h-6 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full flex items-center justify-center cursor-pointer hover:bg-primary-500 hover:border-primary-500 hover:text-white transition-colors shadow-md group">
+                  <Camera className="w-3.5 h-3.5 text-gray-500 group-hover:text-white transition-colors" />
+                  <input type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
+                </label>
               </div>
-              
-              {/* Navigation */}
-              <nav className="p-3 space-y-1">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">{user?.name}</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{user?.email}</p>
+                <p className="flex items-center gap-1.5 justify-center sm:justify-start text-xs text-gray-400 dark:text-gray-500 mt-1.5 font-semibold">
+                  <Calendar className="w-3.5 h-3.5 flex-shrink-0 text-primary-500" />
+                  Cliente desde {getFormattedJoinDate()}
+                </p>
+                {imageFile && (
+                  <div className="flex gap-2 mt-2 justify-center sm:justify-start">
+                    <button onClick={handleSaveImage} disabled={loading} className="flex items-center gap-1 px-3 py-1 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer disabled:opacity-50">
+                      <Check className="w-3.5 h-3.5" /> Salvar
+                    </button>
+                    <button onClick={() => setImageFile(null)} disabled={loading} className="flex items-center gap-1 px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg text-xs font-bold transition-colors cursor-pointer disabled:opacity-50">
+                      <X className="w-3.5 h-3.5" /> Descartar
+                    </button>
+                  </div>
+                )}
+                {user?.profile_image && !imageFile && (
+                  <button onClick={handleRemoveImage} disabled={loading} className="text-xs text-red-500 hover:text-red-600 transition-colors mt-1.5 underline cursor-pointer block mx-auto sm:mx-0">
+                    Remover foto
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Stats */}
+            <div className="flex items-center justify-center sm:justify-start gap-3 w-full lg:w-auto flex-wrap sm:flex-nowrap">
+              <div onClick={() => setActiveSection('orders')} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-5 py-3 text-center flex-1 sm:flex-initial min-w-[80px] hover:border-primary-400 dark:hover:border-primary-600 cursor-pointer transition-all hover:scale-105">
+                <ShoppingBag className="w-4 h-4 text-primary-500 mx-auto mb-1" />
+                <span className="block text-lg font-bold text-gray-900 dark:text-white leading-none">{stats.total}</span>
+                <span className="block text-[10px] text-gray-500 dark:text-gray-400 font-semibold mt-1 uppercase">Pedidos</span>
+              </div>
+              <div onClick={() => setActiveSection('favorites')} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-5 py-3 text-center flex-1 sm:flex-initial min-w-[80px] hover:border-rose-400 dark:hover:border-rose-600 cursor-pointer transition-all hover:scale-105">
+                <Heart className="w-4 h-4 text-rose-500 mx-auto mb-1" />
+                <span className="block text-lg font-bold text-gray-900 dark:text-white leading-none">{favorites.length}</span>
+                <span className="block text-[10px] text-gray-500 dark:text-gray-400 font-semibold mt-1 uppercase">Favoritos</span>
+              </div>
+              <div onClick={() => setActiveSection('reviews')} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-5 py-3 text-center flex-1 sm:flex-initial min-w-[80px] hover:border-amber-400 dark:hover:border-amber-600 cursor-pointer transition-all hover:scale-105">
+                <Star className="w-4 h-4 text-amber-500 mx-auto mb-1" />
+                <span className="block text-lg font-bold text-gray-900 dark:text-white leading-none">{myReviews.length}</span>
+                <span className="block text-[10px] text-gray-500 dark:text-gray-400 font-semibold mt-1 uppercase">Avaliações</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-6 relative lg:items-start">
+
+          {/* ── Sidebar Desktop ─────────────────────────────────────── */}
+          <div className="w-full lg:w-60 xl:w-64 flex-shrink-0 hidden lg:block">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden lg:sticky lg:top-24 shadow-sm dark:shadow-xl">
+              <nav className="p-3 pt-4 space-y-0.5">
                 {menuItems.map(item => (
                   <button
                     key={item.id}
                     onClick={() => setActiveSection(item.id as ProfileSection)}
-                    className={`w-full flex items-center p-3 rounded-xl transition-all duration-200 group ${activeSection === item.id ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-transparent'}`}
+                    className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all duration-200 ${activeSection === item.id
+                      ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800 font-bold'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent'
+                      }`}
                   >
-                    <div className={`p-2 rounded-lg ${activeSection === item.id ? 'bg-primary-100 dark:bg-primary-800/50 text-primary-600 dark:text-primary-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400'}`}>
-                      <item.icon className="w-5 h-5" />
-                    </div>
-                    <div className="text-left ml-3 flex-1">
-                      <p className={`font-medium ${activeSection === item.id ? 'text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 group-hover:text-primary-600 dark:group-hover:text-primary-400'}`}>{item.label}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{item.description}</p>
-                    </div>
-                    <ChevronRight className={`w-5 h-5 ${activeSection === item.id ? 'text-primary-500' : 'text-gray-400'}`} />
+                    <item.icon className={`w-4 h-4 flex-shrink-0 ${activeSection === item.id ? 'text-primary-500' : 'text-gray-400 dark:text-gray-500'}`} />
+                    <span className="font-medium text-sm">{item.label}</span>
                   </button>
                 ))}
+                <div className="pt-2 mt-2 border-t border-gray-100 dark:border-gray-800">
+                  <button
+                    onClick={logout}
+                    className="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl transition-all duration-200 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 border border-transparent font-medium"
+                  >
+                    <LogOut className="w-4 h-4 flex-shrink-0 text-red-400" />
+                    <span className="text-sm">Sair da Conta</span>
+                  </button>
+                </div>
               </nav>
             </div>
           </div>
 
-          {/* Main Content Area */}
-          <div className={`w-full lg:w-2/3 xl:w-3/4 ${!activeSection ? 'hidden lg:block' : 'block'}`}>
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 sm:p-8 min-h-[500px]">
-              
-              {/* Mobile Back Button */}
-              <button 
-                className="lg:hidden flex items-center gap-2 mb-6 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 font-medium transition-colors"
-                onClick={() => setActiveSection(null)}
-              >
-                <ChevronRight className="w-5 h-5 rotate-180" />
-                Voltar para o Menu
-              </button>
+          {/* ── Main Content ─────────────────────────────────────────── */}
+          <div className="flex-1 min-w-0">
+            <div>
+
+              {/* Botão voltar - Mobile */}
+              {activeSection !== null && (
+                <div className="lg:hidden mb-4">
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 rounded-xl hover:text-gray-900 dark:hover:text-white transition-all font-bold text-xs cursor-pointer shadow-sm"
+                  >
+                    <ArrowLeft className="w-4 h-4 text-primary-500" />
+                    <span>Voltar para as Opções</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Menu Mobile - cards */}
+              {activeSection === null && (
+                <div className="lg:hidden space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  {menuItems.map(item => (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveSection(item.id as ProfileSection)}
+                      className="w-full flex items-center justify-between p-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 hover:border-primary-300 dark:hover:border-primary-700 transition-all text-left shadow-sm group cursor-pointer"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-primary-50 dark:bg-primary-900/20 text-primary-500 rounded-xl group-hover:scale-110 transition-transform duration-200">
+                          <item.icon className="w-5 h-5 text-primary-500" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-tight">{item.label}</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">{item.desc}</p>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200 group-hover:translate-x-1 transition-all" />
+                    </button>
+                  ))}
+                  <button
+                    onClick={logout}
+                    className="w-full flex items-center justify-between p-4 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-2xl border border-red-200 dark:border-red-900/30 transition-all text-left group cursor-pointer"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-red-100 dark:bg-red-900/20 text-red-500 rounded-xl group-hover:scale-110 transition-transform duration-200">
+                        <LogOut className="w-5 h-5 text-red-500" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-red-500 text-sm leading-tight">Sair da Conta</h3>
+                        <p className="text-xs text-red-400/70 mt-1 leading-snug">Encerrar sua sessão atual com segurança</p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-red-400/60 group-hover:text-red-500 group-hover:translate-x-1 transition-all" />
+                  </button>
+                </div>
+              )}
 
               {/* Global Messages */}
               {message && (
-                <div className={`mb-6 p-4 rounded-xl flex items-start justify-between gap-3 ${message.type === 'success' ? 'bg-green-50 dark:bg-green-900/30 text-green-800 dark:text-green-200 border border-green-100 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-100 dark:border-red-800'}`}>
+                <div className={`mb-4 p-4 rounded-xl flex items-start justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${message.type === 'success'
+                  ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800/50'
+                  : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/50'
+                  }`}>
                   <div className="flex items-center gap-2 mt-0.5">
-                    {message.type === 'success' ? <Check className="w-5 h-5 flex-shrink-0" /> : <X className="w-5 h-5 flex-shrink-0" />}
-                    <span>{message.text}</span>
+                    {message.type === 'success' ? <Check className="w-5 h-5 text-green-500 flex-shrink-0" /> : <X className="w-5 h-5 text-red-500 flex-shrink-0" />}
+                    <span className="text-sm font-medium">{message.text}</span>
                   </div>
-                  <button onClick={() => setMessage(null)} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 flex-shrink-0"><X className="w-4 h-4" /></button>
+                  <button onClick={() => setMessage(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 flex-shrink-0"><X className="w-4 h-4" /></button>
                 </div>
               )}
 
-              {/* No section selected (Desktop empty state) */}
-              {!activeSection && (
-                <div className="hidden lg:flex flex-col items-center justify-center h-full min-h-[400px] text-gray-400 dark:text-gray-500">
-                  <div className="p-6 bg-gray-50 dark:bg-gray-900/50 rounded-full mb-4">
-                    <User className="w-12 h-12 text-gray-300 dark:text-gray-600" />
-                  </div>
-                  <p className="text-lg font-medium">Selecione uma opção no menu ao lado</p>
-                  <p className="text-sm mt-1">Gerencie suas configurações e histórico de compras</p>
-                </div>
-              )}
-
-              {/* Minha Conta Section */}
+              {/* ─────────────────────────────────────────────────────── */}
+              {/* MEU PERFIL                                              */}
+              {/* ─────────────────────────────────────────────────────── */}
               {activeSection === 'info' && (
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                    <User className="text-primary-500" />
-                    Informações Pessoais
-                  </h2>
-                  <div className="space-y-5">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome Completo</label>
-                      <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none text-gray-900 dark:text-white" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2"><Phone className="w-4 h-4 text-gray-400" /> Telefone / WhatsApp</label>
-                      <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(00) 00000-0000" className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all outline-none text-gray-900 dark:text-white" />
-                    </div>
-                    <div className="pt-4 flex gap-3">
-                      <button onClick={handleSaveInfo} disabled={loading} className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors font-medium shadow-sm shadow-primary-600/20 disabled:opacity-70"><Save className="w-5 h-5" /> Salvar Alterações</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Segurança Section */}
-              {activeSection === 'password' && (
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                    <Lock className="text-primary-500" />
-                    Segurança e Senha
-                  </h2>
-                  <div className="space-y-5 max-w-md">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Senha Atual</label>
-                      <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-gray-900 dark:text-white" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nova Senha</label>
-                      <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-gray-900 dark:text-white" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Confirmar Nova Senha</label>
-                      <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none text-gray-900 dark:text-white" />
-                    </div>
-                    <div className="pt-4">
-                      <button onClick={handleSavePassword} disabled={loading} className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors font-medium shadow-sm shadow-primary-600/20 disabled:opacity-70"><Save className="w-5 h-5" /> Atualizar Senha</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Foto Section */}
-              {activeSection === 'image' && (
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                    <Camera className="text-primary-500" />
-                    Foto de Perfil
-                  </h2>
-                  <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8">
-                    <div className="relative group">
-                      {imageFile ? (
-                        <img src={URL.createObjectURL(imageFile)} alt="Preview" className="w-32 h-32 rounded-full object-cover border-4 border-gray-100 dark:border-gray-700 shadow-md" />
-                      ) : profileImage ? (
-                        <img src={profileImage} alt={user.name} className="w-32 h-32 rounded-full object-cover border-4 border-gray-100 dark:border-gray-700 shadow-md" />
-                      ) : (
-                        <div className="w-32 h-32 rounded-full flex items-center justify-center text-white text-3xl font-bold border-4 border-gray-100 dark:border-gray-700 shadow-md bg-[#00A86B]">
-                          {getInitials(user.name)}
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-300 space-y-4">
+                  <div className="w-full max-w-4xl mx-auto">
+                    {/* Dados Pessoais */}
+                    <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
+                      <div className="flex items-center justify-between mb-5">
+                        <div>
+                          <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <User className="w-4 h-4 text-primary-500" />
+                            Dados Pessoais
+                          </h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Gerencie suas informações cadastrais.</p>
                         </div>
-                      )}
-                      <label className="absolute bottom-0 right-0 p-3 bg-primary-600 text-white rounded-full shadow-lg cursor-pointer hover:bg-primary-700 transition-transform hover:scale-105 active:scale-95">
-                        <Camera className="w-5 h-5" />
-                        <input type="file" accept="image/*" onChange={handleImageSelect} className="hidden" />
-                      </label>
-                    </div>
-                    <div className="flex-1 text-center sm:text-left">
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Envie uma nova foto</h3>
-                      <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Formatos aceitos: JPG, PNG, GIF. Tamanho máximo: 5MB.</p>
-                      <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
-                        <button onClick={handleSaveImage} disabled={loading || !imageFile} className="flex items-center gap-2 px-6 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors font-medium shadow-sm shadow-primary-600/20 disabled:opacity-50"><Save className="w-5 h-5" /> Salvar Imagem</button>
-                        {user.profile_image && (
-                          <button onClick={handleRemoveImage} disabled={loading} className="flex items-center gap-2 px-6 py-2.5 bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors font-medium"><Trash2 className="w-5 h-5" /> Remover Atual</button>
-                        )}
+                        <button
+                          onClick={() => { setEditName(user.name || ''); setEditPhone(phone || ''); setIsEditModalOpen(true) }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30 text-primary-600 dark:text-primary-400 rounded-xl transition-colors font-semibold border border-primary-200 dark:border-primary-800 text-xs cursor-pointer"
+                        >
+                          <Edit className="w-3.5 h-3.5" /> Editar
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl">
+                          <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                            <User className="w-3 h-3 text-primary-400" /> Nome completo
+                          </span>
+                          <span className="block text-sm font-semibold text-gray-900 dark:text-white truncate">{user.name || 'Não informado'}</span>
+                        </div>
+                        <div className="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl">
+                          <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                            <Mail className="w-3 h-3 text-primary-400" /> E-mail
+                          </span>
+                          <span className="block text-sm font-semibold text-gray-900 dark:text-white break-all truncate">{user.email}</span>
+                        </div>
+                        <div className="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl">
+                          <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                            <FileText className="w-3 h-3 text-primary-400" /> CPF
+                          </span>
+                          {user.cpf ? (
+                            <span className="block text-sm font-semibold text-gray-900 dark:text-white">{maskCPF(user.cpf)}</span>
+                          ) : (
+                            <span className="block text-xs font-medium text-gray-400 dark:text-gray-500 italic">Não cadastrado</span>
+                          )}
+                        </div>
+                        <div className="p-4 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl">
+                          <span className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                            <Phone className="w-3 h-3 text-primary-400" /> WhatsApp
+                          </span>
+                          {phone ? (
+                            <span className="block text-sm font-semibold text-gray-900 dark:text-white">{maskPhone(phone)}</span>
+                          ) : (
+                            <span className="block text-xs font-medium text-gray-400 dark:text-gray-500 italic">Não cadastrado</span>
+                          )}
+                        </div>
                       </div>
                     </div>
+
+
                   </div>
                 </div>
               )}
 
-              {/* Endereços Section */}
+              {/* ─────────────────────────────────────────────────────── */}
+              {/* ENDEREÇOS                                               */}
+              {/* ─────────────────────────────────────────────────────── */}
               {activeSection === 'addresses' && (
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
                   {searchParams.get('redirect') && (
                     <button
                       onClick={() => navigate(searchParams.get('redirect')!)}
-                      className="mb-4 flex items-center gap-1.5 text-xs text-primary-600 dark:text-primary-400 hover:underline font-extrabold cursor-pointer"
+                      className="flex items-center gap-1.5 text-xs text-primary-600 dark:text-primary-400 hover:underline font-bold cursor-pointer"
                     >
                       <ArrowLeft size={14} />
                       Voltar para o Carrinho
                     </button>
                   )}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                      <MapPin className="text-primary-500" />
-                      Endereços Salvos
-                    </h2>
+
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                        <MapPin className="text-primary-500" />
+                        Endereços Salvos
+                      </h2>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Gerencie seus locais de entrega padrão e alternativos.</p>
+                    </div>
                     {!editingAddress && !addressForm.cep && (
-                      <button onClick={() => setAddressForm({ ...addressForm, nickname: 'Novo' })} className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 rounded-xl hover:bg-primary-100 dark:hover:bg-primary-900/50 transition-colors font-medium border border-primary-200 dark:border-primary-800">
-                        <Plus className="w-5 h-5" /> Adicionar Novo
+                      <button
+                        onClick={() => setAddressForm({ ...addressForm, nickname: 'Casa' })}
+                        className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800 rounded-xl hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-all font-semibold text-sm cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4" /> Adicionar Novo
                       </button>
                     )}
                   </div>
 
                   {(editingAddress || addressForm.nickname || addressForm.cep) && (
-                    <div className="bg-gray-50 dark:bg-gray-800/80 rounded-2xl p-5 sm:p-6 border border-gray-200 dark:border-gray-700 mb-8 relative">
-                      <button onClick={() => { setEditingAddress(null); setAddressForm({ nickname: '', cep: '', address: '', number: '', complement: '', bairro: '', city: '', state: '', isDefault: false }) }} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 bg-white dark:bg-gray-700 rounded-full shadow-sm"><X className="w-4 h-4" /></button>
-                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-5">{editingAddress ? 'Editar Endereço' : 'Cadastrar Novo Endereço'}</h3>
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700 relative animate-in zoom-in-95 duration-200">
+                      <button
+                        onClick={() => { setEditingAddress(null); setAddressForm({ nickname: '', cep: '', address: '', number: '', complement: '', bairro: '', city: '', state: '', isDefault: false }) }}
+                        className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white bg-gray-100 dark:bg-gray-700 rounded-full"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4">{editingAddress ? 'Editar Endereço' : 'Cadastrar Novo Endereço'}</h3>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Apelido (Ex: Casa, Trabalho) *</label>
-                          <input type="text" value={addressForm.nickname} onChange={(e) => setAddressForm({ ...addressForm, nickname: e.target.value })} className="w-full px-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" />
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Identificação (Ex: Casa, Trabalho) *</label>
+                          <input type="text" value={addressForm.nickname} onChange={(e) => setAddressForm({ ...addressForm, nickname: e.target.value })} className={inputClass} />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">CEP *</label>
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">CEP *</label>
                           <div className="relative">
-                            <input type="text" value={addressForm.cep} onChange={handleCEPChange} maxLength={9} className="w-full px-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" />
-                            {searchingCep && <Loader2 className="absolute right-3 top-3 w-5 h-5 animate-spin text-primary-500" />}
+                            <input type="text" value={addressForm.cep} onChange={handleCEPChange} maxLength={9} className={inputClass} />
+                            {searchingCep && <Loader2 className="absolute right-3 top-3 w-4 h-4 animate-spin text-primary-500" />}
                           </div>
                         </div>
                         <div className="md:col-span-2">
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Endereço *</label>
-                          <input type="text" value={addressForm.address} onChange={(e) => setAddressForm({ ...addressForm, address: e.target.value })} className="w-full px-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" />
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Endereço *</label>
+                          <input type="text" value={addressForm.address} onChange={(e) => setAddressForm({ ...addressForm, address: e.target.value })} className={inputClass} />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Número *</label>
-                          <input type="text" value={addressForm.number} onChange={(e) => setAddressForm({ ...addressForm, number: e.target.value })} className="w-full px-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" />
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Número *</label>
+                          <input type="text" value={addressForm.number} onChange={(e) => setAddressForm({ ...addressForm, number: e.target.value })} className={inputClass} />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Complemento</label>
-                          <input type="text" value={addressForm.complement} onChange={(e) => setAddressForm({ ...addressForm, complement: e.target.value })} className="w-full px-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" />
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Complemento</label>
+                          <input type="text" value={addressForm.complement} onChange={(e) => setAddressForm({ ...addressForm, complement: e.target.value })} className={inputClass} />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bairro</label>
-                          <input type="text" value={addressForm.bairro} onChange={(e) => setAddressForm({ ...addressForm, bairro: e.target.value })} className="w-full px-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" />
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Bairro</label>
+                          <input type="text" value={addressForm.bairro} onChange={(e) => setAddressForm({ ...addressForm, bairro: e.target.value })} className={inputClass} />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cidade *</label>
-                          <input type="text" value={addressForm.city} onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })} className="w-full px-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" />
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Cidade *</label>
+                          <input type="text" value={addressForm.city} onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })} className={inputClass} />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Estado (UF) *</label>
-                          <input type="text" value={addressForm.state} onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value.toUpperCase().substring(0, 2) })} maxLength={2} className="w-full px-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-primary-500 outline-none" />
+                          <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Estado (UF) *</label>
+                          <input type="text" value={addressForm.state} onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value.toUpperCase().substring(0, 2) })} maxLength={2} className={inputClass} />
                         </div>
-                        <div className="md:col-span-2 mt-2">
-                          <label className="flex items-center gap-3 cursor-pointer p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary-300 transition-colors">
-                            <input type="checkbox" checked={addressForm.isDefault} onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })} className="w-5 h-5 text-primary-600 rounded focus:ring-primary-500" />
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Definir como endereço padrão para entregas</span>
+                        <div className="md:col-span-2 mt-1">
+                          <label className="flex items-center gap-3 cursor-pointer p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-primary-400 dark:hover:border-primary-600 transition-colors">
+                            <input type="checkbox" checked={addressForm.isDefault} onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })} className="w-4 h-4 text-primary-500 border-gray-300 dark:border-gray-600 rounded focus:ring-0 focus:ring-offset-0" />
+                            <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">Definir como endereço padrão para entregas</span>
                           </label>
                         </div>
                       </div>
-                      <div className="mt-6 flex justify-end gap-3">
-                        <button onClick={handleSaveAddress} disabled={loading} className="px-6 py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 font-medium shadow-sm transition-colors disabled:opacity-70 flex items-center gap-2"><Save className="w-5 h-5" /> Salvar Endereço</button>
+
+                      <div className="mt-5 flex justify-end gap-3">
+                        <button onClick={handleSaveAddress} disabled={loading} className="px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-bold transition-all text-xs flex items-center gap-1.5 shadow-md disabled:opacity-50 cursor-pointer">
+                          <Save className="w-4 h-4" /> Salvar Endereço
+                        </button>
                       </div>
                     </div>
                   )}
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {addresses.length === 0 && !addressForm.nickname ? (
-                      <div className="col-span-full py-10 text-center text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
-                        <MapPin className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                        <p className="font-medium text-lg text-gray-600 dark:text-gray-300">Nenhum endereço encontrado</p>
-                        <p className="text-sm mt-1">Adicione um endereço para facilitar suas compras.</p>
+                      <div className="col-span-full py-12 text-center bg-gray-50 dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+                        <MapPin className="w-10 h-10 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                        <p className="font-bold text-sm text-gray-500 dark:text-gray-400">Nenhum endereço cadastrado</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs mx-auto">Adicione seus endereços para facilitar no fechamento de suas compras.</p>
                       </div>
                     ) : (
                       addresses.map((address) => (
-                        <div key={address.id} className={`p-5 rounded-2xl border-2 transition-all ${address.is_default ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-900/10 dark:border-primary-600 shadow-sm' : 'border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'}`}>
+                        <div key={address.id} className={`p-5 rounded-xl border-2 transition-all ${address.is_default
+                          ? 'border-primary-400 dark:border-primary-600 bg-primary-50 dark:bg-primary-900/10 shadow-sm'
+                          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+                          }`}>
                           <div className="flex justify-between items-start mb-3">
-                            <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5">
                               {address.nickname}
-                              {address.is_default && <span className="px-2.5 py-0.5 bg-primary-100 text-primary-700 text-xs rounded-full font-semibold flex items-center gap-1"><Star className="w-3 h-3 fill-primary-700" /> Padrão</span>}
+                              {address.is_default && <span className="px-2 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 text-[9px] rounded-full font-bold flex items-center gap-0.5"><Star className="w-2.5 h-2.5 fill-primary-500" /> Padrão</span>}
                             </h3>
-                            <div className="flex gap-1 bg-gray-50 dark:bg-gray-900 p-1 rounded-lg">
+                            <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 p-1 rounded-lg">
                               {!address.is_default && (
-                                <button onClick={() => handleSetDefaultAddress(address.id)} className="p-1.5 text-gray-400 hover:text-primary-600 rounded-md hover:bg-white dark:hover:bg-gray-800 transition-colors" title="Tornar Padrão"><Star className="w-4 h-4" /></button>
+                                <button onClick={() => handleSetDefaultAddress(address.id)} className="p-1.5 text-gray-400 hover:text-primary-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors" title="Tornar Padrão"><Star className="w-3.5 h-3.5" /></button>
                               )}
-                              <button onClick={() => handleEditAddress(address)} className="p-1.5 text-gray-400 hover:text-blue-600 rounded-md hover:bg-white dark:hover:bg-gray-800 transition-colors" title="Editar"><Edit className="w-4 h-4" /></button>
-                              <button onClick={() => handleDeleteAddress(address.id)} className="p-1.5 text-gray-400 hover:text-red-600 rounded-md hover:bg-white dark:hover:bg-gray-800 transition-colors" title="Excluir"><Trash2 className="w-4 h-4" /></button>
+                              <button onClick={() => handleEditAddress(address)} className="p-1.5 text-gray-400 hover:text-blue-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors" title="Editar"><Edit className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => handleDeleteAddress(address.id)} className="p-1.5 text-gray-400 hover:text-red-500 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors" title="Excluir"><Trash2 className="w-3.5 h-3.5" /></button>
                             </div>
                           </div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                            <p className="font-medium text-gray-800 dark:text-gray-300">{address.address}, {address.number} {address.complement && `- ${address.complement}`}</p>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                            <p className="font-semibold text-gray-700 dark:text-gray-300">{address.address}, {address.number} {address.complement && `- ${address.complement}`}</p>
                             <p>{address.bairro && `${address.bairro}, `}{address.city} - {address.state}</p>
-                            <p className="text-xs mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">CEP: {address.cep}</p>
+                            <p className="text-[10px] mt-2 pt-2 border-t border-gray-100 dark:border-gray-700 text-gray-400 dark:text-gray-500">CEP: {address.cep}</p>
                           </div>
                         </div>
                       ))
@@ -857,36 +1120,41 @@ export default function Profile() {
                 </div>
               )}
 
-              {/* Meus Pedidos Section */}
+              {/* ─────────────────────────────────────────────────────── */}
+              {/* PEDIDOS                                                 */}
+              {/* ─────────────────────────────────────────────────────── */}
               {activeSection === 'orders' && (
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                    <Package className="text-primary-500" />
-                    Meus Pedidos
-                  </h2>
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Package className="text-primary-500" />
+                      Meus Pedidos
+                    </h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Consulte o status das suas compras e acesse notas fiscais.</p>
+                  </div>
 
                   {loadingOrders ? (
-                    <div className="py-20 flex flex-col items-center justify-center text-primary-600 dark:text-primary-400">
-                      <Loader2 className="w-10 h-10 animate-spin mb-4" />
-                      <p className="font-medium text-gray-600 dark:text-gray-300">Buscando seus pedidos...</p>
+                    <div className="py-20 flex flex-col items-center justify-center text-primary-500">
+                      <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Buscando seus pedidos...</p>
                     </div>
                   ) : orders.length === 0 ? (
-                    <div className="py-16 text-center bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
-                      <ShoppingBag className="w-16 h-16 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-                      <p className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Você ainda não tem pedidos</p>
-                      <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">Explore nossos produtos e encontre as melhores opções para sua saúde.</p>
-                      <a href="/produtos" className="inline-block mt-6 px-6 py-2.5 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors">Ver Produtos</a>
+                    <div className="py-16 text-center bg-gray-50 dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+                      <ShoppingBag className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                      <p className="text-base font-bold text-gray-700 dark:text-white">Você ainda não fez nenhum pedido</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs mx-auto mb-5">Navegue pelas nossas opções de saúde e faça seu primeiro pedido!</p>
+                      <a href="/produtos" className="inline-block px-5 py-2 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl transition-all text-xs">Ver Produtos</a>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {orders.map((order) => (
-                        <div key={order.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm hover:border-primary-300 dark:hover:border-primary-700 transition-colors">
-                          <div 
-                            className="p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center cursor-pointer bg-gray-50/50 dark:bg-gray-800/30 hover:bg-primary-50/30 dark:hover:bg-gray-800/80 transition-colors"
+                      {orders.slice((ordersPage - 1) * ordersPerPage, ordersPage * ordersPerPage).map((order) => (
+                        <div key={order.id} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm hover:border-primary-300 dark:hover:border-primary-700 transition-colors">
+                          <div
+                            className="p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center cursor-pointer bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                             onClick={() => {
                               const newExpanded = expandedOrder === order.id ? null : order.id;
                               setExpandedOrder(newExpanded);
-                              
+
                               if (newExpanded && !invoices[newExpanded] && !loadingInvoices[newExpanded]) {
                                 setLoadingInvoices(prev => ({ ...prev, [newExpanded]: true }));
                                 orderService.getOrderInvoice(newExpanded).then(invoice => {
@@ -900,182 +1168,617 @@ export default function Profile() {
                             }}
                           >
                             <div className="flex items-center gap-4 mb-4 sm:mb-0">
-                               {getOrderImage(order) ? (
-                                 <img src={getOrderImage(order)!} alt="Pedido" className="w-12 h-12 rounded-xl object-cover border border-gray-100 dark:border-gray-700 shadow-sm" />
-                               ) : (
-                                 <div className={`p-3 rounded-xl ${getStatusColor(order.status).bg}`}>
-                                    <Package className={`w-6 h-6 ${getStatusColor(order.status).text}`} />
-                                 </div>
-                               )}
-                               <div>
-                                 <p className="font-bold text-gray-900 dark:text-white text-lg tracking-tight">Pedido #{order.id.substring(0, 8).toUpperCase()}</p>
-                                 <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
-                                   <Calendar className="w-4 h-4" />
-                                   {formatDate(order.created_at)}
-                                 </p>
-                               </div>
+                              {getOrderImage(order) ? (
+                                <img src={getOrderImage(order)!} alt="Pedido" className="w-12 h-12 rounded-xl object-cover border border-gray-200 dark:border-gray-700 shadow-sm" />
+                              ) : (
+                                <div className="p-3 rounded-xl bg-primary-50 dark:bg-primary-900/20 text-primary-500">
+                                  <Package className="w-5 h-5" />
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-bold text-gray-900 dark:text-white text-base tracking-tight">Pedido #{order.id.substring(0, 8).toUpperCase()}</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
+                                  <Calendar className="w-3.5 h-3.5 text-primary-500" />
+                                  {formatDate(order.created_at)}
+                                </p>
+                              </div>
                             </div>
                             <div className="flex items-center justify-between w-full sm:w-auto sm:justify-end gap-5">
-                               <div className="text-left sm:text-right">
-                                 <p className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wider mb-0.5">Total</p>
-                                 <p className="font-bold text-gray-900 dark:text-white text-lg">{formatCurrency(order.total)}</p>
-                               </div>
-                               <div className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold tracking-wide ${getStatusColor(order.status).badge}`}>
-                                 {translateStatus(order.status)}
-                               </div>
-                               <div className={`p-2 rounded-full bg-white dark:bg-gray-700 shadow-sm border border-gray-100 dark:border-gray-600 transition-transform ${expandedOrder === order.id ? 'rotate-90 bg-primary-50 dark:bg-primary-900/50 border-primary-100 dark:border-primary-800' : ''}`}>
-                                  <ChevronRight className={`w-5 h-5 ${expandedOrder === order.id ? 'text-primary-600 dark:text-primary-400' : 'text-gray-400'}`} />
-                               </div>
+                              <div className="text-left sm:text-right">
+                                <p className="text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mb-0.5">Total</p>
+                                <p className="font-bold text-gray-900 dark:text-white text-base">{formatCurrency(order.total)}</p>
+                              </div>
+                              <div className={`px-2.5 py-1 rounded-full text-xs font-bold ${getStatusColor(order.status)}`}>
+                                {translateStatus(order.status)}
+                              </div>
+                              <div className={`p-1.5 rounded-full bg-gray-100 dark:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-600 transition-transform ${expandedOrder === order.id ? 'rotate-90 bg-primary-50 dark:bg-primary-900/20 border-primary-200 dark:border-primary-800 text-primary-500' : 'text-gray-400'}`}>
+                                <ChevronRight className="w-4 h-4" />
+                              </div>
                             </div>
                           </div>
-                          
+
                           {expandedOrder === order.id && (
-                             <div className="p-5 sm:p-6 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800 animate-in slide-in-from-top-2">
-                                {renderTimeline(order.status)}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                   <div className="bg-gray-50 dark:bg-gray-900/50 p-5 rounded-2xl border border-gray-100 dark:border-gray-800">
-                                     <h4 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                                       <MapPin className="w-5 h-5 text-primary-500" />
-                                       Endereço de Entrega
-                                     </h4>
-                                     <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                                       {renderShippingAddress(order.shipping_address)}
-                                     </p>
-                                   </div>
-                                   <div className="bg-gray-50 dark:bg-gray-900/50 p-5 rounded-2xl border border-gray-100 dark:border-gray-800">
-                                     <h4 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                                       <CreditCard className="w-5 h-5 text-primary-500" />
-                                       Detalhes do Pagamento
-                                     </h4>
-                                     <div className="space-y-2">
-                                       <div className="flex justify-between items-center text-sm">
-                                         <span className="text-gray-500 dark:text-gray-400">Método:</span>
-                                         <span className="font-semibold text-gray-900 dark:text-white">
-                                            {order.payment_method === 'credit_card' ? 'Cartão de Crédito' : order.payment_method === 'pix' ? 'PIX' : order.payment_method === 'boleto' ? 'Boleto' : 'Não informado'}
-                                         </span>
-                                       </div>
-                                       <div className="flex justify-between items-center text-sm">
-                                          <span className="text-gray-500 dark:text-gray-400">Status Financeiro:</span>
-                                          <span className="font-semibold text-gray-900 dark:text-white">{translateStatus(order.status)}</span>
+                            <div className="p-5 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 animate-in slide-in-from-top-2">
+                              {renderTimeline(order.status)}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+                                <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                                  <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-1.5">
+                                    <MapPin className="w-4 h-4 text-primary-500" />
+                                    Endereço de Entrega
+                                  </h4>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed whitespace-pre-line">
+                                    {renderShippingAddress(order.shipping_address)}
+                                  </p>
+                                </div>
+                                <div className="bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                                  <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-1.5">
+                                    <CreditCard className="w-4 h-4 text-primary-500" />
+                                    Detalhes do Pagamento
+                                  </h4>
+                                  <div className="space-y-2 text-xs">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-gray-500 dark:text-gray-400">Método:</span>
+                                      <span className="font-semibold text-gray-700 dark:text-gray-300">
+                                        {order.payment_method === 'credit_card' ? 'Cartão de Crédito' : order.payment_method === 'pix' ? 'PIX' : order.payment_method === 'boleto' ? 'Boleto' : 'Não informado'}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-gray-500 dark:text-gray-400">Status Financeiro:</span>
+                                      <span className="font-semibold text-gray-700 dark:text-gray-300">{translateStatus(order.status)}</span>
+                                    </div>
+
+                                    {(order.status || '').toUpperCase() === 'PENDING' && (
+                                      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase font-bold mb-2 tracking-wider">
+                                          Alterar forma de pagamento
+                                        </p>
+                                        <div className="flex flex-col gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={() => void handleChangePaymentMethod(order.id, 'pix')}
+                                            disabled={!!updatingPaymentLoading[order.id]}
+                                            className={`flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
+                                              order.payment_method === 'pix'
+                                                ? 'bg-primary-50 border-primary-200 text-primary-600 dark:bg-primary-900/20 dark:border-primary-800 dark:text-primary-400'
+                                                : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                                            }`}
+                                          >
+                                            {updatingPaymentLoading[order.id] ? (
+                                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                              <QrCode className="w-3.5 h-3.5" />
+                                            )}
+                                            PIX
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => void handleChangePaymentMethod(order.id, 'credit_card')}
+                                            disabled={!!updatingPaymentLoading[order.id]}
+                                            className={`flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
+                                              order.payment_method === 'credit_card'
+                                                ? 'bg-primary-50 border-primary-200 text-primary-600 dark:bg-primary-900/20 dark:border-primary-800 dark:text-primary-400'
+                                                : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                                            }`}
+                                          >
+                                            <CreditCard className="w-3.5 h-3.5" />
+                                            Cartão de Crédito
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() => void handleChangePaymentMethod(order.id, 'boleto')}
+                                            disabled={!!updatingPaymentLoading[order.id]}
+                                            className={`flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
+                                              order.payment_method === 'boleto'
+                                                ? 'bg-primary-50 border-primary-200 text-primary-600 dark:bg-primary-900/20 dark:border-primary-800 dark:text-primary-400'
+                                                : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                                            }`}
+                                          >
+                                            {updatingPaymentLoading[order.id] ? (
+                                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                              <Barcode className="w-3.5 h-3.5" />
+                                            )}
+                                            Boleto Bancário
+                                          </button>
                                         </div>
-                                        {((order.status || '').toUpperCase() === 'PENDING') && (
-                                          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase font-semibold mb-2">Alterar Método de Pagamento</p>
-                                            <div className="flex gap-2">
-                                              <button
-                                                onClick={() => handleChangePaymentMethod(order.id, 'pix')}
-                                                disabled={!!updatingPaymentLoading[order.id]}
-                                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
-                                                  order.payment_method === 'pix' || order.payment_method === 'credit_card'
-                                                    ? 'bg-primary-50 border-primary-200 text-primary-600 dark:bg-primary-900/20 dark:border-primary-800 dark:text-primary-400'
-                                                    : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
-                                                }`}
-                                              >
-                                                {updatingPaymentLoading[order.id] ? (
-                                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                ) : (
-                                                  <CreditCard className="w-3.5 h-3.5" />
-                                                )}
-                                                PIX ou Cartão
-                                              </button>
-                                              <button
-                                                onClick={() => handleChangePaymentMethod(order.id, 'boleto')}
-                                                disabled={!!updatingPaymentLoading[order.id]}
-                                                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${
-                                                  order.payment_method === 'boleto'
-                                                    ? 'bg-primary-50 border-primary-200 text-primary-600 dark:bg-primary-900/20 dark:border-primary-800 dark:text-primary-400'
-                                                    : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
-                                                }`}
-                                              >
-                                                {updatingPaymentLoading[order.id] ? (
-                                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                ) : (
-                                                  <Download className="w-3.5 h-3.5 text-primary-650 dark:text-primary-400" />
-                                                )}
-                                                Boleto Bancário
-                                              </button>
+
+                                        {orderPaymentPreview[order.id]?.paymentMethod === 'pix' && (
+                                          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
+                                            <p className="text-xs font-bold text-gray-900 dark:text-white mb-3 text-center">Pague via PIX</p>
+                                            <div className="bg-white p-2 rounded-lg flex justify-center mb-3">
+                                              <img
+                                                src={`data:image/png;base64,${(orderPaymentPreview[order.id] as any).pixQrCode}`}
+                                                alt="QR Code PIX"
+                                                className="w-36 h-36"
+                                              />
                                             </div>
+                                            <input
+                                              type="text"
+                                              readOnly
+                                              value={(orderPaymentPreview[order.id] as any).pixPayload}
+                                              className="w-full text-[10px] p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-500 mb-2"
+                                            />
+                                            <button
+                                              type="button"
+                                              onClick={() => handleCopyOrderPix(order.id, (orderPaymentPreview[order.id] as any).pixPayload)}
+                                              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-bold"
+                                            >
+                                              <Copy className="w-3.5 h-3.5" />
+                                              {copiedPixOrderId === order.id ? 'Copiado!' : 'Copiar código PIX'}
+                                            </button>
                                           </div>
                                         )}
-                                       {order.boleto_url && (
-                                          <div className="flex justify-between items-center text-sm mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                                             <span className="text-gray-500 dark:text-gray-400">Boleto Bancário:</span>
-                                             <a href={order.boleto_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50 rounded-lg font-semibold transition-colors">
-                                               <Download className="w-4 h-4" />
-                                               Baixar PDF
-                                             </a>
+
+                                        {orderPaymentPreview[order.id]?.paymentMethod === 'boleto' && (
+                                          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 text-center">
+                                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">Boleto gerado para este pedido.</p>
+                                            <a
+                                              href={(orderPaymentPreview[order.id] as any).bankSlipUrl}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-xs font-bold"
+                                            >
+                                              <Download className="w-3.5 h-3.5" />
+                                              Baixar Boleto
+                                            </a>
                                           </div>
-                                       )}
-                                       {order.payment_url && (
-                                          <div className="flex justify-between items-center text-sm mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                                             <span className="text-gray-500 dark:text-gray-400">
-                                               {order.payment_method === 'credit_card' ? 'Cartão de Crédito:' : order.payment_method === 'pix' ? 'PIX:' : 'Pagamento Online:'}
-                                             </span>
-                                             <a href={order.payment_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50 rounded-lg font-semibold transition-colors">
-                                               <CreditCard className="w-4 h-4" />
-                                               Visualizar Pagamento
-                                             </a>
-                                          </div>
-                                       )}
-                                       {['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'PAID', 'DISTRIBUTOR_INFORMED'].includes((order.status || '').toUpperCase()) && loadingInvoices[order.id] && (
-                                          <div className="flex justify-between items-center text-sm mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                                            <span className="text-gray-500 dark:text-gray-400">Nota Fiscal:</span>
-                                            <span className="text-gray-400 text-xs flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin"/> Buscando...</span>
-                                          </div>
-                                       )}
-                                       {['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'PAID', 'DISTRIBUTOR_INFORMED'].includes((order.status || '').toUpperCase()) && !loadingInvoices[order.id] && invoices[order.id] && (
-                                          <div className="flex justify-between items-center text-sm mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                                            <span className="text-gray-500 dark:text-gray-400">Nota Fiscal:</span>
-                                            {invoices[order.id].status === 'AUTHORIZED' && invoices[order.id].pdfUrl ? (
-                                              <a href={invoices[order.id].pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 dark:hover:bg-primary-900/50 rounded-lg font-semibold transition-colors">
-                                                <Download className="w-4 h-4" />
-                                                Baixar PDF
-                                              </a>
-                                            ) : invoices[order.id].status === 'ERROR' ? (
-                                              <span className="text-red-500 text-xs font-medium">Erro ao buscar nota</span>
-                                            ) : (
-                                              <span className="text-yellow-600 dark:text-yellow-500 text-xs bg-yellow-50 dark:bg-yellow-900/30 px-2.5 py-1.5 rounded-lg font-semibold tracking-wide uppercase">Aguardando emissão</span>
-                                            )}
-                                          </div>
-                                       )}
-                                     </div>
-                                   </div>
-                                </div>
-                                
-                                {order.items && order.items.length > 0 && (
-                                  <div className="mt-6">
-                                     <h4 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                                       <ShoppingBag className="w-5 h-5 text-primary-500" />
-                                       Itens do Pedido ({order.items.length})
-                                     </h4>
-                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                       {order.items.map((item, idx) => (
-                                          <div key={idx} className="flex items-center gap-4 p-3 border border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 rounded-xl">
-                                            {item.image_url ? (
-                                              <img src={productsService.getImageUrl(item.image_url)} alt="Produto" className="w-14 h-14 object-contain bg-white rounded-lg border border-gray-100 dark:border-gray-700 shadow-sm flex-shrink-0 p-0.5" />
-                                            ) : (
-                                              <div className="w-14 h-14 bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                <Package className="w-7 h-7 text-gray-400" />
-                                              </div>
-                                            )}
-                                            <div className="flex-1 min-w-0">
-                                              <p className="font-medium text-gray-900 dark:text-white text-sm truncate">{item.product_name || item.name || 'Produto'}</p>
-                                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Qtd: {item.quantity}</p>
-                                            </div>
-                                            <div className="text-right">
-                                              <p className="font-bold text-gray-900 dark:text-white text-sm">{formatCurrency(item.price || 0)}</p>
-                                            </div>
-                                          </div>
-                                       ))}
-                                     </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {order.boleto_url && (
+                                      <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
+                                        <span className="text-gray-500 dark:text-gray-400">Boleto Bancário:</span>
+                                        <a href={order.boleto_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2.5 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded-lg font-bold transition-colors">
+                                          <Download className="w-3.5 h-3.5" /> Baixar
+                                        </a>
+                                      </div>
+                                    )}
+                                    {order.payment_url && (
+                                      <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
+                                        <span className="text-gray-500 dark:text-gray-400">
+                                          {order.payment_method === 'credit_card' ? 'Cartão de Crédito:' : order.payment_method === 'pix' ? 'PIX:' : 'Pagamento Online:'}
+                                        </span>
+                                        <a href={order.payment_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2.5 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded-lg font-bold transition-colors">
+                                          <CreditCard className="w-3.5 h-3.5" /> Visualizar
+                                        </a>
+                                      </div>
+                                    )}
+                                    {['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'PAID', 'DISTRIBUTOR_INFORMED'].includes((order.status || '').toUpperCase()) && loadingInvoices[order.id] && (
+                                      <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
+                                        <span className="text-gray-500 dark:text-gray-400">Nota Fiscal:</span>
+                                        <span className="text-gray-400 dark:text-gray-500 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Buscando...</span>
+                                      </div>
+                                    )}
+                                    {['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH', 'PAID', 'DISTRIBUTOR_INFORMED'].includes((order.status || '').toUpperCase()) && !loadingInvoices[order.id] && invoices[order.id] && (
+                                      <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
+                                        <span className="text-gray-500 dark:text-gray-400">Nota Fiscal:</span>
+                                        {invoices[order.id].status === 'AUTHORIZED' && invoices[order.id].pdfUrl ? (
+                                          <a href={invoices[order.id].pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2.5 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded-lg font-bold transition-colors">
+                                            <Download className="w-3.5 h-3.5" /> Baixar PDF
+                                          </a>
+                                        ) : invoices[order.id].status === 'ERROR' ? (
+                                          <span className="text-red-500 text-xs font-semibold">Erro ao emitir</span>
+                                        ) : (
+                                          <span className="text-yellow-600 dark:text-yellow-400 text-xs bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider">Aguardando emissão</span>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
-                                )}
-                             </div>
+                                </div>
+                              </div>
+
+                              {order.items && order.items.length > 0 && (
+                                <div className="mt-5">
+                                  <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-1.5">
+                                    <ShoppingBag className="w-4 h-4 text-primary-500" />
+                                    Itens do Pedido ({order.items.length})
+                                  </h4>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {order.items.map((item, idx) => (
+                                      <div key={idx} className="flex items-center gap-3.5 p-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-xl">
+                                        {item.image_url ? (
+                                          <img src={productsService.getImageUrl(item.image_url)} alt="Produto" className="w-12 h-12 object-contain bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex-shrink-0 p-0.5" />
+                                        ) : (
+                                          <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <Package className="w-6 h-6 text-gray-400 dark:text-gray-600" />
+                                          </div>
+                                        )}
+                                        <div className="flex-1 min-w-0 text-xs">
+                                          <p className="font-bold text-gray-900 dark:text-white truncate">{item.product_name || item.name || 'Produto'}</p>
+                                          <p className="text-gray-500 dark:text-gray-400 mt-0.5">Qtd: {item.quantity}</p>
+                                        </div>
+                                        <div className="text-right text-xs">
+                                          <p className="font-bold text-gray-900 dark:text-white">{formatCurrency(item.price || 0)}</p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           )}
+                        </div>
+                      ))}
+
+                      {Math.ceil(orders.length / ordersPerPage) > 1 && (
+                        <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-4 mt-6">
+                          <button
+                            disabled={ordersPage === 1}
+                            onClick={() => {
+                              setOrdersPage(prev => Math.max(prev - 1, 1));
+                              window.scrollTo({ top: 300, behavior: 'smooth' });
+                            }}
+                            className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-305 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all font-semibold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                          >
+                            Anterior
+                          </button>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                            Página {ordersPage} de {Math.ceil(orders.length / ordersPerPage)}
+                          </span>
+                          <button
+                            disabled={ordersPage === Math.ceil(orders.length / ordersPerPage)}
+                            onClick={() => {
+                              setOrdersPage(prev => Math.min(prev + 1, Math.ceil(orders.length / ordersPerPage)));
+                              window.scrollTo({ top: 300, behavior: 'smooth' });
+                            }}
+                            className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-350 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all font-semibold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                          >
+                            Próxima
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ─────────────────────────────────────────────────────── */}
+              {/* FAVORITOS                                               */}
+              {/* ─────────────────────────────────────────────────────── */}
+              {activeSection === 'favorites' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Heart className="text-primary-500 fill-primary-100 dark:fill-primary-900/30" />
+                      Meus Favoritos
+                    </h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Produtos que você salvou para comprar depois.</p>
+                  </div>
+
+                  {loadingFavorites ? (
+                    <div className="py-20 flex flex-col items-center justify-center text-primary-500">
+                      <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Buscando seus favoritos...</p>
+                    </div>
+                  ) : favoriteProducts.length === 0 ? (
+                    <div className="py-16 text-center bg-gray-50 dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+                      <Heart className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                      <p className="text-base font-bold text-gray-700 dark:text-white">Você não tem favoritos ainda</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs mx-auto mb-5">Navegue pelos produtos e clique no coração para salvar seus favoritos.</p>
+                      <button onClick={() => navigate('/produtos')} className="inline-block px-5 py-2 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl transition-all text-xs cursor-pointer">Ver Produtos</button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {favoriteProducts.map((product) => {
+                        const originalPrice = product.promo_price ? product.price : null;
+                        const currentPrice = product.promo_price || product.price;
+                        return (
+                          <div key={product.id} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col justify-between hover:border-primary-300 dark:hover:border-primary-700 transition-all duration-300 relative group">
+                            <button
+                              className="absolute top-3 right-3 p-1.5 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-full hover:bg-rose-100 dark:hover:bg-rose-900/30 z-10 cursor-pointer"
+                            >
+                              <Heart className="w-3.5 h-3.5 fill-rose-500" />
+                            </button>
+                            <div className="text-center pt-2">
+                              <div className="w-20 h-20 mx-auto mb-3 flex items-center justify-center group-hover:scale-105 transition-transform">
+                                <img src={product.image || ''} alt={product.name} className="w-full h-full object-contain drop-shadow-lg" />
+                              </div>
+                              <h4 className="font-bold text-gray-900 dark:text-white text-sm line-clamp-2" title={product.name}>{product.name}</h4>
+                            </div>
+                            <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div>
+                                {originalPrice && (
+                                  <span className="block text-[10px] text-gray-400 dark:text-gray-500 line-through">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
+                                  </span>
+                                )}
+                                <span className="font-extrabold text-gray-900 dark:text-white text-sm">
+                                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(currentPrice)}
+                                </span>
+                              </div>
+                              <button onClick={() => navigate(`/produto/${product.id}`)} className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-[10px] font-bold transition-all uppercase tracking-wider text-center cursor-pointer">
+                                Ver
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ─────────────────────────────────────────────────────── */}
+              {/* AVALIAÇÕES                                              */}
+              {/* ─────────────────────────────────────────────────────── */}
+              {activeSection === 'reviews' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Star className="text-primary-500 fill-primary-100 dark:fill-primary-900/30" />
+                      Minhas Avaliações
+                    </h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Seu histórico de opiniões enviadas sobre produtos.</p>
+                  </div>
+
+                  {loadingReviews ? (
+                    <div className="py-20 flex flex-col items-center justify-center text-primary-500">
+                      <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Buscando suas avaliações...</p>
+                    </div>
+                  ) : myReviews.length === 0 ? (
+                    <div className="py-16 text-center bg-gray-50 dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+                      <Star className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                      <p className="text-base font-bold text-gray-700 dark:text-white">Você não avaliou nenhum produto</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs mx-auto mb-5">Quando você avaliar um produto, a avaliação aparecerá aqui.</p>
+                      <button onClick={() => navigate('/produtos')} className="inline-block px-5 py-2 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl transition-all text-xs cursor-pointer">Ver Produtos</button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {myReviews.map((review) => (
+                        <div key={review.id} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/20 rounded-full flex items-center justify-center text-primary-500 border border-primary-200 dark:border-primary-800">
+                                <Star className="w-4 h-4 text-primary-500 fill-primary-500" />
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-gray-900 dark:text-white text-sm">{review.product || 'Produto'}</h4>
+                                <div className="flex items-center gap-0.5 mt-0.5">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star key={i} className={`w-3 h-3 ${i < review.rating ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700 text-gray-200 dark:text-gray-700'}`} />
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-semibold">{review.date || formatDate(review.created_at)}</span>
+                          </div>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed mt-3 bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                            "{review.comment}"
+                          </p>
                         </div>
                       ))}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* ─────────────────────────────────────────────────────── */}
+              {/* NOTIFICAÇÕES                                            */}
+              {/* ─────────────────────────────────────────────────────── */}
+              {activeSection === 'notifications' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
+                  <div className="w-full max-w-4xl mx-auto">
+                    <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
+                      <div className="flex items-center justify-between mb-6">
+                        <div>
+                          <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <Bell className="text-primary-500" />
+                            Preferências de Notificação
+                          </h2>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Configure como e o que você deseja receber de avisos.</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Canais */}
+                        <div>
+                          <h3 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2 mb-4 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
+                            Canais de Recebimento
+                          </h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Como você prefere receber nossos avisos:</p>
+                          <div className="space-y-3">
+                            {/* WhatsApp toggle */}
+                            <div className="space-y-2">
+                              <div
+                                onClick={() => updatePreference('whatsapp_notifications_enabled', !notifWhatsApp)}
+                                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl cursor-pointer hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-100 dark:hover:bg-gray-750 transition-all duration-300 select-none group"
+                              >
+                                <div className="flex items-center gap-3.5 pr-2">
+                                  <div className="p-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-xl group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.864.002-2.637-1.023-5.116-2.887-6.98C16.526 1.897 14.05 .87 11.417.87c-5.438 0-9.863 4.42-9.867 9.864-.001 1.761.463 3.479 1.344 5.015L1.822 21.43l5.825-1.526zM16.648 13.62c-.27-.135-1.597-.788-1.846-.877-.25-.09-.432-.135-.613.135-.18.27-.7.877-.857 1.058-.158.18-.316.2-.587.065-2.228-1.112-3.673-2.127-5.14-4.636-.312-.533.312-.495.89-1.646.09-.18.045-.338-.022-.473-.068-.135-.613-1.477-.84-2.018-.22-.532-.442-.46-.613-.468-.158-.008-.339-.01-.52-.01-.18 0-.475.067-.723.338-.25.27-.95.925-.95 2.256s.97 2.617 1.105 2.8c.135.18 1.91 2.916 4.628 4.088.647.278 1.152.445 1.545.57.65.207 1.24.177 1.707.108.52-.078 1.597-.652 1.824-1.25.227-.597.227-1.11.158-1.218-.067-.108-.25-.18-.52-.315z" />
+                                    </svg>
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="block text-sm font-bold text-gray-900 dark:text-white">WhatsApp</span>
+                                    <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">Mensagens rápidas e diretas no seu celular.</span>
+                                  </div>
+                                </div>
+                                <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out ${notifWhatsApp ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-300 ease-in-out ${notifWhatsApp ? 'translate-x-5' : 'translate-x-0'}`} />
+                                </div>
+                              </div>
+
+                              {notifWhatsApp && (
+                                <div
+                                  onClick={() => updatePreference('whatsapp_order_confirmation_enabled', !notifWhatsAppOrder)}
+                                  className="flex items-center justify-between p-3.5 ml-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl cursor-pointer hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-100 dark:hover:bg-gray-750 transition-all duration-300 select-none group"
+                                >
+                                  <div className="flex items-center gap-3 pr-2">
+                                    <div className="p-1.5 bg-primary-50/50 dark:bg-primary-900/10 text-primary-500 rounded-lg group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
+                                      <Package className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <span className="block text-xs font-bold text-gray-900 dark:text-white">Pedidos no WhatsApp</span>
+                                      <span className="block text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">Receber atualizações do andamento dos pedidos por WhatsApp.</span>
+                                    </div>
+                                  </div>
+                                  <div className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out ${notifWhatsAppOrder ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition duration-300 ease-in-out ${notifWhatsAppOrder ? 'translate-x-4' : 'translate-x-0'}`} />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            {/* Email toggle */}
+                            <div
+                              onClick={() => updatePreference('email_notifications_enabled', !notifEmail)}
+                              className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl cursor-pointer hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-100 dark:hover:bg-gray-750 transition-all duration-300 select-none group"
+                            >
+                              <div className="flex items-center gap-3.5 pr-2">
+                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 rounded-xl group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
+                                  <Mail className="w-5 h-5" />
+                                </div>
+                                <div className="min-w-0">
+                                  <span className="block text-sm font-bold text-gray-900 dark:text-white">E-mail</span>
+                                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">Avisos detalhados enviados para sua caixa de entrada.</span>
+                                </div>
+                              </div>
+                              <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out ${notifEmail ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-300 ease-in-out ${notifEmail ? 'translate-x-5' : 'translate-x-0'}`} />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Tipos de Avisos */}
+                        <div>
+                          <h3 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2 mb-4 flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
+                            O que deseja receber?
+                          </h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Selecione os tipos de conteúdo do seu interesse:</p>
+                          <div className="space-y-3">
+                            {/* Pedidos toggle */}
+                            <div
+                              onClick={() => updatePreference('order_status_notifications_enabled', !notifOrderStatus)}
+                              className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl cursor-pointer hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-100 dark:hover:bg-gray-750 transition-all duration-300 select-none group"
+                            >
+                              <div className="flex items-center gap-3.5 pr-2">
+                                <div className="p-3 bg-primary-50 dark:bg-primary-900/20 text-primary-500 rounded-xl group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
+                                  <Package className="w-5 h-5" />
+                                </div>
+                                <div className="min-w-0">
+                                  <span className="block text-sm font-bold text-gray-900 dark:text-white">Andamento do Pedido</span>
+                                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">Avisos de pagamento, preparação, envio e entrega.</span>
+                                </div>
+                              </div>
+                              <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out ${notifOrderStatus ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-300 ease-in-out ${notifOrderStatus ? 'translate-x-5' : 'translate-x-0'}`} />
+                              </div>
+                            </div>
+                            {/* Promoções toggle */}
+                            <div
+                              onClick={() => updatePreference('promotions_notifications_enabled', !notifPromotions)}
+                              className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl cursor-pointer hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-100 dark:hover:bg-gray-750 transition-all duration-300 select-none group"
+                            >
+                              <div className="flex items-center gap-3.5 pr-2">
+                                <div className="p-3 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-xl group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
+                                  <Heart className="w-5 h-5 fill-rose-100 dark:fill-rose-900/30" />
+                                </div>
+                                <div className="min-w-0">
+                                  <span className="block text-sm font-bold text-gray-900 dark:text-white">Promoções e Favoritos</span>
+                                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">Produtos favoritados quando entrarem em promoção ou novidades.</span>
+                                </div>
+                              </div>
+                              <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out ${notifPromotions ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
+                                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-300 ease-in-out ${notifPromotions ? 'translate-x-5' : 'translate-x-0'}`} />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ─────────────────────────────────────────────────────── */}
+              {/* AJUDA                                                   */}
+              {/* ─────────────────────────────────────────────────────── */}
+              {activeSection === 'help' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <HelpCircle className="text-primary-500" />
+                      Ajuda & FAQ
+                    </h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Dúvidas frequentes e suporte direto.</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">Dúvidas Frequentes</h3>
+
+                    <div className="space-y-3">
+                      {[
+                        {
+                          q: 'Como funciona a assinatura de cápsulas?',
+                          a: 'A assinatura mensal permite que você escolha suas fórmulas e as receba automaticamente no conforto de sua caixa a cada 30 dias. Assinantes possuem 10% de desconto recorrente e frete grátis em todas as caixas.'
+                        },
+                        {
+                          q: 'Qual o prazo de entrega dos pedidos?',
+                          a: 'O prazo médio é de 2 a 5 dias úteis para capitais da região Sudeste e Sul, e de 5 a 10 dias úteis para as demais regiões do Brasil. Você receberá um código de rastreamento no WhatsApp e no e-mail cadastrado.'
+                        },
+                        {
+                          q: 'Como posso trocar ou cancelar meu pedido?',
+                          a: 'Conforme o Código de Defesa do Consumidor, você tem o direito de solicitar a devolução ou troca de produtos não lacrados em até 7 dias corridos após o recebimento. Para cancelar ou iniciar a devolução, fale com nossa central de suporte.'
+                        },
+                      ].map((faq, i) => (
+                        <details key={i} className="group bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 transition-all duration-300 [&_summary::-webkit-details-marker]:hidden">
+                          <summary className="flex items-center justify-between font-bold text-gray-900 dark:text-white text-xs cursor-pointer">
+                            <span>{faq.q}</span>
+                            <span className="transition-transform duration-300 group-open:rotate-90 text-primary-500 flex-shrink-0 ml-3">
+                              <ChevronRight className="w-4 h-4" />
+                            </span>
+                          </summary>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 leading-relaxed">
+                            {faq.a}
+                          </p>
+                        </details>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                      {/* WhatsApp Channel */}
+                      <div className="bg-green-50/50 dark:bg-green-950/10 border border-green-200 dark:border-green-900/30 rounded-2xl p-5 flex flex-col items-center text-center justify-between">
+                        <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 mb-3">
+                          <Phone size={24} />
+                        </div>
+                        <h4 className="font-bold text-gray-900 dark:text-white text-sm">Suporte via WhatsApp</h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">Atendimento rápido e personalizado diretamente no celular.</p>
+                        <a
+                          href={env.supportWhatsAppUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-all shadow-md hover:scale-[1.02] active:scale-[0.98]"
+                        >
+                          Chamar no WhatsApp
+                        </a>
+                      </div>
+
+                      {/* Email Channel */}
+                      <div className="bg-blue-50/50 dark:bg-blue-950/10 border border-blue-200 dark:border-blue-900/30 rounded-2xl p-5 flex flex-col items-center text-center justify-between">
+                        <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 mb-3">
+                          <Mail size={24} />
+                        </div>
+                        <h4 className="font-bold text-gray-900 dark:text-white text-sm">Suporte via E-mail</h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">Envie suas dúvidas, sugestões ou solicitações para nosso e-mail.</p>
+                        <button
+                          type="button"
+                          onClick={handleSendEmail}
+                          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                        >
+                          Enviar E-mail
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center text-xs text-gray-500 dark:text-gray-400 mt-4 leading-relaxed">
+                      Respondemos em até 1 dia útil.
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1084,6 +1787,82 @@ export default function Profile() {
 
         </div>
       </div>
+
+      {/* ── Modal Editar Dados ───────────────────────────────────── */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Edit className="w-4 h-4 text-primary-500" />
+                Editar Dados Pessoais
+              </h3>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white bg-gray-100 dark:bg-gray-800 rounded-full transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Nome Completo</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className={inputClass}
+                  placeholder="Seu nome completo"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1">
+                  <Phone className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /> Telefone / WhatsApp
+                </label>
+                <input
+                  type="text"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className={inputClass}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl transition-colors font-bold text-xs cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveInfoModal}
+                disabled={loading || !editName.trim()}
+                className="flex items-center justify-center gap-1.5 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-xl transition-all font-bold text-xs shadow-md disabled:opacity-50 cursor-pointer"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-3.5 h-3.5" />
+                    Salvar Alterações
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
     </div>
   )
 }

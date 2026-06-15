@@ -75,7 +75,7 @@ export default function CheckoutCardPayment() {
       return
     }
     if (!orderId) {
-      navigate('/checkout')
+      navigate('/carrinho?step=payment')
       return
     }
 
@@ -203,8 +203,7 @@ export default function CheckoutCardPayment() {
   }
 
   const handleGoBackToMethods = () => {
-    // Retorna para o checkout usando o existingOrderId para não duplicar
-    navigate('/checkout')
+    navigate('/carrinho?step=payment')
   }
 
   if (loadingOrder) {
@@ -219,7 +218,7 @@ export default function CheckoutCardPayment() {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
         <p className="text-red-600 dark:text-red-400 text-lg mb-4">{error || 'Pedido não encontrado.'}</p>
-        <button onClick={() => navigate('/checkout')} className="btn-primary py-2 px-6">Voltar ao Checkout</button>
+        <button onClick={() => navigate('/carrinho?step=payment')} className="btn-primary py-2 px-6">Voltar ao Carrinho</button>
       </div>
     )
   }

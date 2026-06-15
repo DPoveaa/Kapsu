@@ -15,7 +15,27 @@ export const env = {
     .filter((email: string) => email.length > 0),
   
   // URL da API
-  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
+  apiUrl: import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api'),
+
+  // Link publico de atendimento no WhatsApp
+  get supportWhatsAppUrl() {
+    try {
+      const stored = localStorage.getItem('site_settings')
+      if (stored) {
+        const settings = JSON.parse(stored)
+        if (settings && settings.whatsapp_number) {
+          const cleanPhone = settings.whatsapp_number.replace(/\D/g, '')
+          if (cleanPhone) {
+            const phone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
+            return `https://wa.me/${phone}`
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing site_settings from localStorage', e)
+    }
+    return import.meta.env.VITE_SUPPORT_WHATSAPP_URL || 'https://wa.me/551153042534'
+  },
   
   // Modo de desenvolvimento
   isDev: import.meta.env.DEV,

@@ -57,6 +57,7 @@ export interface CreatePreferenceParams {
   addressId?: string
   subscriptionPlan?: 'monthly' | 'quarterly'
   shippingFee?: number
+  orderId?: string
   // Cartão de crédito
   creditCard?: CreditCardData
   installments?: number
@@ -213,9 +214,12 @@ class PaymentService {
   }
 
   /**
-   * Altera o método de pagamento de um pedido pendente
+   * Altera o método de pagamento de um pedido pendente (reutiliza o mesmo pedido).
    */
-  async changePaymentMethod(orderId: string, paymentMethod: 'pix' | 'boleto'): Promise<RedirectPaymentResult> {
+  async changePaymentMethod(
+    orderId: string,
+    paymentMethod: 'pix' | 'boleto' | 'credit_card'
+  ): Promise<PaymentResult> {
     try {
       const response = await fetch(`${this.baseUrl}/${orderId}/change-method`, {
         method: 'POST',
@@ -233,6 +237,19 @@ class PaymentService {
       }
 
       const raw = data.data
+
+      if (raw.paymentMethod === 'pix') {
+        return raw as PixPaymentResult
+      }
+
+      if (raw.paymentMethod === 'boleto') {
+        return raw as BoletoPaymentResult
+      }
+
+      if (raw.paymentMethod === 'credit_card') {
+        return raw as CreditCardPaymentResult
+      }
+
       const redirectUrl = raw.redirectUrl ?? raw.initPoint
       if (!redirectUrl) throw new Error('Resposta sem URL de redirecionamento')
 
