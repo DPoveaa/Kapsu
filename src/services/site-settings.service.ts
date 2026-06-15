@@ -24,9 +24,6 @@ export interface SiteSettings {
   banner_height_desktop?: number
   header_bar_bg_color?: string
   header_bar_bg_color_dark?: string
-  chatbot_enabled?: boolean
-  whatsapp_number?: string
-  google_merchant_sync_enabled?: boolean
 }
 
 export interface SiteSettingsResponse {
@@ -159,36 +156,6 @@ class SiteSettingsService {
       const error = await response.json()
       throw new Error(error.message || 'Erro ao remover logo')
     }
-  }
-
-  /**
-   * Sincroniza todos os produtos com o Google Merchant Center (apenas admin)
-   */
-  async syncAllMerchantProducts(): Promise<{ success: boolean; message: string; data?: { synced?: number; failed?: number; errors?: string[] } }> {
-    const response = await fetch(`${API_URL}/admin/merchant/sync-all`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Erro ao sincronizar produtos com Google Merchant Center')
-    }
-
-    const data = await response.json()
-
-    if (data?.data?.failed > 0) {
-      const details = Array.isArray(data.data.errors)
-        ? data.data.errors.slice(0, 5).join('\n')
-        : ''
-      const suffix = data.data.errors?.length > 5
-        ? `\n...e mais ${data.data.errors.length - 5} erro(s).`
-        : ''
-
-      throw new Error(`${data.message || 'Sincronização concluída com falhas.'}${details ? `\n${details}${suffix}` : ''}`)
-    }
-
-    return data
   }
 }
 

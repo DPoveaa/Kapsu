@@ -338,16 +338,13 @@ export default function Login() {
               </div>
 
               <div className="flex items-center justify-between text-xs sm:text-sm mt-2">
-                <span className="text-gray-600 dark:text-gray-400 text-left">
-                  Não tem uma conta?{' '}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleMode(false)}
-                    className="text-[#00A86B] font-semibold hover:underline transition-colors focus:outline-none"
-                  >
-                    Cadastre-se
-                  </button>
-                </span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleMode(false)}
+                  className="text-gray-600 dark:text-gray-400 hover:text-[#00A86B] dark:hover:text-[#00A86B] transition-colors text-left"
+                >
+                  Não tem uma conta? <span className="text-[#00A86B] font-semibold hover:underline">Cadastre-se</span>
+                </button>
                 <Link
                   to="/recuperar-senha"
                   className="text-[#00A86B] font-semibold hover:underline transition-colors whitespace-nowrap"
@@ -550,16 +547,13 @@ export default function Login() {
               </div>
 
               <div className="flex items-center justify-between text-xs sm:text-sm mt-2">
-                <span className="text-gray-600 dark:text-gray-400">
-                  Já tem uma conta?{' '}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleMode(true)}
-                    className="text-[#00A86B] font-semibold hover:underline transition-colors focus:outline-none"
-                  >
-                    Faça login
-                  </button>
-                </span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleMode(true)}
+                  className="text-gray-600 dark:text-gray-400 hover:text-[#00A86B] dark:hover:text-[#00A86B] transition-colors"
+                >
+                  Já tem uma conta? <span className="text-[#00A86B] font-semibold hover:underline">Faça login</span>
+                </button>
               </div>
 
               <button

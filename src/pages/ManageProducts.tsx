@@ -19,16 +19,15 @@ type Tab = 'active' | 'inactive' | 'archived'
 
 // ─── Column fields for import mapping ──────────────────────────────────────
 const IMPORT_FIELDS = [
-  { key: 'name', label: 'Nome', required: true },
-  { key: 'price', label: 'Preço de Venda', required: true },
-  { key: 'purchase_price', label: 'Preço de Compra', required: false },
-  { key: 'promo_price', label: 'Preço Promocional', required: false },
-  { key: 'description', label: 'Descrição', required: false },
-  { key: 'category', label: 'Categoria', required: false },
-  { key: 'indication', label: 'Indicação', required: false },
-  { key: 'contraindication', label: 'Contraindicação', required: false },
-  { key: 'compositions', label: 'Formulação / Composição', required: false },
-  { key: 'benefits', label: 'Benefícios', required: false },
+  { key: 'name',             label: 'Nome',                     required: true  },
+  { key: 'price',            label: 'Preço de Venda',            required: true  },
+  { key: 'purchase_price',   label: 'Preço de Compra',           required: false },
+  { key: 'promo_price',      label: 'Preço Promocional',         required: false },
+  { key: 'description',      label: 'Descrição',                 required: false },
+  { key: 'category',         label: 'Categoria',                 required: false },
+  { key: 'indication',       label: 'Indicação',                 required: false },
+  { key: 'contraindication', label: 'Contraindicação',           required: false },
+  { key: 'compositions',     label: 'Formulação / Composição',   required: false },
 ] as const
 
 type FieldKey = typeof IMPORT_FIELDS[number]['key']
@@ -36,89 +35,34 @@ type FieldKey = typeof IMPORT_FIELDS[number]['key']
 function autoDetect(headers: string[]): Record<FieldKey, string> {
   const m: Record<FieldKey, string> = {
     name: '', price: '', purchase_price: '', promo_price: '', description: '', category: '',
-    indication: '', contraindication: '', compositions: '', benefits: '',
+    indication: '', contraindication: '', compositions: '',
   }
   for (const h of headers) {
     const low = h.toLowerCase()
-    if (!m.name && (low.includes('nome') || low.includes('name') || low.includes('produto') || low.includes('product') || low === 'item' || low === 'titulo' || low === 'title')) m.name = h
-    else if (!m.price && (low.includes('venda') || low.includes('price') || low === 'preço' || low === 'preco')) m.price = h
+    if (!m.name           && (low.includes('nome') || low.includes('name') || low.includes('produto') || low.includes('product') || low === 'item' || low === 'titulo' || low === 'title')) m.name = h
+    else if (!m.price     && (low.includes('venda') || low.includes('price') || low === 'preço' || low === 'preco')) m.price = h
     else if (!m.purchase_price && (low.includes('compra') || low.includes('custo') || low.includes('cost'))) m.purchase_price = h
-    else if (!m.promo_price && (low.includes('promo') || low.includes('promoc'))) m.promo_price = h
-    else if (!m.description && (low.includes('desc') || low.includes('about') || low.includes('detalhe'))) m.description = h
-    else if (!m.category && (low.includes('cat') || low.includes('grupo'))) m.category = h
-    else if (!m.indication && (low.includes('indica') || low.includes('indicação') || low.includes('indicacao'))) m.indication = h
+    else if (!m.promo_price    && (low.includes('promo') || low.includes('promoc')))                  m.promo_price = h
+    else if (!m.description    && (low.includes('desc') || low.includes('about') || low.includes('detalhe'))) m.description = h
+    else if (!m.category       && (low.includes('cat') || low.includes('grupo')))                     m.category = h
+    else if (!m.indication     && (low.includes('indica') || low.includes('indicação') || low.includes('indicacao'))) m.indication = h
     else if (!m.contraindication && (low.includes('contra') || low.includes('contraindicação') || low.includes('contraindicacao'))) m.contraindication = h
-    else if (!m.compositions && (low.includes('comp') || low.includes('form') || low.includes('composição') || low.includes('composicao') || low.includes('formula') || low.includes('fórmula'))) m.compositions = h
-    else if (!m.benefits && (low.includes('benef') || low.includes('vantagem') || low === 'beneficios')) m.benefits = h
+    else if (!m.compositions   && (low.includes('comp') || low.includes('form') || low.includes('composição') || low.includes('composicao') || low.includes('formula') || low.includes('fórmula'))) m.compositions = h
   }
   return m
 }
 
-function getLevenshteinDistance(a: string, b: string): number {
-  const matrix = []
-  for (let i = 0; i <= b.length; i++) {
-    matrix[i] = [i]
-  }
-  for (let j = 0; j <= a.length; j++) {
-    matrix[0][j] = j
-  }
-  for (let i = 1; i <= b.length; i++) {
-    for (let j = 1; j <= a.length; j++) {
-      if (b.charAt(i - 1) === a.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1]
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          Math.min(
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
-          )
-        )
-      }
-    }
-  }
-  return matrix[b.length][a.length]
-}
-
-function cleanStringForSimilarity(str: string): string {
-  return str
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]/g, '')
-    .trim()
-}
-
-function getStringSimilarity(str1: string, str2: string): number {
-  const s1 = cleanStringForSimilarity(str1)
-  const s2 = cleanStringForSimilarity(str2)
-  if (!s1 || !s2) return 0
-  if (s1 === s2) return 1
-
-  const distance = getLevenshteinDistance(s1, s2)
-  const maxLen = Math.max(s1.length, s2.length)
-  return 1 - distance / maxLen
-}
-
 // ─── Price history type labels ──────────────────────────────────────────────
 const HISTORY_TYPE_LABELS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  sale: { label: 'Venda', color: 'text-blue-600 dark:text-blue-400', icon: <Tag size={13} /> },
-  purchase: { label: 'Compra', color: 'text-purple-600 dark:text-purple-400', icon: <ShoppingCart size={13} /> },
-  promo: { label: 'Promo', color: 'text-orange-600 dark:text-orange-400', icon: <Sparkles size={13} /> },
+  sale:     { label: 'Venda',    color: 'text-blue-600 dark:text-blue-400',   icon: <Tag size={13} /> },
+  purchase: { label: 'Compra',   color: 'text-purple-600 dark:text-purple-400', icon: <ShoppingCart size={13} /> },
+  promo:    { label: 'Promo',    color: 'text-orange-600 dark:text-orange-400', icon: <Sparkles size={13} /> },
 }
 
 function fmt(v: number | null) {
   if (v == null) return '—'
   return `R$ ${Number(v).toFixed(2).replace('.', ',')}`
 }
-
-function cleanPrice(v: any): number | null {
-  if (v === undefined || v === null || String(v).trim() === '') return null
-  const cleanStr = String(v).replace(/r\$/i, '').replace(/\s/g, '').replace(',', '.')
-  const n = parseFloat(cleanStr)
-  return isNaN(n) ? null : n
-}
-
 
 function HistoryRow({ h }: { h: ProductPriceHistory }) {
   const meta = HISTORY_TYPE_LABELS[h.type] ?? HISTORY_TYPE_LABELS.sale
@@ -145,7 +89,7 @@ function HistoryRow({ h }: { h: ProductPriceHistory }) {
       </div>
 
       {/* variation */}
-      {went === 'up' && <span className="flex items-center gap-0.5 text-red-500   text-xs font-medium"><TrendingUp size={13} />+{fmt(diff!)} {diffPct != null && `(+${diffPct.toFixed(1).replace('.', ',')}%)`}</span>}
+      {went === 'up'   && <span className="flex items-center gap-0.5 text-red-500   text-xs font-medium"><TrendingUp  size={13} />+{fmt(diff!)} {diffPct != null && `(+${diffPct.toFixed(1).replace('.', ',')}%)`}</span>}
       {went === 'down' && <span className="flex items-center gap-0.5 text-green-500 text-xs font-medium"><TrendingDown size={13} />{fmt(diff!)} {diffPct != null && `(${diffPct.toFixed(1).replace('.', ',')}%)`}</span>}
       {went === 'same' && <span className="flex items-center gap-0.5 text-gray-400   text-xs"><Minus size={13} /></span>}
 
@@ -162,56 +106,34 @@ function HistoryRow({ h }: { h: ProductPriceHistory }) {
   )
 }
 
-interface SimilarMatch {
-  importedName: string
-  importedRow: any
-  existingProduct: Product
-  resolution: 'update' | 'create' | 'skip'
-}
-
-interface DuplicationGroup {
-  primaryProduct: Product
-  similarProducts: Product[]
-}
-
 // ─── Main component ─────────────────────────────────────────────────────────
 export default function ManageProducts() {
   const navigate = useNavigate()
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [deletingId, setDeletingId] = useState<string | null>(null)
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [products, setProducts]         = useState<Product[]>([])
+  const [loading, setLoading]           = useState(true)
+  const [error, setError]               = useState<string | null>(null)
+  const [searchTerm, setSearchTerm]     = useState('')
+  const [deletingId, setDeletingId]     = useState<string | null>(null)
+  const [selectedIds, setSelectedIds]   = useState<string[]>([])
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<Tab>('active')
+  const [activeTab, setActiveTab]       = useState<Tab>('active')
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // ── Import modal state ────────────────────────────────────────────────────
   const [isImportOpen, setIsImportOpen] = useState(false)
   const [importHeaders, setImportHeaders] = useState<string[]>([])
-  const [importRows, setImportRows] = useState<any[]>([])
+  const [importRows, setImportRows]       = useState<any[]>([])
   const [columnMapping, setColumnMapping] = useState<Record<FieldKey, string>>({
     name: '', price: '', purchase_price: '', promo_price: '', description: '', category: '',
-    indication: '', contraindication: '', compositions: '', benefits: '',
+    indication: '', contraindication: '', compositions: '',
   })
   const [autoDetected, setAutoDetected] = useState<Record<FieldKey, boolean>>({
     name: false, price: false, purchase_price: false, promo_price: false, description: false, category: false,
-    indication: false, contraindication: false, compositions: false, benefits: false,
+    indication: false, contraindication: false, compositions: false,
   })
-  const [isImporting, setIsImporting] = useState(false)
+  const [isImporting, setIsImporting]   = useState(false)
   const [importProgress, setImportProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  // ── Similarity / Duplicates state ─────────────────────────────────────────
-  const [similarityMatches, setSimilarityMatches] = useState<SimilarMatch[]>([])
-  const [isSimilarityModalOpen, setIsSimilarityModalOpen] = useState(false)
-  const [tempResolutions, setTempResolutions] = useState<Record<string, { action: 'update' | 'create' | 'skip'; existingId?: string }>>({})
-
-  const [dbDuplicates, setDbDuplicates] = useState<DuplicationGroup[]>([])
-  const [isDbDuplicatesOpen, setIsDbDuplicatesOpen] = useState(false)
-  const [productsOrdersCount, setProductsOrdersCount] = useState<Record<string, number>>({})
-  const [loadingOrdersCount, setLoadingOrdersCount] = useState(false)
 
   // ── Reactivate modal state ────────────────────────────────────────────────
   const [reactivateCandidates, setReactivateCandidates] = useState<{
@@ -225,14 +147,14 @@ export default function ManageProducts() {
   // ── Product modal form state ──────────────────────────────────────────────
   const { id: urlProductId } = useParams()
   const location = useLocation()
-
+  
   const [isProductModalOpen, setIsProductModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [productFormLoading, setProductFormLoading] = useState(false)
   const [loadingProductDetails, setLoadingProductDetails] = useState(false)
   const [productFormError, setProductFormError] = useState<string | null>(null)
   const [productImageError, setProductImageError] = useState<string | null>(null)
-
+  
   const initialProductFormState = {
     name: '',
     description: '',
@@ -246,7 +168,6 @@ export default function ManageProducts() {
     compositions: '',
     indication: '',
     contraindication: '',
-    benefits: '',
     free_shipping: false,
   }
   const [productFormData, setProductFormData] = useState(initialProductFormState)
@@ -277,11 +198,11 @@ export default function ManageProducts() {
     const trimmed = newCatInput.trim()
     if (!trimmed) return
     const formatted = trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase()
-
+    
     if (!localAddedCategories.includes(formatted) && !existingCategories.includes(formatted)) {
       setLocalAddedCategories(prev => [...prev, formatted])
     }
-
+    
     const currentCats = productFormData.category.split(',').map(s => s.trim()).filter(Boolean)
     if (!currentCats.includes(formatted)) {
       const updatedCats = [...currentCats, formatted]
@@ -370,7 +291,6 @@ export default function ManageProducts() {
         compositions: productRaw.compositions || '',
         indication: productRaw.indication || '',
         contraindication: productRaw.contraindication || '',
-        benefits: productRaw.benefits || '',
         free_shipping: productRaw.free_shipping ?? false,
       })
       setLocalAddedCategories([])
@@ -461,7 +381,6 @@ export default function ManageProducts() {
         compositions: productFormData.compositions.trim() || undefined,
         indication: productFormData.indication.trim() || undefined,
         contraindication: productFormData.contraindication.trim() || undefined,
-        benefits: productFormData.benefits.trim() || undefined,
         free_shipping: productFormData.free_shipping,
       }
 
@@ -486,15 +405,15 @@ export default function ManageProducts() {
   }
 
   // ── Price history modal state ─────────────────────────────────────────────
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false)
+  const [isHistoryOpen, setIsHistoryOpen]     = useState(false)
   const [isGlobalMarkupModalOpen, setIsGlobalMarkupModalOpen] = useState(false)
-  const [historyData, setHistoryData] = useState<{
+  const [historyData, setHistoryData]          = useState<{
     product: { id: string; name: string; active: boolean; archived: boolean };
     history: ProductPriceHistory[];
   }[]>([])
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [expandedProduct, setExpandedProduct] = useState<string | null>(null)
-  const [historyTab, setHistoryTab] = useState<Tab>('active')
+  const [historyLoading, setHistoryLoading]    = useState(false)
+  const [expandedProduct, setExpandedProduct]  = useState<string | null>(null)
+  const [historyTab, setHistoryTab]            = useState<Tab>('active')
   const [historySearchTerm, setHistorySearchTerm] = useState('')
   type HistorySort = 'name' | 'price_asc' | 'price_desc' | 'profit_asc' | 'profit_desc'
   const [historySort, setHistorySort] = useState<HistorySort>('name')
@@ -631,15 +550,18 @@ export default function ManageProducts() {
     reader.readAsBinaryString(file)
   }
 
-  const executeImport = async (
-    idsToReactivate: Set<string>,
-    resolutionsMap: Record<string, { action: 'update' | 'create' | 'skip'; existingId?: string }> = {}
-  ) => {
+  const executeImport = async (idsToReactivate: Set<string>) => {
     setIsImporting(true)
     setImportProgress(0)
     let count = 0
 
     try {
+      const cleanPrice = (v: any): number | null => {
+        if (v === undefined || v === null || String(v).trim() === '') return null
+        const cleanStr = String(v).replace(/r\$/i, '').replace(/\s/g, '').replace(',', '.')
+        const n = parseFloat(cleanStr)
+        return isNaN(n) ? null : n
+      }
 
       const ni = importHeaders.indexOf(columnMapping.name)
       const pi = importHeaders.indexOf(columnMapping.price)
@@ -703,36 +625,11 @@ export default function ManageProducts() {
           const val = get('compositions')
           payload.compositions = val ? String(val).trim() : null
         }
-        if (hasField('benefits')) {
-          const val = get('benefits')
-          payload.benefits = val ? String(val).trim() : null
-        }
         if (hasField('purchase_price')) {
           payload.purchase_price = cleanPrice(get('purchase_price'))
         }
         if (hasField('promo_price')) {
           payload.promo_price = cleanPrice(get('promo_price'))
-        }
-
-        // Apply custom similarity resolution if present
-        const customRes = resolutionsMap[nameLower]
-        if (customRes) {
-          if (customRes.action === 'skip') {
-            continue
-          } else if (customRes.action === 'update' && customRes.existingId) {
-            await productsService.update(customRes.existingId, payload)
-            count++
-            setImportProgress(Math.round((count / validRows.length) * 100))
-            continue
-          } else if (customRes.action === 'create') {
-            await productsService.create({
-              ...payload,
-              active: true,
-            })
-            count++
-            setImportProgress(Math.round((count / validRows.length) * 100))
-            continue
-          }
         }
 
         // Check if product with same name already exists in active/inactive/archived list
@@ -764,7 +661,7 @@ export default function ManageProducts() {
           })
           count++
         }
-
+        
         setImportProgress(Math.round((count / validRows.length) * 100))
       }
       await loadProducts()
@@ -779,23 +676,37 @@ export default function ManageProducts() {
     }
   }
 
-  const checkReactivateCandidates = async (
-    rowsToCheck: any[],
-    resolutions: Record<string, { action: 'update' | 'create' | 'skip'; existingId?: string }> = {}
-  ) => {
-    const ni = importHeaders.indexOf(columnMapping.name)
+  const handleImportConfirm = async () => {
+    if (!columnMapping.name || !columnMapping.price) return
 
+    const cleanPrice = (v: any): number | null => {
+      if (v === undefined || v === null || String(v).trim() === '') return null
+      const cleanStr = String(v).replace(/r\$/i, '').replace(/\s/g, '').replace(',', '.')
+      const n = parseFloat(cleanStr)
+      return isNaN(n) ? null : n
+    }
+
+    const ni = importHeaders.indexOf(columnMapping.name)
+    const pi = importHeaders.indexOf(columnMapping.price)
+
+    const validRows = importRows.filter(r => {
+      const nameVal = String(r[ni] ?? '').trim()
+      const hasValidName = nameVal && nameVal.length >= 2 && !/^\d+$/.test(nameVal)
+      const parsedPrice = cleanPrice(r[pi])
+      return hasValidName && parsedPrice !== null && parsedPrice > 0
+    })
+
+    if (validRows.length === 0) {
+      toast.warning('Nenhum produto válido encontrado para importação.')
+      return
+    }
 
     const seenReactivate = new Set<string>()
-    const candidates = rowsToCheck.map(row => {
+    const candidates = validRows.map(row => {
       const name = String(row[ni] ?? '').trim()
       const nameLower = name.toLowerCase()
       if (seenReactivate.has(nameLower)) return null
       seenReactivate.add(nameLower)
-
-      // If it is custom-resolved to update an active product, it is not a reactivation candidate
-      if (resolutions[nameLower]?.action === 'update') return null
-
       const p = products.find(prod => prod.name.trim().toLowerCase() === nameLower && (prod.archived || !prod.active))
       if (!p) return null
 
@@ -817,209 +728,21 @@ export default function ManageProducts() {
 
     if (candidates.length > 0) {
       setReactivateCandidates(candidates)
-      setTempResolutions(resolutions)
       setIsReactivateModalOpen(true)
     } else {
-      await executeImport(new Set(), resolutions)
+      await executeImport(new Set())
     }
   }
-
-  const handleImportConfirm = async () => {
-    if (!columnMapping.name || !columnMapping.price) return
-
-
-    const ni = importHeaders.indexOf(columnMapping.name)
-    const pi = importHeaders.indexOf(columnMapping.price)
-
-    const validRows = importRows.filter(r => {
-      const nameVal = String(r[ni] ?? '').trim()
-      const hasValidName = nameVal && nameVal.length >= 2 && !/^\d+$/.test(nameVal)
-      const parsedPrice = cleanPrice(r[pi])
-      return hasValidName && parsedPrice !== null && parsedPrice > 0
-    })
-
-    if (validRows.length === 0) {
-      toast.warning('Nenhum produto válido encontrado para importação.')
-      return
-    }
-
-    // 1. Detect similar product names in the database
-    const activeProducts = products.filter(p => p.active && !p.archived)
-    const detectedSimilar: SimilarMatch[] = []
-    const seenSimilar = new Set<string>()
-
-    for (const row of validRows) {
-      const name = String(row[ni] ?? '').trim()
-      const nameLower = name.toLowerCase()
-      if (seenSimilar.has(nameLower)) continue
-      seenSimilar.add(nameLower)
-
-      // If there is an exact case-insensitive match, it is not similarity-warned (it updates automatically)
-      const exactMatch = products.find(p => p.name.trim().toLowerCase() === nameLower)
-      if (exactMatch) continue
-
-      let bestMatch: Product | null = null
-      let highestSimilarity = 0
-
-      for (const p of activeProducts) {
-        const sim = getStringSimilarity(name, p.name)
-        if (sim >= 0.82) { // 82% threshold
-          if (sim > highestSimilarity) {
-            highestSimilarity = sim
-            bestMatch = p
-          }
-        }
-      }
-
-      if (bestMatch) {
-        detectedSimilar.push({
-          importedName: name,
-          importedRow: row,
-          existingProduct: bestMatch,
-          resolution: 'update' // Default to update instead of duplicate
-        })
-      }
-    }
-
-    if (detectedSimilar.length > 0) {
-      setSimilarityMatches(detectedSimilar)
-      setIsSimilarityModalOpen(true)
-    } else {
-      await checkReactivateCandidates(validRows)
-    }
-  }
-
-  const handleMatchResolutionChange = (index: number, action: 'update' | 'create' | 'skip') => {
-    setSimilarityMatches(prev => {
-      const updated = [...prev]
-      updated[index] = { ...updated[index], resolution: action }
-      return updated
-    })
-  }
-
-  const handleSimilarityConfirm = async () => {
-    const resolutions: Record<string, { action: 'update' | 'create' | 'skip'; existingId?: string }> = {}
-
-    for (const match of similarityMatches) {
-      resolutions[match.importedName.toLowerCase()] = {
-        action: match.resolution,
-        existingId: match.resolution === 'update' ? match.existingProduct.id : undefined
-      }
-    }
-
-    setIsSimilarityModalOpen(false)
-
-    const ni = importHeaders.indexOf(columnMapping.name)
-    const pi = importHeaders.indexOf(columnMapping.price)
-
-    const validRows = importRows.filter(r => {
-      const nameVal = String(r[ni] ?? '').trim()
-      const hasValidName = nameVal && nameVal.length >= 2 && !/^\d+$/.test(nameVal)
-      const parsedPrice = cleanPrice(r[pi])
-      return hasValidName && parsedPrice !== null && parsedPrice > 0
-    })
-
-    await checkReactivateCandidates(validRows, resolutions)
-  }
-
-  const handleScanDuplicates = () => {
-    const nonArchived = products.filter(p => !p.archived)
-    let foundAny = false
-    const visited = new Set<string>()
-
-    for (let i = 0; i < nonArchived.length; i++) {
-      const p1 = nonArchived[i]
-      if (visited.has(p1.id)) continue
-
-      for (let j = i + 1; j < nonArchived.length; j++) {
-        const p2 = nonArchived[j]
-        if (visited.has(p2.id)) continue
-
-        const sim = getStringSimilarity(p1.name, p2.name)
-        if (sim >= 0.82) {
-          foundAny = true
-          break
-        }
-      }
-      if (foundAny) break
-    }
-
-    if (foundAny) {
-      setIsDbDuplicatesOpen(true)
-    } else {
-      toast.success('Nenhum produto semelhante ou duplicado encontrado no banco de dados!')
-    }
-  }
-
-  useEffect(() => {
-    if (isDbDuplicatesOpen) {
-      const nonArchived = products.filter(p => !p.archived)
-      const groups: DuplicationGroup[] = []
-      const visited = new Set<string>()
-
-      for (let i = 0; i < nonArchived.length; i++) {
-        const p1 = nonArchived[i]
-        if (visited.has(p1.id)) continue
-
-        const similar: Product[] = []
-        for (let j = i + 1; j < nonArchived.length; j++) {
-          const p2 = nonArchived[j]
-          if (visited.has(p2.id)) continue
-
-          const sim = getStringSimilarity(p1.name, p2.name)
-          if (sim >= 0.82) {
-            similar.push(p2)
-            visited.add(p2.id)
-          }
-        }
-
-        if (similar.length > 0) {
-          visited.add(p1.id)
-          groups.push({
-            primaryProduct: p1,
-            similarProducts: similar
-          })
-        }
-      }
-      setDbDuplicates(groups)
-    }
-  }, [products, isDbDuplicatesOpen])
-
-  useEffect(() => {
-    const fetchOrdersCounts = async () => {
-      if (!isDbDuplicatesOpen || dbDuplicates.length === 0) return
-
-      // Collect all unique product IDs from all groups
-      const allIds = new Set<string>()
-      dbDuplicates.forEach((group) => {
-        allIds.add(group.primaryProduct.id)
-        group.similarProducts.forEach((p) => allIds.add(p.id))
-      })
-
-      try {
-        setLoadingOrdersCount(true)
-        const counts = await productsService.checkProductsOrders(Array.from(allIds))
-        setProductsOrdersCount(prev => ({ ...prev, ...counts }))
-      } catch (err) {
-        console.error('Erro ao buscar quantidade de pedidos dos produtos:', err)
-      } finally {
-        setLoadingOrdersCount(false)
-      }
-    }
-
-    fetchOrdersCounts()
-  }, [dbDuplicates, isDbDuplicatesOpen])
-
 
   const resetImport = () => {
     setImportHeaders([]); setImportRows([]); setImportProgress(0)
     setColumnMapping({
       name: '', price: '', purchase_price: '', promo_price: '', description: '', category: '',
-      indication: '', contraindication: '', compositions: '', benefits: '',
+      indication: '', contraindication: '', compositions: '',
     })
     setAutoDetected({
       name: false, price: false, purchase_price: false, promo_price: false, description: false, category: false,
-      indication: false, contraindication: false, compositions: false, benefits: false,
+      indication: false, contraindication: false, compositions: false,
     })
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
@@ -1034,9 +757,9 @@ export default function ManageProducts() {
 
   const historyFiltered = useMemo(() => {
     const filtered = historyData.filter(({ product }) =>
-      historyTab === 'active' ? product.active && !product.archived :
-        historyTab === 'inactive' ? !product.active && !product.archived :
-          product.archived
+      historyTab === 'active'   ? product.active && !product.archived :
+      historyTab === 'inactive' ? !product.active && !product.archived :
+      product.archived
     ).filter(({ product }) =>
       product.name.toLowerCase().includes(historySearchTerm.toLowerCase())
     ).filter(({ history }) => history.length > 0)
@@ -1165,7 +888,7 @@ export default function ManageProducts() {
   }
 
   // ── Derived lists ─────────────────────────────────────────────────────────
-  const activeProducts = products.filter(p => p.active && !p.archived)
+  const activeProducts   = products.filter(p => p.active && !p.archived)
   const inactiveProducts = products.filter(p => !p.active && !p.archived)
   const archivedProducts = products.filter(p => p.archived)
   const tabProducts: Record<Tab, Product[]> = { active: activeProducts, inactive: inactiveProducts, archived: archivedProducts }
@@ -1175,22 +898,22 @@ export default function ManageProducts() {
   )
 
   const TABS = [
-    { key: 'active' as Tab, label: 'Ativos', count: activeProducts.length, active: 'border-green-500 text-green-600 dark:text-green-400', badge: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' },
-    { key: 'inactive' as Tab, label: 'Inativos', count: inactiveProducts.length, active: 'border-yellow-500 text-yellow-600 dark:text-yellow-400', badge: 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300' },
-    { key: 'archived' as Tab, label: 'Arquivados', count: archivedProducts.length, active: 'border-gray-500 text-gray-600 dark:text-gray-400', badge: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' },
+    { key: 'active'   as Tab, label: 'Ativos',     count: activeProducts.length,   active: 'border-green-500 text-green-600 dark:text-green-400',  badge: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' },
+    { key: 'inactive' as Tab, label: 'Inativos',   count: inactiveProducts.length, active: 'border-yellow-500 text-yellow-600 dark:text-yellow-400', badge: 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300' },
+    { key: 'archived' as Tab, label: 'Arquivados', count: archivedProducts.length, active: 'border-gray-500 text-gray-600 dark:text-gray-400',       badge: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' },
   ]
 
   // ── Sub-renders ───────────────────────────────────────────────────────────
   const renderStatusBadge = (p: Product) => p.archived
-    ? <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"><Archive size={11} />Arquivado</span>
+    ? <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"><Archive size={11}/>Arquivado</span>
     : <button onClick={() => handleToggleActive(p)} className={`px-2 py-1 text-xs font-medium rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${p.active ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 hover:bg-yellow-200'}`} title={`Clique para ${p.active ? 'desativar' : 'ativar'}`}>{p.active ? 'Ativo' : 'Inativo'}</button>
 
   const renderActions = (p: Product) => p.archived
-    ? <div className="flex justify-end"><button onClick={() => handleUnarchive(p)} className="text-blue-600 dark:text-blue-400 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded p-1" title="Desarquivar"><ArchiveRestore size={18} /></button></div>
+    ? <div className="flex justify-end"><button onClick={() => handleUnarchive(p)} className="text-blue-600 dark:text-blue-400 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded p-1" title="Desarquivar"><ArchiveRestore size={18}/></button></div>
     : <div className="flex justify-end space-x-2">
-      <button onClick={() => navigate(`/admin/products/edit/${p.id}`)} className="text-blue-600 dark:text-blue-400 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded p-1" title="Editar"><Edit size={18} /></button>
-      <button onClick={() => handleDelete(p.id)} disabled={deletingId === p.id} className="text-red-600 dark:text-red-400 hover:text-red-900 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded p-1" title="Excluir">{deletingId === p.id ? <Loader2 className="animate-spin" size={18} /> : <Trash2 size={18} />}</button>
-    </div>
+        <button onClick={() => navigate(`/admin/products/edit/${p.id}`)} className="text-blue-600 dark:text-blue-400 hover:text-blue-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded p-1" title="Editar"><Edit size={18}/></button>
+        <button onClick={() => handleDelete(p.id)} disabled={deletingId === p.id} className="text-red-600 dark:text-red-400 hover:text-red-900 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded p-1" title="Excluir">{deletingId === p.id ? <Loader2 className="animate-spin" size={18}/> : <Trash2 size={18}/>}</button>
+      </div>
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -1200,38 +923,30 @@ export default function ManageProducts() {
         {/* Header */}
         <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <button onClick={() => navigate(-1)} className="flex items-center text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
-            <ArrowLeft size={18} className="mr-1.5" />Voltar
+            <ArrowLeft size={18} className="mr-1.5"/>Voltar
           </button>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             {/* History button */}
             <button onClick={openHistory} className="flex items-center justify-center p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm" title="Histórico de Preços">
-              <BarChart2 size={18} />
+              <BarChart2 size={18}/>
             </button>
             {/* Global Markup button */}
             <button onClick={() => setIsGlobalMarkupModalOpen(true)} className="flex items-center justify-center p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm" title="Ajuste de Markup Global">
               <TrendingUp size={18} className="text-green-600 dark:text-green-400" />
             </button>
-            {/* Scan Duplicates button */}
-            <button
-              onClick={handleScanDuplicates}
-              className="flex items-center gap-1.5 px-3 py-2.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/20 dark:hover:bg-amber-950/30 border border-amber-200 dark:border-amber-900 text-amber-700 dark:text-amber-400 rounded-lg text-sm font-medium transition-colors shadow-sm"
-              title="Verificar Semelhantes"
-            >
-              <AlertCircle size={18} />
-            </button>
             {/* Add dropdown */}
             <div ref={dropdownRef} className="relative flex-1 sm:flex-none">
               <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center justify-center bg-green-600 text-white px-3 sm:px-4 py-2 text-sm rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto">
-                <Plus size={18} className="mr-1.5" />Adicionar
+                <Plus size={18} className="mr-1.5"/>Adicionar
               </button>
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-10">
                   <div className="py-1">
                     <button onClick={() => { navigate('/admin/products/create'); setIsDropdownOpen(false) }} className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                      <Plus size={16} className="mr-2" />Novo Produto
+                      <Plus size={16} className="mr-2"/>Novo Produto
                     </button>
                     <button onClick={() => { setIsImportOpen(true); setIsDropdownOpen(false) }} className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                      <Upload size={16} className="mr-2" />Importar Excel/CSV
+                      <Upload size={16} className="mr-2"/>Importar Excel/CSV
                     </button>
                   </div>
                 </div>
@@ -1262,7 +977,7 @@ export default function ManageProducts() {
         {/* Archived notice */}
         {activeTab === 'archived' && (
           <div className="mb-4 flex items-start gap-3 p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300">
-            <Archive size={15} className="mt-0.5 flex-shrink-0 text-gray-400" />
+            <Archive size={15} className="mt-0.5 flex-shrink-0 text-gray-400"/>
             <span>Produtos arquivados possuem pedidos vinculados. Você pode <strong>desarquivá-los</strong> para movê-los para <em>Inativos</em>.</span>
           </div>
         )}
@@ -1270,13 +985,13 @@ export default function ManageProducts() {
         {/* Search */}
         <div className="mb-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input type="text" placeholder="Buscar produtos..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4"/>
+            <input type="text" placeholder="Buscar produtos..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"/>
           </div>
         </div>
 
         {/* Loading / Error */}
-        {loading && <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary-600 w-12 h-12" /></div>}
+        {loading && <div className="flex justify-center py-12"><Loader2 className="animate-spin text-primary-600 w-12 h-12"/></div>}
         {error && !loading && (
           <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
             <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
@@ -1292,8 +1007,8 @@ export default function ManageProducts() {
               <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-between gap-3 flex-wrap">
                 <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{selectedIds.length} produto(s) selecionado(s)</span>
                 {activeTab === 'archived'
-                  ? <button onClick={handleBulkUnarchive} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"><ArchiveRestore size={15} />Desarquivar Selecionados</button>
-                  : <button onClick={handleBulkDelete} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex items-center gap-2"><Trash2 size={15} />Excluir Selecionados</button>
+                  ? <button onClick={handleBulkUnarchive} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"><ArchiveRestore size={15}/>Desarquivar Selecionados</button>
+                  : <button onClick={handleBulkDelete}    className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex items-center gap-2"><Trash2 size={15}/>Excluir Selecionados</button>
                 }
               </div>
             )}
@@ -1305,7 +1020,7 @@ export default function ManageProducts() {
                   <thead className="bg-gray-50 dark:bg-gray-800/80">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">
-                        <input type="checkbox" checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0} onChange={e => setSelectedIds(e.target.checked ? filteredProducts.map(p => p.id) : [])} className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 focus-visible:ring-2 focus-visible:ring-blue-500" />
+                        <input type="checkbox" checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0} onChange={e => setSelectedIds(e.target.checked ? filteredProducts.map(p => p.id) : [])} className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 focus-visible:ring-2 focus-visible:ring-blue-500"/>
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Produto</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Categoria</th>
@@ -1322,14 +1037,14 @@ export default function ManageProducts() {
                     ) : filteredProducts.map(p => (
                       <tr key={p.id} className={`group hover:bg-gray-50 dark:hover:bg-[#065084]/40 transition-colors ${p.archived ? 'opacity-70' : ''}`}>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={e => setSelectedIds(e.target.checked ? [...selectedIds, p.id] : selectedIds.filter(x => x !== p.id))} className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 focus-visible:ring-2 focus-visible:ring-blue-500" />
+                          <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={e => setSelectedIds(e.target.checked ? [...selectedIds, p.id] : selectedIds.filter(x => x !== p.id))} className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 focus-visible:ring-2 focus-visible:ring-blue-500"/>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <img src={p.image} alt={p.name} className={`h-10 w-10 rounded-lg object-contain bg-gray-50 dark:bg-gray-700 p-0.5 flex-shrink-0 ${p.archived ? 'grayscale' : ''}`} onError={e => handleImageError(e, PRODUCT_IMAGE_FALLBACK)} />
+                            <img src={p.image} alt={p.name} className={`h-10 w-10 rounded-lg object-contain bg-gray-50 dark:bg-gray-700 p-0.5 flex-shrink-0 ${p.archived ? 'grayscale' : ''}`} onError={e => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}/>
                             <div>
                               <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-1.5">
-                                {p.name}{p.archived && <Archive size={12} className="text-gray-400" />}
+                                {p.name}{p.archived && <Archive size={12} className="text-gray-400"/>}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">{p.description || 'Sem descrição'}</div>
                             </div>
@@ -1371,9 +1086,9 @@ export default function ManageProducts() {
                                 </button>
                               </div>
                             ) : (
-                              <div
-                                className="group flex flex-col justify-start items-start cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 p-1 rounded-lg transition-colors min-w-[90px]"
-                                onClick={() => startEditingMarkup(p)}
+                              <div 
+                                className="group flex flex-col justify-start items-start cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50 p-1 rounded-lg transition-colors min-w-[90px]" 
+                                onClick={() => startEditingMarkup(p)} 
                                 title="Clique para editar o markup"
                               >
                                 <div className="flex items-center gap-1">
@@ -1426,7 +1141,7 @@ export default function ManageProducts() {
             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-green-50 dark:bg-green-900/30">
-                  <Upload size={20} className="text-green-600 dark:text-green-400" />
+                  <Upload size={20} className="text-green-600 dark:text-green-400"/>
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-gray-900 dark:text-white">Importar Produtos</h2>
@@ -1434,7 +1149,7 @@ export default function ManageProducts() {
                 </div>
               </div>
               <button onClick={() => { setIsImportOpen(false); resetImport() }} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                <X size={18} />
+                <X size={18}/>
               </button>
             </div>
 
@@ -1446,21 +1161,21 @@ export default function ManageProducts() {
                   className="cursor-pointer border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-10 flex flex-col items-center gap-4 hover:border-green-400 dark:hover:border-green-600 hover:bg-green-50/50 dark:hover:bg-green-900/10 transition-all group"
                 >
                   <div className="p-4 rounded-2xl bg-gray-100 dark:bg-gray-800 group-hover:bg-green-100 dark:group-hover:bg-green-900/30 transition-colors">
-                    <Upload size={28} className="text-gray-400 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors" />
+                    <Upload size={28} className="text-gray-400 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors"/>
                   </div>
                   <div className="text-center">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Clique para selecionar o arquivo</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Suporta .xlsx, .xls, .csv</p>
                   </div>
-                  <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} className="hidden" />
+                  <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleFileUpload} className="hidden"/>
                 </div>
               ) : isImporting ? (
                 /* Importing progress */
                 <div className="text-center py-8">
-                  <Loader2 size={40} className="animate-spin text-green-500 mx-auto mb-4" />
+                  <Loader2 size={40} className="animate-spin text-green-500 mx-auto mb-4"/>
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Importando produtos...</p>
                   <div className="mt-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
-                    <div className="bg-green-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${importProgress}%` }} />
+                    <div className="bg-green-500 h-2.5 rounded-full transition-all duration-300" style={{ width: `${importProgress}%` }}/>
                   </div>
                   <p className="text-xs text-gray-400 mt-2">{importProgress}%</p>
                 </div>
@@ -1487,7 +1202,7 @@ export default function ManageProducts() {
                               {field.required && <span className="text-[10px] text-red-500">*obrigatório</span>}
                               {detected && hasValue && (
                                 <span className="flex items-center gap-0.5 text-[10px] text-green-600 dark:text-green-400 font-medium">
-                                  <Sparkles size={10} />auto
+                                  <Sparkles size={10}/>auto
                                 </span>
                               )}
                             </div>
@@ -1501,11 +1216,11 @@ export default function ManageProducts() {
                               <option value="">— Não vincular —</option>
                               {importHeaders.map(h => <option key={h} value={h}>{h}</option>)}
                             </select>
-                            <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                            <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
                           </div>
                           {hasValue
-                            ? <Check size={15} className="text-green-500 flex-shrink-0" />
-                            : <AlertCircle size={15} className={`flex-shrink-0 ${field.required ? 'text-red-400' : 'text-gray-300 dark:text-gray-600'}`} />
+                            ? <Check size={15} className="text-green-500 flex-shrink-0"/>
+                            : <AlertCircle size={15} className={`flex-shrink-0 ${field.required ? 'text-red-400' : 'text-gray-300 dark:text-gray-600'}`}/>
                           }
                         </div>
                       )
@@ -1540,7 +1255,7 @@ export default function ManageProducts() {
             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-900/30">
-                  <BarChart2 size={20} className="text-blue-600 dark:text-blue-400" />
+                  <BarChart2 size={20} className="text-blue-600 dark:text-blue-400"/>
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-gray-900 dark:text-white">Histórico de Preços</h2>
@@ -1548,7 +1263,7 @@ export default function ManageProducts() {
                 </div>
               </div>
               <button onClick={() => setIsHistoryOpen(false)} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                <X size={18} />
+                <X size={18}/>
               </button>
             </div>
 
@@ -1558,8 +1273,8 @@ export default function ManageProducts() {
                 <span key={k} className={`flex items-center gap-1 text-xs font-medium ${v.color}`}>{v.icon}{v.label}</span>
               ))}
               <span className="ml-auto flex items-center gap-3 text-xs text-gray-400">
-                <span className="flex items-center gap-0.5 text-red-500"><TrendingUp size={12} />subiu</span>
-                <span className="flex items-center gap-0.5 text-green-500"><TrendingDown size={12} />baixou</span>
+                <span className="flex items-center gap-0.5 text-red-500"><TrendingUp size={12}/>subiu</span>
+                <span className="flex items-center gap-0.5 text-green-500"><TrendingDown size={12}/>baixou</span>
               </span>
             </div>
 
@@ -1573,7 +1288,7 @@ export default function ManageProducts() {
                     <span className={`text-[10px] font-semibold px-1 py-0.5 rounded-full ${historyTab === t.key ? t.badge : 'bg-gray-100 dark:bg-gray-700 text-gray-400'}`}>
                       {historyData.filter(({ product: p }) =>
                         t.key === 'active' ? p.active && !p.archived :
-                          t.key === 'inactive' ? !p.active && !p.archived : p.archived
+                        t.key === 'inactive' ? !p.active && !p.archived : p.archived
                       ).filter(d => d.history.length > 0).length}
                     </span>
                   </button>
@@ -1605,7 +1320,7 @@ export default function ManageProducts() {
                   <option value="profit_desc">Maior Lucro %</option>
                   <option value="profit_asc">Menor Lucro %</option>
                 </select>
-                <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
               </div>
             </div>
 
@@ -1613,12 +1328,12 @@ export default function ManageProducts() {
             <div className="overflow-y-auto flex-1 p-4">
               {historyLoading ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-3">
-                  <Loader2 size={32} className="animate-spin text-blue-500" />
+                  <Loader2 size={32} className="animate-spin text-blue-500"/>
                   <p className="text-sm text-gray-500">Carregando histórico...</p>
                 </div>
               ) : historyFiltered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 gap-3 text-gray-400">
-                  <BarChart2 size={32} />
+                  <BarChart2 size={32}/>
                   <p className="text-sm">Nenhum histórico de preços para esta categoria.</p>
                   <p className="text-xs text-gray-300">O rastreamento começa a partir da criação ou atualização do produto.</p>
                 </div>
@@ -1626,7 +1341,7 @@ export default function ManageProducts() {
                 <div className="space-y-2">
                   {historyFiltered.map(({ product, history }) => {
                     const isExpanded = expandedProduct === product.id
-                    const latestSale = history.find(h => h.type === 'sale')
+                    const latestSale     = history.find(h => h.type === 'sale')
                     const latestPurchase = history.find(h => h.type === 'purchase')
                     return (
                       <div key={product.id} className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden">
@@ -1636,13 +1351,13 @@ export default function ManageProducts() {
                           className="w-full flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors text-left"
                         >
                           <div className={`p-1.5 rounded transition-transform ${isExpanded ? 'rotate-90' : ''}`}>
-                            <ChevronRight size={14} className="text-gray-400" />
+                            <ChevronRight size={14} className="text-gray-400"/>
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{product.name}</p>
                             <div className="flex flex-wrap items-center gap-3 mt-0.5">
                               {latestPurchase && <span className="text-xs text-purple-600 dark:text-purple-400">Compra: {fmt(latestPurchase.new_price)}</span>}
-                              {latestSale && <span className="text-xs text-blue-600 dark:text-blue-400">Venda: {fmt(latestSale.new_price)}</span>}
+                              {latestSale     && <span className="text-xs text-blue-600 dark:text-blue-400">Venda: {fmt(latestSale.new_price)}</span>}
                               {latestPurchase && latestSale && (() => {
                                 const cost = Number(latestPurchase.new_price)
                                 const sale = Number(latestSale.new_price)
@@ -1666,7 +1381,7 @@ export default function ManageProducts() {
                         {/* Expanded history */}
                         {isExpanded && (
                           <div className="border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 px-3 py-2 space-y-0.5">
-                            {history.map(h => <HistoryRow key={h.id} h={h} />)}
+                            {history.map(h => <HistoryRow key={h.id} h={h}/>)}
                           </div>
                         )}
                       </div>
@@ -1687,7 +1402,7 @@ export default function ManageProducts() {
             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-yellow-50 dark:bg-yellow-900/30">
-                  <AlertCircle size={20} className="text-yellow-600 dark:text-yellow-400" />
+                  <AlertCircle size={20} className="text-yellow-600 dark:text-yellow-400"/>
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-gray-900 dark:text-white">Reativar Produtos Existentes</h2>
@@ -1695,7 +1410,7 @@ export default function ManageProducts() {
                 </div>
               </div>
               <button onClick={() => { setIsReactivateModalOpen(false); setReactivateCandidates([]) }} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                <X size={18} />
+                <X size={18}/>
               </button>
             </div>
 
@@ -1764,7 +1479,7 @@ export default function ManageProducts() {
                     reactivateCandidates.filter(c => c.selected).map(c => c.product.id)
                   )
                   setIsReactivateModalOpen(false)
-                  await executeImport(idsToReactivate, tempResolutions)
+                  await executeImport(idsToReactivate)
                 }}
                 className="flex-1 py-2.5 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
               >
@@ -1783,7 +1498,7 @@ export default function ManageProducts() {
             <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-green-50 dark:bg-green-900/30">
-                  <TrendingUp size={20} className="text-green-600 dark:text-green-400" />
+                  <TrendingUp size={20} className="text-green-600 dark:text-green-400"/>
                 </div>
                 <div>
                   <h2 className="text-base font-bold text-gray-900 dark:text-white">Ajuste de Markup Global</h2>
@@ -1791,7 +1506,7 @@ export default function ManageProducts() {
                 </div>
               </div>
               <button onClick={() => setIsGlobalMarkupModalOpen(false)} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                <X size={18} />
+                <X size={18}/>
               </button>
             </div>
 
@@ -1800,7 +1515,7 @@ export default function ManageProducts() {
               <p className="text-xs text-gray-650 dark:text-gray-400">
                 Defina um markup percentual para aplicar a todos os produtos de uma só vez. O preço de venda de cada produto será recalculado como <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[10px] font-mono text-green-700 dark:text-green-400">Custo + Markup %</code>. Produtos sem preço de custo cadastrado não sofrerão alterações.
               </p>
-
+              
               {globalMarkup !== null && (
                 <div className="p-3 bg-green-50/50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 rounded-xl text-xs text-green-700 dark:text-green-400 flex items-center gap-2">
                   <Check size={14} />
@@ -1851,298 +1566,6 @@ export default function ManageProducts() {
                 ) : (
                   <>Aplicar Global</>
                 )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════════ SIMILARITY WARNING MODAL ══════════════════════════ */}
-      {isSimilarityModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
-            {/* Header */}
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-900/30">
-                  <AlertCircle size={20} className="text-amber-600 dark:text-amber-400" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-gray-900 dark:text-white">Produtos Semelhantes Detectados</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Verifique os produtos parecidos antes de importar</p>
-                </div>
-              </div>
-              <button onClick={() => { setIsSimilarityModalOpen(false); resetImport() }} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="overflow-y-auto p-5 space-y-4 flex-1">
-              <p className="text-sm text-gray-600 dark:text-gray-300">
-                Os seguintes itens da planilha têm nomes parecidos com produtos ativos no banco de dados. Escolha a ação apropriada para cada um:
-              </p>
-
-              <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-1">
-                {similarityMatches.map((match, idx) => {
-                  const p = match.existingProduct
-                  const similarityPct = Math.round(getStringSimilarity(match.importedName, p.name) * 100)
-                  const priceIndex = importHeaders.indexOf(columnMapping.price)
-                  const sheetPrice = match.importedRow && priceIndex !== -1 ? cleanPrice(match.importedRow[priceIndex]) : null
-                  return (
-                    <div key={idx} className="p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 space-y-3">
-                      {/* Comparison Row */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                        {/* Imported item info */}
-                        <div className="p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
-                          <span className="text-[10px] uppercase tracking-wider font-semibold text-gray-400">Na Planilha</span>
-                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mt-0.5 truncate" title={match.importedName}>{match.importedName}</p>
-                          <span className="text-xs text-gray-500 mt-1 block">Preço na planilha: {sheetPrice !== null ? fmt(sheetPrice) : '—'}</span>
-                        </div>
-
-                        {/* Database matching product */}
-                        <div className="p-3 bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 flex items-center gap-3">
-                          <img
-                            src={p.image || PRODUCT_IMAGE_FALLBACK}
-                            alt={p.name}
-                            className="h-10 w-10 rounded-lg object-contain bg-gray-50 dark:bg-gray-700 p-0.5 flex-shrink-0"
-                            onError={e => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
-                          />
-                          <div className="flex-1 min-w-0">
-                            <span className="flex items-center justify-between text-[10px] uppercase tracking-wider font-semibold text-gray-400">
-                              <span>No Banco</span>
-                              <span className="text-amber-600 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded-full text-[9px]">{similarityPct}% semelhante</span>
-                            </span>
-                            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 truncate mt-0.5" title={p.name}>{p.name}</p>
-                            <span className="text-xs text-gray-500">Preço atual: {fmt(p.price)}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Resolution Buttons */}
-                      <div className="flex flex-col sm:flex-row gap-2 items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">O que deseja fazer?</span>
-                        <div className="grid grid-cols-3 gap-2 w-full sm:w-auto">
-                          <button
-                            type="button"
-                            onClick={() => handleMatchResolutionChange(idx, 'update')}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${match.resolution === 'update' ? 'bg-green-600 border-green-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-255 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-55 dark:hover:bg-gray-750'}`}
-                          >
-                            Atualizar Existente
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMatchResolutionChange(idx, 'create')}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${match.resolution === 'create' ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-255 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-55 dark:hover:bg-gray-750'}`}
-                          >
-                            Criar Novo
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleMatchResolutionChange(idx, 'skip')}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${match.resolution === 'skip' ? 'bg-gray-500 border-gray-500 text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-255 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-55 dark:hover:bg-gray-750'}`}
-                          >
-                            Ignorar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-5 border-t border-gray-100 dark:border-gray-800 flex gap-3 flex-shrink-0 bg-gray-50/50 dark:bg-gray-800">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSimilarityModalOpen(false)
-                  resetImport()
-                }}
-                className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                Cancelar Importação
-              </button>
-              <button
-                type="button"
-                onClick={handleSimilarityConfirm}
-                className="flex-1 py-2.5 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 transition-colors"
-              >
-                Confirmar e Continuar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ═══════════════ DATABASE DUPLICATES CLEANUP MODAL ════════════════ */}
-      {isDbDuplicatesOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden border border-gray-200 dark:border-gray-700 flex flex-col max-h-[90vh]">
-            {/* Header */}
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-900/30">
-                  <AlertCircle size={20} className="text-amber-600 dark:text-amber-400" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-gray-900 dark:text-white">Conflitos de Produtos Semelhantes</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Verifique e resolva itens duplicados no seu catálogo</p>
-                </div>
-              </div>
-              <button onClick={() => setIsDbDuplicatesOpen(false)} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                <X size={18} />
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="overflow-y-auto p-5 space-y-4 flex-1">
-              {dbDuplicates.length === 0 ? (
-                <div className="text-center py-12 space-y-4">
-                  <div className="inline-flex p-4 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 mx-auto">
-                    <Check size={48} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Nenhum Conflito Encontrado</h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Seu catálogo de produtos está livre de nomes semelhantes/duplicados!</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsDbDuplicatesOpen(false)}
-                    className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
-                  >
-                    Fechar Modal
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Os seguintes grupos de produtos possuem nomes muito parecidos. Você pode editá-los para diferenciar, desativá-los ou excluí-los permanentemente:
-                  </p>
-
-                  <div className="space-y-6 max-h-[55vh] overflow-y-auto pr-1">
-                    {dbDuplicates.map((group, groupIdx) => {
-                      const allProductsInGroup = [group.primaryProduct, ...group.similarProducts]
-                      return (
-                        <div key={groupIdx} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm bg-gray-50/30 dark:bg-gray-800/20">
-                          {/* Group Header */}
-                          <div className="bg-gray-50 dark:bg-gray-800/80 px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center flex-wrap gap-2">
-                            <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">
-                              Grupo {groupIdx + 1}: Semelhanças de &ldquo;{group.primaryProduct.name}&rdquo;
-                            </h3>
-                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
-                              {allProductsInGroup.length} produtos
-                            </span>
-                          </div>
-
-                          {/* Group Products List */}
-                          <div className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-900">
-                            {allProductsInGroup.map(p => {
-                              return (
-                                <div key={p.id} className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-                                  {/* Left: Product Info */}
-                                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <img
-                                      src={p.image || PRODUCT_IMAGE_FALLBACK}
-                                      alt={p.name}
-                                      className="h-12 w-12 rounded-lg object-contain bg-gray-50 dark:bg-gray-700 p-0.5 flex-shrink-0"
-                                      onError={e => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
-                                    />
-                                    <div className="min-w-0">
-                                      <p className="text-sm font-semibold text-gray-800 dark:text-white truncate" title={p.name}>
-                                        {p.name}
-                                      </p>
-                                      <div className="flex flex-wrap gap-2 items-center mt-1">
-                                        <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-                                          {p.category || 'Outros'}
-                                        </span>
-                                        <span className="text-xs text-gray-500 dark:text-gray-400 font-semibold">
-                                          Custo: {p.purchase_price != null ? fmt(p.purchase_price) : '—'} | Venda: {fmt(p.price)}
-                                        </span>
-                                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
-                                          loadingOrdersCount
-                                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 animate-pulse'
-                                            : (productsOrdersCount[p.id] || 0) > 0
-                                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-900/40'
-                                              : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
-                                        }`}>
-                                          {loadingOrdersCount ? (
-                                            'Carregando vendas...'
-                                          ) : (
-                                            `${productsOrdersCount[p.id] || 0} ${productsOrdersCount[p.id] === 1 ? 'venda' : 'vendas'}`
-                                          )}
-                                        </span>
-                                      </div>
-                                      {/* Timestamps */}
-                                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[10px] sm:text-xs text-gray-400 dark:text-gray-500">
-                                        {p.created_at && (
-                                          <span>
-                                            Criado em: <strong className="text-gray-600 dark:text-gray-300">{new Date(p.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</strong>
-                                          </span>
-                                        )}
-                                        {p.updated_at && (
-                                          <span>
-                                            Atualizado: <strong className="text-gray-600 dark:text-gray-300">{new Date(p.updated_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</strong>
-                                          </span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* Right: Status and Actions */}
-                                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0">
-                                    {/* Status Toggler */}
-                                    <button
-                                      type="button"
-                                      onClick={() => handleToggleActive(p)}
-                                      className={`px-2 py-1 text-xs font-semibold rounded-full transition-colors ${p.active ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 hover:bg-yellow-200'}`}
-                                      title={`Clique para ${p.active ? 'desativar' : 'ativar'}`}
-                                    >
-                                      {p.active ? 'Ativo' : 'Inativo'}
-                                    </button>
-
-                                    {/* Action buttons */}
-                                    <div className="flex items-center gap-1.5">
-                                      <button
-                                        type="button"
-                                        onClick={() => navigate(`/admin/products/edit/${p.id}`)}
-                                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors"
-                                        title="Editar Produto"
-                                      >
-                                        <Edit size={16} />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDelete(p.id)}
-                                        disabled={deletingId === p.id}
-                                        className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors disabled:opacity-50"
-                                        title="Excluir Produto"
-                                      >
-                                        {deletingId === p.id ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="p-5 border-t border-gray-100 dark:border-gray-800 flex justify-end bg-gray-50/50 dark:bg-gray-800 flex-shrink-0">
-              <button
-                type="button"
-                onClick={() => setIsDbDuplicatesOpen(false)}
-                className="px-6 py-2.5 bg-gray-255 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-xl text-sm font-medium transition-colors"
-              >
-                Fechar
               </button>
             </div>
           </div>
@@ -2357,7 +1780,7 @@ export default function ManageProducts() {
                   )
                 })}
               </div>
-
+              
               {/* Add Custom Category Input */}
               <div className="mt-3 flex gap-2">
                 <input
@@ -2435,22 +1858,6 @@ export default function ManageProducts() {
                 rows={3}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                 placeholder="Informe as contraindicações do produto..."
-              />
-            </div>
-
-            {/* Benefícios */}
-            <div>
-              <label htmlFor="product-benefits" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Benefícios do Produto
-              </label>
-              <textarea
-                id="product-benefits"
-                name="benefits"
-                value={productFormData.benefits}
-                onChange={handleProductFormChange}
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                placeholder="Descreva os benefícios do produto (um por linha)..."
               />
             </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, Upload, Trash2, Image as ImageIcon, Mail, Phone, MapPin, Palette, Globe, ShoppingBag } from 'lucide-react'
+import { Save, Upload, Trash2, Image as ImageIcon, Mail, Phone, MapPin, Palette, Globe } from 'lucide-react'
 import { siteSettingsService, SiteSettings as SiteSettingsType } from '../services/site-settings.service'
 import { env } from '../config/env'
 import { confirm } from '../utils/toast'
@@ -12,7 +12,6 @@ export default function SiteSettings() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
-  const [syncing, setSyncing] = useState(false)
 
   const API_URL = env.apiUrl
 
@@ -129,23 +128,6 @@ export default function SiteSettings() {
     }
   }
 
-  const handleSyncAll = async () => {
-    try {
-      setSyncing(true)
-      setError(null)
-      setSuccess(null)
-      
-      const response = await siteSettingsService.syncAllMerchantProducts()
-      setSuccess(response.message || 'Sincronização com o Google Merchant Center concluída!')
-      
-      setTimeout(() => setSuccess(null), 5000)
-    } catch (err: any) {
-      setError(err.message || 'Erro ao sincronizar produtos com o Google Merchant Center')
-    } finally {
-      setSyncing(false)
-    }
-  }
-
   if (loading) {
     return (
       <div className="w-full flex items-center justify-center py-12">
@@ -167,7 +149,7 @@ export default function SiteSettings() {
           </div>
 
           {error && (
-            <div className="mb-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded whitespace-pre-line">
+            <div className="mb-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded">
               {error}
             </div>
           )}
@@ -296,20 +278,6 @@ export default function SiteSettings() {
                   onChange={(e) => handleInputChange('contact_phone', e.target.value)}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="(11) 99999-9999"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <Phone className="w-4 h-4 inline mr-1" />
-                  WhatsApp de Suporte (Apenas DDD e Número)
-                </label>
-                <input
-                  type="tel"
-                  value={settings.whatsapp_number || ''}
-                  onChange={(e) => handleInputChange('whatsapp_number', e.target.value.replace(/\D/g, '').slice(0, 11))}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="Ex: 11999999999"
                 />
               </div>
 
@@ -459,66 +427,6 @@ export default function SiteSettings() {
                     className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                     placeholder="#F59E0B"
                   />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Seção: Google Merchant Center */}
-          <div className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
-            <div className="flex items-center mb-4">
-              <ShoppingBag className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Google Merchant Center</h2>
-            </div>
-            
-            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 border border-gray-100 dark:border-gray-800 space-y-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 mr-4">
-                  <label className="text-base font-semibold text-gray-950 dark:text-white mb-1 block">
-                    Sincronização Automática
-                  </label>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Quando ativado, qualquer alteração nos produtos (preço, estoque, descrição, imagens) ou exclusões físicas/lógicas será enviada e atualizada no Google Merchant Center em tempo real de forma automática.
-                  </p>
-                </div>
-                <div className="flex items-center h-5 mt-1">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={settings.google_merchant_sync_enabled || false}
-                    onClick={() => handleInputChange('google_merchant_sync_enabled', !settings.google_merchant_sync_enabled)}
-                    className={`${
-                      settings.google_merchant_sync_enabled ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'
-                    } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2`}
-                  >
-                    <span
-                      aria-hidden="true"
-                      className={`${
-                        settings.google_merchant_sync_enabled ? 'translate-x-5' : 'translate-x-0'
-                      } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
-                    />
-                  </button>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 dark:border-gray-800 pt-4 flex items-center justify-between">
-                <div className="flex-1 mr-4">
-                  <label className="text-sm font-semibold text-gray-900 dark:text-white mb-1 block">
-                    Sincronizar Tudo Manualmente
-                  </label>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Suba todos os produtos ativos do banco de dados de uma vez e atualize suas fotos, preços e descrições no Merchant Center.
-                  </p>
-                </div>
-                <div>
-                  <button
-                    type="button"
-                    disabled={syncing}
-                    onClick={handleSyncAll}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors"
-                  >
-                    {syncing ? 'Sincronizando...' : 'Sincronizar Agora'}
-                  </button>
                 </div>
               </div>
             </div>

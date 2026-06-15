@@ -9,14 +9,8 @@ interface User {
   name: string
   phone?: string
   profile_image?: string
-  cpf?: string
   isAdmin: boolean
   role?: 'user' | 'admin' | 'pharmacist'
-  whatsapp_notifications_enabled?: boolean
-  email_notifications_enabled?: boolean
-  order_status_notifications_enabled?: boolean
-  promotions_notifications_enabled?: boolean
-  whatsapp_order_confirmation_enabled?: boolean
 }
 
 interface AuthContextType {
@@ -59,14 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 name: isValid.user.name,
                 phone: isValid.user.phone,
                 profile_image: (isValid.user as any).profile_image,
-                cpf: (isValid.user as any).cpf,
                 role: 'user',
-                isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || false,
-                whatsapp_notifications_enabled: (isValid.user as any).whatsapp_notifications_enabled !== undefined ? Boolean((isValid.user as any).whatsapp_notifications_enabled) : true,
-                email_notifications_enabled: (isValid.user as any).email_notifications_enabled !== undefined ? Boolean((isValid.user as any).email_notifications_enabled) : true,
-                order_status_notifications_enabled: (isValid.user as any).order_status_notifications_enabled !== undefined ? Boolean((isValid.user as any).order_status_notifications_enabled) : true,
-                promotions_notifications_enabled: (isValid.user as any).promotions_notifications_enabled !== undefined ? Boolean((isValid.user as any).promotions_notifications_enabled) : true,
-                whatsapp_order_confirmation_enabled: Boolean((isValid.user as any).whatsapp_order_confirmation_enabled)
+                isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || false
               }
               setUser(updatedUser)
               localStorage.setItem('sanare_user', JSON.stringify(updatedUser))
@@ -120,12 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             phone: isValid.user.phone,
             profile_image: (isValid.user as any).profile_image,
             role: 'user',
-            isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || false,
-            whatsapp_notifications_enabled: (isValid.user as any).whatsapp_notifications_enabled !== undefined ? Boolean((isValid.user as any).whatsapp_notifications_enabled) : true,
-            email_notifications_enabled: (isValid.user as any).email_notifications_enabled !== undefined ? Boolean((isValid.user as any).email_notifications_enabled) : true,
-            order_status_notifications_enabled: (isValid.user as any).order_status_notifications_enabled !== undefined ? Boolean((isValid.user as any).order_status_notifications_enabled) : true,
-            promotions_notifications_enabled: (isValid.user as any).promotions_notifications_enabled !== undefined ? Boolean((isValid.user as any).promotions_notifications_enabled) : true,
-            whatsapp_order_confirmation_enabled: Boolean((isValid.user as any).whatsapp_order_confirmation_enabled)
+            isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || false
           }
           setUser(updatedUser)
           localStorage.setItem('sanare_user', JSON.stringify(updatedUser))
@@ -169,14 +152,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: response.user.name,
         phone: response.user.phone,
         profile_image: (response.user as any).profile_image,
-        cpf: (response.user as any).cpf,
         role: 'user',
-        isAdmin: isAdminEmail(response.user.email) || response.user.isAdmin || false,
-        whatsapp_notifications_enabled: response.user.whatsapp_notifications_enabled !== undefined ? Boolean(response.user.whatsapp_notifications_enabled) : true,
-        email_notifications_enabled: response.user.email_notifications_enabled !== undefined ? Boolean(response.user.email_notifications_enabled) : true,
-        order_status_notifications_enabled: response.user.order_status_notifications_enabled !== undefined ? Boolean(response.user.order_status_notifications_enabled) : true,
-        promotions_notifications_enabled: response.user.promotions_notifications_enabled !== undefined ? Boolean(response.user.promotions_notifications_enabled) : true,
-        whatsapp_order_confirmation_enabled: Boolean(response.user.whatsapp_order_confirmation_enabled)
+        isAdmin: isAdminEmail(response.user.email) || response.user.isAdmin || false
       }
       
       setUser(newUser)

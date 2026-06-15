@@ -7,11 +7,7 @@ import AdminModal from '../components/AdminModal'
 
 export default function ShippingSettings() {
   const [regions, setRegions] = useState<ShippingRegion[]>([])
-  const [settings, setSettings] = useState<ShippingSettingsType>({ 
-    free_shipping_threshold: 0,
-    general_delivery_time: 5,
-    general_delivery_time_type: 'business'
-  })
+  const [settings, setSettings] = useState<ShippingSettingsType>({ free_shipping_threshold: 0 })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -24,8 +20,6 @@ export default function ShippingSettings() {
     cepFrom: '',
     cepTo: '',
     shippingFee: '',
-    deliveryTime: '',
-    deliveryTimeType: 'business',
     active: true,
   })
 
@@ -41,21 +35,12 @@ export default function ShippingSettings() {
         shippingService.getShippingSettings(),
       ])
       setRegions(regionsData)
-      
+      // Garante que o valor seja exatamente o que vem do banco, ou 0 se não existir
       const threshold = settingsData.free_shipping_threshold !== undefined 
         ? settingsData.free_shipping_threshold 
         : 0
-      const generalDeliveryTime = settingsData.general_delivery_time !== undefined
-        ? Number(settingsData.general_delivery_time)
-        : 5
-      const generalDeliveryTimeType = settingsData.general_delivery_time_type !== undefined
-        ? settingsData.general_delivery_time_type
-        : 'business'
-
       setSettings({
-        free_shipping_threshold: threshold,
-        general_delivery_time: generalDeliveryTime,
-        general_delivery_time_type: generalDeliveryTimeType as any,
+        free_shipping_threshold: threshold
       })
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar dados')
@@ -71,6 +56,7 @@ export default function ShippingSettings() {
       await shippingService.updateShippingSettings(settings)
       setSuccess('Configurações salvas com sucesso!')
       setTimeout(() => setSuccess(null), 3000)
+      // Recarrega os dados após salvar para garantir que está sincronizado
       await loadData()
     } catch (err: any) {
       setError(err.message || 'Erro ao salvar configurações')
@@ -95,8 +81,6 @@ export default function ShippingSettings() {
         cepFrom: formData.cepFrom,
         cepTo: formData.cepTo,
         shippingFee: Number(formData.shippingFee),
-        deliveryTime: formData.deliveryTime !== '' ? Number(formData.deliveryTime) : null,
-        deliveryTimeType: formData.deliveryTimeType,
         active: formData.active,
       })
 
@@ -110,8 +94,6 @@ export default function ShippingSettings() {
         cepFrom: '',
         cepTo: '',
         shippingFee: '',
-        deliveryTime: '',
-        deliveryTimeType: 'business',
         active: true,
       })
       await loadData()
@@ -143,8 +125,6 @@ export default function ShippingSettings() {
       cepFrom: region.cep_from,
       cepTo: region.cep_to,
       shippingFee: String(region.shipping_fee),
-      deliveryTime: region.delivery_time !== undefined && region.delivery_time !== null ? String(region.delivery_time) : '',
-      deliveryTimeType: region.delivery_time_type || 'business',
       active: region.active,
     })
   }
@@ -156,8 +136,6 @@ export default function ShippingSettings() {
       cepFrom: '',
       cepTo: '',
       shippingFee: '',
-      deliveryTime: '',
-      deliveryTimeType: 'business',
       active: true,
     })
   }
@@ -231,6 +209,7 @@ export default function ShippingSettings() {
                     value={settings.free_shipping_threshold !== undefined ? settings.free_shipping_threshold : ''}
                     onChange={(e) => {
                       const inputValue = e.target.value;
+                      // Permite valor vazio, mas quando há valor, converte para número
                       const value = inputValue === '' ? 0 : Number(inputValue);
                       setSettings({
                         ...settings,
@@ -244,44 +223,6 @@ export default function ShippingSettings() {
                     {settings.free_shipping_threshold === 0 || settings.free_shipping_threshold === null
                       ? 'Frete grátis desabilitado. Defina um valor maior que 0 para habilitar.'
                       : `Pedidos acima de R$ ${settings.free_shipping_threshold.toFixed(2).replace('.', ',')} terão frete grátis`}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
-                    Prazo de Entrega Geral Padrão
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      min="1"
-                      value={settings.general_delivery_time !== undefined ? settings.general_delivery_time : ''}
-                      onChange={(e) => {
-                        const val = e.target.value === '' ? 5 : Number(e.target.value)
-                        setSettings({
-                          ...settings,
-                          general_delivery_time: isNaN(val) ? 5 : val,
-                        })
-                      }}
-                      className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                      placeholder="5"
-                    />
-                    <select
-                      value={settings.general_delivery_time_type || 'business'}
-                      onChange={(e) => {
-                        setSettings({
-                          ...settings,
-                          general_delivery_time_type: e.target.value as any,
-                        })
-                      }}
-                      className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                    >
-                      <option value="business">Dias Úteis</option>
-                      <option value="calendar">Dias Corridos</option>
-                    </select>
-                  </div>
-                  <p className="mt-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-                    Aplicado para regiões que não possuem prazo individual definido.
                   </p>
                 </div>
 
@@ -406,39 +347,6 @@ export default function ShippingSettings() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                        Prazo de Entrega
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={formData.deliveryTime}
-                        onChange={(e) => setFormData({ ...formData, deliveryTime: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                        placeholder="Ex: 3 (opcional)"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                        Tipo de Prazo
-                      </label>
-                      <select
-                        value={formData.deliveryTimeType}
-                        onChange={(e) => setFormData({ ...formData, deliveryTimeType: e.target.value })}
-                        className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                      >
-                        <option value="business">Dias Úteis</option>
-                        <option value="calendar">Dias Corridos</option>
-                      </select>
-                    </div>
-                  </div>
-                  <p className="text-[10px] sm:text-xs text-gray-550 dark:text-gray-455">
-                    Deixe em branco para usar o prazo geral padrão ({settings.general_delivery_time} {settings.general_delivery_time_type === 'business' ? (settings.general_delivery_time === 1 ? 'dia útil' : 'dias úteis') : (settings.general_delivery_time === 1 ? 'dia corrido' : 'dias corridos')}).
-                  </p>
-
                   {/* Switch Toggle */}
                   <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
                     <span className="text-sm text-gray-700 dark:text-gray-300">Região ativa</span>
@@ -477,9 +385,6 @@ export default function ShippingSettings() {
                         Valor (R$)
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
-                        Prazo
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
                         Status
                       </th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap sticky right-0 bg-gray-50 dark:bg-gray-800 z-10 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.3)]">
@@ -490,7 +395,7 @@ export default function ShippingSettings() {
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {regions.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan={6} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                           Nenhuma região cadastrada. Clique em "Nova Região" para adicionar.
                         </td>
                       </tr>
@@ -508,17 +413,6 @@ export default function ShippingSettings() {
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                             R$ {Number(region.shipping_fee).toFixed(2).replace('.', ',')}
-                          </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-550 dark:text-gray-300 font-semibold">
-                            {region.delivery_time !== null && region.delivery_time !== undefined ? (
-                              <span>
-                                {region.delivery_time} {region.delivery_time_type === 'calendar' ? (region.delivery_time === 1 ? 'dia corr.' : 'dias corr.') : 'd.ú.'}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400 dark:text-gray-500 italic font-normal">
-                                Geral ({settings.general_delivery_time} {settings.general_delivery_time_type === 'calendar' ? (settings.general_delivery_time === 1 ? 'dia corr.' : 'dias corr.') : 'd.ú.'})
-                              </span>
-                            )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
