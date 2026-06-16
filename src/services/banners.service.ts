@@ -178,23 +178,48 @@ class BannersService {
     formData.append('image', file)
 
     const token = localStorage.getItem('token') || localStorage.getItem('sanare_token')
-    const response = await fetch(`${API_URL}/upload/banner-image`, {
-      method: 'POST',
-      headers: {
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-      body: formData,
-    })
+    const controller = new AbortController()
+    const timeoutId = window.setTimeout(() => controller.abort(), 45000)
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || 'Erro ao fazer upload da imagem')
+    let response: Response
+    try {
+      response = await fetch(`${API_URL}/upload/banner-image`, {
+        method: 'POST',
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: formData,
+        signal: controller.signal,
+      })
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        throw new Error('Tempo esgotado ao enviar a imagem. Verifique sua conex„o e tente novamente.')
+      }
+      throw new Error(error?.message || 'Erro de conex„o ao enviar a imagem')
+    } finally {
+      window.clearTimeout(timeoutId)
     }
 
-    const data = await response.json()
-    // O backend sempre retorna o caminho relativo em data.path
-    // Normaliza para garantir que est√° no formato correto
-    return normalizeImagePath(data.data.path || data.data.url)
+    const text = await response.text()
+    let data: any = null
+    if (text) {
+      try {
+        data = JSON.parse(text)
+      } catch {
+        data = null
+      }
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.message || 'Erro ao fazer upload da imagem')
+    }
+
+    const imagePath = data?.data?.path || data?.data?.url
+    if (!imagePath) {
+      throw new Error('O servidor n„o retornou o caminho da imagem enviada')
+    }
+
+    return normalizeImagePath(imagePath)
   }
 
   /**

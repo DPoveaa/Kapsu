@@ -7,6 +7,7 @@ interface BannerImageUploadProps {
   value?: string // URL ou caminho da imagem atual
   onChange: (url: string) => void // Callback quando a imagem é alterada (recebe caminho relativo)
   onError?: (error: string | null) => void // Callback para erros
+  onUploadingChange?: (uploading: boolean) => void
   className?: string
   disabled?: boolean
 }
@@ -15,6 +16,7 @@ export default function BannerImageUpload({
   value, 
   onChange, 
   onError, 
+  onUploadingChange,
   className = '',
   disabled = false 
 }: BannerImageUploadProps) {
@@ -62,6 +64,7 @@ export default function BannerImageUpload({
     // Faz upload usando o serviço de banners
     try {
       setUploading(true)
+      onUploadingChange?.(true)
       // bannersService.uploadImage já retorna o caminho relativo normalizado
       const imagePath = await bannersService.uploadImage(file)
       
@@ -80,6 +83,7 @@ export default function BannerImageUpload({
       setPreview(value ? getPreviewUrl(value) : null)
     } finally {
       setUploading(false)
+      onUploadingChange?.(false)
       // Limpa o input para permitir selecionar o mesmo arquivo novamente
       if (fileInputRef.current) {
         fileInputRef.current.value = ''

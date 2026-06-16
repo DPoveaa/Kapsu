@@ -510,11 +510,6 @@ export default function ProductDetail() {
                 }}
                 onError={handleProductImageError}
               />
-
-              {/* Certified formula badge top-left */}
-              <div className="absolute top-3 left-3 bg-black/40 backdrop-blur-sm border border-white/10 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-md uppercase tracking-wider">
-                <ShieldCheck size={12} className="text-[#00C878]" /> Fórmula Certificada
-              </div>
             </div>
 
             {/* Thumbnails list with buttons */}
@@ -699,8 +694,8 @@ export default function ProductDetail() {
                 onClick={handleAddToCart}
                 disabled={!product.active}
                 className={`w-full py-3.5 border font-bold rounded-xl transition-all active:scale-98 flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed duration-200 uppercase tracking-wide ${isAdded
-                    ? 'bg-green-600 border-green-600 text-white animate-fade-in'
-                    : 'border-green-600 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/20'
+                  ? 'bg-green-600 border-green-600 text-white animate-fade-in'
+                  : 'border-green-600 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-950/20'
                   }`}
               >
                 {isAdded ? (

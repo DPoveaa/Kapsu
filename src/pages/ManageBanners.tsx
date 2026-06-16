@@ -99,7 +99,7 @@ export default function ManageBanners() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null)
-  const [uploading] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [formData, setFormData] = useState<CreateBannerData>({
     image_url: '',
     title: '',
@@ -343,6 +343,7 @@ export default function ManageBanners() {
                 value={formData.image_url}
                 onChange={handleImageChange}
                 onError={(err) => { if (err) alert(err) }}
+                onUploadingChange={setUploading}
                 disabled={uploading}
               />
             </div>

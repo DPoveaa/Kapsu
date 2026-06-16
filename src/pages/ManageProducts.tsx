@@ -4,7 +4,7 @@ import {
   ArrowLeft, Plus, Edit, Trash2, Loader2, Search, Upload,
   Archive, ArchiveRestore, TrendingUp, TrendingDown, Minus,
   ChevronDown, ChevronRight, X, BarChart2, ShoppingCart, Tag,
-  Sparkles, Check, AlertCircle, Save
+  Sparkles, Check, AlertCircle, Save, Download
 } from 'lucide-react'
 import { productsService } from '../services/products.service'
 import { siteSettingsService } from '../services/site-settings.service'
@@ -26,6 +26,8 @@ import ImageUpload from '../components/ImageUpload'
 import { normalizeImagePath } from '../utils/imageUrl'
 
 type Tab = 'active' | 'inactive' | 'archived'
+type ProductsSortKey = 'name' | 'category' | 'purchase_price' | 'margin' | 'price' | 'status'
+type SortDirection = 'asc' | 'desc'
 
 // ─── Column fields for import mapping ──────────────────────────────────────
 const IMPORT_FIELDS = [
@@ -190,7 +192,12 @@ export default function ManageProducts() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isExporting, setIsExporting] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [productsSort, setProductsSort] = useState<{ key: ProductsSortKey; direction: SortDirection }>({
+    key: 'name',
+    direction: 'asc',
+  })
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -540,7 +547,7 @@ export default function ManageProducts() {
 
   // ── Price history modal state ─────────────────────────────────────────────
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
-  const [isGlobalMarkupModalOpen, setIsGlobalMarkupModalOpen] = useState(false)
+  const [isMinimumMarginModalOpen, setIsMinimumMarginModalOpen] = useState(false)
   const [historyData, setHistoryData] = useState<{
     product: { id: string; name: string; active: boolean; archived: boolean };
     history: ProductPriceHistory[];
@@ -562,27 +569,34 @@ export default function ManageProducts() {
   }, [isDropdownOpen])
 
   // ── Markup state & handlers ──────────────────────────────────────────────
-  const [globalMarkup, setGlobalMarkup] = useState<number | null>(null)
-  const [globalMarkupInput, setGlobalMarkupInput] = useState<string>('')
-  const [isApplyingGlobalMarkup, setIsApplyingGlobalMarkup] = useState(false)
+  const [minimumMargin, setMinimumMargin] = useState<number | null>(null)
+  const [minimumMarginInput, setMinimumMarginInput] = useState<string>('')
+  const [minimumMarginRoundingMode, setMinimumMarginRoundingMode] = useState<'cents_up' | 'commercial_90_up' | 'commercial_99_up'>('commercial_90_up')
+  const [isApplyingMinimumMargin, setIsApplyingMinimumMargin] = useState(false)
   const [editingMarkupId, setEditingMarkupId] = useState<string | null>(null)
   const [tempMarkupValue, setTempMarkupValue] = useState<string>('')
 
-  const loadGlobalMarkup = useCallback(async () => {
+  const loadMinimumMarginSettings = useCallback(async () => {
     try {
-      const val = await siteSettingsService.getSetting('global_markup')
-      if (val !== null && val !== undefined) {
-        setGlobalMarkup(Number(val))
-        setGlobalMarkupInput(String(val))
+      const [margin, roundingMode] = await Promise.all([
+        siteSettingsService.getSetting('minimum_margin'),
+        siteSettingsService.getSetting('minimum_margin_rounding_mode'),
+      ])
+      if (margin !== null && margin !== undefined) {
+        setMinimumMargin(Number(margin))
+        setMinimumMarginInput(String(margin))
+      }
+      if (roundingMode === 'cents_up' || roundingMode === 'commercial_90_up' || roundingMode === 'commercial_99_up') {
+        setMinimumMarginRoundingMode(roundingMode)
       }
     } catch (e) {
-      console.error('Erro ao carregar markup global:', e)
+      console.error('Erro ao carregar configurações de margem mínima:', e)
     }
   }, [])
 
   useEffect(() => {
-    loadGlobalMarkup()
-  }, [loadGlobalMarkup])
+    loadMinimumMarginSettings()
+  }, [loadMinimumMarginSettings])
 
   const startEditingMarkup = (p: Product) => {
     if (p.purchase_price == null || Number(p.purchase_price) <= 0) {
@@ -637,28 +651,29 @@ export default function ManageProducts() {
     }
   }
 
-  const handleApplyGlobalMarkup = () => {
-    const value = globalMarkupInput.trim()
-    if (value === '' || isNaN(Number(value)) || Number(value) < 0) {
-      toast.error('Insira um markup válido (número positivo ou zero).')
+  const handleApplyMinimumMargin = () => {
+    const value = minimumMarginInput.trim()
+    if (value === '' || isNaN(Number(value)) || Number(value) < 0 || Number(value) >= 100) {
+      toast.error('Insira uma margem valida entre 0 e 99,99%.')
       return
     }
 
-    const targetMarkup = Number(value)
+    const targetMargin = Number(value)
 
     confirm.show(
-      `Deseja aplicar o markup de ${targetMarkup}% globalmente?\nIsso recalculará o preço de venda de todos os produtos ativos e inativos que possuem preço de custo cadastrado.`,
+      `Deseja aplicar margem minima de ${targetMargin}%?\nSomente produtos nao arquivados com custo cadastrado e margem atual abaixo dessa porcentagem terao o preco aumentado.`,
       async () => {
         try {
-          setIsApplyingGlobalMarkup(true)
-          const result = await productsService.applyGlobalMarkup(targetMarkup)
-          setGlobalMarkup(targetMarkup)
-          toast.success(result.message || 'Markup global aplicado com sucesso!')
-          await loadProducts() // Reload products with updated prices
+          setIsApplyingMinimumMargin(true)
+          const result = await productsService.applyMinimumMargin(targetMargin, minimumMarginRoundingMode)
+          setMinimumMargin(targetMargin)
+          toast.success(result.message || 'Margem minima aplicada com sucesso!')
+          setIsMinimumMarginModalOpen(false)
+          await loadProducts()
         } catch (e: any) {
-          toast.error(e.message || 'Erro ao aplicar markup global.')
+          toast.error(e.message || 'Erro ao aplicar margem minima.')
         } finally {
-          setIsApplyingGlobalMarkup(false)
+          setIsApplyingMinimumMargin(false)
         }
       },
       undefined,
@@ -666,8 +681,6 @@ export default function ManageProducts() {
       'Cancelar'
     )
   }
-
-  // ── Load ──────────────────────────────────────────────────────────────────
   const loadProducts = useCallback(async () => {
     try {
       setLoading(true); setError(null)
@@ -678,6 +691,71 @@ export default function ManageProducts() {
 
   useEffect(() => { loadProducts() }, [loadProducts])
   useEffect(() => { setSelectedIds([]); setSearchTerm('') }, [activeTab])
+
+  const formatExportDate = (value: unknown) => {
+    if (!value) return ''
+    const date = new Date(String(value))
+    if (Number.isNaN(date.getTime())) return String(value)
+    return date.toLocaleString('pt-BR')
+  }
+
+  const handleExportProducts = async () => {
+    try {
+      setIsExporting(true)
+      const productsToExport = await productsService.getAllForAdminRaw()
+      const rows = productsToExport.map(product => {
+        const publicImageUrl = product.image ? productsService.getImageUrl(product.image) : ''
+
+        return {
+          ID: product.id,
+          Nome: product.name,
+          Descrição: product.description || '',
+          'Preço de Venda': product.price != null ? Number(product.price) : '',
+          'Preço Promocional': product.promo_price != null ? Number(product.promo_price) : '',
+          'Preço de Compra': product.purchase_price != null ? Number(product.purchase_price) : '',
+          'Markup (%)': product.markup != null ? Number(product.markup) : '',
+          Categoria: product.category || '',
+          Ativo: product.active ? 'Sim' : 'Não',
+          Arquivado: product.archived ? 'Sim' : 'Não',
+          'Frete Grátis': product.free_shipping ? 'Sim' : 'Não',
+          'Imagem Original': product.image || '',
+          'Link Público da Imagem': publicImageUrl,
+          'Formulação / Composição': product.compositions || '',
+          Indicação: product.indication || '',
+          Contraindicação: product.contraindication || '',
+          Benefícios: product.benefits || '',
+          'Criado em': formatExportDate(product.created_at),
+          'Atualizado em': formatExportDate(product.updated_at),
+        }
+      })
+
+      const worksheet = XLSX.utils.json_to_sheet(rows)
+      worksheet['!cols'] = [
+        { wch: 38 }, { wch: 36 }, { wch: 48 }, { wch: 15 }, { wch: 18 },
+        { wch: 16 }, { wch: 12 }, { wch: 24 }, { wch: 10 }, { wch: 12 },
+        { wch: 13 }, { wch: 36 }, { wch: 64 }, { wch: 48 }, { wch: 42 },
+        { wch: 42 }, { wch: 48 }, { wch: 20 }, { wch: 20 },
+      ]
+
+      productsToExport.forEach((product, index) => {
+        if (!product.image) return
+        const cellAddress = `M${index + 2}`
+        const cell = worksheet[cellAddress]
+        if (cell?.v) {
+          cell.l = { Target: String(cell.v), Tooltip: 'Abrir imagem pública' }
+        }
+      })
+
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Produtos')
+      XLSX.writeFile(workbook, `produtos-kapsu-${new Date().toISOString().slice(0, 10)}.xlsx`)
+      toast.success(`${productsToExport.length} produto(s) exportado(s) com sucesso.`)
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao exportar produtos.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
 
   // ── Import ────────────────────────────────────────────────────────────────
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1242,6 +1320,64 @@ export default function ManageProducts() {
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (p.description || '').toLowerCase().includes(searchTerm.toLowerCase())
   )
+  const getProductMarginValue = (p: Product): number | null => {
+    const cost = p.purchase_price != null ? Number(p.purchase_price) : null
+    const sale = Number(p.price)
+    if (cost != null && cost > 0 && sale > 0) {
+      return ((sale - cost) / sale) * 100
+    }
+    if (p.markup != null && Number.isFinite(Number(p.markup))) {
+      return Number(p.markup)
+    }
+    return null
+  }
+  const getProductStatusLabel = (p: Product) => {
+    if (p.archived) return 'Arquivado'
+    return p.active ? 'Ativo' : 'Inativo'
+  }
+  const getProductSortValue = (p: Product, key: ProductsSortKey): string | number | null => {
+    switch (key) {
+      case 'name':
+        return p.name || ''
+      case 'category':
+        return p.category || ''
+      case 'purchase_price':
+        return p.purchase_price != null ? Number(p.purchase_price) : null
+      case 'margin':
+        return getProductMarginValue(p)
+      case 'price':
+        return Number(p.price)
+      case 'status':
+        return getProductStatusLabel(p)
+      default:
+        return ''
+    }
+  }
+  const sortedProducts = useMemo(() => {
+    const directionFactor = productsSort.direction === 'asc' ? 1 : -1
+
+    return [...filteredProducts].sort((a, b) => {
+      const av = getProductSortValue(a, productsSort.key)
+      const bv = getProductSortValue(b, productsSort.key)
+
+      if (av == null && bv == null) return a.name.localeCompare(b.name, 'pt-BR')
+      if (av == null) return 1
+      if (bv == null) return -1
+
+      const result = typeof av === 'number' && typeof bv === 'number'
+        ? av - bv
+        : String(av).localeCompare(String(bv), 'pt-BR', { sensitivity: 'base', numeric: true })
+
+      if (result !== 0) return result * directionFactor
+      return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+    })
+  }, [filteredProducts, productsSort])
+  const handleProductsSort = (key: ProductsSortKey) => {
+    setProductsSort(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc',
+    }))
+  }
 
   const TABS = [
     { key: 'active' as Tab, label: 'Ativos', count: activeProducts.length, active: 'border-green-500 text-green-600 dark:text-green-400', badge: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' },
@@ -1250,6 +1386,25 @@ export default function ManageProducts() {
   ]
 
   // ── Sub-renders ───────────────────────────────────────────────────────────
+  const renderSortableHeader = (key: ProductsSortKey, label: string) => {
+    const isActive = productsSort.key === key
+    return (
+      <button
+        type="button"
+        onClick={() => handleProductsSort(key)}
+        className={`group inline-flex items-center gap-1.5 rounded px-1 py-0.5 -mx-1 -my-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800 ${isActive ? 'text-primary-700 dark:text-primary-300' : 'hover:text-gray-700 dark:hover:text-white'}`}
+        title={`Ordenar por ${label}`}
+        aria-sort={isActive ? (productsSort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+      >
+        <span>{label}</span>
+        <ChevronDown
+          size={14}
+          className={`transition-all ${isActive ? 'opacity-100' : 'opacity-30 group-hover:opacity-70'} ${isActive && productsSort.direction === 'asc' ? 'rotate-180' : ''}`}
+        />
+      </button>
+    )
+  }
+
   const renderStatusBadge = (p: Product) => p.archived
     ? <span className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"><Archive size={11} />Arquivado</span>
     : <button onClick={() => handleToggleActive(p)} className={`px-2 py-1 text-xs font-medium rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${p.active ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 hover:bg-green-200' : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 hover:bg-yellow-200'}`} title={`Clique para ${p.active ? 'desativar' : 'ativar'}`}>{p.active ? 'Ativo' : 'Inativo'}</button>
@@ -1276,8 +1431,8 @@ export default function ManageProducts() {
             <button onClick={openHistory} className="flex items-center justify-center p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm" title="Histórico de Preços">
               <BarChart2 size={18} />
             </button>
-            {/* Global Markup button */}
-            <button onClick={() => setIsGlobalMarkupModalOpen(true)} className="flex items-center justify-center p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm" title="Ajuste de Markup Global">
+            {/* Minimum margin button */}
+            <button onClick={() => setIsMinimumMarginModalOpen(true)} className="flex items-center justify-center p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm" title="Margem minima">
               <TrendingUp size={18} className="text-green-600 dark:text-green-400" />
             </button>
             {/* Scan Duplicates button */}
@@ -1287,6 +1442,16 @@ export default function ManageProducts() {
               title="Verificar Semelhantes"
             >
               <AlertCircle size={18} />
+            </button>
+            <button
+              type="button"
+              onClick={handleExportProducts}
+              disabled={isExporting}
+              className="flex items-center gap-1.5 px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+              title="Exportar produtos para Excel"
+            >
+              {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
+              <span className="hidden lg:inline text-sm font-medium">Exportar</span>
             </button>
             {/* Add dropdown */}
             <div ref={dropdownRef} className="relative flex-1 sm:flex-none">
@@ -1300,7 +1465,7 @@ export default function ManageProducts() {
                       <Plus size={16} className="mr-2" />Novo Produto
                     </button>
                     <button onClick={() => { setIsImportOpen(true); setIsDropdownOpen(false) }} className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-                      <Upload size={16} className="mr-2" />Importar Excel/CSV
+                      <Download size={16} className="mr-2" />Importar Excel/CSV
                     </button>
                   </div>
                 </div>
@@ -1376,19 +1541,19 @@ export default function ManageProducts() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">
                         <input type="checkbox" checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0} onChange={e => setSelectedIds(e.target.checked ? filteredProducts.map(p => p.id) : [])} className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 focus-visible:ring-2 focus-visible:ring-blue-500" />
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Produto</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Categoria</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Compra</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Markup / Margem</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Venda</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('name', 'Produto')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('category', 'Categoria')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('purchase_price', 'Compra')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('margin', 'Markup / Margem')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('price', 'Venda')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('status', 'Status')}</th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap sticky right-0 bg-gray-50 dark:bg-gray-800 z-10 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.3)]">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {filteredProducts.length === 0 ? (
                       <tr><td colSpan={8} className="px-6 py-10 text-center text-gray-500 dark:text-gray-400 text-sm">Nenhum produto encontrado.</td></tr>
-                    ) : filteredProducts.map(p => (
+                    ) : sortedProducts.map(p => (
                       <tr key={p.id} className={`group hover:bg-gray-50 dark:hover:bg-[#065084]/40 transition-colors ${p.archived ? 'opacity-70' : ''}`}>
                         <td className="px-4 py-3 whitespace-nowrap">
                           <input type="checkbox" checked={selectedIds.includes(p.id)} onChange={e => setSelectedIds(e.target.checked ? [...selectedIds, p.id] : selectedIds.filter(x => x !== p.id))} className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 focus-visible:ring-2 focus-visible:ring-blue-500" />
@@ -1849,88 +2014,102 @@ export default function ManageProducts() {
         </div>
       )}
 
-      {/* ═══════════════ GLOBAL MARKUP MODAL ═══════════════════════════════ */}
-      {isGlobalMarkupModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-200 dark:border-gray-700">
-            {/* Header */}
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-green-50 dark:bg-green-900/30">
+      {/* Minimum margin modal */}
+      {isMinimumMarginModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2 rounded-xl bg-green-50 dark:bg-green-900/30 shrink-0">
                   <TrendingUp size={20} className="text-green-600 dark:text-green-400" />
                 </div>
-                <div>
-                  <h2 className="text-base font-bold text-gray-900 dark:text-white">Ajuste de Markup Global</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Recalcular margens de todos os produtos</p>
+                <div className="min-w-0">
+                  <h2 className="text-base font-bold text-gray-900 dark:text-white">Margem minima</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Aumenta apenas produtos abaixo da meta</p>
                 </div>
               </div>
-              <button onClick={() => setIsGlobalMarkupModalOpen(false)} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              <button onClick={() => setIsMinimumMarginModalOpen(false)} className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors" disabled={isApplyingMinimumMargin}>
                 <X size={18} />
               </button>
             </div>
 
-            {/* Body */}
-            <div className="p-5 space-y-4">
-              <p className="text-xs text-gray-650 dark:text-gray-400">
-                Defina um markup percentual para aplicar a todos os produtos de uma só vez. O preço de venda de cada produto será recalculado como <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[10px] font-mono text-green-700 dark:text-green-400">Custo + Markup %</code>. Produtos sem preço de custo cadastrado não sofrerão alterações.
+            <div className="p-4 sm:p-5 space-y-4">
+              <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-400">
+                Informe a margem minima de lucro sobre o preco de venda. Produtos nao arquivados com custo cadastrado e margem atual menor que a meta terao o preco aumentado ate atingir a margem, com arredondamento sempre para cima.
               </p>
 
-              {globalMarkup !== null && (
+              {minimumMargin !== null && (
                 <div className="p-3 bg-green-50/50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 rounded-xl text-xs text-green-700 dark:text-green-400 flex items-center gap-2">
-                  <Check size={14} />
-                  <span>Markup global ativo atualmente: <strong>{globalMarkup}%</strong></span>
+                  <Check size={14} className="shrink-0" />
+                  <span>Margem minima atual: <strong>{minimumMargin}%</strong></span>
                 </div>
               )}
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">Novo Markup (%)</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={globalMarkupInput}
-                    onChange={(e) => setGlobalMarkupInput(e.target.value)}
-                    placeholder="Ex: 50"
-                    min="0"
-                    step="0.01"
-                    disabled={isApplyingGlobalMarkup}
-                    className="w-full pl-3 pr-8 py-2.5 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">%</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">Margem minima (%)</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={minimumMarginInput}
+                      onChange={(e) => setMinimumMarginInput(e.target.value)}
+                      placeholder="Ex: 35"
+                      min="0"
+                      max="99.99"
+                      step="0.01"
+                      disabled={isApplyingMinimumMargin}
+                      className="w-full pl-3 pr-8 py-2.5 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 font-medium">%</span>
+                  </div>
                 </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">Arredondamento</label>
+                  <select
+                    value={minimumMarginRoundingMode}
+                    onChange={(e) => setMinimumMarginRoundingMode(e.target.value as 'cents_up' | 'commercial_90_up' | 'commercial_99_up')}
+                    disabled={isApplyingMinimumMargin}
+                    className="w-full px-3 py-2.5 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  >
+                    <option value="commercial_90_up">Comercial para cima (R$ x,90)</option>
+                    <option value="commercial_99_up">Comercial para cima (R$ x,99)</option>
+                    <option value="cents_up">Centavos para cima</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 rounded-xl text-xs text-amber-800 dark:text-amber-300">
+                Produtos acima da margem informada nao serao reduzidos. Produtos sem preco de compra tambem serao ignorados.
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="p-5 border-t border-gray-100 dark:border-gray-800 flex gap-3 bg-gray-50/50 dark:bg-gray-850">
+            <div className="p-4 sm:p-5 border-t border-gray-100 dark:border-gray-800 flex flex-col-reverse sm:flex-row gap-3 bg-gray-50/50 dark:bg-gray-850">
               <button
-                onClick={() => setIsGlobalMarkupModalOpen(false)}
-                disabled={isApplyingGlobalMarkup}
-                className="flex-1 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                onClick={() => setIsMinimumMarginModalOpen(false)}
+                disabled={isApplyingMinimumMargin}
+                className="flex-1 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
               >
                 Cancelar
               </button>
               <button
-                onClick={async () => {
-                  handleApplyGlobalMarkup();
-                  setIsGlobalMarkupModalOpen(false);
-                }}
-                disabled={isApplyingGlobalMarkup || globalMarkupInput.trim() === ''}
+                onClick={handleApplyMinimumMargin}
+                disabled={isApplyingMinimumMargin || minimumMarginInput.trim() === ''}
                 className="flex-1 py-2 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5"
               >
-                {isApplyingGlobalMarkup ? (
+                {isApplyingMinimumMargin ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
                     Aplicando...
                   </>
                 ) : (
-                  <>Aplicar Global</>
+                  <>Aplicar margem</>
                 )}
               </button>
             </div>
           </div>
         </div>
       )}
-
       {/* ═══════════════ SIMILARITY WARNING MODAL ══════════════════════════ */}
       {isSimilarityModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -2134,13 +2313,12 @@ export default function ManageProducts() {
                                         <span className="text-xs text-gray-500 dark:text-gray-400 font-semibold">
                                           Custo: {p.purchase_price != null ? fmt(p.purchase_price) : '—'} | Venda: {fmt(p.price)}
                                         </span>
-                                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
-                                          loadingOrdersCount
-                                            ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 animate-pulse'
-                                            : (productsOrdersCount[p.id] || 0) > 0
-                                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-900/40'
-                                              : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
-                                        }`}>
+                                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${loadingOrdersCount
+                                          ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 animate-pulse'
+                                          : (productsOrdersCount[p.id] || 0) > 0
+                                            ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-900/40'
+                                            : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                                          }`}>
                                           {loadingOrdersCount ? (
                                             'Carregando vendas...'
                                           ) : (

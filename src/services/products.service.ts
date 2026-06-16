@@ -6,7 +6,7 @@ import { getUploadsImageUrl } from '../utils/imageUrl'
 const API_URL = env.apiUrl
 
 // Tipo do produto vindo do backend
-interface BackendProduct {
+export interface BackendProduct {
   id: string
   name: string
   description: string | null
@@ -20,10 +20,11 @@ interface BackendProduct {
   compositions: string | null
   indication: string | null
   contraindication: string | null
+  benefits?: string | null
   free_shipping?: boolean
   markup?: number | null
-  created_at: Date
-  updated_at: Date
+  created_at: string | Date
+  updated_at: string | Date
 }
 
 interface ProductsResponse {
@@ -92,6 +93,12 @@ class ProductsService {
       archived: product.archived ?? false,
       free_shipping: product.free_shipping ?? false,
       markup: product.markup != null ? Number(product.markup) : null,
+      compositions: product.compositions,
+      indication: product.indication,
+      contraindication: product.contraindication,
+      benefits: product.benefits ?? null,
+      created_at: product.created_at ? String(product.created_at) : undefined,
+      updated_at: product.updated_at ? String(product.updated_at) : undefined,
     }
   }
 
@@ -290,6 +297,36 @@ class ProductsService {
       }
 
       return data.data.map(product => this.mapProduct(product))
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão. Verifique se o servidor está rodando.')
+    }
+  }
+
+  /**
+   * Busca todos os produtos (incluindo inativos) - retorna dados brutos para exportação/admin
+   */
+  async getAllForAdminRaw(): Promise<BackendProduct[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/admin/all`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const data: ProductsResponse = JSON.parse(text)
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao buscar produtos')
+      }
+
+      return data.data
     } catch (error: any) {
       if (error.message) {
         throw error
@@ -591,23 +628,26 @@ class ProductsService {
   }
 
   /**
-   * Aplica um markup global para todos os produtos
+   * Aplica margem mínima para produtos abaixo da meta
    */
-  async applyGlobalMarkup(markup: number): Promise<any> {
+  async applyMinimumMargin(
+    margin: number,
+    roundingMode: 'cents_up' | 'commercial_90_up' | 'commercial_99_up'
+  ): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}/admin/apply-global-markup`, {
+      const response = await fetch(`${this.baseUrl}/admin/apply-minimum-margin`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify({ markup }),
+        body: JSON.stringify({ margin, roundingMode }),
       })
       const text = await response.text()
       if (!text) throw new Error('Resposta vazia do servidor')
       const data = JSON.parse(text)
-      if (!response.ok) throw new Error(data.message || 'Erro ao aplicar markup global')
+      if (!response.ok) throw new Error(data.message || 'Erro ao aplicar margem mínima')
       return data
     } catch (error: any) {
       if (error.message) throw error
-      throw new Error('Erro de conexão ao aplicar markup global.')
+      throw new Error('Erro de conexão ao aplicar margem mínima.')
     }
   }
 
