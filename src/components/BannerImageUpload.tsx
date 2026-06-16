@@ -112,15 +112,9 @@ export default function BannerImageUpload({
               alt="Preview"
               className="w-full h-full object-cover"
               onError={(e) => {
-                // Se a URL do servidor falhar, tenta via rota /api/uploads
                 const target = e.target as HTMLImageElement
-                if (target.src && !target.src.startsWith('data:') && !target.dataset.triedApi) {
-                  target.dataset.triedApi = '1'
-                  target.src = target.src.replace('/uploads/', '/api/uploads/')
-                } else {
-                  target.onerror = null // Previne loop infinito
-                  target.style.display = 'none'
-                }
+                target.onerror = null
+                target.style.display = 'none'
               }}
             />
             {!disabled && (

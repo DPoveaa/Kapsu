@@ -484,13 +484,8 @@ export default function Home() {
                     onDragStart={(e) => e.preventDefault()}
                     onError={(e) => {
                       const target = e.target as HTMLImageElement
-                      if (target.src && !target.src.includes('/api/uploads/') && !target.dataset.triedApi) {
-                        target.dataset.triedApi = '1'
-                        target.src = target.src.replace('/uploads/', '/api/uploads/')
-                      } else {
-                        target.onerror = null
-                        target.style.display = 'none'
-                      }
+                      target.onerror = null
+                      target.style.display = 'none'
                     }}
                   />
                   <div 

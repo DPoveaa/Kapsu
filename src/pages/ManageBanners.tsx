@@ -24,9 +24,13 @@ function BannerImagePreview({ banner }: { banner: Banner }) {
     const target = e.target as HTMLImageElement
     
     if (!triedApiUrl) {
-      // Primeira tentativa falhou, tenta via rota /api/uploads
-      const apiUrl = imageUrl.replace('/uploads/', '/api/uploads/')
-      console.log('🔄 Tentando URL via API:', apiUrl)
+      const apiUrl = getImageUrl(banner.image_url)
+      if (apiUrl === imageUrl) {
+        setTriedApiUrl(true)
+        setHasError(true)
+        return
+      }
+      console.log('Tentando URL normalizada:', apiUrl)
       setImageUrl(apiUrl)
       setTriedApiUrl(true)
       setHasError(false)

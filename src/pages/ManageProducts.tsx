@@ -23,6 +23,7 @@ import {
 } from '../utils/pricing'
 import AdminModal from '../components/AdminModal'
 import ImageUpload from '../components/ImageUpload'
+import { normalizeImagePath } from '../utils/imageUrl'
 
 type Tab = 'active' | 'inactive' | 'archived'
 
@@ -390,7 +391,7 @@ export default function ManageProducts() {
         promo_price: productRaw.promo_price ? formatPriceInput(Number(productRaw.promo_price)) : '',
         purchase_price: cost ? formatPriceInput(cost) : '',
         markup: compatibleMarkup != null ? formatMarkupInput(compatibleMarkup) : '',
-        image: product.image || '',
+        image: productRaw.image || '',
         category: product.category || 'Outros',
         active: productRaw.active ?? true,
         compositions: productRaw.compositions || '',
@@ -507,7 +508,7 @@ export default function ManageProducts() {
         promo_price: productFormData.promo_price ? roundCurrency(Number(productFormData.promo_price)) : null,
         purchase_price: cost,
         markup: finalMarkup,
-        image: productFormData.image.trim() || undefined,
+        image: productFormData.image.trim() ? normalizeImagePath(productFormData.image) : undefined,
         category: productFormData.category || undefined,
         active: productFormData.active,
         compositions: productFormData.compositions.trim() || undefined,

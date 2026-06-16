@@ -1,6 +1,7 @@
 import { env } from '../config/env'
 import { Product, ProductPriceHistory } from '../types'
 import { PRODUCT_IMAGE_FALLBACK } from '../utils/imageFallback'
+import { getUploadsImageUrl } from '../utils/imageUrl'
 
 const API_URL = env.apiUrl
 
@@ -70,20 +71,8 @@ class ProductsService {
     if (!isUrl && !isPath && !hasImageExtension && trimmedImage.length > 50) {
       return PRODUCT_IMAGE_FALLBACK
     }
-
-    // Se já é uma URL completa (http:// ou https://), retorna como está
-    if (isUrl) {
-      return trimmedImage
-    }
-
-    // Se é um caminho relativo (começa com /), converte para URL completa
-    if (isPath) {
-      // Mantém a URL da API incluindo o /api
-      return `${API_URL}${trimmedImage}`
-    }
-
-    // Se não começa com /, assume que é um caminho relativo e adiciona /uploads/products/
-    return `${API_URL}/uploads/products/${trimmedImage}`
+    const url = getUploadsImageUrl(trimmedImage, 'products')
+    return url || (isUrl ? trimmedImage : PRODUCT_IMAGE_FALLBACK)
   }
 
   /**

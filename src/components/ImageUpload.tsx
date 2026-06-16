@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Upload, X, Loader2, Image as ImageIcon } from 'lucide-react'
 import { uploadService } from '../services/upload.service'
-import { env } from '../config/env'
+import { getUploadsImageUrl, normalizeImagePath } from '../utils/imageUrl'
 
 interface ImageUploadProps {
   value?: string // URL da imagem atual
@@ -21,18 +21,7 @@ export default function ImageUpload({
   // Converte caminho relativo para URL completa para exibição
   const getPreviewUrl = (imagePath: string | null): string | null => {
     if (!imagePath) return null
-    
-    // Se já é uma URL completa, retorna como está
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-      return imagePath
-    }
-    
-    // Se é um caminho relativo, converte para URL completa
-    if (imagePath.startsWith('/')) {
-      return `${env.apiUrl.replace('/api', '')}${imagePath}`
-    }
-    
-    return imagePath
+    return getUploadsImageUrl(imagePath, 'products') || null
   }
 
   const [uploading, setUploading] = useState(false)
@@ -74,9 +63,9 @@ export default function ImageUpload({
       setUploading(true)
       const response = await uploadService.uploadProductImage(file)
       // Salva apenas o caminho relativo (path) em vez da URL completa
-      onChange(response.data.path)
+      onChange(normalizeImagePath(response.data.path))
       // Atualiza preview com a URL completa para exibição
-      setPreview(response.data.url)
+      setPreview(getPreviewUrl(response.data.path))
       onError?.(null) // Limpa erro anterior
     } catch (error: any) {
       console.error('Erro ao fazer upload:', error)
