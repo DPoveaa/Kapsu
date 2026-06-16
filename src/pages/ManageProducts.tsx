@@ -32,8 +32,8 @@ type SortDirection = 'asc' | 'desc'
 // ─── Column fields for import mapping ──────────────────────────────────────
 const IMPORT_FIELDS = [
   { key: 'name', label: 'Nome', required: true },
-  { key: 'price', label: 'Preço de Venda', required: true },
-  { key: 'purchase_price', label: 'Preço de Compra', required: false },
+  { key: 'price', label: 'Preço de Venda', required: false },
+  { key: 'purchase_price', label: 'Preço Distribuidora', required: false },
   { key: 'promo_price', label: 'Preço Promocional', required: false },
   { key: 'description', label: 'Descrição', required: false },
   { key: 'category', label: 'Categoria', required: false },
@@ -54,7 +54,7 @@ function autoDetect(headers: string[]): Record<FieldKey, string> {
     const low = h.toLowerCase()
     if (!m.name && (low.includes('nome') || low.includes('name') || low.includes('produto') || low.includes('product') || low === 'item' || low === 'titulo' || low === 'title')) m.name = h
     else if (!m.price && (low.includes('venda') || low.includes('price') || low === 'preço' || low === 'preco')) m.price = h
-    else if (!m.purchase_price && (low.includes('compra') || low.includes('custo') || low.includes('cost'))) m.purchase_price = h
+    else if (!m.purchase_price && (low.includes('compra') || low.includes('custo') || low.includes('cost') || low.includes('distribuidora'))) m.purchase_price = h
     else if (!m.promo_price && (low.includes('promo') || low.includes('promoc'))) m.promo_price = h
     else if (!m.description && (low.includes('desc') || low.includes('about') || low.includes('detalhe'))) m.description = h
     else if (!m.category && (low.includes('cat') || low.includes('grupo'))) m.category = h
@@ -234,7 +234,7 @@ export default function ManageProducts() {
   const [reactivateCandidates, setReactivateCandidates] = useState<{
     product: Product;
     selected: boolean;
-    newPrice: number;
+    newPrice: number | null;
     newPurchasePrice: number | null;
   }[]>([])
   const [isReactivateModalOpen, setIsReactivateModalOpen] = useState(false)
@@ -710,15 +710,14 @@ export default function ManageProducts() {
           ID: product.id,
           Nome: product.name,
           Descrição: product.description || '',
+          'Preço Distribuidora': product.purchase_price != null ? Number(product.purchase_price) : '',
           'Preço de Venda': product.price != null ? Number(product.price) : '',
           'Preço Promocional': product.promo_price != null ? Number(product.promo_price) : '',
-          'Preço de Compra': product.purchase_price != null ? Number(product.purchase_price) : '',
           'Markup (%)': product.markup != null ? Number(product.markup) : '',
           Categoria: product.category || '',
           Ativo: product.active ? 'Sim' : 'Não',
           Arquivado: product.archived ? 'Sim' : 'Não',
           'Frete Grátis': product.free_shipping ? 'Sim' : 'Não',
-          'Imagem Original': product.image || '',
           'Link Público da Imagem': publicImageUrl,
           'Formulação / Composição': product.compositions || '',
           Indicação: product.indication || '',
@@ -733,13 +732,13 @@ export default function ManageProducts() {
       worksheet['!cols'] = [
         { wch: 38 }, { wch: 36 }, { wch: 48 }, { wch: 15 }, { wch: 18 },
         { wch: 16 }, { wch: 12 }, { wch: 24 }, { wch: 10 }, { wch: 12 },
-        { wch: 13 }, { wch: 36 }, { wch: 64 }, { wch: 48 }, { wch: 42 },
-        { wch: 42 }, { wch: 48 }, { wch: 20 }, { wch: 20 },
+        { wch: 13 }, { wch: 64 }, { wch: 48 }, { wch: 42 }, { wch: 42 },
+        { wch: 48 }, { wch: 20 }, { wch: 20 },
       ]
 
       productsToExport.forEach((product, index) => {
         if (!product.image) return
-        const cellAddress = `M${index + 2}`
+        const cellAddress = `L${index + 2}`
         const cell = worksheet[cellAddress]
         if (cell?.v) {
           cell.l = { Target: String(cell.v), Tooltip: 'Abrir imagem pública' }
@@ -778,6 +777,98 @@ export default function ManageProducts() {
     reader.readAsBinaryString(file)
   }
 
+  const getImportCellValue = (row: any[], field: FieldKey) => {
+    const col = columnMapping[field]
+    if (!col) return undefined
+    const idx = importHeaders.indexOf(col)
+    if (idx === -1) return undefined
+    return row[idx]
+  }
+
+  const getImportName = (row: any[]) => String(getImportCellValue(row, 'name') ?? '').trim()
+
+  const isValidImportName = (name: string) => !!name && name.length >= 2 && !/^\d+$/.test(name)
+
+  const hasImportCellContent = (value: any) => value !== undefined && value !== null && String(value).trim() !== ''
+
+  const parseImportCategory = (value: any) => {
+    if (!hasImportCellContent(value)) return undefined
+    const parts = String(value).split(',')
+    const mapped = parts.map(part => {
+      const s = part.trim()
+      if (!s) return ''
+      return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
+    }).filter(Boolean)
+    const unique = Array.from(new Set(mapped))
+    return unique.length > 0 ? unique.join(', ') : undefined
+  }
+
+  const buildImportPayload = (row: any[]) => {
+    const name = getImportName(row)
+    const payload: any = { name }
+    const hasField = (field: FieldKey) => !!columnMapping[field]
+    let hasUpdatableData = false
+
+    const setTextField = (field: FieldKey, payloadKey = field) => {
+      if (!hasField(field)) return
+      const value = getImportCellValue(row, field)
+      if (!hasImportCellContent(value)) return
+      payload[payloadKey] = String(value).trim()
+      hasUpdatableData = true
+    }
+
+    if (hasField('price')) {
+      const price = cleanPrice(getImportCellValue(row, 'price'))
+      if (price !== null && price > 0) {
+        payload.price = price
+        hasUpdatableData = true
+      }
+    }
+
+    if (hasField('category')) {
+      const category = parseImportCategory(getImportCellValue(row, 'category'))
+      if (category) {
+        payload.category = category
+        hasUpdatableData = true
+      }
+    }
+
+    setTextField('description')
+    setTextField('indication')
+    setTextField('contraindication')
+    setTextField('compositions')
+    setTextField('benefits')
+
+    if (hasField('purchase_price')) {
+      const purchasePrice = cleanPrice(getImportCellValue(row, 'purchase_price'))
+      if (purchasePrice !== null) {
+        payload.purchase_price = purchasePrice
+        hasUpdatableData = true
+      }
+    }
+
+    if (hasField('promo_price')) {
+      const promoPrice = cleanPrice(getImportCellValue(row, 'promo_price'))
+      if (promoPrice !== null) {
+        payload.promo_price = promoPrice
+        hasUpdatableData = true
+      }
+    }
+
+    return {
+      name,
+      nameLower: name.toLowerCase(),
+      payload,
+      hasPrice: payload.price !== undefined,
+      hasUpdatableData,
+    }
+  }
+
+  const getImportCandidateRows = () => importRows.filter(row => {
+    const info = buildImportPayload(row)
+    return isValidImportName(info.name) && info.hasUpdatableData
+  })
+
   const executeImport = async (
     idsToReactivate: Set<string>,
     resolutionsMap: Record<string, { action: 'update' | 'create' | 'skip'; existingId?: string }> = {}
@@ -787,79 +878,16 @@ export default function ManageProducts() {
     let count = 0
 
     try {
-
-      const ni = importHeaders.indexOf(columnMapping.name)
-      const pi = importHeaders.indexOf(columnMapping.price)
-
-      const validRows = importRows.filter(r => {
-        const nameVal = String(r[ni] ?? '').trim()
-        const hasValidName = nameVal && nameVal.length >= 2 && !/^\d+$/.test(nameVal)
-        const parsedPrice = cleanPrice(r[pi])
-        return hasValidName && parsedPrice !== null && parsedPrice > 0
-      })
+      const validRows = getImportCandidateRows()
+      const progressTotal = Math.max(validRows.length, 1)
 
       const seenNames = new Set<string>()
-      const hasField = (field: FieldKey) => !!columnMapping[field]
+      let skippedWithoutPrice = 0
 
       for (const row of validRows) {
-        const get = (field: FieldKey) => {
-          const col = columnMapping[field]; if (!col) return undefined
-          const idx = importHeaders.indexOf(col); if (idx === -1) return undefined
-          return row[idx]
-        }
-        const parseCategory = (v: any) => {
-          if (!v) return undefined
-          const parts = String(v).split(',')
-          const mapped = parts.map(part => {
-            const s = part.trim()
-            if (!s) return ''
-            return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
-          }).filter(Boolean)
-          const unique = Array.from(new Set(mapped))
-          return unique.join(', ')
-        }
-        const name = String(get('name') ?? '').trim()
-        const price = cleanPrice(get('price'))
-        if (!name || name.length < 2 || /^\d+$/.test(name) || !price) continue
-        const nameLower = name.toLowerCase()
+        const { nameLower, payload, hasPrice } = buildImportPayload(row)
         if (seenNames.has(nameLower)) continue
         seenNames.add(nameLower)
-
-        const payload: any = {
-          name,
-          price,
-        }
-
-        if (hasField('description')) {
-          const val = get('description')
-          payload.description = val ? String(val).trim() : null
-        }
-        if (hasField('category')) {
-          const val = get('category')
-          payload.category = parseCategory(val)
-        }
-        if (hasField('indication')) {
-          const val = get('indication')
-          payload.indication = val ? String(val).trim() : null
-        }
-        if (hasField('contraindication')) {
-          const val = get('contraindication')
-          payload.contraindication = val ? String(val).trim() : null
-        }
-        if (hasField('compositions')) {
-          const val = get('compositions')
-          payload.compositions = val ? String(val).trim() : null
-        }
-        if (hasField('benefits')) {
-          const val = get('benefits')
-          payload.benefits = val ? String(val).trim() : null
-        }
-        if (hasField('purchase_price')) {
-          payload.purchase_price = cleanPrice(get('purchase_price'))
-        }
-        if (hasField('promo_price')) {
-          payload.promo_price = cleanPrice(get('promo_price'))
-        }
 
         // Apply custom similarity resolution if present
         const customRes = resolutionsMap[nameLower]
@@ -869,15 +897,19 @@ export default function ManageProducts() {
           } else if (customRes.action === 'update' && customRes.existingId) {
             await productsService.update(customRes.existingId, payload)
             count++
-            setImportProgress(Math.round((count / validRows.length) * 100))
+            setImportProgress(Math.round((count / progressTotal) * 100))
             continue
           } else if (customRes.action === 'create') {
+            if (!hasPrice) {
+              skippedWithoutPrice++
+              continue
+            }
             await productsService.create({
               ...payload,
               active: true,
             })
             count++
-            setImportProgress(Math.round((count / validRows.length) * 100))
+            setImportProgress(Math.round((count / progressTotal) * 100))
             continue
           }
         }
@@ -904,6 +936,10 @@ export default function ManageProducts() {
             count++
           }
         } else {
+          if (!hasPrice) {
+            skippedWithoutPrice++
+            continue
+          }
           // If it doesn't exist, create it
           await productsService.create({
             ...payload,
@@ -912,13 +948,14 @@ export default function ManageProducts() {
           count++
         }
 
-        setImportProgress(Math.round((count / validRows.length) * 100))
+        setImportProgress(Math.round((count / progressTotal) * 100))
       }
       await loadProducts()
       setIsImportOpen(false)
       setIsReactivateModalOpen(false)
       resetImport()
-      toast.success(`${count} produto(s) importado(s) com sucesso!`)
+      const skippedMessage = skippedWithoutPrice > 0 ? ` ${skippedWithoutPrice} linha(s) sem preço foram ignoradas por não corresponderem a produto existente.` : ''
+      toast.success(`${count} produto(s) importado(s) com sucesso!${skippedMessage}`)
     } catch (e: any) {
       toast.error(e.message || 'Erro ao importar')
     } finally {
@@ -946,13 +983,8 @@ export default function ManageProducts() {
       const p = products.find(prod => prod.name.trim().toLowerCase() === nameLower && (prod.archived || !prod.active))
       if (!p) return null
 
-      const getVal = (field: FieldKey) => {
-        const col = columnMapping[field]; if (!col) return undefined
-        const idx = importHeaders.indexOf(col); if (idx === -1) return undefined
-        return row[idx]
-      }
-      const newPrice = cleanPrice(getVal('price')) || 0
-      const newPurchasePrice = cleanPrice(getVal('purchase_price')) || null
+      const newPrice = cleanPrice(getImportCellValue(row, 'price'))
+      const newPurchasePrice = cleanPrice(getImportCellValue(row, 'purchase_price'))
 
       return {
         product: p,
@@ -960,7 +992,7 @@ export default function ManageProducts() {
         newPrice,
         newPurchasePrice
       }
-    }).filter((item): item is { product: Product; selected: boolean; newPrice: number; newPurchasePrice: number | null } => !!item)
+    }).filter((item): item is { product: Product; selected: boolean; newPrice: number | null; newPurchasePrice: number | null } => !!item)
 
     if (candidates.length > 0) {
       setReactivateCandidates(candidates)
@@ -972,18 +1004,10 @@ export default function ManageProducts() {
   }
 
   const handleImportConfirm = async () => {
-    if (!columnMapping.name || !columnMapping.price) return
+    if (!columnMapping.name) return
 
 
-    const ni = importHeaders.indexOf(columnMapping.name)
-    const pi = importHeaders.indexOf(columnMapping.price)
-
-    const validRows = importRows.filter(r => {
-      const nameVal = String(r[ni] ?? '').trim()
-      const hasValidName = nameVal && nameVal.length >= 2 && !/^\d+$/.test(nameVal)
-      const parsedPrice = cleanPrice(r[pi])
-      return hasValidName && parsedPrice !== null && parsedPrice > 0
-    })
+    const validRows = getImportCandidateRows()
 
     if (validRows.length === 0) {
       toast.warning('Nenhum produto válido encontrado para importação.')
@@ -996,7 +1020,7 @@ export default function ManageProducts() {
     const seenSimilar = new Set<string>()
 
     for (const row of validRows) {
-      const name = String(row[ni] ?? '').trim()
+      const name = getImportName(row)
       const nameLower = name.toLowerCase()
       if (seenSimilar.has(nameLower)) continue
       seenSimilar.add(nameLower)
@@ -1056,15 +1080,7 @@ export default function ManageProducts() {
 
     setIsSimilarityModalOpen(false)
 
-    const ni = importHeaders.indexOf(columnMapping.name)
-    const pi = importHeaders.indexOf(columnMapping.price)
-
-    const validRows = importRows.filter(r => {
-      const nameVal = String(r[ni] ?? '').trim()
-      const hasValidName = nameVal && nameVal.length >= 2 && !/^\d+$/.test(nameVal)
-      const parsedPrice = cleanPrice(r[pi])
-      return hasValidName && parsedPrice !== null && parsedPrice > 0
-    })
+    const validRows = getImportCandidateRows()
 
     await checkReactivateCandidates(validRows, resolutions)
   }
@@ -1758,7 +1774,7 @@ export default function ManageProducts() {
                     </button>
                     <button
                       onClick={handleImportConfirm}
-                      disabled={!columnMapping.name || !columnMapping.price}
+                      disabled={!columnMapping.name}
                       className="flex-1 py-2.5 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       Importar {importRows.length} linha(s)
@@ -1974,9 +1990,11 @@ export default function ManageProducts() {
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-x-3 text-[11px] text-gray-500 mt-0.5">
-                          <span>Preço: <span className="line-through text-gray-400">{fmt(p.price)}</span> → <strong className="text-green-600 dark:text-green-400">{fmt(cand.newPrice)}</strong></span>
+                          {cand.newPrice !== null && (
+                            <span>Preco: <span className="line-through text-gray-400">{fmt(p.price)}</span> {'->'} <strong className="text-green-600 dark:text-green-400">{fmt(cand.newPrice)}</strong></span>
+                          )}
                           {cand.newPurchasePrice !== null && (
-                            <span>Custo: <span className="line-through text-gray-400">{fmt(p.purchase_price ?? null)}</span> → <strong className="text-purple-650 dark:text-purple-400">{fmt(cand.newPurchasePrice)}</strong></span>
+                            <span>Distribuidora: <span className="line-through text-gray-400">{fmt(p.purchase_price ?? null)}</span> {'->'} <strong className="text-purple-650 dark:text-purple-400">{fmt(cand.newPurchasePrice)}</strong></span>
                           )}
                         </div>
                       </div>
@@ -2186,7 +2204,9 @@ export default function ManageProducts() {
                           <button
                             type="button"
                             onClick={() => handleMatchResolutionChange(idx, 'create')}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${match.resolution === 'create' ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-255 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-55 dark:hover:bg-gray-750'}`}
+                            disabled={sheetPrice === null}
+                            title={sheetPrice === null ? 'Informe preço de venda para criar um produto novo' : 'Criar um novo produto'}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all disabled:opacity-40 disabled:cursor-not-allowed ${match.resolution === 'create' ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-255 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-55 dark:hover:bg-gray-750'}`}
                           >
                             Criar Novo
                           </button>
