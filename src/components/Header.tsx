@@ -13,6 +13,24 @@ import { Product } from '../types'
 import { getImageUrl } from '../utils/imageUrl'
 import { searchProducts } from '../utils/productSearch'
 
+const SEARCH_PLACEHOLDERS = [
+  'Quero mais energia',
+  'Quero emagrecer',
+  'Quero dormir melhor',
+  'Quero mais foco',
+  'Quero pele bonita',
+  'Quero cabelo forte',
+  'Quero menos inchaço',
+  'Quero mais disposição',
+  'Quero acelerar o metabolismo',
+  'Quero cuidar da imunidade',
+  'Quero mais performance',
+  'Quero mais libido',
+  'Quero corpo definido',
+  'Quero controlar a ansiedade',
+  'Quero uma rotina mais saudável'
+]
+
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -26,6 +44,7 @@ export default function Header() {
   const [searchCatalog, setSearchCatalog] = useState<Product[] | null>(null)
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
+  const [animatedPlaceholder, setAnimatedPlaceholder] = useState(SEARCH_PLACEHOLDERS[0])
   const desktopSearchRef = useRef<HTMLDivElement>(null)
   const mobileSearchRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
@@ -138,6 +157,51 @@ export default function Header() {
     }
   }, [searchTerm, searchCatalog])
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setAnimatedPlaceholder(SEARCH_PLACEHOLDERS[0])
+      return
+    }
+
+    let phraseIndex = 0
+    let charIndex = SEARCH_PLACEHOLDERS[0].length
+    let deleting = false
+    let timeoutId: ReturnType<typeof setTimeout>
+
+    const tick = () => {
+      const phrase = SEARCH_PLACEHOLDERS[phraseIndex]
+
+      if (!deleting) {
+        charIndex += 1
+        setAnimatedPlaceholder(phrase.slice(0, charIndex))
+
+        if (charIndex >= phrase.length) {
+          deleting = true
+          timeoutId = setTimeout(tick, 6200)
+          return
+        }
+
+        timeoutId = setTimeout(tick, 55)
+        return
+      }
+
+      charIndex -= 1
+      setAnimatedPlaceholder(phrase.slice(0, charIndex))
+
+      if (charIndex <= 0) {
+        deleting = false
+        phraseIndex = (phraseIndex + 1) % SEARCH_PLACEHOLDERS.length
+        timeoutId = setTimeout(tick, 420)
+        return
+      }
+
+      timeoutId = setTimeout(tick, 28)
+    }
+
+    timeoutId = setTimeout(tick, 6200)
+    return () => clearTimeout(timeoutId)
+  }, [])
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const q = searchTerm.trim()
@@ -184,11 +248,11 @@ export default function Header() {
                 }}
                 className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:hover:bg-gray-700/70"
               >
-                <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+                <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
                   <img
                     src={getImageUrl(p.image)}
                     alt={p.name}
-                    className="h-full w-full object-contain p-1"
+                    className="h-full w-full object-cover"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement
                       target.style.display = 'none'
@@ -246,7 +310,7 @@ export default function Header() {
                 value={searchTerm}
                 onFocus={() => setShowSuggestions(true)}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Buscar produtos"
+                placeholder={animatedPlaceholder}
                 className="h-11 w-full rounded-full border border-gray-300 bg-white pl-4 pr-12 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-transparent focus:ring-2 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
               />
               <button
@@ -376,7 +440,7 @@ export default function Header() {
               value={searchTerm}
               onFocus={() => setShowSuggestions(true)}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar produtos"
+              placeholder={animatedPlaceholder}
               className="h-11 w-full rounded-full border border-gray-300 bg-white pl-4 pr-12 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-transparent focus:ring-2 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
             />
             <button
@@ -503,7 +567,7 @@ export default function Header() {
           </div>
         )}
       </nav>
-      
+
       {/* Faixa de Categorias */}
       <HeaderCategories />
     </header>

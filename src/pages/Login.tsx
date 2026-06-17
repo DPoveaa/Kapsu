@@ -6,7 +6,8 @@ import { authService } from '../services/auth.service'
 import { cartService } from '../services/cart.service'
 import { validateCPF, formatCPF, validatePhone, formatPhone, validateEmail, validatePassword } from '../utils/validators'
 import AnimatedLogo from '../components/AnimatedLogo'
-import loginBannerImage from '../images/Kapsu_login_banner.png'
+import loginBannerPortrait from '../images/3x4.png'
+import loginBannerLandscape from '../images/4x3.png'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -49,7 +50,30 @@ export default function Login() {
     setIsLogin(!isRegisterRoute)
     setGeneralError('')
     setFieldErrors({})
+    setShowLoginPassword(false)
+    setShowRegisterPassword(false)
+    setShowRegisterConfirmPassword(false)
   }, [location.pathname])
+
+  useEffect(() => {
+    const hidePasswords = () => {
+      setShowLoginPassword(false)
+      setShowRegisterPassword(false)
+      setShowRegisterConfirmPassword(false)
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) hidePasswords()
+    }
+
+    window.addEventListener('blur', hidePasswords)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('blur', hidePasswords)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
 
   // Verifica se veio do cadastro externo (com query params) ou se tem carrinho pendente
   useEffect(() => {
@@ -70,6 +94,9 @@ export default function Login() {
     setGeneralError('')
     setFieldErrors({})
     setSuccessMessage('')
+    setShowLoginPassword(false)
+    setShowRegisterPassword(false)
+    setShowRegisterConfirmPassword(false)
     
     const redirect = searchParams.get('redirect')
     const redirectQuery = redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''
@@ -97,6 +124,12 @@ export default function Login() {
       setRegisterData(prev => ({ ...prev, phone: formatPhone(value) }))
     } else {
       setRegisterData(prev => ({ ...prev, [field]: value }))
+    }
+  }
+
+  const handlePasswordGroupBlur = (event: React.FocusEvent<HTMLDivElement>, hidePassword: () => void) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      hidePassword()
     }
   }
 
@@ -253,6 +286,7 @@ export default function Login() {
               <AnimatedLogo 
                 className="w-full h-full object-contain"
                 alt="Kapsu Logo"
+                forceSleeping={showLoginPassword || showRegisterPassword || showRegisterConfirmPassword}
               />
             </div>
           </div>
@@ -300,7 +334,7 @@ export default function Login() {
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                   E-mail
                 </label>
-                <div className="relative">
+                <div className="relative" onBlur={(event) => handlePasswordGroupBlur(event, () => setShowLoginPassword(false))}>
                   <input
                     type="email"
                     value={loginEmail}
@@ -317,7 +351,7 @@ export default function Login() {
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                   Senha
                 </label>
-                <div className="relative">
+                <div className="relative" onBlur={(event) => handlePasswordGroupBlur(event, () => setShowRegisterPassword(false))}>
                   <input
                     type={showLoginPassword ? 'text' : 'password'}
                     value={loginPassword}
@@ -379,7 +413,7 @@ export default function Login() {
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                   Nome Completo
                 </label>
-                <div className="relative">
+                <div className="relative" onBlur={(event) => handlePasswordGroupBlur(event, () => setShowRegisterConfirmPassword(false))}>
                   <input
                     type="text"
                     value={registerData.name}
@@ -583,12 +617,15 @@ export default function Login() {
       </div>
 
       {/* Lado Direito - Imagem de Destaque (Fórmula/Suplementação Kapsu) */}
-      <div className="hidden lg:flex lg:w-[58%] xl:w-[62%] relative overflow-hidden bg-[#02130b]">
-        <img
-          src={loginBannerImage}
+      <div className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-[58%] xl:w-[62%] flex-shrink-0 items-center justify-center overflow-hidden bg-[#02130b]">
+        <picture className="h-full w-full">
+          <source media="(min-aspect-ratio: 16/10)" srcSet={loginBannerLandscape} />
+          <img
+          src={loginBannerPortrait}
           alt="Kapsu Suplementação de Alta Qualidade"
-          className="w-full h-full object-cover object-center"
-        />
+          className="h-full w-full object-fill"
+          />
+        </picture>
         {/* Overlay escuro opcional para manter integridade com temas escuros */}
         <div className="absolute inset-0 bg-black/10 dark:bg-black/25 pointer-events-none" />
       </div>

@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Mail, Lock, Loader2, CheckCircle, XCircle, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import { authService } from '../services/auth.service'
 import AnimatedLogo from '../components/AnimatedLogo'
-import loginBannerImage from '../images/Kapsu_login_banner.png'
+import loginBannerPortrait from '../images/3x4.png'
+import loginBannerLandscape from '../images/4x3.png'
 
 export default function RecoverPassword() {
   const navigate = useNavigate()
@@ -18,11 +19,65 @@ export default function RecoverPassword() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [tokenStatus, setTokenStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>(token ? 'checking' : 'idle')
+  const [tokenMessage, setTokenMessage] = useState('')
 
   // Status
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+
+  useEffect(() => {
+    const hidePasswords = () => {
+      setShowPassword(false)
+      setShowConfirmPassword(false)
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) hidePasswords()
+    }
+
+    window.addEventListener('blur', hidePasswords)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('blur', hidePasswords)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const validateToken = async () => {
+      if (!token) {
+        setTokenStatus('idle')
+        setTokenMessage('')
+        return
+      }
+
+      setTokenStatus('checking')
+      setTokenMessage('')
+      setError('')
+
+      try {
+        const response = await authService.validateResetToken(token)
+        if (cancelled) return
+        setTokenStatus('valid')
+        setTokenMessage(response.message || '')
+      } catch (err: any) {
+        if (cancelled) return
+        setTokenStatus('invalid')
+        setTokenMessage(err.message || 'Este link de redefinição expirou ou já foi utilizado.')
+      }
+    }
+
+    validateToken()
+
+    return () => {
+      cancelled = true
+    }
+  }, [token])
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -73,6 +128,8 @@ export default function RecoverPassword() {
       const response = await authService.resetPassword(token!, newPassword)
       if (response.success) {
         setSuccess('Senha redefinida! Redirecionando para o login...')
+        setShowPassword(false)
+        setShowConfirmPassword(false)
         setTimeout(() => {
           navigate('/login')
         }, 3000)
@@ -81,6 +138,12 @@ export default function RecoverPassword() {
       setError(err.message || 'Link inválido ou expirado.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handlePasswordGroupBlur = (event: React.FocusEvent<HTMLDivElement>, hidePassword: () => void) => {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+      hidePassword()
     }
   }
 
@@ -110,7 +173,11 @@ export default function RecoverPassword() {
           {/* Logo animada */}
           <div className="mb-6 flex justify-center">
             <div className="w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center">
-              <AnimatedLogo className="w-full h-full object-contain" alt="Kapsu Logo" />
+              <AnimatedLogo
+                className="w-full h-full object-contain"
+                alt="Kapsu Logo"
+                forceSleeping={showPassword || showConfirmPassword}
+              />
             </div>
           </div>
 
@@ -126,6 +193,40 @@ export default function RecoverPassword() {
               ? 'Defina e confirme sua nova senha abaixo.' 
               : 'Informe seu e-mail ou CPF para receber o link de redefinição.'}
           </p>
+
+          {token && tokenStatus === 'checking' && (
+            <div className="mb-5 p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl text-blue-700 dark:text-blue-300 text-sm flex items-start shadow-sm">
+              <Loader2 size={18} className="mr-2.5 mt-0.5 flex-shrink-0 animate-spin" />
+              <span className="break-words font-medium">Validando seu link de redefinição...</span>
+            </div>
+          )}
+
+          {token && tokenStatus === 'invalid' && (
+            <div className="mb-5 space-y-4">
+              <div className="p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 text-sm flex items-start shadow-sm">
+                <XCircle size={18} className="mr-2.5 mt-0.5 flex-shrink-0 text-red-500" />
+                <div>
+                  <p className="font-semibold">Link expirado ou inválido</p>
+                  <p className="mt-1 text-red-600 dark:text-red-300">{tokenMessage || 'Este link não pode mais ser usado para alterar sua senha.'}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/recuperar-senha', { replace: true })}
+                className="w-full bg-[#00A86B] hover:bg-[#008A57] text-white font-bold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center shadow-lg shadow-[#00A86B]/25 hover:shadow-[#00A86B]/35 text-base tracking-wide"
+              >
+                Solicitar novo link
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="w-full flex items-center justify-center gap-2 py-3 text-gray-600 dark:text-gray-400 hover:text-[#00A86B] dark:hover:text-[#00A86B] font-semibold transition-colors text-sm"
+              >
+                <ArrowLeft size={16} />
+                Voltar para o Login
+              </button>
+            </div>
+          )}
 
           {/* Banner de Sucesso */}
           {success && (
@@ -150,7 +251,7 @@ export default function RecoverPassword() {
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                   E-mail ou CPF
                 </label>
-                <div className="relative">
+                <div className="relative" onBlur={(event) => handlePasswordGroupBlur(event, () => setShowPassword(false))}>
                   <input
                     type="text"
                     value={identifier}
@@ -187,14 +288,14 @@ export default function RecoverPassword() {
                 Voltar para o Login
               </button>
             </form>
-          ) : (
+          ) : tokenStatus === 'valid' ? (
             /* --- FORMULÁRIO DE REDEFINIÇÃO --- */
             <form onSubmit={handleResetSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                   Nova Senha
                 </label>
-                <div className="relative">
+                <div className="relative" onBlur={(event) => handlePasswordGroupBlur(event, () => setShowConfirmPassword(false))}>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={newPassword}
@@ -253,18 +354,21 @@ export default function RecoverPassword() {
                 )}
               </button>
             </form>
-          )}
+          ) : null}
 
         </div>
       </div>
 
       {/* Lado Direito - Imagem de Destaque */}
-      <div className="hidden lg:flex lg:w-[58%] xl:w-[62%] relative overflow-hidden bg-[#02130b]">
-        <img
-          src={loginBannerImage}
+      <div className="hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-[58%] xl:w-[62%] flex-shrink-0 items-center justify-center overflow-hidden bg-[#02130b]">
+        <picture className="h-full w-full">
+          <source media="(min-aspect-ratio: 16/10)" srcSet={loginBannerLandscape} />
+          <img
+          src={loginBannerPortrait}
           alt="Kapsu Suplementação de Alta Qualidade"
-          className="w-full h-full object-cover object-center"
-        />
+          className="h-full w-full object-fill"
+          />
+        </picture>
         <div className="absolute inset-0 bg-black/10 dark:bg-black/25 pointer-events-none" />
       </div>
 

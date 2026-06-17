@@ -277,6 +277,33 @@ class AuthService {
   /**
    * Envia redefinição de senha com o token (Reset Password)
    */
+  async validateResetToken(token: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/reset-password/validate?token=${encodeURIComponent(token)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const text = await response.text()
+      let result
+      try {
+        result = text ? JSON.parse(text) : {}
+      } catch (e) {
+        throw new Error('Resposta inválida do servidor')
+      }
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Link inválido ou expirado')
+      }
+
+      return result
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro de conexão ao validar link de redefinição')
+    }
+  }
+
   async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
     try {
       const response = await fetch(`${this.baseUrl}/reset-password`, {

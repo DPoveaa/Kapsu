@@ -12,6 +12,7 @@ import comprimidoDireito from '../images/comprimido_direito.png'
 interface AnimatedLogoProps {
   className?: string
   alt?: string
+  forceSleeping?: boolean
 }
 
 interface ZBubble {
@@ -19,7 +20,7 @@ interface ZBubble {
   delay: number
 }
 
-export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
+export default function AnimatedLogo({ className = '', forceSleeping = false }: AnimatedLogoProps) {
   const [isBlinking, setIsBlinking] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [zBubbles, setZBubbles] = useState<ZBubble[]>([])
@@ -28,6 +29,7 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
   const intervalRef = useRef<number | null>(null)
   const zIntervalRef = useRef<number | null>(null)
   const zIdCounterRef = useRef(0)
+  const eyesClosed = forceSleeping || isBlinking
 
   // Detecta modo escuro
   useEffect(() => {
@@ -60,7 +62,7 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
   // Lógica de piscar aleatório (apenas no modo claro)
   useEffect(() => {
     // Se estiver em modo escuro, não faz nada (olhos ficam fechados)
-    if (isDarkMode) {
+    if (isDarkMode || forceSleeping) {
       // Limpa qualquer intervalo existente
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
@@ -103,7 +105,7 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
       }
       clearTimeout(timeoutId)
     }
-  }, [isDarkMode])
+  }, [isDarkMode, forceSleeping])
 
   // Lógica de Z saindo (apenas no modo escuro)
   useEffect(() => {
@@ -223,7 +225,7 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
 
         {/* pupila esquerdo */}
         <img
-          src={isBlinking ? pupilaDormindoEsquerdo : pupilaNormalEsquerdo}
+          src={eyesClosed ? pupilaDormindoEsquerdo : pupilaNormalEsquerdo}
           alt=""
           className="absolute panda-pupil-left"
           style={{
@@ -256,7 +258,7 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
 
         {/* pupila direita */}
         <img
-          src={isBlinking ? pupilaDormindoDireito : pupilaNormalDireito}
+          src={eyesClosed ? pupilaDormindoDireito : pupilaNormalDireito}
           alt=""
           className="absolute panda-pupil-right"
           style={{
@@ -353,4 +355,3 @@ export default function AnimatedLogo({ className = '' }: AnimatedLogoProps) {
     </div>
   )
 }
-
