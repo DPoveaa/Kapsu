@@ -33,7 +33,7 @@ type SortDirection = 'asc' | 'desc'
 const IMPORT_FIELDS = [
   { key: 'name', label: 'Nome', required: true },
   { key: 'price', label: 'Preço de Venda', required: false },
-  { key: 'purchase_price', label: 'Preço Distribuidora', required: false },
+  { key: 'purchase_price', label: 'Preço de Compra', required: false },
   { key: 'promo_price', label: 'Preço Promocional', required: false },
   { key: 'description', label: 'Descrição', required: false },
   { key: 'category', label: 'Categoria', required: false },
@@ -54,7 +54,7 @@ function autoDetect(headers: string[]): Record<FieldKey, string> {
     const low = h.toLowerCase()
     if (!m.name && (low.includes('nome') || low.includes('name') || low.includes('produto') || low.includes('product') || low === 'item' || low === 'titulo' || low === 'title')) m.name = h
     else if (!m.price && (low.includes('venda') || low.includes('price') || low === 'preço' || low === 'preco')) m.price = h
-    else if (!m.purchase_price && (low.includes('compra') || low.includes('custo') || low.includes('cost') || low.includes('distribuidora'))) m.purchase_price = h
+    else if (!m.purchase_price && (low.includes('compra') || low.includes('custo') || low.includes('cost'))) m.purchase_price = h
     else if (!m.promo_price && (low.includes('promo') || low.includes('promoc'))) m.promo_price = h
     else if (!m.description && (low.includes('desc') || low.includes('about') || low.includes('detalhe'))) m.description = h
     else if (!m.category && (low.includes('cat') || low.includes('grupo'))) m.category = h
@@ -1774,7 +1774,7 @@ export default function ManageProducts() {
                     </button>
                     <button
                       onClick={handleImportConfirm}
-                      disabled={!columnMapping.name}
+                      disabled={!columnMapping.name || !columnMapping.price}
                       className="flex-1 py-2.5 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       Importar {importRows.length} linha(s)
@@ -1990,11 +1990,9 @@ export default function ManageProducts() {
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-x-3 text-[11px] text-gray-500 mt-0.5">
-                          {cand.newPrice !== null && (
-                            <span>Preco: <span className="line-through text-gray-400">{fmt(p.price)}</span> {'->'} <strong className="text-green-600 dark:text-green-400">{fmt(cand.newPrice)}</strong></span>
-                          )}
+                          <span>Preço: <span className="line-through text-gray-400">{fmt(p.price)}</span> → <strong className="text-green-600 dark:text-green-400">{fmt(cand.newPrice)}</strong></span>
                           {cand.newPurchasePrice !== null && (
-                            <span>Distribuidora: <span className="line-through text-gray-400">{fmt(p.purchase_price ?? null)}</span> {'->'} <strong className="text-purple-650 dark:text-purple-400">{fmt(cand.newPurchasePrice)}</strong></span>
+                            <span>Custo: <span className="line-through text-gray-400">{fmt(p.purchase_price ?? null)}</span> → <strong className="text-purple-650 dark:text-purple-400">{fmt(cand.newPurchasePrice)}</strong></span>
                           )}
                         </div>
                       </div>
@@ -2204,9 +2202,7 @@ export default function ManageProducts() {
                           <button
                             type="button"
                             onClick={() => handleMatchResolutionChange(idx, 'create')}
-                            disabled={sheetPrice === null}
-                            title={sheetPrice === null ? 'Informe preço de venda para criar um produto novo' : 'Criar um novo produto'}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all disabled:opacity-40 disabled:cursor-not-allowed ${match.resolution === 'create' ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-255 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-55 dark:hover:bg-gray-750'}`}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${match.resolution === 'create' ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-255 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-55 dark:hover:bg-gray-750'}`}
                           >
                             Criar Novo
                           </button>
