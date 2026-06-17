@@ -98,9 +98,9 @@
     color: #000000 !important;
   }
   
-  /* Garante que text-black seja respeitado quando explicitamente usado */
+  /* Evita texto preto invisÃ­vel em superfÃ­cies escuras */
   html.dark .text-black {
-    color: #000000;
+    @apply text-gray-50;
   }
   
   * {
@@ -326,9 +326,7 @@ input[type="tel"],
 input[type="search"],
 textarea,
 select {
-  background-color: #FFFFFF !important;
-  color: #111111 !important;
-  border-color: #E5E7EB !important;
+  @apply border-gray-200 bg-white text-gray-950;
   transition: all 0.2s ease-in-out;
 }
 
@@ -340,9 +338,7 @@ input[type="tel"]:focus,
 input[type="search"]:focus,
 textarea:focus,
 select:focus {
-  border-color: #00A86B !important;
-  box-shadow: 0 0 0 2px rgba(0, 168, 107, 0.15) !important;
-  outline: none !important;
+  @apply border-primary-500 outline-none ring-2 ring-primary-500/20;
 }
 
 /* Modo Escuro para os campos de texto */
@@ -354,9 +350,7 @@ html.dark input[type="tel"],
 html.dark input[type="search"],
 html.dark textarea,
 html.dark select {
-  background-color: #151A1F !important;
-  color: #D1D5DB !important;
-  border-color: #1F2937 !important;
+  @apply border-gray-700 bg-gray-900 text-gray-100;
 }
 
 html.dark input[type="text"]:focus,
@@ -367,9 +361,7 @@ html.dark input[type="tel"]:focus,
 html.dark input[type="search"]:focus,
 html.dark textarea:focus,
 html.dark select:focus {
-  border-color: #00C878 !important;
-  box-shadow: 0 0 0 2px rgba(0, 200, 120, 0.2) !important;
-  outline: none !important;
+  @apply border-primary-400 outline-none ring-2 ring-primary-400/25;
 }
 
 /* ─── Add-to-cart animations ─────────────────────────────────────────────── */

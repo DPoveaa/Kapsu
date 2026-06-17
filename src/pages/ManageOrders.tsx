@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Search, Eye, Package, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Search, Eye, Package, Plus, Trash2, ChevronDown } from 'lucide-react'
 import { adminService } from '../services/admin.service'
 import CreateOrderModal from '../components/CreateOrderModal'
 import { useAuth } from '../context/AuthContext'
@@ -24,6 +24,24 @@ interface Order {
   } | null
 }
 
+type OrdersTab = 'active' | 'cancelled'
+type OrdersSortKey = 'created_at' | 'total' | 'customer' | 'status' | 'payment_method' | 'id'
+type SortDirection = 'asc' | 'desc'
+
+const CANCELLED_ORDER_STATUS_CODES = new Set([
+  'CANCELLED',
+  'REFUNDED',
+  'REFUND_REQUESTED',
+  'REFUND_IN_PROGRESS',
+  'CHARGEBACK_REQUESTED',
+  'CHARGEBACK_DISPUTE',
+  'AWAITING_CHARGEBACK_REVERSAL',
+])
+
+const isCancelledOrderStatus = (status: string | null | undefined) => {
+  return CANCELLED_ORDER_STATUS_CODES.has((status || '').toUpperCase())
+}
+
 export default function ManageOrders() {
   const navigate = useNavigate()
   const { isAdmin } = useAuth()
@@ -34,6 +52,11 @@ export default function ManageOrders() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [activeTab, setActiveTab] = useState<OrdersTab>('active')
+  const [ordersSort, setOrdersSort] = useState<{ key: OrdersSortKey; direction: SortDirection }>({
+    key: 'created_at',
+    direction: 'desc',
+  })
 
   const handleDeleteOrder = (orderId: string) => {
     confirm.show(
@@ -98,16 +121,104 @@ export default function ManageOrders() {
     }
   }
 
-  // Filtra pedidos
-  const filteredOrders = orders.filter(order => {
-    const searchLower = searchTerm.toLowerCase()
+  const activeOrders = useMemo(() => orders.filter(order => !isCancelledOrderStatus(order.status)), [orders])
+  const cancelledOrders = useMemo(() => orders.filter(order => isCancelledOrderStatus(order.status)), [orders])
+  const tabOrders = activeTab === 'cancelled' ? cancelledOrders : activeOrders
+
+  const getOrderSortValue = (order: Order, key: OrdersSortKey): string | number => {
+    switch (key) {
+      case 'created_at':
+        return new Date(order.created_at).getTime()
+      case 'total':
+        return Number(order.total) || 0
+      case 'customer':
+        return order.user?.name || order.user?.email || 'Usuário não encontrado'
+      case 'status':
+        return getOrderStatusLabel(order.status)
+      case 'payment_method':
+        return order.payment_method || 'Não informado'
+      case 'id':
+        return order.id
+      default:
+        return ''
+    }
+  }
+
+  const filteredOrders = useMemo(() => {
+    const searchLower = searchTerm.trim().toLowerCase()
+    const list = tabOrders.filter(order => {
+      if (!searchLower) return true
+      return (
+        order.id.toLowerCase().includes(searchLower) ||
+        order.user?.name.toLowerCase().includes(searchLower) ||
+        order.user?.email.toLowerCase().includes(searchLower) ||
+        order.user?.phone?.toLowerCase().includes(searchLower) ||
+        order.status.toLowerCase().includes(searchLower) ||
+        getOrderStatusLabel(order.status).toLowerCase().includes(searchLower) ||
+        (order.payment_method || '').toLowerCase().includes(searchLower)
+      )
+    })
+
+    const directionFactor = ordersSort.direction === 'asc' ? 1 : -1
+    return [...list].sort((a, b) => {
+      const av = getOrderSortValue(a, ordersSort.key)
+      const bv = getOrderSortValue(b, ordersSort.key)
+
+      const result = typeof av === 'number' && typeof bv === 'number'
+        ? av - bv
+        : String(av).localeCompare(String(bv), 'pt-BR', { sensitivity: 'base', numeric: true })
+
+      if (result !== 0) return result * directionFactor
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+  }, [tabOrders, searchTerm, ordersSort])
+
+  const handleOrdersSort = (key: OrdersSortKey) => {
+    setOrdersSort(prev => {
+      if (prev.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+      }
+
+      const defaultDirection: SortDirection = key === 'total' || key === 'created_at' ? 'desc' : 'asc'
+      return { key, direction: defaultDirection }
+    })
+  }
+
+  const renderSortableHeader = (key: OrdersSortKey, label: string) => {
+    const isActive = ordersSort.key === key
     return (
-      order.id.toLowerCase().includes(searchLower) ||
-      order.user?.name.toLowerCase().includes(searchLower) ||
-      order.user?.email.toLowerCase().includes(searchLower) ||
-      order.status.toLowerCase().includes(searchLower)
+      <button
+        type="button"
+        onClick={() => handleOrdersSort(key)}
+        className={`group inline-flex items-center gap-1.5 rounded px-1 py-0.5 -mx-1 -my-0.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800 ${isActive ? 'text-primary-700 dark:text-primary-300' : 'hover:text-gray-700 dark:hover:text-white'}`}
+        title={`Ordenar por ${label}`}
+        aria-sort={isActive ? (ordersSort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+      >
+        <span>{label}</span>
+        <ChevronDown
+          size={14}
+          className={`transition-all ${isActive ? 'opacity-100' : 'opacity-30 group-hover:opacity-70'} ${isActive && ordersSort.direction === 'asc' ? 'rotate-180' : ''}`}
+        />
+      </button>
     )
-  })
+  }
+
+  const TABS = [
+    {
+      key: 'active' as OrdersTab,
+      label: 'Ativos',
+      count: activeOrders.length,
+      active: 'border-green-500 text-green-700 dark:text-green-300',
+      badge: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
+    },
+    {
+      key: 'cancelled' as OrdersTab,
+      label: 'Cancelados',
+      count: cancelledOrders.length,
+      active: 'border-red-500 text-red-700 dark:text-red-300',
+      badge: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300',
+    },
+  ]
 
   // Formata status
   const getStatusBadge = (status: string) => {
@@ -205,7 +316,7 @@ export default function ManageOrders() {
                 <div className="min-w-0 flex-1">
                   <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Valor Total</p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white break-words">
-                    R$ {orders.reduce((sum, order) => sum + Number(order.total), 0).toFixed(2).replace('.', ',')}
+                    R$ {activeOrders.reduce((sum, order) => sum + Number(order.total), 0).toFixed(2).replace('.', ',')}
                   </p>
                 </div>
               </div>
@@ -216,7 +327,7 @@ export default function ManageOrders() {
                 <div className="min-w-0 flex-1">
                   <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">Pedidos Pendentes</p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                    {orders.filter(o => o.status === 'PENDING' || o.status === 'AWAITING_PAYMENT').length}
+                    {activeOrders.filter(o => o.status === 'PENDING' || o.status === 'AWAITING_PAYMENT').length}
                   </p>
                 </div>
               </div>
@@ -247,6 +358,28 @@ export default function ManageOrders() {
         {/* Tabela de Pedidos - Desktop / Cards - Mobile */}
         {!loading && !error && (
           <>
+            <div className="mb-4 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+              <div className="flex gap-4 min-w-max">
+                {TABS.map(tab => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`flex items-center gap-2 px-1 pb-3 border-b-2 text-sm font-semibold transition-colors ${
+                      activeTab === tab.key
+                        ? tab.active
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${activeTab === tab.key ? tab.badge : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Table wrapper with horizontal scroll and responsive design */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
               <div className="overflow-x-auto relative">
@@ -254,22 +387,22 @@ export default function ManageOrders() {
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        ID do Pedido
+                        {renderSortableHeader('id', 'ID do Pedido')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Cliente
+                        {renderSortableHeader('customer', 'Cliente')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Total
+                        {renderSortableHeader('total', 'Total')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Status
+                        {renderSortableHeader('status', 'Status')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Método de Pagamento
+                        {renderSortableHeader('payment_method', 'Método de Pagamento')}
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                        Data
+                        {renderSortableHeader('created_at', 'Data')}
                       </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider sticky right-0 bg-gray-50 dark:bg-gray-800 z-10 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.3)]">
                         Ações
@@ -280,7 +413,11 @@ export default function ManageOrders() {
                     {filteredOrders.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                          {orders.length === 0 ? 'Nenhum pedido encontrado' : 'Nenhum pedido corresponde à busca'}
+                          {tabOrders.length === 0
+                            ? activeTab === 'cancelled'
+                              ? 'Nenhum pedido cancelado encontrado'
+                              : 'Nenhum pedido ativo encontrado'
+                            : 'Nenhum pedido corresponde à busca'}
                         </td>
                       </tr>
                     ) : (

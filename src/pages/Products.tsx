@@ -7,6 +7,7 @@ import {
 import ProductCard from '../components/ProductCard'
 import { Product } from '../types'
 import { productsService } from '../services/products.service'
+import { searchProducts } from '../utils/productSearch'
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
@@ -160,12 +161,20 @@ export default function Products() {
 
   // Filter and Sort logic
   const filteredProducts = useMemo(() => {
+    const term = searchTerm.trim()
+    const searchScores = new Map<string, number>()
+    const matchingProductIds = new Set<string>()
+
+    if (term) {
+      for (const result of searchProducts(products, term)) {
+        matchingProductIds.add(result.product.id)
+        searchScores.set(result.product.id, result.score)
+      }
+    }
+
     const list = products.filter(product => {
       // 1. Search Query Match
-      const term = searchTerm.toLowerCase().trim()
-      const matchesSearch = !term ||
-        product.name.toLowerCase().includes(term) ||
-        (product.description || '').toLowerCase().includes(term)
+      const matchesSearch = !term || matchingProductIds.has(product.id)
 
       // 2. Category Match
       const matchesCategory = selectedCategories.length === 0 ||
@@ -205,6 +214,9 @@ export default function Products() {
       }
       if (sortBy === 'discount_desc') {
         return getDiscount(b) - getDiscount(a)
+      }
+      if (term) {
+        return (searchScores.get(b.id) || 0) - (searchScores.get(a.id) || 0)
       }
       // 'popular' keeps server/database default (newest first)
       return 0

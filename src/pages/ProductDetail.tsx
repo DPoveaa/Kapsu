@@ -441,8 +441,6 @@ export default function ProductDetail() {
     )
   }
 
-  const finalPrice = product.promo_price || product.price || 0
-  const installmentValue = (finalPrice / 12).toFixed(2)
   const discountPct = product.promo_price
     ? Math.round(((Number(product.price) - Number(product.promo_price)) / Number(product.price)) * 100)
     : 0
@@ -621,10 +619,6 @@ export default function ProductDetail() {
                   R$ {Number(product.price).toFixed(2).replace('.', ',')}
                 </span>
               )}
-
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5">
-                Ou em até <span className="font-bold text-gray-800 dark:text-gray-200">12x de R$ {installmentValue.replace('.', ',')}</span> sem juros
-              </p>
             </div>
 
             {/* Delivery notice */}

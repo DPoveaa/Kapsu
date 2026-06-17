@@ -11,6 +11,7 @@ import { env } from '../config/env'
 import { productsService } from '../services/products.service'
 import { Product } from '../types'
 import { getImageUrl } from '../utils/imageUrl'
+import { searchProducts } from '../utils/productSearch'
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -22,9 +23,11 @@ export default function Header() {
   const userMenuRef = useRef<HTMLDivElement>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [suggestions, setSuggestions] = useState<Product[]>([])
+  const [searchCatalog, setSearchCatalog] = useState<Product[] | null>(null)
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const searchRef = useRef<HTMLDivElement>(null)
+  const desktopSearchRef = useRef<HTMLDivElement>(null)
+  const mobileSearchRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
 
   // Função para obter a URL da imagem de perfil
@@ -73,19 +76,24 @@ export default function Header() {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false)
       }
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      const clickedInsideSearch =
+        desktopSearchRef.current?.contains(target) ||
+        mobileSearchRef.current?.contains(target)
+
+      if (!clickedInsideSearch) {
         setShowSuggestions(false)
       }
     }
 
-    if (userMenuOpen) {
+    if (userMenuOpen || showSuggestions) {
       document.addEventListener('mousedown', handleClickOutside)
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-  }, [userMenuOpen])
+  }, [userMenuOpen, showSuggestions])
 
   useEffect(() => {
     const q = searchTerm.trim()
@@ -97,8 +105,28 @@ export default function Header() {
     setLoadingSuggestions(true)
     const t = setTimeout(async () => {
       try {
-        const results = await productsService.search(q)
-        setSuggestions(results.slice(0, 6))
+        let catalog = searchCatalog
+        let serverResults: Product[] = []
+
+        const requests = await Promise.allSettled([
+          productsService.search(q),
+          catalog ? Promise.resolve(catalog) : productsService.getAll(),
+        ])
+
+        if (requests[0].status === 'fulfilled') {
+          serverResults = requests[0].value
+        }
+
+        if (requests[1].status === 'fulfilled') {
+          catalog = requests[1].value
+          if (!searchCatalog) setSearchCatalog(catalog)
+        }
+
+        const fuzzyResults = searchProducts((catalog || serverResults).filter(p => p.active), q, 8).map(result => result.product)
+        const merged = [...fuzzyResults, ...serverResults.filter(p => p.active)]
+        const uniqueResults = Array.from(new Map(merged.map(product => [product.id, product])).values())
+
+        setSuggestions(uniqueResults.slice(0, 6))
       } catch {
         setSuggestions([])
       } finally {
@@ -108,7 +136,7 @@ export default function Header() {
     return () => {
       clearTimeout(t)
     }
-  }, [searchTerm])
+  }, [searchTerm, searchCatalog])
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -118,10 +146,85 @@ export default function Header() {
     navigate(`/produtos?q=${encodeURIComponent(q)}`)
   }
 
+  const formatPrice = (product: Product) => {
+    const price = product.promo_price ?? product.price
+    return Number(price || 0).toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    })
+  }
+
+  const renderSearchSuggestions = () => {
+    const q = searchTerm.trim()
+    if (!showSuggestions || (!loadingSuggestions && q.length < 2)) return null
+
+    return (
+      <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl shadow-gray-900/10 dark:border-gray-700 dark:bg-gray-800 dark:shadow-black/30">
+        <div className="border-b border-gray-100 px-4 py-2.5 dark:border-gray-700">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            Sugestões de produtos
+          </p>
+        </div>
+        {loadingSuggestions && (
+          <div className="flex items-center gap-2 px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
+            <Loader2 className="animate-spin text-primary-600 dark:text-primary-400" size={16} />
+            <span>Buscando produtos parecidos...</span>
+          </div>
+        )}
+        {!loadingSuggestions && suggestions.length > 0 && (
+          <div className="max-h-[22rem] overflow-y-auto p-2">
+            {suggestions.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  setShowSuggestions(false)
+                  setSearchTerm('')
+                  navigate(`/produtos/${p.id}`)
+                }}
+                className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:hover:bg-gray-700/70"
+              >
+                <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+                  <img
+                    src={getImageUrl(p.image)}
+                    alt={p.name}
+                    className="h-full w-full object-contain p-1"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.style.display = 'none'
+                    }}
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="line-clamp-2 text-sm font-semibold leading-snug text-gray-900 transition-colors group-hover:text-primary-700 dark:text-gray-100 dark:group-hover:text-primary-300">
+                      {p.name}
+                    </p>
+                    <span className="whitespace-nowrap text-xs font-bold text-primary-700 dark:text-primary-300">
+                      {formatPrice(p)}
+                    </span>
+                  </div>
+                  <p className="mt-1 line-clamp-1 text-xs text-gray-500 dark:text-gray-400">
+                    {p.category || 'Produto'}{p.description ? ` • ${p.description}` : ''}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+        {!loadingSuggestions && suggestions.length === 0 && q.length >= 2 && (
+          <div className="px-4 py-4 text-sm text-gray-600 dark:text-gray-300">
+            Nenhum produto parecido foi encontrado.
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 sticky top-0 z-50 backdrop-blur-sm bg-white/95 dark:bg-gray-800/95">
       {/* Barra superior verde */}
-      <div className="h-1" style={{ backgroundColor: '#00A86B' }}></div>
+      <div className="h-1 bg-primary-500"></div>
 
       <nav className="container mx-auto px-6 md:px-8 lg:px-12">
         <div className="flex items-center justify-between h-16">
@@ -134,7 +237,7 @@ export default function Header() {
             <span className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Kapsu</span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-3 flex-1 max-w-3xl" ref={searchRef}>
+          <div className="hidden md:flex items-center gap-3 flex-1 max-w-3xl" ref={desktopSearchRef}>
             <div className="flex items-center gap-2 flex-shrink-0">
             </div>
             <form onSubmit={handleSearchSubmit} className="relative flex-1">
@@ -144,7 +247,7 @@ export default function Header() {
                 onFocus={() => setShowSuggestions(true)}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar produtos"
-                className="w-full pl-4 pr-12 h-10 text-sm border border-gray-300 dark:border-gray-700 rounded-full bg-white dark:bg-gray-200 text-black dark:text-black shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="h-11 w-full rounded-full border border-gray-300 bg-white pl-4 pr-12 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-transparent focus:ring-2 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
               />
               <button
                 type="submit"
@@ -152,45 +255,7 @@ export default function Header() {
               >
                 <Search size={16} />
               </button>
-              {showSuggestions && (loadingSuggestions || suggestions.length > 0) && (
-                <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
-                  {loadingSuggestions && (
-                    <div className="flex items-center gap-2 px-4 py-3 text-gray-600 dark:text-gray-300">
-                      <Loader2 className="animate-spin" size={16} />
-                      <span>Buscando...</span>
-                    </div>
-                  )}
-                  {!loadingSuggestions && suggestions.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => {
-                        setShowSuggestions(false)
-                        setSearchTerm('')
-                        navigate(`/produtos/${p.id}`)
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
-                    >
-                      <img
-                        src={getImageUrl(p.image)}
-                        alt={p.name}
-                        className="w-10 h-10 rounded object-contain bg-white p-0.5 border border-gray-200 dark:border-gray-700"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                        }}
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{p.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-300 line-clamp-1">{p.description}</p>
-                      </div>
-                    </button>
-                  ))}
-                  {!loadingSuggestions && suggestions.length === 0 && searchTerm.trim().length >= 2 && (
-                    <div className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">Nenhum produto encontrado</div>
-                  )}
-                </div>
-              )}
+              {renderSearchSuggestions()}
             </form>
           </div>
 
@@ -203,7 +268,7 @@ export default function Header() {
             >
               <ShoppingCart size={22} />
               {itemCount > 0 && (
-                <span className="absolute -top-1 -right-1 text-white text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5 shadow-md" style={{ backgroundColor: '#00A86B' }}>
+                <span className="absolute -top-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-500 px-1.5 text-xs font-bold text-white shadow-md">
                   {itemCount > 99 ? '99+' : itemCount}
                 </span>
               )}
@@ -240,15 +305,14 @@ export default function Header() {
                         const parent = target.parentElement
                         if (parent) {
                           const fallback = document.createElement('div')
-                          fallback.className = 'w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm'
-                          fallback.style.backgroundColor = '#00A86B'
+                          fallback.className = 'w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm bg-primary-500'
                           fallback.textContent = getInitials(user.name)
                           parent.appendChild(fallback)
                         }
                       }}
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: '#00A86B' }}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm bg-primary-500">
                       {getInitials(user.name)}
                     </div>
                   )}
@@ -305,7 +369,7 @@ export default function Header() {
             </button>
           </div>
         </div>
-        <div className="md:hidden px-3 pb-3" ref={searchRef}>
+        <div className="md:hidden px-3 pb-3" ref={mobileSearchRef}>
           <form onSubmit={handleSearchSubmit} className="relative">
             <input
               type="text"
@@ -313,7 +377,7 @@ export default function Header() {
               onFocus={() => setShowSuggestions(true)}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Buscar produtos"
-              className="w-full pl-4 pr-12 h-10 text-sm border border-gray-300 dark:border-gray-700 rounded-full bg-white dark:bg-gray-200 text-black dark:text-black shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="h-11 w-full rounded-full border border-gray-300 bg-white pl-4 pr-12 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-transparent focus:ring-2 focus:ring-primary-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500"
             />
             <button
               type="submit"
@@ -321,45 +385,7 @@ export default function Header() {
             >
               <Search size={16} />
             </button>
-            {showSuggestions && (loadingSuggestions || suggestions.length > 0) && (
-              <div className="absolute left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden">
-                {loadingSuggestions && (
-                  <div className="flex items-center gap-2 px-4 py-3 text-gray-600 dark:text-gray-300">
-                    <Loader2 className="animate-spin" size={16} />
-                    <span>Buscando...</span>
-                  </div>
-                )}
-                {!loadingSuggestions && suggestions.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => {
-                      setShowSuggestions(false)
-                      setSearchTerm('')
-                      navigate(`/produtos/${p.id}`)
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-600 text-left"
-                  >
-                    <img
-                      src={getImageUrl(p.image)}
-                      alt={p.name}
-                      className="w-10 h-10 rounded object-contain bg-white p-0.5 border border-gray-200 dark:border-gray-700"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement
-                        target.style.display = 'none'
-                      }}
-                    />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">{p.name}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-300 line-clamp-1">{p.description}</p>
-                    </div>
-                  </button>
-                ))}
-                {!loadingSuggestions && suggestions.length === 0 && searchTerm.trim().length >= 2 && (
-                  <div className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">Nenhum produto encontrado</div>
-                )}
-              </div>
-            )}
+            {renderSearchSuggestions()}
           </form>
         </div>
 
@@ -403,15 +429,14 @@ export default function Header() {
                         const parent = target.parentElement
                         if (parent) {
                           const fallback = document.createElement('div')
-                          fallback.className = 'w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm'
-                          fallback.style.backgroundColor = '#00A86B'
+                          fallback.className = 'w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm bg-primary-500'
                           fallback.textContent = getInitials(user.name)
                           parent.appendChild(fallback)
                         }
                       }}
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm" style={{ backgroundColor: '#00A86B' }}>
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm bg-primary-500">
                       {getInitials(user.name)}
                     </div>
                   )}
@@ -434,7 +459,7 @@ export default function Header() {
                     <Link
                       to="/admin/whatsapp/support"
                       onClick={() => setMobileMenuOpen(false)}
-                      className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors relative"
+                      className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-colors relative"
                     >
                       <MessageCircle size={16} />
                       <span>Atendimento</span>
@@ -468,7 +493,7 @@ export default function Header() {
             ) : (
               <Link
                 to="/login"
-                className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                className="flex items-center space-x-2 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <User size={20} />
