@@ -9,7 +9,7 @@ export interface User {
   phone: string | null
   cpf: string | null
   address: string | null
-  role: 'user' | 'admin' | 'pharmacist'
+  role: 'user' | 'admin' | 'support'
   last_login: string | null
   created_at: string
   updated_at: string
@@ -44,7 +44,8 @@ export interface StatisticsResponse {
   statistics: {
     totalUsers: number
     totalAdmins: number
-    totalPharmacists: number
+    totalSupport: number
+    totalUsersWithoutCpf: number
     recentUsers: User[]
   }
 }
@@ -81,7 +82,13 @@ class AdminService {
   /**
    * Lista todos os usuários
    */
-  async listUsers(page: number = 1, limit: number = 50, search: string = ''): Promise<UsersListResponse> {
+  async listUsers(
+    page: number = 1,
+    limit: number = 50,
+    search: string = '',
+    role: string = '',
+    noCpf: string = ''
+  ): Promise<UsersListResponse> {
     try {
       const token = localStorage.getItem('sanare_token')
       if (!token) {
@@ -92,6 +99,8 @@ class AdminService {
         page: page.toString(),
         limit: limit.toString(),
         ...(search && { search }),
+        ...(role && { role }),
+        ...(noCpf && { noCpf }),
       })
 
       const response = await fetch(`${this.baseUrl}/users?${params}`, {
@@ -159,7 +168,7 @@ class AdminService {
   /**
    * Atualiza o role de um usuário
    */
-  async updateUserRole(userId: string, role: 'user' | 'admin' | 'pharmacist'): Promise<{ success: boolean; message: string; user: User }> {
+  async updateUserRole(userId: string, role: 'user' | 'admin' | 'support'): Promise<{ success: boolean; message: string; user: User }> {
     try {
       const token = localStorage.getItem('sanare_token')
       if (!token) {
@@ -191,6 +200,44 @@ class AdminService {
         throw error
       }
       throw new Error('Erro de conexão ao atualizar role do usuário')
+    }
+  }
+
+  /**
+   * Atualiza dados básicos de um usuário
+   */
+  async updateUser(userId: string, data: { name?: string; cpf?: string | null; phone?: string | null; email?: string }): Promise<{ success: boolean; message: string; user: User }> {
+    try {
+      const token = localStorage.getItem('sanare_token')
+      if (!token) {
+        throw new Error('Token não encontrado')
+      }
+
+      const response = await fetch(`${this.baseUrl}/users/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const responseData = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Erro ao atualizar dados do usuário')
+      }
+
+      return responseData
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao atualizar dados do usuário')
     }
   }
 
@@ -1285,16 +1332,24 @@ class AdminService {
     data: {
       chatModel: string
       extractionModel: string
+      currentIndex?: number
+      initialKeyIndex?: number
+      lastSuccessfulKeyIndex?: number | null
+      availableKeys?: number
+      cooldownKeys?: number
       stats: Array<{
         keyIndex: number
         maskedKey: string
         status: string
         cooldownUntil: string | null
+        nextAvailableAt?: string | null
         successCount: number
         errorCount: number
         consecutiveErrors: number
         lastUsedAt: string | null
         lastErrorReason: string | null
+        lastRotationReason?: string | null
+        disabledUntil?: string | null
       }>
     }
   }> {

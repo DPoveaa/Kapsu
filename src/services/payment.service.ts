@@ -301,5 +301,47 @@ class PaymentService {
       throw new Error('Erro de conexão. Verifique se o servidor está rodando.')
     }
   }
+
+  /**
+   * Busca as opções de parcelamento sem juros calculadas pelo backend
+   */
+  async getInstallmentOptions(total: number): Promise<{
+    cartTotal: number
+    maxInstallments: number
+    maxInterestFreeInstallments: number
+    options: Array<{
+      installments: number
+      installmentValue: number
+      totalValue: number
+      hasInterest: boolean
+      label: string
+    }>
+    nextRuleIncentive?: {
+      minCartValue: number
+      maxInterestFreeInstallments: number
+      missingValue: number
+    } | null
+    appliedRuleId?: string | null
+  }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/installment-options?total=${total}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      })
+
+      const text = await response.text()
+      if (!text) throw new Error('Resposta vazia do servidor')
+
+      const data = JSON.parse(text)
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao buscar opções de parcelamento')
+      }
+
+      return data.data || data
+    } catch (error: any) {
+      if (error.message) throw error
+      throw new Error('Erro de conexão ao buscar opções de parcelamento')
+    }
+  }
 }
 export const paymentService = new PaymentService()

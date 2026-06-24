@@ -31,6 +31,10 @@ interface OrderDetail {
   shipping_address: string | null
   created_at: string
   updated_at: string
+  card_installments?: number | null
+  card_installment_value?: number | string | null
+  card_interest_free?: boolean | null
+  installment_rule_id?: string | null
   user: {
     id: string
     name: string
@@ -113,6 +117,7 @@ export default function OrderDetail() {
     if (!method) return 'Não informado'
     const methods: Record<string, string> = {
       credit: 'Cartão de Crédito',
+      credit_card: 'Cartão de Crédito',
       debit: 'Cartão de Débito',
       pix: 'PIX',
       cash: 'Dinheiro',
@@ -379,6 +384,18 @@ export default function OrderDetail() {
                   <p className="text-xs text-gray-500 uppercase font-semibold">Método de Pagamento</p>
                   <p className="text-gray-900 dark:text-white font-medium mt-0.5">{formatPaymentMethod(order.payment_method)}</p>
                 </div>
+                {order.payment_method === 'credit_card' && order.card_installments && (
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-semibold">Parcelamento</p>
+                    <p className="text-gray-900 dark:text-white font-medium mt-0.5">
+                      {order.card_installments}x de R${' '}
+                      {Number(order.card_installment_value || 0)
+                        .toFixed(2)
+                        .replace('.', ',')}{' '}
+                      {order.card_interest_free ? 'sem juros' : 'com juros'}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

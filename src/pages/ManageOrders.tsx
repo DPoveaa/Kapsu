@@ -451,7 +451,15 @@ export default function ManageOrders() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900 dark:text-white">
-                              {order.payment_method || 'Não informado'}
+                              {order.payment_method === 'credit_card' || order.payment_method === 'credit'
+                                ? 'Cartão de Crédito'
+                                : order.payment_method === 'pix'
+                                ? 'PIX'
+                                : order.payment_method === 'debit'
+                                ? 'Cartão de Débito'
+                                : order.payment_method === 'cash'
+                                ? 'Dinheiro'
+                                : order.payment_method || 'Não informado'}
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">

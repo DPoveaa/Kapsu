@@ -18,6 +18,29 @@ import { getOrderStatusLabel, getOrderStatusBadgeClass, isInvoiceEligibleStatus 
 
 type ProfileSection = 'info' | 'password' | 'image' | 'addresses' | 'orders' | 'favorites' | 'reviews' | 'notifications' | 'help' | null
 
+const TAB_TO_SECTION: Record<string, ProfileSection> = {
+  info: 'info',
+  addresses: 'addresses',
+  orders: 'orders',
+  favorites: 'favorites',
+  reviews: 'reviews',
+  notifications: 'notifications',
+  help: 'help',
+}
+
+function resolveProfileSection(
+  searchParams: URLSearchParams,
+  locationSection?: ProfileSection | null
+): ProfileSection | null {
+  const tab = searchParams.get('tab')
+  if (tab && TAB_TO_SECTION[tab]) {
+    return TAB_TO_SECTION[tab]
+  }
+  const section = searchParams.get('section') as ProfileSection | null
+  if (section) return section
+  return locationSection ?? null
+}
+
 interface OrderItem {
   product_id?: string;
   name?: string;
@@ -47,9 +70,10 @@ export default function Profile() {
   const [searchParams] = useSearchParams()
   const location = useLocation()
 
-  const initialSection = (searchParams.get('section') as ProfileSection) ||
-    (location.state?.section as ProfileSection) ||
-    null
+  const initialSection = resolveProfileSection(
+    searchParams,
+    (location.state?.section as ProfileSection) || null
+  )
 
   const [activeSection, setActiveSection] = useState<ProfileSection>(() => {
     if (initialSection) return initialSection
@@ -61,10 +85,17 @@ export default function Profile() {
 
   // Atualiza activeSection quando searchParams ou location.state mudar
   useEffect(() => {
-    const section = (searchParams.get('section') as ProfileSection) ||
-      (location.state?.section as ProfileSection)
+    const section = resolveProfileSection(
+      searchParams,
+      (location.state?.section as ProfileSection) || null
+    )
     if (section) {
       setActiveSection(section)
+      if (section === 'notifications') {
+        setTimeout(() => {
+          document.getElementById('profile-notifications-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }, 150)
+      }
     }
   }, [searchParams, location.state])
 
@@ -1511,7 +1542,7 @@ export default function Profile() {
               {/* NOTIFICAÇÕES                                            */}
               {/* ─────────────────────────────────────────────────────── */}
               {activeSection === 'notifications' && (
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
+                <div id="profile-notifications-section" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
                   <div className="w-full max-w-4xl mx-auto">
                     <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
                       <div className="flex items-center justify-between mb-6">

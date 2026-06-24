@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { 
   Settings, MessageSquare, Users, Package, ShoppingCart, BarChart3, 
   Truck, Gift, Tag, Image, Star, Layout, Menu, ChevronLeft, ChevronRight, Menu as MenuIcon, X,
-  ShieldCheck
+  ShieldCheck, Bot, KeyRound, CreditCard
 } from 'lucide-react'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +25,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { title: "Pedidos", icon: ShoppingCart, link: "/admin/orders" },
         { title: "Frete", icon: Truck, link: "/admin/shipping" },
         { title: "Promoções", icon: Gift, link: "/admin/promotions" },
-        { title: "Cupons", icon: Tag, link: "/admin/promo-codes" }
+        { title: "Cupons", icon: Tag, link: "/admin/promo-codes" },
+        { title: "Parcelas sem Juros", icon: CreditCard, link: "/admin/installment-rules" }
       ]
     },
     {
@@ -39,6 +40,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     {
       title: "Sistema",
       items: [
+        { title: "Central da IA", icon: Bot, link: "/admin/kaia-chats" },
+        { title: "Chaves de IA", icon: KeyRound, link: "/admin/ai-keys" },
         { title: "WhatsApp", icon: MessageSquare, link: "/admin/whatsapp" },
         { title: "Usuários", icon: Users, link: "/admin/users" },
         { title: "Auditoria", icon: ShieldCheck, link: "/admin/audit" },
@@ -150,8 +153,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden">
-        <div className="p-4 md:p-6 lg:p-8 mt-12 md:mt-0 w-full md:max-w-none">
+      <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col p-4 md:p-6 lg:p-8 mt-12 md:mt-0 w-full md:max-w-none overflow-y-auto min-h-0">
           {children}
         </div>
       </main>

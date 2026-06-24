@@ -22,6 +22,9 @@ import FreeShippingRules from './pages/FreeShippingRules'
 import ManagePromotions from './pages/ManagePromotions'
 import ManagePromoCodes from './pages/ManagePromoCodes'
 import AuditLogs from './pages/AuditLogs'
+import KaiaChats from './pages/KaiaChats'
+import ManageAIKeys from './pages/ManageAIKeys'
+import ManageInstallmentRules from './pages/ManageInstallmentRules'
 
 import ManageBanners from './pages/ManageBanners'
 import ManageReviews from './pages/ManageReviews'
@@ -257,6 +260,16 @@ function AppContent() {
           }
         />
         <Route
+          path="/admin/installment-rules"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <ManageInstallmentRules />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/banners"
           element={
             <ProtectedRoute requireAdmin>
@@ -302,6 +315,26 @@ function AppContent() {
             <ProtectedRoute requireAdmin>
               <AdminLayout>
                 <OrderDetail />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/ai-keys"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <ManageAIKeys />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/kaia-chats"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <KaiaChats />
               </AdminLayout>
             </ProtectedRoute>
           }

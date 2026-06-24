@@ -61,7 +61,8 @@ export default function Products() {
     const cats = catParam ? catParam.split(',').filter(Boolean) : []
     setSelectedCategories(cats)
 
-    const promo = params.get('promocao') === 'true'
+    // FIX: ler 'promo' (não 'promocao') para compatibilidade com /produtos?promo=true
+    const promo = params.get('promo') === 'true'
     setIsPromoOnly(promo)
   }, [params])
 
@@ -370,7 +371,17 @@ export default function Products() {
             <input
               type="checkbox"
               checked={isPromoOnly}
-              onChange={e => setIsPromoOnly(e.target.checked)}
+              onChange={e => {
+                const newPromo = e.target.checked
+                setIsPromoOnly(newPromo)
+                const newParams = new URLSearchParams(params)
+                if (newPromo) {
+                  newParams.set('promo', 'true')
+                } else {
+                  newParams.delete('promo')
+                }
+                setParams(newParams)
+              }}
               className="h-4 w-4 text-green-600 border-gray-300 dark:border-gray-700 rounded focus:ring-green-500"
             />
             <span className="flex items-center gap-1.5"><Percent size={13} className="text-red-500"/>Apenas Promoção</span>
@@ -483,7 +494,12 @@ export default function Products() {
                 {isPromoOnly && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs font-semibold">
                     Apenas Promoções
-                    <button onClick={() => setIsPromoOnly(false)} className="hover:opacity-70 p-0.5 rounded-full hover:bg-green-100 dark:hover:bg-green-800 transition-colors">
+                    <button onClick={() => {
+                      setIsPromoOnly(false)
+                      const newParams = new URLSearchParams(params)
+                      newParams.delete('promo')
+                      setParams(newParams)
+                    }} className="hover:opacity-70 p-0.5 rounded-full hover:bg-green-100 dark:hover:bg-green-800 transition-colors">
                       <X size={11}/>
                     </button>
                   </span>

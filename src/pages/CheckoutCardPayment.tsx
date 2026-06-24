@@ -69,6 +69,11 @@ export default function CheckoutCardPayment() {
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({})
 
+  const [installmentOptions, setInstallmentOptions] = useState<any[]>([])
+  const [maxInterestFree, setMaxInterestFree] = useState(1)
+  const [incentive, setIncentive] = useState<any>(null)
+  const [loadingOptions, setLoadingOptions] = useState(false)
+
   useEffect(() => {
     if (authLoading) return
     if (!isAuthenticated) {
@@ -95,6 +100,31 @@ export default function CheckoutCardPayment() {
           return
         }
         setOrder(orderData)
+
+        // Carrega as opções de parcelamento sem juros dinamicamente
+        try {
+          setLoadingOptions(true)
+          const totalAmount = Number(orderData.total)
+          const opts = await paymentService.getInstallmentOptions(totalAmount)
+          setInstallmentOptions(opts.options)
+          setMaxInterestFree(opts.maxInterestFreeInstallments)
+          setIncentive(opts.nextRuleIncentive || null)
+        } catch (optsErr) {
+          console.error('Erro ao carregar opções de parcelamento:', optsErr)
+          // Fallback seguro: 1x sem juros
+          const totalAmount = Number(orderData.total)
+          setInstallmentOptions([{
+            installments: 1,
+            installmentValue: totalAmount,
+            totalValue: totalAmount,
+            hasInterest: false,
+            label: `1x de R$ ${totalAmount.toFixed(2).replace('.', ',')} sem juros`
+          }])
+          setMaxInterestFree(1)
+          setIncentive(null)
+        } finally {
+          setLoadingOptions(false)
+        }
       } catch (err: any) {
         setError('Não foi possível carregar o pedido.')
       } finally {
@@ -233,6 +263,10 @@ export default function CheckoutCardPayment() {
 
   const totalAmount = Number(order.total)
   const last4 = formData.number.replace(/\D/g, '').slice(-4)
+  const selectedOption = installmentOptions.find(opt => opt.installments === formData.installments)
+  const displayInstallmentVal = selectedOption ? selectedOption.installmentValue : (totalAmount / formData.installments)
+  const displayTotalAmount = selectedOption ? selectedOption.totalValue : totalAmount
+  const interestLabel = selectedOption ? (selectedOption.hasInterest ? 'com juros' : 'sem juros') : (formData.installments === 1 ? 'sem juros' : '')
 
   return (
     <div className="bg-gradient-to-b from-gray-50 dark:from-gray-950 to-white dark:to-gray-900 min-h-screen pb-16 animate-fade-in">
@@ -274,7 +308,7 @@ export default function CheckoutCardPayment() {
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Nome impresso no cartão *</label>
                     <input 
                       type="text" name="holderName" value={formData.holderName} onChange={handleChange} 
-                      className={`w-full px-4 py-3 border ${validationErrors.holderName ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 dark:border-gray-700 focus:ring-primary-500'} rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white focus:ring-2 outline-none transition-all`} 
+                      className={`w-full px-4 py-3 border ${validationErrors.holderName ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 dark:border-gray-700 focus:ring-primary-500'} rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 outline-none transition-all`} 
                       placeholder="Ex: JOAO M SILVA" 
                     />
                     {validationErrors.holderName && <p className="text-red-500 text-xs mt-1">{validationErrors.holderName}</p>}
@@ -284,7 +318,7 @@ export default function CheckoutCardPayment() {
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">CPF do titular *</label>
                     <input 
                       type="text" name="cpf" value={formData.cpf} onChange={handleChange} maxLength={14}
-                      className={`w-full px-4 py-3 border ${validationErrors.cpf ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 dark:border-gray-700 focus:ring-primary-500'} rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white focus:ring-2 outline-none transition-all`} 
+                      className={`w-full px-4 py-3 border ${validationErrors.cpf ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 dark:border-gray-700 focus:ring-primary-500'} rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 outline-none transition-all`} 
                       placeholder="000.000.000-00" 
                     />
                     {validationErrors.cpf && <p className="text-red-500 text-xs mt-1">{validationErrors.cpf}</p>}
@@ -294,7 +328,7 @@ export default function CheckoutCardPayment() {
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Número do Cartão *</label>
                     <input 
                       type="text" name="number" value={formData.number} onChange={handleChange} maxLength={19}
-                      className={`w-full px-4 py-3 border ${validationErrors.number ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 dark:border-gray-700 focus:ring-primary-500'} rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white focus:ring-2 outline-none transition-all`} 
+                      className={`w-full px-4 py-3 border ${validationErrors.number ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 dark:border-gray-700 focus:ring-primary-500'} rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 outline-none transition-all`} 
                       placeholder="0000 0000 0000 0000" 
                     />
                     {validationErrors.number && <p className="text-red-500 text-xs mt-1">{validationErrors.number}</p>}
@@ -305,7 +339,7 @@ export default function CheckoutCardPayment() {
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Validade *</label>
                       <input 
                         type="text" name="expiry" value={formData.expiry} onChange={handleChange} maxLength={5}
-                        className={`w-full px-4 py-3 border ${validationErrors.expiry ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 dark:border-gray-700 focus:ring-primary-500'} rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white focus:ring-2 outline-none transition-all`} 
+                        className={`w-full px-4 py-3 border ${validationErrors.expiry ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 dark:border-gray-700 focus:ring-primary-500'} rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 outline-none transition-all`} 
                         placeholder="MM/AA" 
                       />
                       {validationErrors.expiry && <p className="text-red-500 text-xs mt-1">{validationErrors.expiry}</p>}
@@ -314,7 +348,7 @@ export default function CheckoutCardPayment() {
                       <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">CVV *</label>
                       <input 
                         type="text" name="ccv" value={formData.ccv} onChange={handleChange} maxLength={4}
-                        className={`w-full px-4 py-3 border ${validationErrors.ccv ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 dark:border-gray-700 focus:ring-primary-500'} rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white focus:ring-2 outline-none transition-all`} 
+                        className={`w-full px-4 py-3 border ${validationErrors.ccv ? 'border-red-300 focus:ring-red-500' : 'border-gray-300 dark:border-gray-700 focus:ring-primary-500'} rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 outline-none transition-all`} 
                         placeholder="123" 
                       />
                       {validationErrors.ccv && <p className="text-red-500 text-xs mt-1">{validationErrors.ccv}</p>}
@@ -323,20 +357,41 @@ export default function CheckoutCardPayment() {
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Opções de Parcelamento *</label>
-                    <select 
-                      name="installments" value={formData.installments} 
-                      onChange={(e) => setFormData(prev => ({ ...prev, installments: Number(e.target.value) }))} 
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none transition-all"
-                    >
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map(num => {
-                        const val = totalAmount / num;
-                        return (
-                          <option key={num} value={num}>
-                            {num}x de R$ {val.toFixed(2).replace('.', ',')} {num === 1 ? 'sem juros' : ''}
-                          </option>
-                        )
-                      })}
-                    </select>
+                    {loadingOptions ? (
+                      <div className="flex items-center gap-2 text-sm text-gray-500 py-3 bg-white dark:bg-gray-800 px-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                        <Loader2 className="animate-spin w-4 h-4 text-primary-600" />
+                        <span>Calculando opções de parcelamento...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <select 
+                          name="installments" value={formData.installments} 
+                          onChange={(e) => setFormData(prev => ({ ...prev, installments: Number(e.target.value) }))} 
+                          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none transition-all"
+                        >
+                          {installmentOptions.map(opt => (
+                            <option key={opt.installments} value={opt.installments}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                        {maxInterestFree > 1 && (
+                          <p className="text-sm font-semibold text-green-600 dark:text-green-400 mt-1.5 flex items-center gap-1">
+                            <span>✨</span> Você pode parcelar em até {maxInterestFree}x sem juros!
+                          </p>
+                        )}
+                        {incentive && (
+                          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 rounded-xl text-xs sm:text-sm text-blue-700 dark:text-blue-400 flex flex-col gap-1 leading-relaxed">
+                            <span className="font-bold flex items-center gap-1">
+                              <span>💡</span> Dica de Economia
+                            </span>
+                            <span>
+                              Adicione mais <strong>R$ {incentive.missingValue.toFixed(2).replace('.', ',')}</strong> na sua compra para liberar até <strong>{incentive.maxInterestFreeInstallments}x sem juros</strong> no cartão!
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
 
                   <button 
@@ -371,12 +426,19 @@ export default function CheckoutCardPayment() {
 
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 dark:text-gray-400">Forma de Pagamento</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">{formData.installments}x de R$ {(totalAmount / formData.installments).toFixed(2).replace('.', ',')}</span>
+                    <span className="font-semibold text-gray-900 dark:text-white">
+                      {formData.installments}x de R$ {displayInstallmentVal.toFixed(2).replace('.', ',')}{' '}
+                      {interestLabel && (
+                        <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1">
+                          ({interestLabel})
+                        </span>
+                      )}
+                    </span>
                   </div>
 
                   <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
                     <span className="text-lg font-bold text-gray-900 dark:text-white">Total a pagar</span>
-                    <span className="text-2xl font-black text-primary-600 dark:text-primary-400">R$ {totalAmount.toFixed(2).replace('.', ',')}</span>
+                    <span className="text-2xl font-black text-primary-600 dark:text-primary-400">R$ {displayTotalAmount.toFixed(2).replace('.', ',')}</span>
                   </div>
                 </div>
 
@@ -431,7 +493,7 @@ export default function CheckoutCardPayment() {
                 {/* Note: In a real scenario we'd show shipping separately if the order has it. Here we use the final total. */}
                 <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
                   <span className="font-bold text-gray-900 dark:text-white">Total</span>
-                  <span className="text-xl font-black text-primary-600 dark:text-primary-400">R$ {totalAmount.toFixed(2).replace('.', ',')}</span>
+                  <span className="text-xl font-black text-primary-600 dark:text-primary-400">R$ {displayTotalAmount.toFixed(2).replace('.', ',')}</span>
                 </div>
               </div>
 

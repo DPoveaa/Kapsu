@@ -1275,15 +1275,27 @@ class WhatsAppService {
     cartInfo?: any,
     conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string; timestamp?: number }>,
     isAuthenticated?: boolean,
-    userInfo?: { id: string; name: string; email: string; phone?: string }
+    userInfo?: { id: string; name: string; email: string; phone?: string },
+    notificationChoice?: {
+      type: 'notification_preference_choice';
+      channel?: 'email' | 'whatsapp';
+      notificationType: string;
+      action: string;
+      source?: string;
+    }
   ): Promise<any> {
     const sessionId = localStorage.getItem('sanare_site_session') || '';
     try {
+      const token = localStorage.getItem('sanare_token') || localStorage.getItem('token');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(`${API_URL}/chat/site/message`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           message,
           sessionId,
@@ -1291,7 +1303,8 @@ class WhatsAppService {
           isAuthenticated,
           cartInfo,
           conversationHistory,
-          userInfo
+          userInfo,
+          notificationChoice,
         }),
       });
       const text = await response.text();

@@ -34,7 +34,7 @@ export const env = {
     } catch (e) {
       console.error('Error parsing site_settings from localStorage', e)
     }
-    return import.meta.env.VITE_SUPPORT_WHATSAPP_URL || 'https://wa.me/551153042534'
+    return import.meta.env.VITE_SUPPORT_WHATSAPP_URL || null
   },
   
   // Modo de desenvolvimento
