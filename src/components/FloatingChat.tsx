@@ -211,13 +211,26 @@ const buildProductRecommendationParts = (
 }
 
 const buildClientChatMessage = (historyMessage: any): ChatMessage => {
+  // Kaia v2 retorna parts no nível raiz do item de histórico: { id, role, content, layout, parts[], timestamp }
+  // A v1 legada retorna parts dentro de metadata: { id, role, content, metadata: { parts[] }, timestamp }
+  const v2Parts = Array.isArray(historyMessage.parts) && historyMessage.parts.length > 0
+    ? historyMessage.parts
+    : null
+
   const metadata = historyMessage.metadata ? { ...historyMessage.metadata } : (undefined as ChatMessage['metadata'] | undefined)
   const rawContent = typeof historyMessage.content === 'string' ? historyMessage.content : ''
   const sanitized = sanitizeClientMessageText(rawContent)
   const metadataActions = normalizeChatActions(metadata?.actionButtons || metadata?.actions)
   const actions = metadataActions
 
-  const clientMetadata = metadata || (sanitized.followUpText ? {} : undefined)
+  // Para mensagens v2, cria metadata sintética com as parts do nível raiz
+  const clientMetadata: ChatMessage['metadata'] = v2Parts
+    ? {
+        parts: v2Parts,
+        responseLayout: historyMessage.layout || 'text',
+        ...(metadata || {})
+      }
+    : metadata || (sanitized.followUpText ? {} : undefined)
 
   if (clientMetadata) {
     if (sanitized.followUpText && !clientMetadata.followUpText) {
@@ -275,6 +288,7 @@ const buildClientChatMessage = (historyMessage: any): ChatMessage => {
     metadata: clientMetadata
   }
 }
+
 
 const FloatingChat: React.FC = () => {
   const { isAuthenticated, user } = useAuth()
@@ -336,7 +350,7 @@ const FloatingChat: React.FC = () => {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
 
-      const response = await fetch(`${env.apiUrl}/chat/site/conversation/new`, { method: 'POST', headers })
+      const response = await fetch(`${env.apiUrl}/kaia/v2/new-chat`, { method: 'POST', headers })
       if (!response.ok) return
 
       const result = await response.json()
@@ -628,7 +642,7 @@ const FloatingChat: React.FC = () => {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
       }
-      const response = await fetch(`${env.apiUrl}/chat/site/conversation/${sessionId}`, { headers })
+      const response = await fetch(`${env.apiUrl}/kaia/v2/history?sessionId=${sessionId}`, { headers })
       if (response.ok) {
         const result = await response.json()
         if (result.success && result.data && Array.isArray(result.data.history)) {
@@ -771,7 +785,7 @@ const FloatingChat: React.FC = () => {
         if (token) {
           headers['Authorization'] = `Bearer ${token}`
         }
-        const response = await fetch(`${env.apiUrl}/chat/site/conversation/${sessionId}`, { headers })
+        const response = await fetch(`${env.apiUrl}/kaia/v2/history?sessionId=${sessionId}`, { headers })
         if (response.ok) {
           const result = await response.json()
           if (result.success && result.data && result.data.conversation) {
@@ -1538,6 +1552,96 @@ const FloatingChat: React.FC = () => {
         ))
       }
 
+      // Sincroniza o carrinho se o backend retornar o estado do carrinho atualizado do banco
+      if (aiData.currentCart && isAuthenticated) {
+        await refreshCart()
+      }
+
+      // ══════════════════════════════════════════════════════════════
+      // KAIA V2 — Handler para o formato moderno de resposta
+      // Detectado por: clientSafe === true AND parts[] array presente
+      // A v2 retorna: { message, layout, parts[], clientSafe: true }
+      // ══════════════════════════════════════════════════════════════
+      if (aiData.clientSafe === true && Array.isArray(aiData.parts)) {
+        const v2Message = aiData.message || ''
+        const v2Parts = aiData.parts as Array<any>
+        const v2Timestamp = Date.now()
+
+        // Detecta se a resposta indica suporte humano acionado (layout = 'support_handoff')
+        if (aiData.layout === 'support_handoff') {
+          setEscalationStatus('human_needed')
+          setEscalationChannel('site')
+        }
+
+        // Extrai ações das parts para o nível superior da mensagem
+        const v2ActionPart = v2Parts.find((p: any) => p.type === 'actions')
+        const v2Actions: ChatAction[] = v2ActionPart
+          ? (v2ActionPart.actions || []).map((act: any) => ({
+              label: act.label || act.text || 'Abrir',
+              href: act.action || act.url || act.href || '',
+              type: (act.type === 'primary' ? 'primary' : 'secondary') as 'primary' | 'secondary'
+            })).filter((a: ChatAction) => a.href)
+          : []
+
+        // Adiciona mensagem ao estado com metadata.parts populado
+        // O JSX do FloatingChat já renderiza todos os tipos de parts corretamente:
+        // text, product_cards, cart_items, coupon_cards, order_cards, promotion_cards,
+        // product_comparison, shipping_options, actions, free_shipping_progress
+        const msgId = v2Timestamp
+        // Para respostas v2 com parts[], define content como texto da resposta imediatamente.
+        // Não usamos typeMessageText porque ele anima o campo `content`, mas a renderização
+        // de parts lê de metadata.parts[].text — animar content não teria efeito visual.
+        // O texto fica disponível tanto em content (renderizador legado) quanto em parts[type=text]
+        const textPart = v2Parts.find((p: any) => p.type === 'text')
+        const displayText = sanitizeClientMessageText(textPart?.text || v2Message).content
+
+        setMessages(prev => {
+          // Evita duplicata se o polling já trouxe a mesma mensagem do banco
+          const alreadyExists = prev.some(m =>
+            m.role === 'assistant' &&
+            m.content &&
+            displayText &&
+            m.content.trim() === displayText.trim() &&
+            Math.abs((m.timestamp || 0) - v2Timestamp) < 8000
+          )
+          if (alreadyExists) return prev
+
+          return [...prev, {
+            role: 'assistant' as const,
+            content: displayText, // texto disponível no campo content também (fallback e deduplicação)
+            timestamp: msgId,
+            actions: v2Actions.length > 0 ? v2Actions : undefined,
+            metadata: {
+              parts: v2Parts,
+              responseLayout: aiData.layout || 'text',
+              clientDiagnostics: {
+                hadStructuredFormat: v2Parts.length > 1,
+                loadedFromHistory: false,
+                sanitizedForClient: true,
+                removedInternalMarkers: false,
+                rebuiltCards: v2Parts.some((p: any) => ['product_cards', 'cart_items', 'coupon_cards', 'order_cards'].includes(p.type)),
+                rebuiltButtons: v2Actions.length > 0,
+                rebuiltFromParts: true,
+                legacyFallbackUsed: false,
+                splitConverted: false
+              }
+            }
+          }]
+        })
+
+        // Sincroniza carrinho se foi modificado pela Kaia v2
+        const hasCartUpdate = v2Parts.some((p: any) => p.type === 'cart_items')
+        if (hasCartUpdate && isAuthenticated) {
+          await refreshCart()
+        }
+
+        setIsLoading(false)
+        return
+      }
+      // ══════════════════════════════════════════════════════════════
+      // FIM handler Kaia v2 — Fallback para respostas legadas (v1)
+      // ══════════════════════════════════════════════════════════════
+
       // Handoff WhatsApp retornado diretamente pelo backend (pedido direto, opção 2, etc.)
       if (aiData.type === 'whatsapp_handoff' || aiData.handoff?.channel === 'whatsapp') {
         setPendingContext('none')
@@ -1586,11 +1690,6 @@ const FloatingChat: React.FC = () => {
         setEscalationChannel('email')
         setIsLoading(false)
         return
-      }
-
-      // Sincroniza o carrinho se o backend retornar o estado do carrinho atualizado do banco
-      if (aiData.currentCart && isAuthenticated) {
-        await refreshCart()
       }
 
       if (aiData.type === 'guided_support' || (aiData.guided_support_diagnostic && aiData.actionButtons?.length)) {
@@ -2281,7 +2380,7 @@ const FloatingChat: React.FC = () => {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
       }
-      const response = await fetch(`${env.apiUrl}/chat/site/conversations`, { headers })
+      const response = await fetch(`${env.apiUrl}/kaia/v2/conversations`, { headers })
       if (response.ok) {
         const result = await response.json()
         if (result.success && Array.isArray(result.conversations)) {
@@ -2320,7 +2419,7 @@ const FloatingChat: React.FC = () => {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
       }
-      const response = await fetch(`${env.apiUrl}/chat/site/conversation/${sessId}`, {
+      const response = await fetch(`${env.apiUrl}/kaia/v2/conversation/${sessId}`, {
         method: 'DELETE',
         headers
       })
@@ -2891,6 +2990,163 @@ const FloatingChat: React.FC = () => {
                                             {action.label}
                                           </button>
                                         ))}
+                                      </div>
+                                    )
+                                  }
+                                  if (part.type === 'product_comparison') {
+                                    const products = part.products || []
+                                    return (
+                                      <div key={`part-comp-${index}-${partIdx}`} className="w-full max-w-[85%] sm:max-w-[80%] space-y-2">
+                                        {products.map((prod: any) => (
+                                          <div key={prod.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-left">
+                                            <h4 className="font-semibold text-xs text-gray-800 dark:text-gray-100">{prod.name}</h4>
+                                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
+                                              <span className="font-semibold">Preço:</span> {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.price)}
+                                              {prod.promoPrice && ` (Promoção: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.promoPrice)})`}
+                                            </p>
+                                            {prod.benefits && (
+                                              <p className="text-[11px] text-gray-655 dark:text-gray-300 mt-1 leading-snug">
+                                                <span className="font-semibold">Benefícios:</span> {prod.benefits}
+                                              </p>
+                                            )}
+                                            <div className="mt-2.5 flex gap-2">
+                                              <button
+                                                onClick={() => { navigate(`/produtos/${prod.id}`); setIsOpen(false) }}
+                                                className="flex-1 py-1 text-center bg-gray-105 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-[10px] font-semibold cursor-pointer"
+                                              >
+                                                Ver Produto
+                                              </button>
+                                              <button
+                                                onClick={() => handleAddProductDirectly(prod)}
+                                                className="flex-1 py-1 text-center bg-green-600 hover:bg-green-700 text-white rounded text-[10px] font-semibold cursor-pointer"
+                                              >
+                                                Adicionar
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )
+                                  }
+                                  if (part.type === 'order_cards') {
+                                    const orders = part.orders || []
+                                    return (
+                                      <div key={`part-orders-${index}-${partIdx}`} className="w-full max-w-[85%] sm:max-w-[80%] space-y-2">
+                                        {orders.map((order: any) => (
+                                          <div key={order.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-left">
+                                            <div className="flex justify-between items-center text-[10px] text-gray-400">
+                                              <span className="font-semibold text-green-600 dark:text-green-400">Pedido #{order.id}</span>
+                                              <span>{new Date(order.createdAt).toLocaleDateString('pt-BR')}</span>
+                                            </div>
+                                            <p className="text-xs text-gray-700 dark:text-gray-200 mt-1 font-semibold">
+                                              Status: <span className="text-[#00A86B]">{order.status}</span>
+                                            </p>
+                                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
+                                              Total: <span className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.totalValue)}</span>
+                                            </p>
+                                            <button
+                                              onClick={() => { navigate(`/profile`); setIsOpen(false) }}
+                                              className="w-full mt-2 py-1 text-center bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-200 rounded text-[10px] font-semibold cursor-pointer"
+                                            >
+                                              Ver Detalhes
+                                            </button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )
+                                  }
+                                  if (part.type === 'coupon_cards') {
+                                    const coupons = part.coupons || []
+                                    return (
+                                      <div key={`part-coupons-${index}-${partIdx}`} className="w-full max-w-[85%] sm:max-w-[80%] space-y-2">
+                                        {coupons.map((coupon: any) => (
+                                          <div key={coupon.code} className="bg-green-50/50 dark:bg-green-950/20 rounded-lg border border-dashed border-green-300 dark:border-green-800 p-3 text-left shadow-sm flex flex-col space-y-1.5">
+                                            <div className="flex justify-between items-center">
+                                              <span className="text-xs font-bold text-green-800 dark:text-green-300 bg-green-100 dark:bg-green-900/40 px-2 py-0.5 rounded font-mono uppercase tracking-wider">
+                                                {coupon.code}
+                                              </span>
+                                              <button
+                                                onClick={() => {
+                                                  navigator.clipboard.writeText(coupon.code)
+                                                  alert('Cupom copiado para a área de transferência! 🎉')
+                                                }}
+                                                className="text-[10px] text-green-700 dark:text-green-400 font-bold hover:underline cursor-pointer"
+                                              >
+                                                Copiar
+                                              </button>
+                                            </div>
+                                            <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">{coupon.name}</p>
+                                            {coupon.description && (
+                                              <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug">{coupon.description}</p>
+                                            )}
+                                            <p className="text-[10px] text-green-600 dark:text-green-400 font-bold">
+                                              Desconto: {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(coupon.discountValue)}
+                                              {coupon.minOrderValue && ` (mínimo ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(coupon.minOrderValue)})`}
+                                            </p>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )
+                                  }
+                                  if (part.type === 'promotion_cards') {
+                                    const promotions = part.promotions || []
+                                    return (
+                                      <div key={`part-promos-${index}-${partIdx}`} className="w-full max-w-[85%] sm:max-w-[80%] space-y-2">
+                                        {promotions.map((promo: any) => (
+                                          <div key={promo.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2.5 shadow-sm text-left flex items-center space-x-2.5">
+                                            {promo.image && (
+                                              <img src={productsService.getImageUrl(promo.image)} alt={promo.name} className="w-10 h-10 object-contain rounded bg-gray-50" />
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                              <h4 className="font-semibold text-xs text-gray-800 dark:text-gray-100 line-clamp-1">{promo.name}</h4>
+                                              <p className="text-[10px] text-green-600 font-bold">
+                                                Por apenas {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(promo.promoPrice || promo.price)}
+                                              </p>
+                                            </div>
+                                            <button
+                                              onClick={() => { navigate(`/produtos/${promo.id}`); setIsOpen(false) }}
+                                              className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-[10px] font-semibold cursor-pointer"
+                                            >
+                                              Ver
+                                            </button>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )
+                                  }
+                                  if (part.type === 'shipping_options') {
+                                    const options = part.options || []
+                                    return (
+                                      <div key={`part-shipping-${index}-${partIdx}`} className="w-full max-w-[85%] sm:max-w-[80%] space-y-2">
+                                        {options.map((opt: any, optIdx: number) => (
+                                          <div key={optIdx} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-left">
+                                            <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">{opt.carrier}</p>
+                                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
+                                              Valor: <span className="font-bold text-green-600 dark:text-green-400">{opt.shippingFee === 0 ? 'Grátis' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(opt.shippingFee)}</span>
+                                            </p>
+                                            <p className="text-[10px] text-gray-400 mt-0.5">Prazo: {opt.deliveryTime} dias ({opt.deliveryTimeType === 'business' ? 'úteis' : 'corridos'})</p>
+                                            {opt.message && <p className="text-[10px] text-[#00A86B] mt-1 font-medium">{opt.message}</p>}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )
+                                  }
+                                  if (part.type === 'free_shipping_progress') {
+                                    const progress = part.data || {}
+                                    return (
+                                      <div key={`part-shipping-prog-${index}-${partIdx}`} className="w-full max-w-[85%] sm:max-w-[80%] bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-left flex flex-col space-y-2">
+                                        <div className="flex justify-between items-center text-[10px] font-semibold text-gray-500">
+                                          <span>Meta de Frete Grátis</span>
+                                          <span>{progress.percent}%</span>
+                                        </div>
+                                        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                                          <div className="bg-[#00A86B] h-full rounded-full transition-all duration-500" style={{ width: `${progress.percent}%` }} />
+                                        </div>
+                                        <p className="text-[10px] text-gray-600 dark:text-gray-350 leading-snug">
+                                          {progress.isFree 
+                                            ? '🎉 Parabéns! Você atingiu o frete grátis!' 
+                                            : `Faltam apenas ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(progress.remainingValue)} para ganhar frete grátis.`}
+                                        </p>
                                       </div>
                                     )
                                   }

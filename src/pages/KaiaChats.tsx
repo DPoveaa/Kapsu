@@ -4,10 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import {
   Bot, Search, Filter, RefreshCw, MessageSquare, AlertTriangle,
   CheckCircle, Clock, ChevronDown,
-  ShoppingCart, Tag, Truck, Package, Send, X, Eye,
+  ShoppingCart, Tag, Truck, Package, Send, X,
   Activity, Zap, Shield, Code2, TrendingUp, ChevronUp,
   Check, AlertCircle, Loader2,
-  Phone, Mail, Hash, Calendar, BarChart2, Cpu,
+  Phone, Mail, Hash, Calendar, BarChart2,
   Headphones, Pause, Play,
   CircleDot, Layers
 } from 'lucide-react';
@@ -45,6 +45,7 @@ interface Message {
   role: 'user' | 'assistant' | 'system' | 'admin';
   content: string;
   metadata: MessageMetadata | null;
+  diagnostics?: any | null;
   timestamp: number;
 }
 
@@ -171,285 +172,181 @@ const maskPhone = (phone: string) => {
   return phone.replace(/(\d{2})\d+(\d{2})/, '$1*****$2');
 };
 
-// ==================== COMPONENTE BADGE DE SEGURANÇA ====================
-const SecurityBadge = ({ label, status }: { label: string; status: string }) => {
-  const isBlocked = status === 'blocked';
-  const isPassed = status === 'passed' || status === 'sanitized';
-  return (
-    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${
-      isBlocked ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' :
-      isPassed ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' :
-      'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-    }`}>
-      {isBlocked ? <X size={10} /> : isPassed ? <Check size={10} /> : <CircleDot size={10} />}
-      {label}: {status}
-    </span>
-  );
-};
+
 
 // ==================== PAINEL TÉCNICO (Debug) ====================
-const TechnicalPanel = ({ metadata }: { metadata: MessageMetadata | null }) => {
+const TechnicalPanel = ({ metadata, diagnostics }: { metadata: MessageMetadata | null; diagnostics: any | null }) => {
   const [expanded, setExpanded] = useState(false);
 
-  if (!metadata) return null;
+  if (!metadata && !diagnostics) return null;
 
-  const hasAnyData = metadata.intent || metadata.routes_used || metadata.security_checks ||
-    metadata.processing_time_ms || metadata.ai_provider || metadata.error_summary || metadata.ai_key_rotation;
+  // Se for Kaia v2, a maior parte das informações está em diagnostics
+  const agent = diagnostics?.agent || metadata?.ai_provider;
+  const intent = diagnostics?.intent || metadata?.intent;
+  const confidence = diagnostics?.confidence ?? metadata?.confidence;
+  const riskLevel = diagnostics?.riskLevel || metadata?.riskLevel;
+  const conversionStage = diagnostics?.conversionStage;
+  const salesOpportunity = diagnostics?.salesOpportunity;
+  const toolsUsed = diagnostics?.toolsUsed || metadata?.routes_used || [];
+  const model = diagnostics?.model || metadata?.ai_model;
+  const processingTimeMs = diagnostics?.processingTimeMs || metadata?.processing_time_ms;
+  const retrieval = diagnostics?.retrieval;
+  const sales = diagnostics?.sales;
+  const warnings = diagnostics?.warnings || [];
+
+  const hasAnyData = agent || intent || riskLevel || toolsUsed.length > 0 || model || processingTimeMs;
 
   if (!hasAnyData) return null;
 
   return (
-    <div className="mt-2 rounded-xl border border-violet-200 dark:border-violet-800/50 overflow-hidden">
+    <div className="mt-2 rounded-xl border border-violet-200 dark:border-violet-800/50 overflow-hidden shadow-sm">
       <button
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center gap-2 px-3 py-2 bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors text-xs font-semibold text-violet-600 dark:text-violet-400"
       >
         <Code2 size={12} />
-        Debug da IA
+        Diagnóstico Técnico (Kaia v2)
         {expanded ? <ChevronUp size={12} className="ml-auto" /> : <ChevronDown size={12} className="ml-auto" />}
-        {metadata.fallback_used && (
-          <span className="ml-1 bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 px-1.5 py-0.5 rounded-full text-[10px]">
-            FALLBACK
+        {salesOpportunity && (
+          <span className="ml-1.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider animate-pulse">
+            Oportunidade
           </span>
         )}
       </button>
 
       {expanded && (
         <div className="p-3 bg-white dark:bg-gray-900/40 space-y-3 text-xs">
-          {/* Intenção e Entidades */}
-          {(metadata.intent || metadata.confidence !== undefined) && (
-            <div>
-              <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
-                <Layers size={11} /> Classificação
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {metadata.intent && (
-                  <span className={`px-2 py-0.5 rounded-full font-medium ${getIntentBadge(metadata.intent)}`}>
-                    🎯 {metadata.intent}
-                  </span>
-                )}
-                {metadata.confidence !== undefined && (
-                  <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-mono">
-                    conf: {(metadata.confidence * 100).toFixed(0)}%
-                  </span>
-                )}
-                {metadata.riskLevel && (
-                  <span className={`px-2 py-0.5 rounded-full font-medium ${
-                    metadata.riskLevel === 'HIGH' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' :
-                    metadata.riskLevel === 'MEDIUM' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' :
-                    'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-                  }`}>
-                    risk: {metadata.riskLevel}
-                  </span>
-                )}
-              </div>
-              {metadata.entities && Object.keys(metadata.entities).length > 0 && (
-                <div className="mt-1.5 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg font-mono text-[11px] text-gray-600 dark:text-gray-400 break-all">
-                  {JSON.stringify(metadata.entities, null, 0).slice(0, 300)}
-                  {JSON.stringify(metadata.entities).length > 300 && '...'}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Fontes de Contexto */}
-          {metadata.context_sources && metadata.context_sources.length > 0 && (
-            <div>
-              <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
-                <Activity size={11} /> Contexto Consultado
-              </p>
-              <div className="flex flex-wrap gap-1">
-                {metadata.context_sources.map((src, i) => (
-                  <span key={i} className="px-2 py-0.5 bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400 rounded-full font-medium">
-                    {src}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Rotas e Serviços */}
-          {(metadata.routes_used?.length || metadata.services_used?.length) && (
-            <div>
-              <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
-                <Zap size={11} /> Rotas & Serviços Usados
-              </p>
-              <div className="space-y-1">
-                {metadata.routes_used?.map((r, i) => (
-                  <div key={i} className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded font-mono text-[10px]">
-                    <Hash size={9} /> {r}
-                  </div>
-                ))}
-                {metadata.services_used?.map((s, i) => (
-                  <div key={i} className="flex items-center gap-1.5 px-2 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 rounded font-mono text-[10px]">
-                    <Cpu size={9} /> {s}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Ação Executada */}
-          {metadata.actionResult && (
-            <div>
-              <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
-                <ShoppingCart size={11} /> Ação Executada
-              </p>
-              <div className={`px-3 py-2 rounded-lg ${
-                metadata.actionResult.status === 'executed' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' :
-                metadata.actionResult.status === 'failed' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400' :
-                'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-              }`}>
-                <div className="flex items-center gap-2 font-semibold">
-                  {metadata.actionResult.status === 'executed' ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
-                  {metadata.actionResult.type} — {metadata.actionResult.status}
-                </div>
-                {metadata.actionResult.message && (
-                  <p className="mt-1 text-[11px] opacity-80">{metadata.actionResult.message}</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* IA Externa */}
-          {metadata.ai_provider && (
-            <div>
-              <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
-                <Bot size={11} /> IA Utilizada
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                <span className="px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-full font-medium">
-                  {metadata.ai_provider}
+          {/* Agente e Roteamento */}
+          <div>
+            <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
+              <Bot size={11} className="text-violet-500" /> Roteamento de Agente
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {agent && (
+                <span className="px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 font-medium">
+                  Agente: {agent}
                 </span>
-                {metadata.ai_model && (
-                  <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full font-mono text-[10px]">
-                    {metadata.ai_model}
-                  </span>
-                )}
-                {metadata.processing_time_ms !== undefined && (
-                  <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full font-mono text-[10px]">
-                    ⏱ {metadata.processing_time_ms}ms
-                  </span>
-                )}
-                {metadata.ai_key_index !== undefined && (
-                  <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-mono text-[10px]">
-                    chave #{metadata.ai_key_index}
-                  </span>
-                )}
-                {metadata.ai_key_masked && (
-                  <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full font-mono text-[10px]">
-                    {metadata.ai_key_masked}
-                  </span>
-                )}
-                {metadata.fallback_used && (
-                  <span className="px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 rounded-full font-semibold">
-                    ⚠ FALLBACK
-                  </span>
-                )}
-              </div>
-              {metadata.ai_key_rotation && (
-                <div className="mt-1.5 p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg text-[11px] font-mono space-y-1">
-                  <div>
-                    rotacao: {metadata.ai_key_rotation.rotated ? 'sim' : 'nao'}
-                    {metadata.ai_key_rotation.reason ? ` | motivo: ${metadata.ai_key_rotation.reason}` : ''}
-                  </div>
-                  <div>
-                    disponiveis: {metadata.ai_key_rotation.availableKeys ?? '-'}
-                    {' | '}
-                    cooldown: {metadata.ai_key_rotation.cooldownKeys ?? '-'}
-                    {metadata.ai_key_rotation.cooldownMs ? ` | aplicado: ${Math.ceil(metadata.ai_key_rotation.cooldownMs / 1000)}s` : ''}
-                  </div>
-                  {metadata.ai_key_rotation.attemptedKeyIndexes && metadata.ai_key_rotation.attemptedKeyIndexes.length > 0 && (
-                    <div>tentadas: #{metadata.ai_key_rotation.attemptedKeyIndexes.join(', #')}</div>
-                  )}
-                  {metadata.ai_key_rotation.errorType && (
-                    <div>erro: {metadata.ai_key_rotation.errorType}</div>
-                  )}
-                </div>
               )}
-              {metadata.error_summary && (
-                <div className="mt-1.5 p-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg text-[11px] font-mono break-all">
-                  ❌ {metadata.error_summary}
-                </div>
+              {intent && (
+                <span className={`px-2 py-0.5 rounded-full font-medium ${getIntentBadge(intent)}`}>
+                  Intenção: {intent}
+                </span>
               )}
-            </div>
-          )}
-
-          {/* Segurança */}
-          {metadata.security_checks && (
-            <div>
-              <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
-                <Shield size={11} /> Verificações de Segurança
-              </p>
-              <div className="flex flex-wrap gap-1">
-                <SecurityBadge label="Auth" status={metadata.security_checks.isAuthenticated ? 'autenticado' : 'visitante'} />
-                <SecurityBadge label="Rate" status={metadata.security_checks.rateLimit} />
-                <SecurityBadge label="Tamanho" status={metadata.security_checks.lengthCheck} />
-                <SecurityBadge label="Injection" status={metadata.security_checks.promptInjection} />
-                <SecurityBadge label="Sanitização" status={metadata.security_checks.sanitization} />
-              </div>
-            </div>
-          )}
-
-          {/* Diagnóstico do Carrinho */}
-          {metadata.intent === 'pergunta_carrinho' && (
-            <div>
-              <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
-                <ShoppingCart size={11} /> Diagnóstico do Carrinho
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {metadata.cart_source && (
-                  <span className="px-2 py-0.5 rounded-full bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 font-mono text-[10px]">
-                    fonte: {metadata.cart_source}
-                  </span>
-                )}
+              {confidence !== undefined && (
                 <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-mono text-[10px]">
-                  {metadata.cart_product_count ?? 0} item(ns)
+                  conf: {(confidence * 100).toFixed(0)}%
                 </span>
-                {metadata.cart_total !== undefined && (
-                  <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-mono text-[10px]">
-                    total: R$ {metadata.cart_total.toFixed(2).replace('.', ',')}
-                  </span>
-                )}
-                <span className={`px-2 py-0.5 rounded-full font-medium text-[10px] ${
-                  metadata.sent_mini_cards
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
-                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                }`}>
-                  mini cards: {metadata.sent_mini_cards ? 'sim ✓' : 'não (carrinho vazio)'}
-                </span>
-                {metadata.responseLayout && (
-                  <span className="px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 font-mono text-[10px]">
-                    layout: {metadata.responseLayout}
-                  </span>
-                )}
-                {metadata.split_converted !== undefined && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-mono text-[10px]">
-                    split convertido: {metadata.split_converted ? 'sim ✓' : 'não'}
-                  </span>
-                )}
-                <span className="px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-mono text-[10px]">
-                  origem: histórico (reconstruído)
-                </span>
-                {metadata.parts_order && metadata.parts_order.length > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-mono text-[10px]">
-                    partes: {metadata.parts_order.join(' ➔ ')}
-                  </span>
-                )}
-              </div>
-              {metadata.cartProducts && metadata.cartProducts.length > 0 && (
-                <div className="mt-1.5 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg text-[10px] text-gray-500 dark:text-gray-400">
-                  <strong className="font-semibold">Produtos exibidos:</strong> {metadata.cartProducts.map((p: any) => `${p.name} (Qtd: ${p.quantity || p.qty || 1})`).join(', ')}
-                </div>
               )}
+              {conversionStage && (
+                <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium">
+                  Etapa: {conversionStage}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Ferramentas Seguras (Tools) */}
+          {toolsUsed.length > 0 && (
+            <div>
+              <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
+                <Layers size={11} className="text-blue-500" /> Ferramentas Utilizadas
+              </p>
+              <div className="flex flex-wrap gap-1">
+                {toolsUsed.map((tool: string, i: number) => (
+                  <span key={i} className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded font-mono text-[10px] flex items-center gap-1">
+                    <Zap size={9} /> {tool}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 
-          {/* Tipo de Resposta */}
-          {metadata.response_type && (
-            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-500">
-              <Eye size={10} />
-              <span className="text-[11px]">Tipo de resposta: <strong className="font-semibold">{metadata.response_type}</strong></span>
+          {/* RAG & Relações de Grafo */}
+          {retrieval && (
+            <div>
+              <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
+                <Search size={11} className="text-teal-500" /> Recuperação de Dados (Retrieval RAG)
+              </p>
+              <div className="grid grid-cols-3 gap-2 bg-gray-50 dark:bg-gray-800/40 p-2 rounded-lg text-[10px] font-mono">
+                <div>
+                  <span className="text-gray-400 block">Busca Semântica:</span>
+                  <span className="font-bold text-gray-700 dark:text-gray-300">{retrieval.semanticResults ?? 0} produtos</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block">Relações Grafo:</span>
+                  <span className="font-bold text-gray-700 dark:text-gray-300">{retrieval.graphResults ?? 0} nodes</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block">Ranqueados:</span>
+                  <span className="font-bold text-gray-700 dark:text-gray-300">{retrieval.finalProducts ?? 0} produtos</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Estratégia Comercial */}
+          {sales && (
+            <div>
+              <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
+                <ShoppingCart size={11} className="text-emerald-500" /> Ações Comerciais
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                  sales.recommendedProducts?.length > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                }`}>
+                  Recomendou: {sales.recommendedProducts?.length ?? 0} prod
+                </span>
+                {sales.couponSuggested && (
+                  <span className="px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 font-medium text-[10px]">
+                    Sugeriu Cupom 🏷️
+                  </span>
+                )}
+                {sales.freeShippingSuggestion && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium text-[10px]">
+                    Alerta Frete Grátis 🚚
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Segurança & Desempenho */}
+          <div>
+            <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
+              <Shield size={11} className="text-red-500" /> Segurança & Telemetria
+            </p>
+            <div className="flex flex-wrap gap-1.5 text-[10px]">
+              {model && (
+                <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full font-mono">
+                  Modelo: {model}
+                </span>
+              )}
+              {processingTimeMs !== undefined && (
+                <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full font-mono">
+                  Tempo: {processingTimeMs}ms
+                </span>
+              )}
+              {riskLevel && (
+                <span className={`px-2 py-0.5 rounded-full font-semibold ${
+                  riskLevel === 'high' || riskLevel === 'HIGH' ? 'bg-red-100 text-red-700' :
+                  riskLevel === 'medium' || riskLevel === 'MEDIUM' ? 'bg-amber-100 text-amber-700' :
+                  'bg-green-100 text-green-700'
+                }`}>
+                  Risco: {riskLevel}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Avisos/Alertas */}
+          {warnings.length > 0 && (
+            <div className="p-2 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-lg text-amber-800 dark:text-amber-300">
+              <p className="font-semibold mb-1">Avisos de Execução:</p>
+              <ul className="list-disc list-inside space-y-0.5">
+                {warnings.map((w: string, idx: number) => (
+                  <li key={idx}>{w}</li>
+                ))}
+              </ul>
             </div>
           )}
         </div>
@@ -570,9 +467,9 @@ const ChatMessage = ({ message }: { message: Message }) => {
         </div>
 
         {/* Painel Técnico */}
-        {message.metadata && (
+        {(message.metadata || message.diagnostics) && (
           <div className="w-full">
-            <TechnicalPanel metadata={message.metadata} />
+            <TechnicalPanel metadata={message.metadata} diagnostics={message.diagnostics} />
           </div>
         )}
       </div>
@@ -737,7 +634,7 @@ export default function KaiaChats() {
         limit: '30',
         ...Object.fromEntries(Object.entries(filtersRef.current).filter(([_, v]) => v)),
       });
-      const res = await fetch(`${API_URL}/admin/conversations?${params}`, { headers });
+      const res = await fetch(`${API_URL}/admin/kaia/v2/conversations?${params}`, { headers });
       const data = await res.json();
       if (data.success) {
         setConversations(data.data.conversations);
@@ -784,7 +681,7 @@ export default function KaiaChats() {
   const fetchMessages = useCallback(async (convId: string, silent = false) => {
     if (!silent) setLoadingMessages(true);
     try {
-      const res = await fetch(`${API_URL}/admin/conversations/${convId}`, { headers });
+      const res = await fetch(`${API_URL}/admin/kaia/v2/conversations/${convId}`, { headers });
       const data = await res.json();
       if (data.success) {
         setMessages(data.data.messages);
@@ -844,8 +741,19 @@ export default function KaiaChats() {
     if (!selectedConv) return;
     setActionLoading(action);
     try {
-      const res = await fetch(`${API_URL}/admin/conversations/${selectedConv.id}/${action}`, {
-        method: 'POST', headers,
+      let body: any = {};
+      if (action === 'resolve') body = { status: 'resolved' };
+      else if (action === 'pause-ai') body = { aiEnabled: false };
+      else if (action === 'resume-ai') body = { aiEnabled: true };
+      else if (action === 'archive') body = { isArchived: true };
+      else if (action === 'unarchive') body = { isArchived: false };
+      else if (action === 'ignore') body = { isIgnored: true };
+      else if (action === 'unignore') body = { isIgnored: false };
+
+      const res = await fetch(`${API_URL}/admin/kaia/v2/conversations/${selectedConv.id}/status`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify(body)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Erro ao executar ação');
@@ -862,7 +770,7 @@ export default function KaiaChats() {
       await fetchConversations(page, true);
       await fetchMessages(selectedConv.id);
       // Atualiza a conversa selecionada com os novos dados
-      const convRes = await fetch(`${API_URL}/admin/conversations/${selectedConv.id}`, { headers });
+      const convRes = await fetch(`${API_URL}/admin/kaia/v2/conversations/${selectedConv.id}`, { headers });
       const convData = await convRes.json();
       if (convData.success) setSelectedConv(convData.data.conversation);
     } catch (err: any) {
@@ -904,7 +812,7 @@ export default function KaiaChats() {
     if (!selectedConv || !replyText.trim()) return;
     setSendingReply(true);
     try {
-      const res = await fetch(`${API_URL}/admin/conversations/${selectedConv.id}/reply`, {
+      const res = await fetch(`${API_URL}/admin/kaia/v2/conversations/${selectedConv.id}/reply`, {
         method: 'POST',
         headers,
         body: JSON.stringify({ message: replyText }),

@@ -1293,7 +1293,7 @@ class WhatsAppService {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      const response = await fetch(`${API_URL}/chat/site/message`, {
+      const response = await fetch(`${API_URL}/kaia/v2/message`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -1334,7 +1334,7 @@ class WhatsAppService {
   ): Promise<any> {
     const sessionId = localStorage.getItem('sanare_site_session') || '';
     try {
-      const response = await fetch(`${API_URL}/chat/site/escalate`, {
+      const response = await fetch(`${API_URL}/kaia/v2/human-support`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1345,7 +1345,8 @@ class WhatsAppService {
           name,
           phone,
           email,
-          reason
+          reason,
+          message: reason || 'Solicitação de suporte'
         }),
       });
       const text = await response.text();
@@ -1369,13 +1370,14 @@ class WhatsAppService {
   async deEscalateSiteChat(): Promise<any> {
     const sessionId = localStorage.getItem('sanare_site_session') || '';
     try {
-      const response = await fetch(`${API_URL}/chat/site/de-escalate`, {
+      const response = await fetch(`${API_URL}/kaia/v2/message`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sessionId
+          sessionId,
+          message: 'Retornar para IA'
         }),
       });
       const text = await response.text();
