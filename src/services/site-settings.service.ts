@@ -25,6 +25,7 @@ export interface SiteSettings {
   chatbot_enabled?: boolean
   whatsapp_number?: string
   google_merchant_sync_enabled?: boolean
+  human_support_settings?: any
 }
 
 export interface SiteSettingsResponse {

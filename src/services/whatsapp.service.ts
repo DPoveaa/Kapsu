@@ -1282,7 +1282,8 @@ class WhatsAppService {
       notificationType: string;
       action: string;
       source?: string;
-    }
+    },
+    clientRequestId?: string
   ): Promise<any> {
     const sessionId = localStorage.getItem('sanare_site_session') || '';
     try {
@@ -1305,6 +1306,7 @@ class WhatsAppService {
           conversationHistory,
           userInfo,
           notificationChoice,
+          clientRequestId,
         }),
       });
       const text = await response.text();
@@ -1365,19 +1367,63 @@ class WhatsAppService {
   }
 
   /**
-   * Site Chat: De-escala conversa voltando para IA
+   * Site Chat: Retorna conversa para atendimento por IA (action estruturada)
    */
-  async deEscalateSiteChat(): Promise<any> {
+  async returnToAiSiteChat(): Promise<any> {
     const sessionId = localStorage.getItem('sanare_site_session') || '';
     try {
-      const response = await fetch(`${API_URL}/kaia/v2/message`, {
+      const token = localStorage.getItem('sanare_token') || localStorage.getItem('token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(`${API_URL}/kaia/v2/actions`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           sessionId,
-          message: 'Retornar para IA'
+          action: {
+            type: 'return_to_ai',
+            actionRequestId: `return_ai_${Date.now()}`
+          }
+        }),
+      });
+      const text = await response.text();
+      if (!text) throw new Error('Resposta vazia do servidor');
+      const data = JSON.parse(text);
+      if (!response.ok) throw new Error(data.message || 'Erro ao retornar para IA');
+      return data;
+    } catch (e: any) {
+      console.error(e);
+      return { success: false, message: e.message || 'Erro de conexão' };
+    }
+  }
+
+  /**
+   * Site Chat: De-escala conversa voltando para IA (legado — redireciona para action)
+   */
+  async deEscalateSiteChat(): Promise<any> {
+    return this.returnToAiSiteChat();
+  }
+
+  /**
+   * Site Chat: Executa action da Kaia v2
+   */
+  async sendSiteAction(action: any): Promise<any> {
+    const sessionId = localStorage.getItem('sanare_site_session') || '';
+    try {
+      const token = localStorage.getItem('sanare_token') || localStorage.getItem('token');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const response = await fetch(`${API_URL}/kaia/v2/actions`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          sessionId,
+          action
         }),
       });
       const text = await response.text();
@@ -1386,7 +1432,7 @@ class WhatsAppService {
       }
       const data = JSON.parse(text);
       if (!response.ok) {
-        throw new Error(data.message || 'Erro ao retornar para IA');
+        throw new Error(data.message || 'Erro ao processar action');
       }
       return data;
     } catch (e: any) {

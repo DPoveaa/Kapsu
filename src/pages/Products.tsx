@@ -62,8 +62,11 @@ export default function Products() {
     setSelectedCategories(cats)
 
     // FIX: ler 'promo' (não 'promocao') para compatibilidade com /produtos?promo=true
-    const promo = params.get('promo') === 'true'
+    const promo = params.get('promo') === 'true' || params.get('promocao') === 'true'
     setIsPromoOnly(promo)
+    if (promo) {
+      setSortBy('discount_desc')
+    }
   }, [params])
 
   // Reset page when filters change
@@ -376,8 +379,9 @@ export default function Products() {
                 setIsPromoOnly(newPromo)
                 const newParams = new URLSearchParams(params)
                 if (newPromo) {
-                  newParams.set('promo', 'true')
+                  newParams.set('promocao', 'true')
                 } else {
+                  newParams.delete('promocao')
                   newParams.delete('promo')
                 }
                 setParams(newParams)
@@ -444,6 +448,12 @@ export default function Products() {
 
           {/* Catalog Content area */}
           <div className="flex-1 min-w-0">
+            {isPromoOnly && (
+              <div className="mb-4 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/40 rounded-xl flex items-center justify-between">
+                <h1 className="text-sm font-bold text-green-800 dark:text-green-300">Produtos em promoção</h1>
+                <button onClick={handleClearFilters} className="text-xs text-green-700 dark:text-green-400 hover:underline font-semibold cursor-pointer">Limpar filtro</button>
+              </div>
+            )}
             {/* Active Filters Tag list */}
             {hasActiveFilters && (
               <div className="flex flex-wrap items-center gap-2 mb-4 bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xs">
@@ -497,7 +507,8 @@ export default function Products() {
                     <button onClick={() => {
                       setIsPromoOnly(false)
                       const newParams = new URLSearchParams(params)
-                      newParams.delete('promo')
+                      newParams.delete('promocao')
+                  newParams.delete('promo')
                       setParams(newParams)
                     }} className="hover:opacity-70 p-0.5 rounded-full hover:bg-green-100 dark:hover:bg-green-800 transition-colors">
                       <X size={11}/>

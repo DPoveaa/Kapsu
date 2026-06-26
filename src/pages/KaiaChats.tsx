@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Bot, Search, Filter, RefreshCw, MessageSquare, AlertTriangle,
-  CheckCircle, Clock, ChevronDown,
+  CheckCircle, Clock, ChevronDown, ChevronLeft, ChevronRight, Download,
   ShoppingCart, Tag, Truck, Package, Send, X,
   Activity, Zap, Shield, Code2, TrendingUp, ChevronUp,
   Check, AlertCircle, Loader2,
   Phone, Mail, Hash, Calendar, BarChart2,
-  Headphones, Pause, Play,
+  Headphones, Pause, Play, Trash2,
   CircleDot, Layers
 } from 'lucide-react';
 
@@ -172,6 +172,191 @@ const maskPhone = (phone: string) => {
   return phone.replace(/(\d{2})\d+(\d{2})/, '$1*****$2');
 };
 
+const safeArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value as T[] : [];
+const safeObject = <T extends Record<string, any>>(value: unknown): T => (
+  value && typeof value === 'object' && !Array.isArray(value) ? value as T : {} as T
+);
+const safeString = (value: unknown, fallback = '') => typeof value === 'string' ? value : fallback;
+const safeNumber = (value: unknown, fallback = 0) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+const safeBoolean = (value: unknown, fallback = false) => typeof value === 'boolean' ? value : fallback;
+
+const normalizeActions = (actions: unknown): any[] => safeArray<any>(actions).map((action, index) => {
+  const payload = safeObject<Record<string, any>>(action?.payload);
+  return {
+    id: safeString(action?.id, `action-${index}`),
+    label: safeString(action?.label || action?.text, 'Ação'),
+    type: safeString(action?.type || action?.actionType || action?.variant, 'navigate'),
+    href: safeString(action?.href || action?.url || action?.action || payload.path, ''),
+    payload,
+    ...safeObject<Record<string, any>>(action),
+  };
+});
+
+const normalizeProducts = (products: unknown): any[] => safeArray<any>(products).map(product => {
+  const raw = safeObject<Record<string, any>>(product);
+  const id = safeString(raw.id || raw.productId || raw.product_id);
+  const slug = safeString(raw.slug);
+  return {
+    ...raw,
+    id,
+    name: safeString(raw.name || raw.title, 'Produto'),
+    price: safeNumber(raw.price || raw.originalPrice || raw.original_price || raw.promoPrice || raw.promo_price, 0),
+    promoPrice: raw.promoPrice ?? raw.promo_price ?? null,
+    originalPrice: raw.originalPrice ?? raw.original_price ?? raw.price,
+    url: safeString(raw.url || raw.href || (slug ? `/produtos/${slug}` : id ? `/produtos/${id}` : '')),
+  };
+});
+
+const normalizeParts = (parts: unknown): any[] => safeArray<any>(parts).map(part => {
+  const normalized = safeObject<Record<string, any>>(part);
+  const type = safeString(normalized.type, 'text');
+
+  if (type === 'actions') {
+    return { ...normalized, type, actions: normalizeActions(normalized.actions) };
+  }
+
+  if (type === 'product_cards' || type === 'promotion_cards') {
+    return { ...normalized, type, products: normalizeProducts(normalized.products || normalized.promotions || normalized.items).slice(0, 3) };
+  }
+
+  if (type === 'cart_items') {
+    return { ...normalized, type, items: safeArray(normalized.items || normalized.products) };
+  }
+
+  return {
+    ...normalized,
+    type,
+    text: safeString(normalized.text || normalized.content),
+    role: safeString(normalized.role, 'assistant'),
+  };
+});
+
+const normalizeDiagnostics = (diagnostics: unknown): any | null => {
+  if (!diagnostics) return null;
+  const diag = safeObject<Record<string, any>>(diagnostics);
+  const retrieval = safeObject<Record<string, any>>(diag.retrieval);
+  const sales = safeObject<Record<string, any>>(diag.sales);
+
+  return {
+    ...diag,
+    engine: safeString(diag.engine, 'kaia_v2'),
+    responseContract: safeString(diag.responseContract, 'parts_v2'),
+    legacyFallbackUsed: safeBoolean(diag.legacyFallbackUsed, false),
+    toolsUsed: safeArray<string>(diag.toolsUsed || diag.tools_used || diag.routesUsed || diag.routes_used),
+    warnings: safeArray<string>(diag.warnings),
+    retrieval: Object.keys(retrieval).length > 0 ? {
+      ...retrieval,
+      semanticResults: safeNumber(retrieval.semanticResults ?? retrieval.semantic_results, 0),
+      graphResults: safeNumber(retrieval.graphResults ?? retrieval.graph_results, 0),
+      finalProducts: safeNumber(retrieval.finalProducts ?? retrieval.final_products, 0),
+    } : null,
+    sales: Object.keys(sales).length > 0 ? {
+      ...sales,
+      recommendedProducts: normalizeProducts(sales.recommendedProducts || sales.recommended_products),
+      couponSuggested: safeBoolean(sales.couponSuggested ?? sales.coupon_suggested, false),
+      freeShippingSuggestion: safeBoolean(sales.freeShippingSuggestion ?? sales.free_shipping_suggestion, false),
+    } : null,
+  };
+};
+
+const normalizeMessageMetadata = (metadata: unknown): MessageMetadata | null => {
+  if (!metadata) return null;
+  const meta = safeObject<Record<string, any>>(metadata);
+  return {
+    ...meta,
+    entities: safeObject(meta.entities),
+    recommendedProducts: normalizeProducts(meta.recommendedProducts || meta.recommended_products),
+    cartProducts: safeArray(meta.cartProducts || meta.cart_products),
+    couponCards: safeArray(meta.couponCards || meta.coupon_cards),
+    actionButtons: normalizeActions(meta.actionButtons || meta.action_buttons || meta.actions),
+    routes_used: safeArray<string>(meta.routes_used || meta.routesUsed),
+    services_used: safeArray<string>(meta.services_used || meta.servicesUsed),
+    context_sources: safeArray<string>(meta.context_sources || meta.contextSources),
+    parts: normalizeParts(meta.parts),
+    parts_count: safeNumber(meta.parts_count ?? meta.partsCount ?? safeArray(meta.parts).length, 0),
+    parts_order: safeArray<string>(meta.parts_order || meta.partsOrder),
+  };
+};
+
+const normalizeMessage = (message: unknown): Message => {
+  const msg = safeObject<Record<string, any>>(message);
+  const metadata = normalizeMessageMetadata(msg.metadata);
+  const rootParts = normalizeParts(msg.parts);
+  const diagnostics = normalizeDiagnostics(msg.diagnostics || msg.debug || msg.adminDiagnostics);
+
+  return {
+    id: safeString(msg.id, `msg-${safeNumber(msg.timestamp, Date.now())}`),
+    role: ['user', 'assistant', 'system', 'admin'].includes(msg.role) ? msg.role : 'assistant',
+    content: safeString(msg.content || msg.message || msg.text),
+    metadata: rootParts.length > 0
+      ? {
+          ...(metadata || {}),
+          responseLayout: safeString(msg.layout || metadata?.responseLayout, 'text'),
+          parts: rootParts,
+          parts_count: rootParts.length,
+          parts_order: rootParts.map(part => part.type),
+        }
+      : metadata,
+    diagnostics,
+    timestamp: safeNumber(msg.timestamp || msg.created_at || msg.createdAt, Date.now()),
+  };
+};
+
+const normalizeConversation = (conversation: unknown): Conversation => {
+  const conv = safeObject<Record<string, any>>(conversation);
+  const lastMessage = conv.last_message || conv.lastMessage;
+
+  return {
+    id: safeString(conv.id || conv.conversation_id || conv.session_id, `conv-${Date.now()}`),
+    session_id: safeString(conv.session_id || conv.sessionId || conv.id),
+    customer_id: conv.customer_id ?? conv.customerId ?? null,
+    customer_name: conv.customer_name ?? conv.customerName ?? null,
+    customer_email: conv.customer_email ?? conv.customerEmail ?? null,
+    customer_phone: conv.customer_phone ?? conv.customerPhone ?? null,
+    name: conv.name ?? null,
+    email: conv.email ?? null,
+    phone: conv.phone ?? null,
+    status: safeString(conv.status, 'active'),
+    channel: safeString(conv.channel, 'site'),
+    created_at: safeString(conv.created_at || conv.createdAt, new Date().toISOString()),
+    last_message_at: safeString(conv.last_message_at || conv.lastMessageAt || conv.updated_at, new Date().toISOString()),
+    message_count: safeNumber(conv.message_count ?? conv.messageCount ?? safeArray(conv.messages || conv.items).length, 0),
+    last_message: lastMessage ? {
+      content: safeString(lastMessage.content || lastMessage.message || lastMessage.text),
+      sender_type: safeString(lastMessage.sender_type || lastMessage.senderType || lastMessage.role, 'user'),
+      created_at: safeString(lastMessage.created_at || lastMessage.createdAt, new Date().toISOString()),
+    } : null,
+    has_human_support: safeBoolean(conv.has_human_support ?? conv.hasHumanSupport, false),
+    has_error: safeBoolean(conv.has_error ?? conv.hasError, false),
+    has_action: safeBoolean(conv.has_action ?? conv.hasAction, false),
+    has_recommendation: safeBoolean(conv.has_recommendation ?? conv.hasRecommendation, false),
+    has_promo: safeBoolean(conv.has_promo ?? conv.hasPromo, false),
+    has_order_query: safeBoolean(conv.has_order_query ?? conv.hasOrderQuery, false),
+    ai_enabled: safeBoolean(conv.ai_enabled ?? conv.aiEnabled, true),
+  };
+};
+
+const normalizeMetrics = (metrics: unknown): Metrics => {
+  const m = safeObject<Record<string, any>>(metrics);
+  return {
+    totalConversations: safeNumber(m.totalConversations ?? m.total ?? m.conversationsTotal, 0),
+    todayConversations: safeNumber(m.todayConversations ?? m.today ?? m.conversationsToday, 0),
+    humanConversations: safeNumber(m.humanConversations ?? m.human ?? m.humanSupport, 0),
+    errorConversations: safeNumber(m.errorConversations ?? m.errors ?? m.errorCount, 0),
+    topIntents: safeArray(m.topIntents),
+    topProducts: safeArray(m.topProducts),
+    topCoupons: safeArray(m.topCoupons),
+    topActions: safeArray(m.topActions),
+    avgResponseTime: safeNumber(m.avgResponseTime, 0),
+    fallbackRate: safeNumber(m.fallbackRate, 0),
+    escalationRate: safeNumber(m.escalationRate, 0),
+    securityBlocksCount: safeNumber(m.securityBlocksCount, 0),
+  };
+};
+
 
 
 // ==================== PAINEL TÉCNICO (Debug) ====================
@@ -180,19 +365,34 @@ const TechnicalPanel = ({ metadata, diagnostics }: { metadata: MessageMetadata |
 
   if (!metadata && !diagnostics) return null;
 
+  const safeMetadata = normalizeMessageMetadata(metadata);
+  const safeDiagnostics = normalizeDiagnostics(diagnostics);
+
   // Se for Kaia v2, a maior parte das informações está em diagnostics
-  const agent = diagnostics?.agent || metadata?.ai_provider;
-  const intent = diagnostics?.intent || metadata?.intent;
-  const confidence = diagnostics?.confidence ?? metadata?.confidence;
-  const riskLevel = diagnostics?.riskLevel || metadata?.riskLevel;
-  const conversionStage = diagnostics?.conversionStage;
-  const salesOpportunity = diagnostics?.salesOpportunity;
-  const toolsUsed = diagnostics?.toolsUsed || metadata?.routes_used || [];
-  const model = diagnostics?.model || metadata?.ai_model;
-  const processingTimeMs = diagnostics?.processingTimeMs || metadata?.processing_time_ms;
-  const retrieval = diagnostics?.retrieval;
-  const sales = diagnostics?.sales;
-  const warnings = diagnostics?.warnings || [];
+  const agent = safeDiagnostics?.agent || safeMetadata?.ai_provider;
+  const intent = safeDiagnostics?.intent || safeMetadata?.intent;
+  const confidence = safeDiagnostics?.confidence ?? safeMetadata?.confidence;
+  const riskLevel = safeDiagnostics?.riskLevel || safeMetadata?.riskLevel;
+  const conversionStage = safeDiagnostics?.conversionStage;
+  const salesOpportunity = safeDiagnostics?.salesOpportunity;
+  const toolsUsed = safeArray<string>(safeDiagnostics?.toolsUsed || safeMetadata?.routes_used);
+  const model = safeDiagnostics?.model || safeMetadata?.ai_model;
+  const processingTimeMs = safeDiagnostics?.processingTimeMs || safeMetadata?.processing_time_ms;
+  const retrieval = safeDiagnostics?.retrieval;
+  const sales = safeDiagnostics?.sales;
+  const warnings = safeArray<string>(safeDiagnostics?.warnings);
+  const productsFromParts = normalizeProducts(safeArray<any>(safeMetadata?.parts).flatMap((part: any) =>
+    part?.type === 'product_cards' || part?.type === 'promotion_cards'
+      ? (part.products || part.items || part.promotions || [])
+      : []
+  ));
+  const diagnosticsProducts = normalizeProducts(sales?.recommendedProducts);
+  const recommendedProducts = diagnosticsProducts.some((product: any) => product.id && product.name !== 'Produto' && product.price > 0)
+    ? diagnosticsProducts
+    : productsFromParts;
+  const engine = safeDiagnostics?.engine;
+  const responseContract = safeDiagnostics?.responseContract;
+  const legacyFallbackUsed = safeDiagnostics?.legacyFallbackUsed;
 
   const hasAnyData = agent || intent || riskLevel || toolsUsed.length > 0 || model || processingTimeMs;
 
@@ -292,13 +492,13 @@ const TechnicalPanel = ({ metadata, diagnostics }: { metadata: MessageMetadata |
               </p>
               <div className="flex flex-wrap gap-1.5">
                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                  sales.recommendedProducts?.length > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                  recommendedProducts.length > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
                 }`}>
-                  Recomendou: {sales.recommendedProducts?.length ?? 0} prod
+                  Recomendou: {recommendedProducts.length} prod
                 </span>
                 {sales.couponSuggested && (
                   <span className="px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 font-medium text-[10px]">
-                    Sugeriu Cupom 🏷️
+                    Sugeriu Cupom 🏷️ 
                   </span>
                 )}
                 {sales.freeShippingSuggestion && (
@@ -316,6 +516,23 @@ const TechnicalPanel = ({ metadata, diagnostics }: { metadata: MessageMetadata |
               <Shield size={11} className="text-red-500" /> Segurança & Telemetria
             </p>
             <div className="flex flex-wrap gap-1.5 text-[10px]">
+              {engine && (
+                <span className="px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-full font-mono">
+                  Engine: {engine}
+                </span>
+              )}
+              {responseContract && (
+                <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full font-mono">
+                  Contrato: {responseContract}
+                </span>
+              )}
+              {legacyFallbackUsed !== undefined && (
+                <span className={`px-2 py-0.5 rounded-full font-semibold ${
+                  legacyFallbackUsed ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                }`}>
+                  Fallback Legada: {legacyFallbackUsed ? 'Sim' : 'Não'}
+                </span>
+              )}
               {model && (
                 <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full font-mono">
                   Modelo: {model}
@@ -349,7 +566,31 @@ const TechnicalPanel = ({ metadata, diagnostics }: { metadata: MessageMetadata |
               </ul>
             </div>
           )}
+
+          {/* Visor JSON Completo */}
+          <div className="pt-2.5 border-t border-violet-100 dark:border-violet-900/20">
+            <DiagnosticJsonViewer data={safeDiagnostics ? { ...safeDiagnostics, sales: safeDiagnostics.sales ? { ...safeDiagnostics.sales, recommendedProducts } : safeDiagnostics.sales } : safeMetadata} />
+          </div>
         </div>
+      )}
+    </div>
+  );
+};
+
+const DiagnosticJsonViewer = ({ data }: { data: any }) => {
+  const [showJson, setShowJson] = useState(false);
+  return (
+    <div>
+      <button
+        onClick={() => setShowJson(!showJson)}
+        className="text-[10px] text-violet-500 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 font-semibold underline cursor-pointer"
+      >
+        {showJson ? 'Ocultar JSON de Diagnóstico' : 'Ver JSON de Diagnóstico Completo'}
+      </button>
+      {showJson && (
+        <pre className="mt-2 p-2.5 bg-gray-900 text-emerald-400 rounded-lg overflow-x-auto text-[10px] font-mono whitespace-pre-wrap max-h-60 leading-relaxed border border-gray-800">
+          {JSON.stringify(data, null, 2)}
+        </pre>
       )}
     </div>
   );
@@ -360,8 +601,27 @@ const ChatMessage = ({ message }: { message: Message }) => {
   const isUser = message.role === 'user';
   const isAdmin = message.role === 'admin';
   const isSystem = message.role === 'system';
-
-  const bubbleClass = isUser
+  const metadata = normalizeMessageMetadata(message.metadata);
+  const recommendedProducts = normalizeProducts(metadata?.recommendedProducts);
+  const couponCards = safeArray<any>(metadata?.couponCards);
+  const actionButtons = normalizeActions(metadata?.actionButtons);  const rawParts = normalizeParts(metadata?.parts);
+  const copyGeneration = message.diagnostics?.copyGeneration || (metadata as any)?.copyGeneration;
+  const copyDiagnostics = copyGeneration?.diagnostics || copyGeneration;
+  const textPartIndexes = rawParts.reduce((acc: number[], part: any, idx: number) => {
+    if (part.type === 'text') acc.push(idx);
+    return acc;
+  }, []);
+  const parts = copyGeneration?.intro && copyGeneration?.closing && copyDiagnostics?.copyGeneratedBy === 'llm' && copyDiagnostics?.copyValidation === 'passed'
+    ? rawParts.map((part: any, idx: number) => {
+        if (part.type !== 'text') return part;
+        if (idx === textPartIndexes[0]) return { ...part, text: copyGeneration.intro };
+        if (idx === textPartIndexes[1]) return { ...part, text: copyGeneration.closing };
+        return part;
+      })
+    : rawParts;
+  const hasStructuredParts = !isUser && parts.length > 0;
+  const formatCurrency = (value: unknown) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(safeNumber(value, 0));
+const bubbleClass = isUser
     ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-tl-sm'
     : isAdmin
     ? 'bg-blue-600 text-white rounded-tr-sm'
@@ -381,7 +641,7 @@ const ChatMessage = ({ message }: { message: Message }) => {
             isSystem ? 'text-amber-600 dark:text-amber-400' :
             'text-violet-500 dark:text-violet-400'
           }`}>
-            {isUser ? '👤 Cliente' : isAdmin ? '👨‍💼 Admin' : isSystem ? '⚙️ Sistema' : '🤖 Kaia'}
+            {isUser ? 'Cliente' : isAdmin ? 'Admin' : isSystem ? 'Sistema' : 'Kaia'}
           </span>
           <span className="text-[10px] text-gray-400 dark:text-gray-600">
             {new Date(message.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
@@ -389,13 +649,66 @@ const ChatMessage = ({ message }: { message: Message }) => {
         </div>
 
         <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${bubbleClass}`}>
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          {!hasStructuredParts && <p className="whitespace-pre-wrap break-words">{message.content}</p>}
 
+          {hasStructuredParts && (
+            <div className="flex flex-col gap-2">
+              {parts.map((part: any, partIndex: number) => {
+                if (part.type === 'text') {
+                  return <p key={partIndex} className="whitespace-pre-wrap break-words">{part.text}</p>;
+                }
+                if (part.type === 'product_cards') {
+                  const products = normalizeProducts(part.products || part.items);
+                  return (
+                    <div key={partIndex} className="flex flex-col gap-1.5">
+                      {products.map((product: any) => (
+                        <div key={product.id || product.name} className="rounded-lg border border-white/20 bg-white/10 p-2 text-xs">
+                          <div className="flex items-center gap-1.5 font-semibold"><Package size={11} />{product.name}</div>
+                          <div className="mt-0.5 opacity-80">{formatCurrency(product.price)}{product.category ? ` · ${product.category}` : ''}</div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+                if (part.type === 'shipping_options') {
+                  const options = safeArray<any>(part.options);
+                  return (
+                    <div key={partIndex} className="flex flex-col gap-1.5">
+                      {options.map((option: any, optionIndex: number) => (
+                        <div key={optionIndex} className="rounded-lg border border-white/20 bg-white/10 p-2 text-xs">
+                          <div className="flex items-center gap-1.5 font-semibold"><Truck size={11} />{safeString(option.name || option.carrier, 'Entrega')}</div>
+                          <div className="mt-0.5 opacity-80">{formatCurrency(option.shippingFee ?? option.price)} · {safeString(option.deadline || (option.deliveryTime ? `${option.deliveryTime} dias` : ''), 'Prazo a consultar')}</div>
+                          {option.carrier && option.name && <div className="mt-0.5 opacity-70">{option.carrier}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                }
+                if (part.type === 'actions') {
+                  const actions = normalizeActions(part.actions);
+                  return (
+                    <div key={partIndex} className="flex flex-wrap gap-1.5">
+                      {actions.map((action: any, actionIndex: number) => (
+                        <span key={action.id || actionIndex} className="text-xs px-2.5 py-1 rounded-full border border-white/30 bg-white/10 font-medium">
+                          {action.label} <span className="opacity-70 font-mono">{action.type}</span>
+                        </span>
+                      ))}
+                    </div>
+                  );
+                }
+                return (
+                  <div key={partIndex} className="rounded-lg border border-white/20 bg-white/10 p-2 text-xs font-mono break-all">
+                    {part.type}
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {/* Produtos Recomendados */}
-          {message.metadata?.recommendedProducts && message.metadata.recommendedProducts.length > 0 && (
+          {!hasStructuredParts && recommendedProducts.length > 0 && (
             <div className="mt-2 flex flex-col gap-1">
               <p className="text-xs opacity-70 font-semibold">📦 Produtos recomendados:</p>
-              {message.metadata.recommendedProducts.slice(0, 3).map((p: any, i: number) => (
+              {recommendedProducts.slice(0, 3).map((p: any, i: number) => (
                 <div key={i} className="flex items-center gap-1.5 text-xs opacity-90">
                   <Package size={10} />
                   <span>{p.name}</span>
@@ -406,10 +719,10 @@ const ChatMessage = ({ message }: { message: Message }) => {
           )}
 
           {/* Cupons de Desconto */}
-          {message.metadata?.couponCards && message.metadata.couponCards.length > 0 && (
+          {!hasStructuredParts && couponCards.length > 0 && (
             <div className="mt-2 flex flex-col gap-1.5">
-              <p className="text-xs opacity-70 font-semibold">🎫 Cupons ativos:</p>
-              {message.metadata.couponCards.map((c: any, i: number) => (
+              <p className="text-xs opacity-70 font-semibold">Cupons ativos:</p>
+              {couponCards.map((c: any, i: number) => (
                 <div key={i} className="flex items-center gap-1.5 text-xs opacity-90 bg-white/10 p-1.5 rounded border border-white/20">
                   <Tag size={10} />
                   <span className="font-bold font-mono">{c.code}</span>
@@ -420,11 +733,11 @@ const ChatMessage = ({ message }: { message: Message }) => {
           )}
 
           {/* Botões de Ação */}
-          {(() => {
-            let btns = message.metadata?.actionButtons || [];
-            const hasCoupons = message.metadata?.couponCards && message.metadata.couponCards.length > 0;
-            const hasProducts = message.metadata?.recommendedProducts && message.metadata.recommendedProducts.length > 0;
-            const responseType = message.metadata?.response_type || message.metadata?.responseLayout;
+          {!hasStructuredParts && (() => {
+            let btns = actionButtons;
+            const hasCoupons = couponCards.length > 0;
+            const hasProducts = recommendedProducts.length > 0;
+            const responseType = metadata?.response_type || metadata?.responseLayout;
 
             if (hasCoupons || responseType === 'coupon_cards') {
               btns = btns.filter((btn: any) => {
@@ -525,7 +838,7 @@ const ConversationCard = ({
 
           {conv.last_message && (
             <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-              {conv.last_message.sender_type === 'ai' ? '🤖 ' : conv.last_message.sender_type === 'admin' ? '👨‍💼 ' : ''}
+              {conv.last_message.sender_type === 'ai' ? '🤖 ' : conv.last_message.sender_type === 'admin' ? '👤 ➔ 🤖 ' : ''}
               {conv.last_message.content.slice(0, 60)}
             </p>
           )}
@@ -586,21 +899,22 @@ export default function KaiaChats() {
     visitor_only: '',
     startDate: '',
     endDate: '',
-    is_archived: 'false',
-    is_ignored: 'false',
+    is_archived: '',
+    is_ignored: '',
   });
   const [showFilters, setShowFilters] = useState(false);
   const [actionLoading, setActionLoading] = useState('');
   const [toasts, setToasts] = useState<{ id: number; msg: string; type: 'success' | 'error' }[]>([]);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
+  const [confirmModal, setConfirmModal] = useState<{ action: string; title: string; message: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const isInitialLoadRef = useRef(true);
   const toastIdRef = useRef(0);
   const autoRefreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Garantia de segurança adicional no runtime — redireciona se não for admin
+  // Garantia de segurança adicional no runtime - redireciona se não for admin
   useEffect(() => {
     if (!authLoading && (!isAuthenticated || !isAdmin)) {
       navigate('/', { replace: true });
@@ -625,29 +939,55 @@ export default function KaiaChats() {
   const pageRef = useRef(page);
   pageRef.current = page;
 
+  // ===== Fetch global counts =====
+  const fetchConversationCounts = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/admin/kaia/v2/conversations/counts`, { headers });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setPendingCount(Number(data.data.awaiting_human || 0));
+      }
+    } catch (err) {
+      console.error('Erro ao buscar contagens:', err);
+    }
+  }, []);
+
   // ===== Fetch Conversations =====
   const fetchConversations = useCallback(async (p = 1, silent = false) => {
     if (!silent) setLoading(true);
     try {
       const params = new URLSearchParams({
         page: String(p),
-        limit: '30',
+        limit: '20',
         ...Object.fromEntries(Object.entries(filtersRef.current).filter(([_, v]) => v)),
       });
       const res = await fetch(`${API_URL}/admin/kaia/v2/conversations?${params}`, { headers });
       const data = await res.json();
       if (data.success) {
-        setConversations(data.data.conversations);
-        setTotalPages(data.data.pagination.pages);
-        setTotalConvs(data.data.pagination.total);
-        // Conta conversas aguardando humano
-        const pending = data.data.conversations.filter((c: Conversation) => c.status === 'human_needed').length;
-        setPendingCount(pending);
+        const payload = Array.isArray(data.data)
+          ? { conversations: data.data }
+          : safeObject<Record<string, any>>(data.data);
+        const conversationsList = safeArray(payload.conversations || payload.items || payload.data).map(normalizeConversation);
+        const pagination = safeObject<Record<string, any>>(payload.pagination);
+        setConversations(conversationsList);
+        setTotalPages(Math.max(1, safeNumber(pagination.totalPages ?? pagination.pages, 1)));
+        setTotalConvs(safeNumber(pagination.total, conversationsList.length));
+        const metricsTotal = metrics?.totalConversations ?? 0;
+        if (import.meta.env.DEV && metricsTotal > 0 && conversationsList.length === 0) {
+          console.warn('[Kaia admin] metrics indicate conversations exist, but the list returned empty', {
+            endpoint: '/admin/kaia/v2/conversations',
+            params: Object.fromEntries(params.entries()),
+            metricsTotal,
+            payloadShape: Array.isArray(data.data) ? 'data[]' : Object.keys(payload)
+          });
+        }
+        // Contagem global vem do endpoint /counts
+        await fetchConversationCounts();
 
         // Se houver uma conversa selecionada, atualiza os dados dela a partir da lista
         const currentSelected = selectedConvRef.current;
         if (currentSelected) {
-          const updated = data.data.conversations.find((c: Conversation) => c.id === currentSelected.id);
+          const updated = conversationsList.find((c: Conversation) => c.id === currentSelected.id);
           if (updated) {
             setSelectedConv(prev => {
               // Só atualiza se houver mudança real para evitar re-renders desnecessários
@@ -669,14 +1009,14 @@ export default function KaiaChats() {
   // ===== Fetch Metrics =====
   const fetchMetrics = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/admin/chat/metrics`, { headers });
+      let res = await fetch(`${API_URL}/admin/kaia/v2/metrics`, { headers });
+      if (!res.ok) res = await fetch(`${API_URL}/admin/chat/metrics`, { headers });
       const data = await res.json();
-      if (data.success) setMetrics(data.metrics);
+      if (data.success) setMetrics(normalizeMetrics(data.data?.metrics || data.data || data.metrics));
     } catch (err) {
       console.error('Erro ao buscar métricas:', err);
     }
   }, []);
-
   // ===== Fetch Messages =====
   const fetchMessages = useCallback(async (convId: string, silent = false) => {
     if (!silent) setLoadingMessages(true);
@@ -684,7 +1024,8 @@ export default function KaiaChats() {
       const res = await fetch(`${API_URL}/admin/kaia/v2/conversations/${convId}`, { headers });
       const data = await res.json();
       if (data.success) {
-        setMessages(data.data.messages);
+        const payload = safeObject<Record<string, any>>(data.data);
+        setMessages(safeArray(payload.messages || payload.items || payload.conversation?.messages).map(normalizeMessage));
       }
     } catch (err) {
       console.error('Erro ao buscar mensagens:', err);
@@ -693,7 +1034,7 @@ export default function KaiaChats() {
     }
   }, []);
 
-  useEffect(() => { fetchConversations(1); fetchMetrics(); }, []);
+  useEffect(() => { fetchConversations(1); fetchMetrics(); fetchConversationCounts(); }, []);
   useEffect(() => { fetchConversations(page); }, [filters, page, fetchConversations]);
 
   // Auto-refresh a cada 3 segundos
@@ -703,11 +1044,12 @@ export default function KaiaChats() {
       autoRefreshRef.current = setInterval(() => {
         fetchConversations(pageRef.current, true);
         fetchMetrics();
+        fetchConversationCounts();
         if (selectedConvRef.current) fetchMessages(selectedConvRef.current.id, true);
       }, 3000);
     }
     return () => { if (autoRefreshRef.current) clearInterval(autoRefreshRef.current); };
-  }, [autoRefresh, fetchConversations, fetchMetrics, fetchMessages]);
+  }, [autoRefresh, fetchConversations, fetchMetrics, fetchMessages, fetchConversationCounts]);
 
   useEffect(() => {
     if (selectedConv) {
@@ -728,7 +1070,7 @@ export default function KaiaChats() {
       messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
       isInitialLoadRef.current = false;
     } else {
-      // Polling: só rola se o usuário já estiver perto do final (≤ 100px)
+      // Polling: só rola se o usuário já estiver perto do final (~100px)
       const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
       if (distanceFromBottom <= 100) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -737,9 +1079,24 @@ export default function KaiaChats() {
   }, [messages]);
 
   // ===== Ações de Conversa =====
+  const requestAction = (action: string) => {
+    const modals: Record<string, { title: string; message: string }> = {
+      archive: { title: 'Arquivar conversa', message: 'Deseja arquivar esta conversa? Ela sairá da lista principal.' },
+      delete: { title: 'Excluir conversa', message: 'Deseja excluir esta conversa? A ação é reversível apenas por suporte.' },
+      'pause-ai': { title: 'Pausar IA', message: 'A IA deixará de responder nesta conversa até ser retomada.' },
+      'resume-ai': { title: 'Retomar IA', message: 'A Kaia voltará a responder automaticamente nesta conversa.' },
+    };
+    if (modals[action]) {
+      setConfirmModal({ action, ...modals[action] });
+      return;
+    }
+    handleAction(action);
+  };
+
   const handleAction = async (action: string) => {
     if (!selectedConv) return;
     setActionLoading(action);
+    setConfirmModal(null);
     try {
       let body: any = {};
       if (action === 'resolve') body = { status: 'resolved' };
@@ -749,6 +1106,7 @@ export default function KaiaChats() {
       else if (action === 'unarchive') body = { isArchived: false };
       else if (action === 'ignore') body = { isIgnored: true };
       else if (action === 'unignore') body = { isIgnored: false };
+      else if (action === 'delete') body = { deleted: true };
 
       const res = await fetch(`${API_URL}/admin/kaia/v2/conversations/${selectedConv.id}/status`, {
         method: 'PATCH',
@@ -765,14 +1123,16 @@ export default function KaiaChats() {
         unarchive: 'Conversa desarquivada',
         ignore: 'Conversa ignorada',
         unignore: 'Conversa restaurada',
+        delete: 'Conversa excluída',
       };
       showToast(actionLabels[action] || 'Ação executada com sucesso');
       await fetchConversations(page, true);
+      await fetchConversationCounts();
       await fetchMessages(selectedConv.id);
       // Atualiza a conversa selecionada com os novos dados
       const convRes = await fetch(`${API_URL}/admin/kaia/v2/conversations/${selectedConv.id}`, { headers });
       const convData = await convRes.json();
-      if (convData.success) setSelectedConv(convData.data.conversation);
+      if (convData.success) setSelectedConv(normalizeConversation(convData.data?.conversation || convData.data));
     } catch (err: any) {
       showToast(err.message || 'Erro ao executar ação', 'error');
       console.error('Erro ao executar ação:', err);
@@ -783,7 +1143,8 @@ export default function KaiaChats() {
 
   // ===== Exportar conversa =====
   const handleExport = () => {
-    if (!selectedConv || messages.length === 0) return;
+    const safeMessages = safeArray<Message>(messages);
+    if (!selectedConv || safeMessages.length === 0) return;
     const name = selectedConv.customer_name || selectedConv.name || selectedConv.session_id;
     const lines = [
       `=== Conversa: ${name} ===`,
@@ -791,7 +1152,7 @@ export default function KaiaChats() {
       `Data: ${new Date(selectedConv.created_at).toLocaleString('pt-BR')}`,
       `Sessão: ${selectedConv.session_id}`,
       '',
-      ...messages.map(m => {
+      ...safeMessages.map(m => {
         const role = m.role === 'user' ? 'CLIENTE' : m.role === 'assistant' ? 'KAIA' : m.role.toUpperCase();
         const time = new Date(m.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         const intent = m.metadata?.intent ? ` [${m.metadata.intent}]` : '';
@@ -848,17 +1209,21 @@ export default function KaiaChats() {
               <Bot size={20} className="text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Central da IA — Kaia</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Central da IA - Kaia</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">Diagnóstico técnico e auditoria de atendimentos</p>
             </div>
           </div>
           <div className="flex gap-2">
             {/* Badge pending */}
             {pendingCount > 0 && (
-              <div className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 font-semibold animate-pulse">
+              <button
+                type="button"
+                onClick={() => { setFilters(f => ({ ...f, status: 'awaiting_human' })); setPage(1); fetchConversations(1); }}
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 font-semibold animate-pulse hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+              >
                 <AlertCircle size={14} />
                 {pendingCount} aguardando atendimento
-              </div>
+              </button>
             )}
             {/* Auto-refresh toggle */}
             <button
@@ -951,10 +1316,16 @@ export default function KaiaChats() {
                   className="w-full text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-500"
                 >
                   <option value="">Todos os status</option>
-                  <option value="active">Ativo</option>
+                  <option value="ai_active">IA ativa</option>
+                  <option value="awaiting_human">Aguardando humano</option>
+                  <option value="human_active">Humano ativo</option>
+                  <option value="ai_paused">IA pausada</option>
+                  <option value="archived">Arquivadas</option>
+                  <option value="ignored">Ignoradas</option>
+                  <option value="deleted">Excluídas</option>
                   <option value="resolved">Resolvido</option>
-                  <option value="human_needed">Atendimento Pendente</option>
-                  <option value="human_assigned">Com Atendente</option>
+                  <option value="human_needed">Atendimento Pendente (legado)</option>
+                  <option value="human_assigned">Com Atendente (legado)</option>
                   <option value="closed">Encerrado</option>
                 </select>
                 <div className="flex gap-1.5">
@@ -963,18 +1334,18 @@ export default function KaiaChats() {
                     onChange={e => setFilters(f => ({ ...f, is_archived: e.target.value }))}
                     className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-500"
                   >
+                    <option value="">Todos (Arq)</option>
                     <option value="false">Não arquivados</option>
                     <option value="true">Arquivados</option>
-                    <option value="all">Todos (Arq)</option>
                   </select>
                   <select
                     value={filters.is_ignored}
                     onChange={e => setFilters(f => ({ ...f, is_ignored: e.target.value }))}
                     className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-500"
                   >
+                    <option value="">Todos (Ign)</option>
                     <option value="false">Não ignorados</option>
                     <option value="true">Ignorados</option>
-                    <option value="all">Todos (Ign)</option>
                   </select>
                 </div>
                 <div className="flex gap-1.5">
@@ -1010,7 +1381,7 @@ export default function KaiaChats() {
                   />
                 </div>
                 <button
-                  onClick={() => { setFilters({ search: '', status: '', has_error: '', has_human_support: '', customer_only: '', visitor_only: '', startDate: '', endDate: '', is_archived: 'false', is_ignored: 'false' }); setPage(1); }}
+                  onClick={() => { setFilters({ search: '', status: '', has_error: '', has_human_support: '', customer_only: '', visitor_only: '', startDate: '', endDate: '', is_archived: '', is_ignored: '' }); setPage(1); }}
                   className="w-full text-xs text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors py-0.5"
                 >
                   Limpar filtros
@@ -1048,17 +1419,17 @@ export default function KaiaChats() {
               <button
                 disabled={page <= 1}
                 onClick={() => setPage(p => Math.max(1, p - 1))}
-                className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors text-gray-600 dark:text-gray-300"
+                className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors text-gray-600 dark:text-gray-300 flex items-center gap-1"
               >
-                ← Anterior
+                <ChevronLeft size={14} /> Anterior
               </button>
               <span className="text-xs text-gray-400 dark:text-gray-500">{page}/{totalPages}</span>
               <button
                 disabled={page >= totalPages}
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors text-gray-600 dark:text-gray-300"
+                className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors text-gray-600 dark:text-gray-300 flex items-center gap-1"
               >
-                Próxima →
+                Próxima <ChevronRight size={14} />
               </button>
             </div>
           )}
@@ -1135,7 +1506,7 @@ export default function KaiaChats() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => handleAction('archive')}
+                      onClick={() => requestAction('archive')}
                       disabled={!!actionLoading}
                       className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-50"
                     >
@@ -1161,7 +1532,7 @@ export default function KaiaChats() {
                   )}
                   {selectedConv.ai_enabled ? (
                     <button
-                      onClick={() => handleAction('pause-ai')}
+                      onClick={() => requestAction('pause-ai')}
                       disabled={!!actionLoading}
                       className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-50"
                     >
@@ -1170,7 +1541,7 @@ export default function KaiaChats() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => handleAction('resume-ai')}
+                      onClick={() => requestAction('resume-ai')}
                       disabled={!!actionLoading}
                       className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white transition-colors disabled:opacity-50"
                     >
@@ -1178,6 +1549,14 @@ export default function KaiaChats() {
                       Retomar IA
                     </button>
                   )}
+                  <button
+                    onClick={() => requestAction('delete')}
+                    disabled={!!actionLoading}
+                    className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50"
+                  >
+                    {actionLoading === 'delete' ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                    Excluir
+                  </button>
                   {/* Exportar conversa */}
                   <button
                     onClick={handleExport}
@@ -1185,7 +1564,7 @@ export default function KaiaChats() {
                     className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                     aria-label="Exportar conversa como texto"
                   >
-                    <Truck size={11} />
+                    <Download size={11} />
                     Exportar
                   </button>
                 </div>
@@ -1315,6 +1694,34 @@ export default function KaiaChats() {
           </div>
         )}
       </div>
+
+      {confirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-md w-full p-5 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{confirmModal.title}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-5">{confirmModal.message}</p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(null)}
+                className="px-4 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAction(confirmModal.action)}
+                className="px-4 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-700 text-white"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+
+

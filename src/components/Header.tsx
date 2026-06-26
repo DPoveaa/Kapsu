@@ -269,7 +269,7 @@ export default function Header() {
                     </span>
                   </div>
                   <p className="mt-1 line-clamp-1 text-xs text-gray-500 dark:text-gray-400">
-                    {p.category || 'Produto'}{p.description ? ` • ${p.description}` : ''}
+                    {p.category || 'Produto'}{p.description ? ` • ` : ''}
                   </p>
                 </div>
               </button>
@@ -328,7 +328,9 @@ export default function Header() {
             <ThemeToggle />
             <Link
               to="/carrinho"
+              data-cart-icon-target
               className="relative p-2.5 text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-300 hover:bg-primary-50 dark:hover:bg-gray-700 rounded-lg transition-all duration-200"
+              aria-label="Abrir carrinho"
             >
               <ShoppingCart size={22} />
               {itemCount > 0 && (
@@ -573,4 +575,5 @@ export default function Header() {
     </header>
   )
 }
+
 

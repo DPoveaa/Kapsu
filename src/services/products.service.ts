@@ -1,5 +1,5 @@
 import { env } from '../config/env'
-import { Product, ProductPriceHistory } from '../types'
+import { Product, ProductPriceHistory, ProductTargetAudience } from '../types'
 import { PRODUCT_IMAGE_FALLBACK } from '../utils/imageFallback'
 import { getUploadsImageUrl } from '../utils/imageUrl'
 
@@ -22,6 +22,7 @@ export interface BackendProduct {
   contraindication: string | null
   benefits?: string | null
   free_shipping?: boolean
+  target_audience?: ProductTargetAudience | null
   markup?: number | null
   created_at: string | Date
   updated_at: string | Date
@@ -92,6 +93,8 @@ class ProductsService {
       active: product.active,
       archived: product.archived ?? false,
       free_shipping: product.free_shipping ?? false,
+      targetAudience: product.target_audience ?? 'unknown',
+      target_audience: product.target_audience ?? 'unknown',
       markup: product.markup != null ? Number(product.markup) : null,
       compositions: product.compositions,
       indication: product.indication,
@@ -246,6 +249,7 @@ class ProductsService {
     indication?: string
     contraindication?: string
     free_shipping?: boolean
+    target_audience?: ProductTargetAudience | null
     markup?: number | null
   }): Promise<Product> {
     try {
@@ -412,6 +416,7 @@ class ProductsService {
     indication?: string
     contraindication?: string
     free_shipping?: boolean
+    target_audience?: ProductTargetAudience | null
     markup?: number | null
   }): Promise<Product> {
     try {

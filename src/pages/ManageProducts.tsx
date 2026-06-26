@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { productsService } from '../services/products.service'
 import { siteSettingsService } from '../services/site-settings.service'
-import { Product, ProductPriceHistory } from '../types'
+import { Product, ProductPriceHistory, ProductTargetAudience } from '../types'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import * as XLSX from 'xlsx'
 import { confirm, toast } from '../utils/toast'
@@ -264,6 +264,7 @@ export default function ManageProducts() {
     indication: '',
     contraindication: '',
     benefits: '',
+    target_audience: 'unknown',
     free_shipping: false,
   }
   const [productFormData, setProductFormData] = useState(initialProductFormState)
@@ -405,6 +406,7 @@ export default function ManageProducts() {
         indication: productRaw.indication || '',
         contraindication: productRaw.contraindication || '',
         benefits: productRaw.benefits || '',
+        target_audience: productRaw.target_audience || (product as any).targetAudience || 'unknown',
         free_shipping: productRaw.free_shipping ?? false,
       })
       setLocalAddedCategories([])
@@ -522,6 +524,7 @@ export default function ManageProducts() {
         indication: productFormData.indication.trim() || undefined,
         contraindication: productFormData.contraindication.trim() || undefined,
         benefits: productFormData.benefits.trim() || undefined,
+        target_audience: productFormData.target_audience as ProductTargetAudience,
         free_shipping: productFormData.free_shipping,
       }
 
@@ -709,7 +712,7 @@ export default function ManageProducts() {
         return {
           ID: product.id,
           Nome: product.name,
-          Descrição: product.description || '',
+          'Descrição': product.description || '',
           'Preço Distribuidora': product.purchase_price != null ? Number(product.purchase_price) : '',
           'Preço de Venda': product.price != null ? Number(product.price) : '',
           'Preço Promocional': product.promo_price != null ? Number(product.promo_price) : '',
@@ -720,9 +723,9 @@ export default function ManageProducts() {
           'Frete Grátis': product.free_shipping ? 'Sim' : 'Não',
           'Link Público da Imagem': publicImageUrl,
           'Formulação / Composição': product.compositions || '',
-          Indicação: product.indication || '',
-          Contraindicação: product.contraindication || '',
-          Benefícios: product.benefits || '',
+          'Indicação': product.indication || '',
+          'Contraindicação': product.contraindication || '',
+          'Benefícios': product.benefits || '',
           'Criado em': formatExportDate(product.created_at),
           'Atualizado em': formatExportDate(product.updated_at),
         }
@@ -2492,7 +2495,7 @@ export default function ManageProducts() {
             {/* Descrição */}
             <div>
               <label htmlFor="product-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Descrição
+                'Descrição
               </label>
               <textarea
                 id="product-description"
@@ -2500,7 +2503,7 @@ export default function ManageProducts() {
                 value={productFormData.description}
                 onChange={handleProductFormChange}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark':border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                 placeholder="Descreva o produto..."
               />
             </div>
@@ -2677,7 +2680,7 @@ export default function ManageProducts() {
             {/* Indicação */}
             <div>
               <label htmlFor="product-indication" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Indicação
+                'Indicação
               </label>
               <textarea
                 id="product-indication"
@@ -2685,7 +2688,7 @@ export default function ManageProducts() {
                 value={productFormData.indication}
                 onChange={handleProductFormChange}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark':border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                 placeholder="Informe as indicações do produto..."
               />
             </div>
@@ -2693,7 +2696,7 @@ export default function ManageProducts() {
             {/* Contraindicação */}
             <div>
               <label htmlFor="product-contraindication" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Contraindicação
+                'Contraindicação
               </label>
               <textarea
                 id="product-contraindication"
@@ -2701,7 +2704,7 @@ export default function ManageProducts() {
                 value={productFormData.contraindication}
                 onChange={handleProductFormChange}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark':border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                 placeholder="Informe as contraindicações do produto..."
               />
             </div>
@@ -2709,7 +2712,7 @@ export default function ManageProducts() {
             {/* Benefícios */}
             <div>
               <label htmlFor="product-benefits" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Benefícios do Produto
+                'Benefícios do Produto
               </label>
               <textarea
                 id="product-benefits"
@@ -2717,11 +2720,29 @@ export default function ManageProducts() {
                 value={productFormData.benefits}
                 onChange={handleProductFormChange}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark':border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                 placeholder="Descreva os benefícios do produto (um por linha)..."
               />
             </div>
 
+            {/* Publico-alvo */}
+            <div>
+              <label htmlFor="product-target_audience" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Publico-alvo
+              </label>
+              <select
+                id="product-target_audience"
+                name="target_audience"
+                value={productFormData.target_audience}
+                onChange={handleProductFormChange}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+              >
+                <option value="unknown">Nao informado</option>
+                <option value="unisex">Unissex</option>
+                <option value="female">Feminino</option>
+                <option value="male">Masculino</option>
+              </select>
+            </div>
             {/* Frete Grátis */}
             <div className="flex items-center">
               <input

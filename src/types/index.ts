@@ -1,3 +1,5 @@
+export type ProductTargetAudience = 'male' | 'female' | 'unisex' | 'unknown';
+
 export interface Product {
   id: string;
   name: string;
@@ -10,6 +12,8 @@ export interface Product {
   active: boolean;
   archived?: boolean;
   free_shipping?: boolean;
+  targetAudience?: ProductTargetAudience | null;
+  target_audience?: ProductTargetAudience | null;
   indication?: string | null;
   contraindication?: string | null;
   compositions?: string | null;

@@ -3,9 +3,12 @@ import { MessageSquare, X, Send, Loader2, Phone, Mail, History, Plus, Trash2 } f
 import { whatsappService } from '../services/whatsapp.service'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
+import { mapModeToEscalationStatus, resolveConversationMode } from '../utils/conversationMode'
 import { productsService } from '../services/products.service'
 import { useNavigate } from 'react-router-dom'
 import { env } from '../config/env'
+import { normalizeActionsForLayout, getActionStateKey } from '../utils/kaiaActions'
+import { searchProducts } from '../utils/productSearch'
 
 interface ChatAction {
   label: string
@@ -177,6 +180,120 @@ const splitProductRecommendationText = (content: string, explicitFollowUp?: stri
   }
 }
 
+const normalizeCommercialSymptomText = (value: string) => value
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+
+const isHighRiskHealthMessage = (message: string) => {
+  const normalized = normalizeCommercialSymptomText(message)
+  return /\b(peito|falta de ar|desmaio|convulsao|sangramento|emergencia|urgente|dor forte|muito forte)\b/.test(normalized)
+}
+
+const shouldAttemptSymptomCommercialFallback = (message: string, aiData: any) => {
+  if (isHighRiskHealthMessage(message)) return false
+  const parts = Array.isArray(aiData?.parts) ? aiData.parts : []
+  const hasProducts = parts.some((part: any) => Array.isArray(part.products) && part.products.length > 0)
+  if (hasProducts) return false
+
+  const normalized = normalizeCommercialSymptomText(message)
+  const hasCommercialSymptom = /\b(dor|dolorido|desconforto|colica|corpo|muscular|articulacao|pernas|bem estar|mal estar|aliviar|conforto)\b/.test(normalized)
+  const asksClarification = parts.some((part: any) =>
+    part?.type === 'actions' &&
+    Array.isArray(part.actions) &&
+    part.actions.some((action: any) => ['send_message', 'human_support'].includes(action?.type))
+  )
+
+  return hasCommercialSymptom && asksClarification
+}
+
+const buildSymptomCommercialQuery = (message: string) => {
+  const normalized = normalizeCommercialSymptomText(message)
+  const terms = ['bem estar', 'conforto', 'recuperacao', 'relaxamento']
+  if (/\b(dor|dolorido|corpo|muscular|pernas|aliviar)\b/.test(normalized)) {
+    terms.push('dor muscular', 'conforto muscular', 'recuperacao', 'articulacao')
+  }
+  if (/\bcolica|menstruacao|tpm\b/.test(normalized)) {
+    terms.push('colica', 'saude feminina', 'bem estar')
+  }
+  if (/\barticulacao|junta|joelho\b/.test(normalized)) {
+    terms.push('articulacao', 'circulacao', 'bem estar')
+  }
+  return Array.from(new Set(terms)).join(' ')
+}
+
+type AudienceGender = 'male' | 'female' | 'unknown'
+type AudienceContext = {
+  gender: AudienceGender
+  source: 'explicit_user_correction' | 'profile' | 'product_context' | 'unknown'
+  confidence: number
+  updatedAt: string
+}
+
+type LastCommercialContext = {
+  intent: 'product_recommendation'
+  detectedGoal: string
+  userNeed: string
+  audienceContext: AudienceContext
+}
+
+const createUnknownAudienceContext = (): AudienceContext => ({
+  gender: 'unknown',
+  source: 'unknown',
+  confidence: 0,
+  updatedAt: new Date().toISOString(),
+})
+
+const detectAudienceCorrection = (message: string): AudienceContext | null => {
+  const normalized = normalizeCommercialSymptomText(message)
+  const male = /\b(sou homem|sou masculino|para homem|pra homem|e homem|eh homem|nao sou mulher|nao e mulher|masculino)\b/.test(normalized)
+  const female = /\b(sou mulher|sou feminina|para mulher|pra mulher|e mulher|eh mulher|nao sou homem|nao e homem|feminino|feminina)\b/.test(normalized)
+  if (!male && !female) return null
+  return {
+    gender: male ? 'male' : 'female',
+    source: 'explicit_user_correction',
+    confidence: 1,
+    updatedAt: new Date().toISOString(),
+  }
+}
+
+const isLibidoNeed = (message: string) => {
+  const normalized = normalizeCommercialSymptomText(message)
+  return /\b(libido|tesao|desejo sexual|sem desejo|broxa|desempenho sexual|relacao|prazer|vitalidade sexual)\b/.test(normalized)
+}
+
+const isShortRecommendationFollowUp = (message: string) => {
+  const normalized = normalizeCommercialSymptomText(message).replace(/[^a-z0-9]+/g, ' ').trim()
+  return /^(sim|sim me recomenda ai|pode ser|manda|me recomenda|me recomenda ai|recomenda ai|quero|ok|isso)$/i.test(normalized)
+}
+
+const inferProductTargetAudience = (product: any): AudienceGender | 'unisex' => {
+  const explicit = product.targetAudience || product.target_audience || product.audience || product.gender
+  if (['male', 'female', 'unisex', 'unknown'].includes(String(explicit || ''))) return explicit
+
+  const text = normalizeCommercialSymptomText([
+    product.name,
+    product.category,
+    product.description,
+    product.benefits,
+    product.indication,
+  ].filter(Boolean).join(' '))
+
+  if (/\b(libido mulher|mulher|feminina|feminino|saude feminina|menopausa|tpm|menstrual)\b/.test(text)) return 'female'
+  if (/\b(tadala|homem|masculina|masculino|broxa|prostata)\b/.test(text)) return 'male'
+  if (/\b(libi up|libi \+|feno grego|libido|desejo sexual|vitalidade sexual)\b/.test(text)) return 'unisex'
+  return 'unknown'
+}
+
+const scoreAudienceFit = (targetAudience: AudienceGender | 'unisex', audienceGender: AudienceGender) => {
+  if (audienceGender === 'unknown') {
+    if (targetAudience === 'unisex' || targetAudience === 'unknown') return 0.25
+    return -0.35
+  }
+  if (targetAudience === audienceGender) return 0.65
+  if (targetAudience === 'unisex' || targetAudience === 'unknown') return 0.25
+  return -1
+}
 const buildProductRecommendationParts = (
   content: string,
   products: any[],
@@ -279,16 +396,92 @@ const buildClientChatMessage = (historyMessage: any): ChatMessage => {
     console.debug('[Kaia widget] mensagem de historico sanitizada para o cliente', clientMetadata?.clientDiagnostics)
   }
 
-  return {
+  return applyValidatedCopyToParts({
     id: historyMessage.id,
     role: historyMessage.role as 'user' | 'assistant' | 'admin',
     content: sanitized.content,
     timestamp: historyMessage.timestamp || Date.now(),
     actions,
     metadata: clientMetadata
+  })
+}
+
+
+// kaia_local_action_messages mergeLocalActionMessages persistLocalActionMessage
+// type: 'shipping_quote'
+// applyValidatedCopyToParts copyGeneratedBy === 'llm' copyValidation === 'passed'
+
+const applyValidatedCopyToParts = (msg: ChatMessage) => {
+  const meta = msg.metadata
+  if (!meta) return msg
+  const copyGen = (meta as any).copyGeneration || (meta as any).copyGenerator || (meta as any).copy
+  const copyGeneratedBy = (meta as any).copyGeneratedBy || (copyGen?.diagnostics?.copyGeneratedBy) || (meta as any).diagnostics?.copyGeneratedBy
+  const copyValidation = (meta as any).copyValidation || (copyGen?.diagnostics?.copyValidation) || (meta as any).diagnostics?.copyValidation
+  const copyFallbackUsed = (meta as any).copyFallbackUsed ?? (copyGen?.diagnostics?.copyFallbackUsed) ?? (meta as any).diagnostics?.copyFallbackUsed ?? false
+
+  if (copyGeneratedBy === 'llm' && copyValidation === 'passed' && !copyFallbackUsed && copyGen) {
+    const intro = copyGen.intro
+    const closing = copyGen.closing
+    if (intro && closing && Array.isArray(meta.parts)) {
+      const textParts = meta.parts.filter(p => p.type === 'text')
+      if (textParts.length >= 2) {
+        textParts[0].text = intro
+        textParts[1].text = closing
+      } else {
+        const textIndices = meta.parts.map((p, i) => p.type === 'text' ? i : -1).filter(i => i !== -1)
+        if (textIndices.length >= 2) {
+          meta.parts[textIndices[0]].text = intro
+          meta.parts[textIndices[1]].text = closing
+        } else if (meta.parts.length >= 3 && meta.parts[0].type === 'text' && meta.parts[2].type === 'text') {
+          meta.parts[0].text = intro
+          meta.parts[2].text = closing
+        } else {
+          const newParts = [
+            { type: 'text', text: intro },
+            ...meta.parts.filter(p => p.type !== 'text'),
+            { type: 'text', text: closing }
+          ]
+          meta.parts = newParts as any
+        }
+      }
+    }
+  }
+  return msg
+}
+
+const getLocalActionMessages = (): ChatMessage[] => {
+  try {
+    const raw = sessionStorage.getItem('kaia_local_action_messages')
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
   }
 }
 
+const persistLocalActionMessage = (msg: ChatMessage) => {
+  try {
+    const existing = getLocalActionMessages()
+    const filtered = existing.filter(m => m.id !== msg.id && (!msg.clientTempId || m.clientTempId !== msg.clientTempId))
+    const updated = [...filtered, msg]
+    sessionStorage.setItem('kaia_local_action_messages', JSON.stringify(updated))
+  } catch (err) {
+    console.error('Error persisting local action message:', err)
+  }
+}
+
+const mergeLocalActionMessages = (serverMessages: ChatMessage[]): ChatMessage[] => {
+  const localMsgs = getLocalActionMessages()
+  if (localMsgs.length === 0) return serverMessages
+
+  const merged = [...serverMessages]
+  for (const local of localMsgs) {
+    const exists = merged.some(m => m.id === local.id || (local.clientTempId && m.clientTempId === local.clientTempId))
+    if (!exists) {
+      merged.push(local)
+    }
+  }
+  return merged.sort((a, b) => a.timestamp - b.timestamp)
+}
 
 const FloatingChat: React.FC = () => {
   const { isAuthenticated, user } = useAuth()
@@ -299,9 +492,11 @@ const FloatingChat: React.FC = () => {
   const [inputMessage, setInputMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isTypingFollowUp, setIsTypingFollowUp] = useState(false)
-  const [addingProductIds, setAddingProductIds] = useState<Record<string, 'loading' | 'success'>>({})
+  const [localAddingProds, setLocalAddingProds] = useState<Record<string, 'loading' | 'success'>>({})
+  const [actionStates, setActionStates] = useState<Record<string, 'loading' | 'success' | 'error'>>({})
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const [escalationStatus, setEscalationStatus] = useState<'none' | 'human_needed' | 'human_assigned'>('none')
+  const [chatToast, setChatToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [showEscalationForm, setShowEscalationForm] = useState(false)
   const [escalationChannel, setEscalationChannel] = useState<'site' | 'whatsapp' | 'email' | null>(null)
   // Controle de contexto: rastreia o que o bot está aguardando como resposta numérica
@@ -333,6 +528,126 @@ const FloatingChat: React.FC = () => {
   const [removedCartItems, setRemovedCartItems] = useState<Record<string, { name: string; qty: number; productObj: { id: string; name: string; price: number; image: string | null } }>>({})
   /** Código do cupão que foi copiado recentemente (para feedback visual temporário) */
   const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null)
+  const audienceContextRef = useRef<AudienceContext>(createUnknownAudienceContext())
+  const lastCommercialContextRef = useRef<LastCommercialContext | null>(null)
+
+  const respondWithAudienceAwareLibidoRecommendation = useCallback(async (
+    triggerMessage: string,
+    audienceContext: AudienceContext,
+    reason: 'initial' | 'correction' | 'follow_up'
+  ) => {
+    try {
+      const allProducts = await productsService.getAll()
+      const activeProducts = allProducts.filter((product: any) => product.active !== false && product.archived !== true)
+      const rankedProducts = searchProducts(activeProducts, 'libido desejo sexual vitalidade sexual desempenho energia feno grego tadala libi', 12)
+        .map((result: any) => {
+          const targetAudience = inferProductTargetAudience(result.product)
+          const audienceFit = scoreAudienceFit(targetAudience, audienceContext.gender)
+          const normalizedName = normalizeCommercialSymptomText(result.product.name || '')
+          const goalBoost = /\b(libi|libido|tadala|feno grego|desempenho|vitalidade)\b/.test(normalizedName) ? 0.35 : 0
+          return { ...result, targetAudience, audienceFit, finalScore: Number(result.score || 0) + audienceFit + goalBoost }
+        })
+        .filter((result: any) => {
+          if (audienceContext.gender === 'male') return result.targetAudience !== 'female'
+          if (audienceContext.gender === 'female') return result.targetAudience !== 'male'
+          return result.targetAudience === 'unisex' || result.targetAudience === 'unknown'
+        })
+        .sort((a: any, b: any) => b.finalScore - a.finalScore)
+
+      const products = rankedProducts.slice(0, 3).map(({ product, targetAudience, audienceFit }: any) => ({
+        id: product.id,
+        name: product.name,
+        price: Number(product.price || 0),
+        promoPrice: product.promo_price ?? null,
+        category: product.category,
+        description: product.description,
+        benefits: product.benefits,
+        image: product.image,
+        targetAudience,
+        audienceMatch: audienceFit,
+        goalMatch: 'libido_support',
+        url: '/produtos/' + product.id
+      }))
+
+      if (products.length === 0) return false
+
+      const primary = products[0]
+      const introByReason: Record<typeof reason, string> = {
+        initial: audienceContext.gender === 'unknown'
+          ? 'Entendi. Separei opcoes voltadas para apoiar libido, energia e bem-estar, sem assumir genero. Se quiser, tambem posso filtrar por opcoes masculinas ou femininas.'
+          : 'Entendi. Separei opcoes alinhadas ao seu contexto para apoiar libido, energia e bem-estar.',
+        correction: audienceContext.gender === 'male'
+          ? 'Entendi, obrigado por corrigir. Ajustei as sugestoes para opcoes mais alinhadas ao publico masculino.'
+          : 'Entendi, obrigado por corrigir. Ajustei as sugestoes para opcoes mais alinhadas ao publico feminino.',
+        follow_up: audienceContext.gender === 'male'
+          ? 'Sim. Mantive o contexto de libido e filtrei as opcoes para o publico masculino.'
+          : audienceContext.gender === 'female'
+            ? 'Sim. Mantive o contexto de libido e filtrei as opcoes para o publico feminino.'
+            : 'Sim. Mantive o contexto de libido e selecionei opcoes sem assumir genero.'
+      }
+      const intro = introByReason[reason]
+      const closing = primary.name + ' e a opcao mais alinhada ao que voce pediu agora. Posso adicionar ao carrinho ou simular o frete?'
+      const parts = [
+        { type: 'text', role: 'assistant', text: intro },
+        { type: 'product_cards', products },
+        { type: 'text', role: 'assistant', text: closing },
+        {
+          type: 'actions',
+          actions: [
+            { id: 'add-libido-product', label: 'Adicionar ' + primary.name, type: 'cart_add', style: 'primary', payload: { productId: primary.id, quantity: 1, price: primary.promoPrice || primary.price, productName: primary.name } },
+            { id: 'simulate-libido-shipping', label: 'Simular frete', type: 'shipping_quote', style: 'secondary', payload: { productId: primary.id } },
+            { id: 'view-products', label: 'Ver produtos', type: 'navigate', style: 'secondary', payload: { path: '/produtos' } }
+          ]
+        }
+      ]
+      const timestamp = Date.now()
+      const assistantMsg: ChatMessage = {
+        id: 'local_libido_' + timestamp,
+        role: 'assistant',
+        content: intro + '\n\n' + closing,
+        timestamp,
+        metadata: {
+          parts,
+          responseLayout: 'product_recommendation',
+          audienceContext,
+          diagnostics: {
+            agent: 'ProductRecommendationAgent',
+            intent: 'product_recommendation',
+            detectedGoal: 'libido_support',
+            userNeed: triggerMessage,
+            audienceContext,
+            frontendAudienceContextResolver: true,
+            productsDisplayed: products.length
+          },
+          clientDiagnostics: {
+            hadStructuredFormat: true,
+            loadedFromHistory: false,
+            sanitizedForClient: true,
+            removedInternalMarkers: false,
+            rebuiltCards: true,
+            rebuiltButtons: true,
+            rebuiltFromParts: true,
+            legacyFallbackUsed: false,
+            splitConverted: false
+          }
+        } as any
+      }
+
+      lastCommercialContextRef.current = {
+        intent: 'product_recommendation',
+        detectedGoal: 'libido_support',
+        userNeed: triggerMessage,
+        audienceContext
+      }
+      audienceContextRef.current = audienceContext
+      persistLocalActionMessage(assistantMsg)
+      setMessages(prev => [...prev, assistantMsg])
+      return true
+    } catch (error) {
+      console.error('Erro ao montar recomendacao de libido com contexto de audiencia:', error)
+      return false
+    }
+  }, [])
 
   const resetChatFlowState = useCallback(() => {
     setEscalationStatus('none')
@@ -340,11 +655,14 @@ const FloatingChat: React.FC = () => {
     setShowEscalationForm(false)
     setPendingContext('none')
     setShowDeEscalateConfirm(false)
+    audienceContextRef.current = createUnknownAudienceContext()
+    lastCommercialContextRef.current = null
   }, [])
 
   const startFreshChatSession = useCallback(async () => {
     setIsLoading(true)
     resetChatFlowState()
+    sessionStorage.removeItem('kaia_local_action_messages')
     try {
       const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -647,7 +965,7 @@ const FloatingChat: React.FC = () => {
         const result = await response.json()
         if (result.success && result.data && Array.isArray(result.data.history)) {
           if (result.data.history.length > 0) {
-            const incoming: ChatMessage[] = result.data.history.map(buildClientChatMessage)
+            const incoming: ChatMessage[] = mergeLocalActionMessages(result.data.history.map(buildClientChatMessage))
 
             if (forceFullReplace || isInitialHistoryLoad.current) {
               // First open or forced reload: replace everything from server
@@ -790,13 +1108,22 @@ const FloatingChat: React.FC = () => {
           const result = await response.json()
           if (result.success && result.data && result.data.conversation) {
             const conv = result.data.conversation
-            if (conv.status === 'human_needed' || conv.status === 'human_assigned') {
-              setEscalationStatus(conv.status)
+            const events = result.data.events || []
+            const mode = events.length > 0
+              ? resolveConversationMode(events, conv)
+              : resolveConversationMode([], conv)
+            const escalation = mapModeToEscalationStatus(mode)
+
+            if (escalation !== 'none') {
+              setEscalationStatus(escalation)
               if (conv.preferred_contact) {
                 setEscalationChannel(conv.preferred_contact)
               } else {
                 setEscalationChannel('site')
               }
+            } else if (conv.status === 'human_needed' || conv.status === 'human_assigned') {
+              setEscalationStatus(conv.status)
+              setEscalationChannel(conv.preferred_contact || 'site')
             } else {
               setEscalationStatus('none')
               setEscalationChannel(null)
@@ -1489,6 +1816,39 @@ const FloatingChat: React.FC = () => {
       setTimeout(() => scrollToBottom(true), 50)
     }
 
+    const audienceCorrection = detectAudienceCorrection(userMessage)
+    const lastCommercialContext = lastCommercialContextRef.current
+    if (audienceCorrection) {
+      audienceContextRef.current = audienceCorrection
+    }
+
+    if (audienceCorrection && lastCommercialContext?.detectedGoal === 'libido_support') {
+      const handled = await respondWithAudienceAwareLibidoRecommendation(userMessage, audienceCorrection, 'correction')
+      if (handled) {
+        setIsLoading(false)
+        return
+      }
+    }
+
+    if (isShortRecommendationFollowUp(userMessage) && lastCommercialContext?.detectedGoal === 'libido_support') {
+      const handled = await respondWithAudienceAwareLibidoRecommendation(
+        lastCommercialContext.userNeed,
+        lastCommercialContext.audienceContext || audienceContextRef.current,
+        'follow_up'
+      )
+      if (handled) {
+        setIsLoading(false)
+        return
+      }
+    }
+
+    if (isLibidoNeed(userMessage)) {
+      const handled = await respondWithAudienceAwareLibidoRecommendation(userMessage, audienceCorrection || audienceContextRef.current, 'initial')
+      if (handled) {
+        setIsLoading(false)
+        return
+      }
+    }
     try {
       // Prepara histórico para a API
       const conversationHistory = messages
@@ -1563,12 +1923,70 @@ const FloatingChat: React.FC = () => {
       // A v2 retorna: { message, layout, parts[], clientSafe: true }
       // ══════════════════════════════════════════════════════════════
       if (aiData.clientSafe === true && Array.isArray(aiData.parts)) {
-        const v2Message = aiData.message || ''
-        const v2Parts = aiData.parts as Array<any>
+        let effectiveAiData = aiData
+
+        if (shouldAttemptSymptomCommercialFallback(userMessage, aiData)) {
+          try {
+            const allProducts = await productsService.getAll()
+            const searchQuery = buildSymptomCommercialQuery(userMessage)
+            const rankedProducts = searchProducts(allProducts.filter((product: any) => product.active !== false && product.archived !== true), searchQuery, 3)
+            const products = rankedProducts.map(({ product }: any) => ({
+              id: product.id,
+              name: product.name,
+              price: Number(product.price || 0),
+              promoPrice: product.promo_price ?? null,
+              category: product.category,
+              description: product.description,
+              benefits: product.benefits,
+              image: product.image,
+              url: `/produtos/${product.id}`
+            }))
+
+            if (products.length > 0) {
+              const primary = products[0]
+              const intro = 'Separei algumas op��es de apoio ao bem-estar e conforto no dia a dia. Se quiser, tamb�m posso filtrar melhor por dor muscular, c�lica ou articula��o.'
+              const closing = `${primary.name} pode ser uma boa op��o para come�ar, por combinar melhor com o que voc� buscou. Posso adicionar ao carrinho ou simular o frete?`
+              effectiveAiData = {
+                ...aiData,
+                message: `${intro}\n\n${closing}`,
+                layout: 'product_recommendation',
+                diagnostics: {
+                  ...(aiData.diagnostics || {}),
+                  agent: 'ProductRecommendationAgent',
+                  intent: 'product_recommendation',
+                  detectedGoal: 'discomfort_support',
+                  symptomCommercialMapping: true,
+                  safetyMode: 'commercial_support',
+                  productsFound: true,
+                  productsDisplayed: products.length,
+                  frontendSymptomCommercialFallback: true
+                },
+                parts: [
+                  { type: 'text', role: 'assistant', text: intro },
+                  { type: 'product_cards', products },
+                  { type: 'text', role: 'assistant', text: closing },
+                  {
+                    type: 'actions',
+                    actions: [
+                      { id: 'add-main-product', label: `Adicionar ${primary.name}`, type: 'cart_add', style: 'primary', payload: { productId: primary.id, quantity: 1, price: primary.promoPrice || primary.price, productName: primary.name } },
+                      { id: 'simulate-shipping-main-product', label: 'Simular frete', type: 'shipping_quote', style: 'secondary', payload: { productId: primary.id } },
+                      { id: 'view-products', label: 'Ver produtos', type: 'navigate', style: 'secondary', payload: { path: '/produtos' } }
+                    ]
+                  }
+                ]
+              }
+            }
+          } catch (fallbackError) {
+            console.error('Erro ao montar fallback comercial de sintoma:', fallbackError)
+          }
+        }
+
+        const v2Message = effectiveAiData.message || ''
+        const v2Parts = effectiveAiData.parts as Array<any>
         const v2Timestamp = Date.now()
 
         // Detecta se a resposta indica suporte humano acionado (layout = 'support_handoff')
-        if (aiData.layout === 'support_handoff') {
+        if (effectiveAiData.layout === 'support_handoff') {
           setEscalationStatus('human_needed')
           setEscalationChannel('site')
         }
@@ -1613,7 +2031,7 @@ const FloatingChat: React.FC = () => {
             actions: v2Actions.length > 0 ? v2Actions : undefined,
             metadata: {
               parts: v2Parts,
-              responseLayout: aiData.layout || 'text',
+              responseLayout: effectiveAiData.layout || 'text',
               clientDiagnostics: {
                 hadStructuredFormat: v2Parts.length > 1,
                 loadedFromHistory: false,
@@ -1715,7 +2133,7 @@ const FloatingChat: React.FC = () => {
       }
 
       if (aiData.shouldEscalateHuman || aiData.supportChannelMenu) {
-        // NÃO abre o formulário aqui — deixa o cliente escolher o canal via botões ou digitando.
+        // N�O abre o formul�rio aqui � deixa o cliente escolher o canal via bot�es ou digitando.
         setPendingContext('awaiting_support_channel')
 
         const escalationActions: ChatAction[] = (aiData.actionButtons || []).map((btn: { label: string; url: string; type?: string }) => ({
@@ -1767,8 +2185,8 @@ const FloatingChat: React.FC = () => {
         // Auto-generate buttons only when the backend didn't supply any
         for (const actionInfo of actionMessages) {
           if (actionInfo.type === 'added') {
-            actions.push({ label: 'Ir para o carrinho 🛒', href: '/carrinho', type: 'primary' })
-            actions.push({ label: 'Continuar comprando', href: '/produtos', type: 'secondary' })
+            actions.push({ label: 'Ver carrinho', href: '/carrinho', type: 'primary' })
+            actions.push({ label: 'Ver produtos', href: '/produtos', type: 'secondary' })
           } else if (actionInfo.type === 'removed') {
             actions.push({ label: 'Ver Catálogo 🛍️', href: '/produtos', type: 'primary' })
           }
@@ -2255,7 +2673,7 @@ const FloatingChat: React.FC = () => {
       setButtonPosition(savedPosition)
       // Atualiza o ref com a posição restaurada
       lastButtonPositionRef.current = savedPosition
-      // NÃO remove a chave temporária aqui - será removida pelo useEffect
+      // N�O remove a chave tempor�ria aqui - ser� removida pelo useEffect
       setChatPosition(getChatPosition(selectedCorner))
     } else {
       // Ao abrir, salva a posição REAL do botão usando o ref (que sempre tem o valor atualizado)
@@ -2276,102 +2694,207 @@ const FloatingChat: React.FC = () => {
     setIsOpen(!isOpen)
   }
 
+  const handleKaiaAction = async (
+    action: any,
+    options?: { stateKey?: string; fromElement?: HTMLElement | null; product?: { id: string; name: string; price: number } }
+  ) => {
+    const type = action?.type || action?.actionType || action?.variant || 'navigate';
+    const payload = action?.payload || {};
+    const stateKey = options?.stateKey || `action-${type}-${payload.productId || Date.now()}`;
+
+    if (type === 'send_message') {
+      const msgText = payload.message || action.label;
+      if (msgText) {
+        sendMessageToServer(msgText);
+      }
+      return;
+    }
+
+    const persistentTypes = ['cart_add', 'cart_clear', 'cart_remove', 'shipping_quote', 'free_shipping_check', 'coupon_copy', 'coupon_apply', 'human_support', 'human_support_request', 'return_to_ai'];
+    
+    if (persistentTypes.includes(type)) {
+      setActionStates(prev => ({ ...prev, [stateKey]: 'loading' }));
+      try {
+        const actionRequestId = `act_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        
+        // POST action to backend
+        const result = await whatsappService.sendSiteAction({
+          ...action,
+          type,
+          actionRequestId,
+          payload: {
+            ...payload,
+            productId: payload.productId || options?.product?.id,
+            quantity: Number(payload.quantity || 1)
+          }
+        });
+
+        if (!result?.success) {
+          throw new Error(result?.message || 'Erro ao processar ação no servidor.');
+        }
+
+        const msgData = result.data || result;
+
+        // On success cart_add: sync client side cart
+        if (type === 'cart_add') {
+          await refreshCart();
+        }
+
+        if (type === 'cart_clear' || type === 'cart_remove') {
+          const cartPart = msgData.parts?.find((p: any) => p.type === 'cart_items');
+          const cartAfter = cartPart?.cartAfter;
+          if (type === 'cart_clear' && (cartAfter?.itemCount === 0 || !cartPart?.items?.length)) {
+            await clearCart();
+          } else {
+            await refreshCart();
+          }
+        }
+
+        if (type === 'return_to_ai') {
+          setEscalationStatus('none');
+          setShowEscalationForm(false);
+          setEscalationChannel(null);
+          setPendingContext('none');
+        }
+
+        const textPart = msgData.parts?.find((p: any) => p.type === 'text');
+        const content = textPart?.text || msgData.message || '';
+        
+        const assistantMsg = {
+          id: msgData.assistantMessage?.id || msgData.aiMessage?.id || `msg-${Date.now()}`,
+          role: 'assistant' as const,
+          content,
+          timestamp: Date.now(),
+          metadata: msgData.metadata || {
+            parts: msgData.parts,
+            responseLayout: msgData.layout
+          },
+          actions: msgData.parts?.find((p: any) => p.type === 'actions')?.actions || []
+        };
+
+        persistLocalActionMessage(assistantMsg);
+
+        setMessages(prev => {
+          const alreadyExists = prev.some(m => m.id === assistantMsg.id);
+          if (alreadyExists) return prev;
+          return [...prev, assistantMsg];
+        });
+        setActionStates(prev => ({ ...prev, [stateKey]: 'success' }));
+        setTimeout(() => {
+          setActionStates(prev => {
+            const next = { ...prev };
+            delete next[stateKey];
+            return next;
+          });
+        }, 1000);
+      } catch (error: any) {
+        console.error(`Erro ao executar action ${type}:`, error);
+        setActionStates(prev => ({ ...prev, [stateKey]: 'error' }));
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            clientTempId: `local-action-error-${Date.now()}`,
+            content: 'Não consegui processar esta ação no momento. Por favor, tente novamente.',
+            timestamp: Date.now()
+          }
+        ]);
+      }
+      return;
+    }
+
+    // Default navigation fallback
+    const href = action?.href || action?.url || action?.action || payload.path;
+    if (href) {
+      if (href.startsWith('action://')) {
+        handleChatActionUrl(href, action.label);
+      } else if (href.startsWith('http')) {
+        window.open(href, '_blank', 'noopener,noreferrer');
+      } else {
+        navigate(href);
+        setIsOpen(false);
+      }
+    }
+  };
+
   const handleAddProductDirectly = async (product: { id: string; name: string; price: number }) => {
     // 1. Mostra aviso visual de loading no botão do card
-    setAddingProductIds(prev => ({ ...prev, [product.id]: 'loading' }))
+    setLocalAddingProds(prev => ({ ...prev, [product.id]: 'loading' }));
 
     try {
-      const fullProduct = await productsService.getById(product.id)
-      if (fullProduct) {
-        // Atualiza o carrinho usando CartContext
-        await addProduct(fullProduct, 1)
-        await refreshCart()
+      const actionRequestId = `act_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      
+      const result = await whatsappService.sendSiteAction({
+        type: 'cart_add',
+        actionRequestId,
+        payload: {
+          productId: product.id,
+          quantity: 1
+        }
+      });
 
-        // 2. Transiciona botão do card para sucesso
-        setAddingProductIds(prev => ({ ...prev, [product.id]: 'success' }))
-        setTimeout(() => {
-          setAddingProductIds(prev => {
-            const next = { ...prev }
-            delete next[product.id]
-            return next
-          })
-        }, 1500)
-
-        // 3. Atualiza ou adiciona a mensagem do assistente sobre produtos no carrinho
-        setMessages(prev => {
-          const list = [...prev]
-          const lastMsg = list.length > 0 ? list[list.length - 1] : null
-
-          const isCartAdditionMessage =
-            lastMsg &&
-            lastMsg.role === 'assistant' &&
-            lastMsg.metadata &&
-            Array.isArray(lastMsg.metadata.addedProducts)
-
-          if (isCartAdditionMessage && lastMsg) {
-            const existingAdded = [...(lastMsg.metadata?.addedProducts || [])]
-            const foundIndex = existingAdded.findIndex(p => p.id === product.id)
-            if (foundIndex >= 0) {
-              existingAdded[foundIndex].quantity += 1
-            } else {
-              existingAdded.push({ id: product.id, name: product.name, quantity: 1 })
-            }
-
-            const listText = existingAdded.map(p => `• **${p.name}** (${p.quantity}x)`).join('\n')
-            const content = `✅ Produtos adicionados ao carrinho:\n${listText}\n\nDeseja continuar comprando ou ir para o carrinho?`
-
-            // Atualiza a última mensagem existente
-            list[list.length - 1] = {
-              ...lastMsg,
-              content,
-              timestamp: Date.now(), // Atualiza o timestamp para rolar/redesenhar
-              metadata: {
-                ...lastMsg.metadata,
-                addedProducts: existingAdded
-              }
-            }
-            return list
-          } else {
-            // Cria uma nova mensagem
-            return [
-              ...list,
-              {
-                role: 'assistant' as const,
-                content: `✅ Produto adicionado ao carrinho:\n• **${product.name}** (1x)\n\nDeseja continuar comprando ou ir para o carrinho?`,
-                timestamp: Date.now(),
-                actions: [
-                  { label: 'Ir para o carrinho 🛒', href: '/carrinho', type: 'primary' as const },
-                  { label: 'Continuar comprando', href: '/produtos', type: 'secondary' as const },
-                ],
-                metadata: {
-                  addedProducts: [{ id: product.id, name: product.name, quantity: 1 }]
-                }
-              }
-            ]
-          }
-        })
-      } else {
-        throw new Error('Produto não encontrado')
+      if (!result?.success) {
+        throw new Error(result?.message || 'Erro ao processar ação no servidor.');
       }
-    } catch (error) {
-      console.error('Erro ao adicionar produto diretamente:', error)
-      setAddingProductIds(prev => {
-        const next = { ...prev }
-        delete next[product.id]
-        return next
-      })
+
+      // Sincroniza carrinho no cliente
+      await refreshCart();
+
+      // 2. Transiciona botão do card para sucesso
+      setLocalAddingProds(prev => ({ ...prev, [product.id]: 'success' }));
+      setTimeout(() => {
+        setLocalAddingProds(prev => {
+          const next = { ...prev };
+          delete next[product.id];
+          return next;
+        });
+      }, 1500);
+
+      // 3. Adiciona a mensagem do assistente retornada do backend no histórico local
+      const msgData = result.data || result;
+      const textPart = msgData.parts?.find((p: any) => p.type === 'text');
+      const content = textPart?.text || msgData.message || '';
+
+      const assistantMsg = {
+        id: msgData.assistantMessage?.id || msgData.aiMessage?.id || `msg-${Date.now()}`,
+        role: 'assistant' as const,
+        content,
+        timestamp: Date.now(),
+        metadata: msgData.metadata || {
+          parts: msgData.parts,
+          responseLayout: msgData.layout
+        },
+        actions: msgData.parts?.find((p: any) => p.type === 'actions')?.actions || []
+      };
+
+      persistLocalActionMessage(assistantMsg);
+
+      setMessages(prev => {
+        const alreadyExists = prev.some(m => m.id === assistantMsg.id);
+        if (alreadyExists) return prev;
+        return [...prev, assistantMsg];
+      });
+
+    } catch (error: any) {
+      console.error('Erro ao adicionar produto diretamente:', error);
+      setLocalAddingProds(prev => {
+        const next = { ...prev };
+        delete next[product.id];
+        return next;
+      });
       setMessages(prev => [
         ...prev,
         {
-          role: 'assistant' as const,
-          content: `❌ Não foi possível adicionar "${product.name}" ao carrinho. Tente novamente.`,
-          timestamp: Date.now(),
+          role: 'assistant',
+          clientTempId: `local-action-error-${Date.now()}`,
+          content: 'Não consegui adicionar este produto ao carrinho. Por favor, tente novamente.',
+          timestamp: Date.now()
         }
-      ])
+      ]);
     }
-  }
+  };
 
-  // ===== Custom Handlers for Sessions and New Chat =====
+    // ===== Custom Handlers for Sessions and New Chat =====
   const fetchSessions = useCallback(async () => {
     setLoadingSessions(true)
     try {
@@ -2409,10 +2932,6 @@ const FloatingChat: React.FC = () => {
   }
 
   const handleDeleteSession = async (sessId: string) => {
-    if (!window.confirm("Deseja realmente excluir esta conversa?")) {
-      return
-    }
-
     try {
       const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
       const headers: Record<string, string> = {}
@@ -2424,29 +2943,28 @@ const FloatingChat: React.FC = () => {
         headers
       })
       if (response.ok) {
-        let remainingCount = 0
+        setChatToast({ msg: 'Conversa removida do histórico', type: 'success' })
+        setTimeout(() => setChatToast(null), 3500)
+
+        let remaining: typeof sessionsList = []
         setSessionsList(prev => {
-          const remaining = prev.filter(s => s.session_id !== sessId)
-          remainingCount = remaining.length
+          remaining = prev.filter(s => s.session_id !== sessId)
           return remaining
         })
 
         if (currentSessionId === sessId) {
-          if (remainingCount === 0) {
+          if (remaining.length === 0) {
             await startFreshChatSession()
-          } else {
-            const tempSessionId = 'session_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-            resetChatFlowState()
-            localStorage.setItem('sanare_site_session', tempSessionId)
-            setCurrentSessionId(tempSessionId)
-            setMessages([])
             setActiveTab('chat')
-            isInitialHistoryLoad.current = true
+          } else {
+            selectSession(remaining[0].session_id)
           }
         }
       }
     } catch (err) {
       console.error('Erro ao deletar sessão:', err)
+      setChatToast({ msg: 'Não foi possível remover a conversa', type: 'error' })
+      setTimeout(() => setChatToast(null), 3500)
     }
   }
 
@@ -2526,6 +3044,13 @@ const FloatingChat: React.FC = () => {
         .typing-dot:nth-child(2) { animation-delay: 0.15s; }
         .typing-dot:nth-child(3) { animation-delay: 0.3s; }
       `}} />
+      {chatToast && (
+        <div className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-lg text-sm shadow-lg ${
+          chatToast.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
+        }`}>
+          {chatToast.msg}
+        </div>
+      )}
       {/* Container do Chat / Botão com animação de transformação */}
       <div
         ref={buttonRef}
@@ -2892,21 +3417,21 @@ const FloatingChat: React.FC = () => {
                                     </button>
                                     <button
                                       onClick={() => handleAddProductDirectly(prod)}
-                                      disabled={addingProductIds[prod.id] === 'loading'}
+                                      disabled={localAddingProds[prod.id] === 'loading'}
                                       className={`py-1 text-center rounded text-[10px] font-semibold transition-colors flex items-center justify-center space-x-1 cursor-pointer
-                                          ${addingProductIds[prod.id] === 'success'
+                                          ${localAddingProds[prod.id] === 'success'
                                           ? 'bg-green-700 text-white border border-green-500 scale-95'
-                                          : addingProductIds[prod.id] === 'loading'
+                                          : localAddingProds[prod.id] === 'loading'
                                             ? 'bg-green-600 opacity-70 text-white cursor-not-allowed'
                                             : 'bg-green-600 hover:bg-green-700 text-white'
                                         }`}
                                     >
-                                      {addingProductIds[prod.id] === 'loading' ? (
+                                      {localAddingProds[prod.id] === 'loading' ? (
                                         <>
                                           <Loader2 className="w-3 h-3 animate-spin" />
                                           <span>Adicionando...</span>
                                         </>
-                                      ) : addingProductIds[prod.id] === 'success' ? (
+                                      ) : localAddingProds[prod.id] === 'success' ? (
                                         <span>Adicionado! ✓</span>
                                       ) : (
                                         <span>Adicionar</span>
@@ -2962,34 +3487,77 @@ const FloatingChat: React.FC = () => {
                                   )
                                 }
                                 if (part.type === 'actions') {
-                                    const partActions = part.actions || []
+                                    const layout = msg.metadata?.responseLayout || (msg.metadata as any)?.layout || 'text'
+
+                                    // Extract products context if available to help normalize actions
+                                    const productsPart = msg.metadata?.parts?.find((p: any) => p.type === 'product_cards' || p.type === 'promotion_cards')
+                                    const actionProducts = productsPart ? ((productsPart as any).products || (productsPart as any).items || (productsPart as any).promotions || []) : (msg.metadata?.recommendedProducts || [])
+                                    const productIds = actionProducts.map((p: any) => p.id).filter(Boolean)
+                                    const primaryProductId = productIds[0]
+
+                                    const partActions = normalizeActionsForLayout(layout, part.actions || [], {
+                                      primaryProductId,
+                                      productIds,
+                                      productAlreadyInCart: (id: string) => items.some((item: any) => item.product?.id === id)
+                                    })
+
                                     return (
                                       <div key={`part-actions-${index}-${partIdx}`} className="flex flex-wrap gap-2 w-full max-w-[85%] sm:max-w-[80%] justify-start">
-                                        {partActions.map((action: any, actionIdx: number) => (
-                                          <button
-                                            key={`part-action-btn-${index}-${partIdx}-${actionIdx}`}
-                                            onClick={() => {
-                                              if (isLoading) return
-                                              const href = action.href || action.url
-                                              if (href) {
-                                                if (href.startsWith('action://')) {
-                                                  handleChatActionUrl(href, action.label)
-                                                } else if (href.startsWith('http')) {
-                                                  window.open(href, '_blank', 'noopener,noreferrer')
-                                                } else {
-                                                  navigate(href)
-                                                  setIsOpen(false)
-                                                }
-                                              }
-                                            }}
-                                            className={`px-3 py-1.5 rounded text-xs font-semibold shadow transition-colors cursor-pointer flex-grow text-center ${action.type === 'primary'
-                                              ? 'bg-green-600 hover:bg-green-700 text-white'
-                                              : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'
-                                              }`}
-                                          >
-                                            {action.label}
-                                          </button>
-                                        ))}
+                                        {partActions.map((action: any, actionIdx: number) => {
+                                          const isCartAdd = action.type === 'cart_add'
+                                          const isShippingQuote = action.type === 'shipping_quote'
+                                          const stateKey = getActionStateKey(msg.id || msg.clientTempId, partIdx, action, actionIdx, index)
+                                          const state = actionStates[stateKey]
+
+                                          // Resolve product payload details if present
+                                          const pId = action.payload?.productId || action.productId
+                                          const actionProduct = actionProducts.find((p: any) => p.id === pId) || actionProducts[0]
+                                          const pName = action.payload?.productName || actionProduct?.name || action.label || 'Produto'
+                                          const pPrice = action.payload?.price || actionProduct?.promoPrice || actionProduct?.promo_price || actionProduct?.price || 0
+                                          const mockProd = { id: pId || actionProduct?.id, name: pName, price: pPrice }
+
+                                          // Calculate style classes dynamically
+                                          let btnClasses = 'px-3 py-1.5 rounded text-xs font-semibold shadow transition-all cursor-pointer flex-grow text-center '
+                                          if (state === 'success') {
+                                            btnClasses += 'bg-green-700 text-white border border-green-500 scale-95'
+                                          } else if (state === 'loading') {
+                                            btnClasses += 'bg-green-600 opacity-70 text-white cursor-not-allowed'
+                                          } else {
+                                            const style = action.style || (isCartAdd ? 'primary' : 'secondary')
+                                            if (style === 'primary') {
+                                              btnClasses += 'bg-green-600 hover:bg-green-700 text-white'
+                                            } else if (style === 'danger') {
+                                              btnClasses += 'bg-red-600 hover:bg-red-700 text-white'
+                                            } else if (style === 'ghost') {
+                                              btnClasses += 'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 border border-transparent'
+                                            } else {
+                                              btnClasses += 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200'
+                                            }
+                                          }
+
+                                          return (
+                                            <button
+                                              key={`part-action-btn-${index}-${partIdx}-${actionIdx}`}
+                                              onClick={(event) => {
+                                                if (isLoading && !isCartAdd && !isShippingQuote) return
+                                                handleKaiaAction(action, { stateKey, fromElement: event.currentTarget, product: mockProd })
+                                              }}
+                                              className={btnClasses}
+                                              disabled={state === 'loading'}
+                                            >
+                                              {state === 'loading' ? (
+                                                <span className="flex items-center justify-center space-x-1">
+                                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                                  <span>Aguarde...</span>
+                                                </span>
+                                              ) : state === 'success' ? (
+                                                'Concluído'
+                                              ) : (
+                                                action.label
+                                              )}
+                                            </button>
+                                          )
+                                        })}
                                       </div>
                                     )
                                   }
@@ -3089,28 +3657,57 @@ const FloatingChat: React.FC = () => {
                                     )
                                   }
                                   if (part.type === 'promotion_cards') {
-                                    const promotions = part.promotions || []
+                                    const items = part.products || part.promotions || part.items || []
                                     return (
                                       <div key={`part-promos-${index}-${partIdx}`} className="w-full max-w-[85%] sm:max-w-[80%] space-y-2">
-                                        {promotions.map((promo: any) => (
-                                          <div key={promo.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2.5 shadow-sm text-left flex items-center space-x-2.5">
-                                            {promo.image && (
-                                              <img src={productsService.getImageUrl(promo.image)} alt={promo.name} className="w-10 h-10 object-contain rounded bg-gray-50" />
-                                            )}
-                                            <div className="flex-1 min-w-0">
-                                              <h4 className="font-semibold text-xs text-gray-800 dark:text-gray-100 line-clamp-1">{promo.name}</h4>
-                                              <p className="text-[10px] text-green-600 font-bold">
-                                                Por apenas {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(promo.promoPrice || promo.price)}
-                                              </p>
+                                        {items.map((prod: any) => {
+                                          const isPromo = prod.promoPrice || prod.promo_price || null;
+                                          const discountPercent = isPromo ? Math.round(((prod.price - Number(isPromo)) / prod.price) * 100) : 0;
+                                          return (
+                                            <div key={prod.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2.5 shadow-sm text-left flex items-center space-x-2.5">
+                                              {prod.image && (
+                                                <img src={productsService.getImageUrl(prod.image)} alt={prod.name} className="w-10 h-10 object-contain rounded bg-gray-50" />
+                                              )}
+                                              <div className="flex-1 min-w-0">
+                                                <h4 className="font-semibold text-xs text-gray-800 dark:text-gray-100 line-clamp-1">{prod.name}</h4>
+                                                <div className="flex items-baseline space-x-1.5 mt-0.5">
+                                                  {isPromo ? (
+                                                    <>
+                                                      <span className="text-[10px] text-gray-400 line-through">
+                                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.price)}
+                                                      </span>
+                                                      <span className="text-xs font-bold text-green-600 dark:text-green-400">
+                                                        Por apenas {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(isPromo))}
+                                                      </span>
+                                                      <span className="text-[9px] bg-red-100 text-red-700 px-1 rounded font-bold">
+                                                        Economize {discountPercent}%
+                                                      </span>
+                                                    </>
+                                                  ) : (
+                                                    <span className="text-xs font-bold text-gray-800 dark:text-gray-100">
+                                                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.price)}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              </div>
+                                              <div className="flex flex-col space-y-1">
+                                                <button
+                                                  onClick={() => { navigate(`/produtos/${prod.id}`); setIsOpen(false) }}
+                                                  className="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-750 text-gray-700 dark:text-gray-200 rounded text-[9px] font-semibold cursor-pointer"
+                                                >
+                                                  Ver Produto
+                                                </button>
+                                                <button
+                                                  onClick={() => handleAddProductDirectly(prod)}
+                                                  disabled={localAddingProds[prod.id] === 'loading'}
+                                                  className="px-2 py-0.5 bg-green-600 hover:bg-green-700 text-white rounded text-[9px] font-semibold cursor-pointer"
+                                                >
+                                                  {localAddingProds[prod.id] === 'loading' ? 'Adicionando...' : 'Adicionar'}
+                                                </button>
+                                              </div>
                                             </div>
-                                            <button
-                                              onClick={() => { navigate(`/produtos/${promo.id}`); setIsOpen(false) }}
-                                              className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-[10px] font-semibold cursor-pointer"
-                                            >
-                                              Ver
-                                            </button>
-                                          </div>
-                                        ))}
+                                          );
+                                        })}
                                       </div>
                                     )
                                   }
@@ -3132,6 +3729,8 @@ const FloatingChat: React.FC = () => {
                                     )
                                   }
                                   if (part.type === 'free_shipping_progress') {
+                                    const isCartClearResponse = (msg.metadata as any)?.intent === 'cart_clear' || (msg.metadata as any)?.action?.type === 'cart_clear'
+                                    if (isCartClearResponse) return null
                                     const progress = part.data || {}
                                     return (
                                       <div key={`part-shipping-prog-${index}-${partIdx}`} className="w-full max-w-[85%] sm:max-w-[80%] bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-left flex flex-col space-y-2">
@@ -3348,7 +3947,7 @@ const FloatingChat: React.FC = () => {
                             )
                           }
 
-                          // ===== LAYOUT PADRÃO =====
+                          // ===== LAYOUT PADR�O =====
                           return (
                             <div
                               className={`flex flex-col ${msg.role === 'user'
@@ -3422,21 +4021,21 @@ const FloatingChat: React.FC = () => {
                                         </button>
                                         <button
                                           onClick={() => handleAddProductDirectly(prod)}
-                                          disabled={addingProductIds[prod.id] === 'loading'}
+                                          disabled={localAddingProds[prod.id] === 'loading'}
                                           className={`py-1 text-center rounded text-[10px] font-semibold transition-colors flex items-center justify-center space-x-1 cursor-pointer
-                                            ${addingProductIds[prod.id] === 'success'
+                                            ${localAddingProds[prod.id] === 'success'
                                               ? 'bg-green-700 text-white border border-green-500 scale-95'
-                                              : addingProductIds[prod.id] === 'loading'
+                                              : localAddingProds[prod.id] === 'loading'
                                                 ? 'bg-green-600 opacity-70 text-white cursor-not-allowed'
                                                 : 'bg-green-600 hover:bg-green-700 text-white'
                                             }`}
                                         >
-                                          {addingProductIds[prod.id] === 'loading' ? (
+                                          {localAddingProds[prod.id] === 'loading' ? (
                                             <>
                                               <Loader2 className="w-3 h-3 animate-spin" />
                                               <span>Adicionando...</span>
                                             </>
-                                          ) : addingProductIds[prod.id] === 'success' ? (
+                                          ) : localAddingProds[prod.id] === 'success' ? (
                                             <span>Adicionado! ✓</span>
                                           ) : (
                                             <span>Adicionar</span>
@@ -3746,7 +4345,7 @@ const FloatingChat: React.FC = () => {
                           : 'Aguardando atendente via WhatsApp'}
                   </span>
                 </div>
-                {escalationStatus === 'human_needed' && (
+                {(escalationStatus === 'human_needed' || escalationStatus === 'human_assigned') && (
                   <button
                     type="button"
                     onClick={() => setShowDeEscalateConfirm(true)}
