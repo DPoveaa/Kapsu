@@ -24,9 +24,10 @@ import {
 import AdminModal from '../components/AdminModal'
 import ImageUpload from '../components/ImageUpload'
 import { normalizeImagePath } from '../utils/imageUrl'
+import { generateProductUrl } from '../utils/productUrl'
 
 type Tab = 'active' | 'inactive' | 'archived'
-type ProductsSortKey = 'name' | 'category' | 'purchase_price' | 'margin' | 'price' | 'status'
+type ProductsSortKey = 'name' | 'sku' | 'category' | 'purchase_price' | 'margin' | 'price' | 'status'
 type SortDirection = 'asc' | 'desc'
 
 // ─── Column fields for import mapping ──────────────────────────────────────
@@ -266,6 +267,11 @@ export default function ManageProducts() {
     benefits: '',
     target_audience: 'unknown',
     free_shipping: false,
+    sku: '',
+    quantity: '',
+    meta_title: '',
+    meta_description: '',
+    tags: '',
   }
   const [productFormData, setProductFormData] = useState(initialProductFormState)
   const priceEditSourceRef = useRef<'price' | 'markup' | 'purchase_price'>('price')
@@ -408,6 +414,11 @@ export default function ManageProducts() {
         benefits: productRaw.benefits || '',
         target_audience: productRaw.target_audience || (product as any).targetAudience || 'unknown',
         free_shipping: productRaw.free_shipping ?? false,
+        sku: productRaw.sku || '',
+        quantity: productRaw.quantity || '',
+        meta_title: productRaw.meta_title || '',
+        meta_description: productRaw.meta_description || '',
+        tags: productRaw.tags || '',
       })
       setLocalAddedCategories([])
       setIsProductModalOpen(true)
@@ -526,6 +537,11 @@ export default function ManageProducts() {
         benefits: productFormData.benefits.trim() || undefined,
         target_audience: productFormData.target_audience as ProductTargetAudience,
         free_shipping: productFormData.free_shipping,
+        sku: productFormData.sku.trim() || undefined,
+        quantity: productFormData.quantity.trim() || undefined,
+        meta_title: productFormData.meta_title.trim() || undefined,
+        meta_description: productFormData.meta_description.trim() || undefined,
+        tags: productFormData.tags.trim() || undefined,
       }
 
       if (editingProduct) {
@@ -1358,6 +1374,8 @@ export default function ManageProducts() {
     switch (key) {
       case 'name':
         return p.name || ''
+      case 'sku':
+        return p.sku || ''
       case 'category':
         return p.category || ''
       case 'purchase_price':
@@ -1561,6 +1579,7 @@ export default function ManageProducts() {
                         <input type="checkbox" checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0} onChange={e => setSelectedIds(e.target.checked ? filteredProducts.map(p => p.id) : [])} className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 focus-visible:ring-2 focus-visible:ring-blue-500" />
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('name', 'Produto')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('sku', 'SKU')}</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('category', 'Categoria')}</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('purchase_price', 'Compra')}</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('margin', 'Markup / Margem')}</th>
@@ -1571,7 +1590,7 @@ export default function ManageProducts() {
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {filteredProducts.length === 0 ? (
-                      <tr><td colSpan={8} className="px-6 py-10 text-center text-gray-500 dark:text-gray-400 text-sm">Nenhum produto encontrado.</td></tr>
+                      <tr><td colSpan={9} className="px-6 py-10 text-center text-gray-500 dark:text-gray-400 text-sm">Nenhum produto encontrado.</td></tr>
                     ) : sortedProducts.map(p => (
                       <tr key={p.id} className={`group hover:bg-gray-50 dark:hover:bg-[#065084]/40 transition-colors ${p.archived ? 'opacity-70' : ''}`}>
                         <td className="px-4 py-3 whitespace-nowrap">
@@ -1579,14 +1598,38 @@ export default function ManageProducts() {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <img src={p.image} alt={p.name} className={`h-10 w-10 rounded-lg object-contain bg-gray-50 dark:bg-gray-700 p-0.5 flex-shrink-0 ${p.archived ? 'grayscale' : ''}`} onError={e => handleImageError(e, PRODUCT_IMAGE_FALLBACK)} />
+                            {p.image && p.image.trim() !== '' && p.image !== PRODUCT_IMAGE_FALLBACK ? (
+                              <a
+                                href={p.image}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="cursor-zoom-in hover:opacity-85 transition-opacity flex-shrink-0"
+                                title="Clique para abrir a imagem"
+                              >
+                                <img src={p.image} alt={p.name} className={`h-10 w-10 rounded-lg object-contain bg-gray-50 dark:bg-gray-700 p-0.5 flex-shrink-0 ${p.archived ? 'grayscale' : ''}`} onError={e => handleImageError(e, PRODUCT_IMAGE_FALLBACK)} />
+                              </a>
+                            ) : (
+                              <img src={PRODUCT_IMAGE_FALLBACK} alt={p.name} className={`h-10 w-10 rounded-lg object-contain bg-gray-50 dark:bg-gray-700 p-0.5 flex-shrink-0 ${p.archived ? 'grayscale' : ''}`} />
+                            )}
                             <div>
                               <div className="text-sm font-medium text-gray-900 dark:text-white flex items-center gap-1.5">
-                                {p.name}{p.archived && <Archive size={12} className="text-gray-400" />}
+                                <a
+                                  href={generateProductUrl(p)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="hover:underline hover:text-primary-600 dark:hover:text-primary-400 cursor-pointer"
+                                  title="Visualizar página pública do produto"
+                                >
+                                  {p.name}
+                                </a>
+                                {p.archived && <Archive size={12} className="text-gray-400" />}
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">{p.description || 'Sem descrição'}</div>
                             </div>
                           </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap font-mono">
+                          {p.sku || <span className="text-gray-300 dark:text-gray-600">—</span>}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-1">
@@ -2492,6 +2535,39 @@ export default function ManageProducts() {
               />
             </div>
 
+            {/* SKU & Quantidade */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="product-sku" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  SKU (Único)
+                </label>
+                <input
+                  type="text"
+                  id="product-sku"
+                  name="sku"
+                  value={productFormData.sku}
+                  onChange={handleProductFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                  placeholder="Ex: VIT-D3-2000"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="product-quantity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Quantidade (Planilha)
+                </label>
+                <input
+                  type="text"
+                  id="product-quantity"
+                  name="quantity"
+                  value={productFormData.quantity}
+                  onChange={handleProductFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                  placeholder="Ex: 60 cápsulas, 100ml"
+                />
+              </div>
+            </div>
+
             {/* Descrição */}
             <div>
               <label htmlFor="product-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -2503,8 +2579,57 @@ export default function ManageProducts() {
                 value={productFormData.description}
                 onChange={handleProductFormChange}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 dark':border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                 placeholder="Descreva o produto..."
+              />
+            </div>
+
+            {/* Meta Title & Tags */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="product-meta_title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Meta Title
+                </label>
+                <input
+                  type="text"
+                  id="product-meta_title"
+                  name="meta_title"
+                  value={productFormData.meta_title}
+                  onChange={handleProductFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                  placeholder="Título para o Google"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="product-tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Tags (Separadas por vírgula)
+                </label>
+                <input
+                  type="text"
+                  id="product-tags"
+                  name="tags"
+                  value={productFormData.tags}
+                  onChange={handleProductFormChange}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                  placeholder="Ex: saúde, imunidade, vitamina"
+                />
+              </div>
+            </div>
+
+            {/* Meta Description */}
+            <div>
+              <label htmlFor="product-meta_description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Meta Description
+              </label>
+              <textarea
+                id="product-meta_description"
+                name="meta_description"
+                value={productFormData.meta_description}
+                onChange={handleProductFormChange}
+                rows={2}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+                placeholder="Descrição para buscadores (Google)..."
               />
             </div>
 

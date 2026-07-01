@@ -1,16 +1,21 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { resolveConversationMode } from '../utils/conversationMode';
+import { aiApiKeysService, AiApiKey, DuplicateApiKeyError } from '../services/ai-api-keys.service';
+import AdminModal from '../components/AdminModal';
 import {
   Bot, Search, Filter, RefreshCw, MessageSquare, AlertTriangle,
   CheckCircle, Clock, ChevronDown, ChevronLeft, ChevronRight, Download,
   ShoppingCart, Tag, Truck, Package, Send, X,
   Activity, Zap, Shield, Code2, TrendingUp, ChevronUp,
   Check, AlertCircle, Loader2,
-  Phone, Mail, Hash, Calendar, BarChart2,
+  Phone, Mail, Hash, Calendar,
   Headphones, Pause, Play, Trash2,
-  CircleDot, Layers
+  CircleDot, Layers, EyeOff, KeyRound, RotateCcw, Plus, Copy, MoreVertical,
+  UserX, UserCheck
 } from 'lucide-react';
+import { generateProductUrl } from '../utils/productUrl';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -38,6 +43,13 @@ interface Conversation {
   has_promo: boolean;
   has_order_query: boolean;
   ai_enabled: boolean;
+  events?: Array<{ event_type: string; created_at: string | Date }>;
+  is_archived?: boolean;
+  is_ignored?: boolean;
+  is_deleted?: boolean;
+  archived_at?: string | null;
+  deleted_at?: string | null;
+  hidden_from_customer_at?: string | null;
 }
 
 interface Message {
@@ -114,6 +126,9 @@ interface Metrics {
   fallbackRate: number;
   escalationRate: number;
   securityBlocksCount: number;
+  topConsumers?: any[];
+  topAgents?: { agent: string; count: number }[];
+  awaitingHuman?: number;
 }
 
 // ==================== HELPERS ====================
@@ -142,7 +157,7 @@ const getIntentBadge = (intent: string) => {
     outro: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
     duvida_generica: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300',
   };
-  return colors[intent] || 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300';
+  return colors[intent] || 'bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300';
 };
 
 const timeAgo = (dateStr: string) => {
@@ -158,6 +173,29 @@ const timeAgo = (dateStr: string) => {
   if (diffHours < 24) return `${diffHours}h atrás`;
   if (diffDays === 1) return 'Ontem';
   if (diffDays < 7) return `${diffDays} dias atrás`;
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+};
+
+const formatLastInteraction = (dateStr: string) => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  
+  const isSameDay = date.getDate() === now.getDate() &&
+                    date.getMonth() === now.getMonth() &&
+                    date.getFullYear() === now.getFullYear();
+                    
+  if (isSameDay) {
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+  
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = date.getDate() === yesterday.getDate() &&
+                      date.getMonth() === yesterday.getMonth() &&
+                      date.getFullYear() === yesterday.getFullYear();
+                      
+  if (isYesterday) return 'Ontem';
+  
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 };
 
@@ -206,7 +244,7 @@ const normalizeProducts = (products: unknown): any[] => safeArray<any>(products)
     price: safeNumber(raw.price || raw.originalPrice || raw.original_price || raw.promoPrice || raw.promo_price, 0),
     promoPrice: raw.promoPrice ?? raw.promo_price ?? null,
     originalPrice: raw.originalPrice ?? raw.original_price ?? raw.price,
-    url: safeString(raw.url || raw.href || (slug ? `/produtos/${slug}` : id ? `/produtos/${id}` : '')),
+    url: safeString(raw.url || raw.href || (id ? generateProductUrl({ id, slug: raw.slug || slug || null }) : '')),
   };
 });
 
@@ -308,6 +346,19 @@ const normalizeMessage = (message: unknown): Message => {
 const normalizeConversation = (conversation: unknown): Conversation => {
   const conv = safeObject<Record<string, any>>(conversation);
   const lastMessage = conv.last_message || conv.lastMessage;
+  const events = safeArray<any>(conv.events || conv.conversationEvents || conv.lifecycle_events || conv.lifecycleEvents)
+    .map(event => ({
+      event_type: safeString(event.event_type || event.type || event.name),
+      created_at: event.created_at || event.createdAt || new Date().toISOString(),
+    }))
+    .filter(event => event.event_type);
+  const resolvedMode = resolveConversationMode(events, {
+    status: safeString(conv.status),
+    ai_enabled: conv.ai_enabled ?? conv.aiEnabled,
+  });
+  const archivedAt = conv.archived_at ?? conv.archivedAt ?? null;
+  const deletedAt = conv.deleted_at ?? conv.deletedAt ?? null;
+  const hiddenFromCustomerAt = conv.hidden_from_customer_at ?? conv.hiddenFromCustomerAt ?? null;
 
   return {
     id: safeString(conv.id || conv.conversation_id || conv.session_id, `conv-${Date.now()}`),
@@ -319,7 +370,7 @@ const normalizeConversation = (conversation: unknown): Conversation => {
     name: conv.name ?? null,
     email: conv.email ?? null,
     phone: conv.phone ?? null,
-    status: safeString(conv.status, 'active'),
+    status: deletedAt ? 'deleted' : archivedAt ? 'archived' : resolvedMode,
     channel: safeString(conv.channel, 'site'),
     created_at: safeString(conv.created_at || conv.createdAt, new Date().toISOString()),
     last_message_at: safeString(conv.last_message_at || conv.lastMessageAt || conv.updated_at, new Date().toISOString()),
@@ -336,6 +387,13 @@ const normalizeConversation = (conversation: unknown): Conversation => {
     has_promo: safeBoolean(conv.has_promo ?? conv.hasPromo, false),
     has_order_query: safeBoolean(conv.has_order_query ?? conv.hasOrderQuery, false),
     ai_enabled: safeBoolean(conv.ai_enabled ?? conv.aiEnabled, true),
+    events,
+    is_archived: Boolean(archivedAt || conv.is_archived || conv.isArchived),
+    is_ignored: safeBoolean(conv.is_ignored ?? conv.isIgnored, false),
+    is_deleted: Boolean(deletedAt || conv.is_deleted || conv.isDeleted),
+    archived_at: archivedAt,
+    deleted_at: deletedAt,
+    hidden_from_customer_at: hiddenFromCustomerAt,
   };
 };
 
@@ -350,10 +408,13 @@ const normalizeMetrics = (metrics: unknown): Metrics => {
     topProducts: safeArray(m.topProducts),
     topCoupons: safeArray(m.topCoupons),
     topActions: safeArray(m.topActions),
-    avgResponseTime: safeNumber(m.avgResponseTime, 0),
+    avgResponseTime: safeNumber(m.avgResponseTime ?? m.averageResponseTimeMs, 0),
     fallbackRate: safeNumber(m.fallbackRate, 0),
     escalationRate: safeNumber(m.escalationRate, 0),
-    securityBlocksCount: safeNumber(m.securityBlocksCount, 0),
+    securityBlocksCount: safeNumber(m.securityBlocksCount ?? m.blocked, 0),
+    topConsumers: safeArray(m.topConsumers),
+    topAgents: safeArray(m.topAgents),
+    awaitingHuman: safeNumber(m.awaitingHuman ?? m.awaiting_human, 0),
   };
 };
 
@@ -399,10 +460,10 @@ const TechnicalPanel = ({ metadata, diagnostics }: { metadata: MessageMetadata |
   if (!hasAnyData) return null;
 
   return (
-    <div className="mt-2 rounded-xl border border-violet-200 dark:border-violet-800/50 overflow-hidden shadow-sm">
+    <div className="mt-2 rounded-xl border border-primary-200 dark:border-primary-800/50 overflow-hidden shadow-sm">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center gap-2 px-3 py-2 bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-colors text-xs font-semibold text-violet-600 dark:text-violet-400"
+        className="w-full flex items-center gap-2 px-3 py-2 bg-primary-50 dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors text-xs font-semibold text-primary-600 dark:text-primary-400"
       >
         <Code2 size={12} />
         Diagnóstico Técnico (Kaia v2)
@@ -419,11 +480,11 @@ const TechnicalPanel = ({ metadata, diagnostics }: { metadata: MessageMetadata |
           {/* Agente e Roteamento */}
           <div>
             <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
-              <Bot size={11} className="text-violet-500" /> Roteamento de Agente
+              <Bot size={11} className="text-primary-500" /> Roteamento de Agente
             </p>
             <div className="flex flex-wrap gap-1.5">
               {agent && (
-                <span className="px-2 py-0.5 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 font-medium">
+                <span className="px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium">
                   Agente: {agent}
                 </span>
               )}
@@ -517,7 +578,7 @@ const TechnicalPanel = ({ metadata, diagnostics }: { metadata: MessageMetadata |
             </p>
             <div className="flex flex-wrap gap-1.5 text-[10px]">
               {engine && (
-                <span className="px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-full font-mono">
+                <span className="px-2 py-0.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 rounded-full font-mono">
                   Engine: {engine}
                 </span>
               )}
@@ -568,7 +629,7 @@ const TechnicalPanel = ({ metadata, diagnostics }: { metadata: MessageMetadata |
           )}
 
           {/* Visor JSON Completo */}
-          <div className="pt-2.5 border-t border-violet-100 dark:border-violet-900/20">
+          <div className="pt-2.5 border-t border-primary-100 dark:border-primary-900/20">
             <DiagnosticJsonViewer data={safeDiagnostics ? { ...safeDiagnostics, sales: safeDiagnostics.sales ? { ...safeDiagnostics.sales, recommendedProducts } : safeDiagnostics.sales } : safeMetadata} />
           </div>
         </div>
@@ -583,7 +644,7 @@ const DiagnosticJsonViewer = ({ data }: { data: any }) => {
     <div>
       <button
         onClick={() => setShowJson(!showJson)}
-        className="text-[10px] text-violet-500 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300 font-semibold underline cursor-pointer"
+        className="text-[10px] text-primary-500 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-semibold underline cursor-pointer"
       >
         {showJson ? 'Ocultar JSON de Diagnóstico' : 'Ver JSON de Diagnóstico Completo'}
       </button>
@@ -627,7 +688,7 @@ const bubbleClass = isUser
     ? 'bg-blue-600 text-white rounded-tr-sm'
     : isSystem
     ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-700 rounded-sm text-xs'
-    : 'bg-violet-600 text-white rounded-tr-sm';
+    : 'bg-primary-600 text-white rounded-tr-sm';
 
   const align = isUser ? 'justify-start' : 'justify-end';
 
@@ -639,7 +700,7 @@ const bubbleClass = isUser
             isUser ? 'text-gray-500 dark:text-gray-400' :
             isAdmin ? 'text-blue-500 dark:text-blue-400' :
             isSystem ? 'text-amber-600 dark:text-amber-400' :
-            'text-violet-500 dark:text-violet-400'
+            'text-primary-500 dark:text-primary-400'
           }`}>
             {isUser ? 'Cliente' : isAdmin ? 'Admin' : isSystem ? 'Sistema' : 'Kaia'}
           </span>
@@ -790,76 +851,6 @@ const bubbleClass = isUser
   );
 };
 
-// ==================== CARD DE CONVERSA ====================
-const ConversationCard = ({
-  conv,
-  isSelected,
-  onClick,
-}: {
-  conv: Conversation;
-  isSelected: boolean;
-  onClick: () => void;
-}) => {
-  const statusInfo = getStatusInfo(conv.status);
-  const displayName = conv.customer_name || conv.name || `Visitante ${conv.session_id?.slice(0, 8)}`;
-  const displayContact = conv.customer_email
-    ? maskEmail(conv.customer_email)
-    : conv.customer_phone
-    ? maskPhone(conv.customer_phone)
-    : null;
-
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full text-left p-3.5 border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
-        isSelected ? 'bg-violet-50 dark:bg-violet-900/20 border-l-2 border-l-violet-500' : ''
-      }`}
-    >
-      <div className="flex items-start gap-2.5">
-        {/* Avatar */}
-        <div className={`w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-sm ${
-          conv.customer_id ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
-        }`}>
-          {displayName.charAt(0).toUpperCase()}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="font-semibold text-sm text-gray-900 dark:text-white truncate">{displayName}</span>
-            <span className="text-[9px] font-mono px-1 py-0.2 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 rounded">#{conv.id.slice(0, 4)}</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium flex-shrink-0 ${statusInfo.bg} ${statusInfo.color}`}>
-              {statusInfo.label}
-            </span>
-          </div>
-
-          {displayContact && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 truncate mb-1">{displayContact}</p>
-          )}
-
-          {conv.last_message && (
-            <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-              {conv.last_message.sender_type === 'ai' ? '🤖 ' : conv.last_message.sender_type === 'admin' ? '👤 ➔ 🤖 ' : ''}
-              {conv.last_message.content.slice(0, 60)}
-            </p>
-          )}
-
-          {/* Flags técnicas */}
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <span className="text-[10px] text-gray-400 dark:text-gray-500">{timeAgo(conv.last_message_at)}</span>
-            <span className="text-gray-300 dark:text-gray-700">·</span>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500">{conv.message_count} msgs</span>
-            {conv.has_error && <AlertTriangle size={10} className="text-red-500" aria-label="Teve erro" />}
-            {conv.has_human_support && <Headphones size={10} className="text-blue-500" aria-label="Atendimento humano" />}
-            {conv.has_action && <ShoppingCart size={10} className="text-emerald-500" aria-label="Ação executada" />}
-            {conv.has_recommendation && <Package size={10} className="text-violet-400" aria-label="Produto recomendado" />}
-            {conv.has_promo && <Tag size={10} className="text-pink-500" aria-label="Cupom/Promoção" />}
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-};
-
 // ==================== TOAST SIMPLES ====================
 const Toast = ({ toasts }: { toasts: { id: number; msg: string; type: 'success' | 'error' }[] }) => (
   <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
@@ -874,6 +865,145 @@ const Toast = ({ toasts }: { toasts: { id: number; msg: string; type: 'success' 
   </div>
 );
 
+const CONFIGURED_AGENTS = [
+  {
+    id: 'ProductRecommendationAgent',
+    name: 'Recomendação de Produtos',
+    description: 'Gera sugestões de suplementos, vitaminas e cosméticos com base na queixa/objetivo do cliente.',
+    intents: ['product_recommendation', 'product_search'],
+    tools: ['searchProducts', 'getProductById'],
+    systemPrompt: 'Você é o especialista comercial da Kapsu para recomendação de suplementos, vitaminas e cosméticos. Analise a necessidade do cliente e sugira as melhores opções do catálogo, explicando como elas ajudam nos seus objetivos de saúde e estética de forma ética e segura.'
+  },
+  {
+    id: 'ProductDetailsAgent',
+    name: 'Ficha Técnica de Produtos',
+    description: 'Explica a composição, modo de uso, contraindicações e benefícios de um produto específico.',
+    intents: ['product_details'],
+    tools: ['getProductById'],
+    systemPrompt: 'Você é o enciclopedista técnico de produtos da Kapsu. Explique de forma clara a ficha técnica, ingredientes ativos, contraindicações e modo de uso de cada suplemento ou cosmético. Mantenha um tom profissional e científico, porém acessível ao consumidor final.'
+  },
+  {
+    id: 'ProductComparisonAgent',
+    name: 'Comparação de Produtos',
+    description: 'Compara múltiplos produtos do catálogo (benefícios, composição, foco principal).',
+    intents: ['product_comparison'],
+    tools: ['searchProducts', 'getProductById'],
+    systemPrompt: 'Você analisa comparativos de produtos. Seu foco é confrontar composições, benefícios práticos e preços para ajudar o cliente a entender a diferença entre opções parecidas e decidir qual melhor atende sua rotina.'
+  },
+  {
+    id: 'CartAgent',
+    name: 'Gerenciador do Carrinho',
+    description: 'Gerencia inclusão, exclusão, alteração de quantidade e limpeza de itens no carrinho.',
+    intents: ['cart_query', 'cart_clear', 'cart_add', 'cart_remove'],
+    tools: ['getCustomerCart', 'addToCustomerCart', 'removeFromCustomerCart', 'clearCustomerCart'],
+    systemPrompt: 'Você gerencia o carrinho de compras do cliente no chat. Informe o que está atualmente adicionado, calcule o subtotal e auxilie na adição ou remoção rápida de itens conforme solicitado pelo usuário.'
+  },
+  {
+    id: 'FreeShippingAgent',
+    name: 'Regras de Frete Grátis',
+    description: 'Informa sobre metas de frete grátis e sugere produtos de valor complementar.',
+    intents: ['free_shipping_info'],
+    tools: ['getCustomerCart', 'simulateShipping'],
+    systemPrompt: 'Você orienta o cliente sobre a meta de frete grátis. Informe quanto falta para atingir o frete grátis e sugira produtos de valor menor ou complementar para completar a compra e usufruir do benefício.'
+  },
+  {
+    id: 'ShippingAgent',
+    name: 'Cálculo de Frete',
+    description: 'Simula prazos e custos de frete (Correios/Sedex) para o CEP do cliente.',
+    intents: ['shipping_quote'],
+    tools: ['simulateShipping'],
+    systemPrompt: 'Você é o consultor de logística. Simule valores e prazos de frete a partir do CEP informado e das dimensões dos produtos. Sempre explique as opções de entrega de forma clara e amigável.'
+  },
+  {
+    id: 'CouponsAgent',
+    name: 'Consulta de Cupons',
+    description: 'Busca e apresenta cupons promocionais ativos e aplicabilidade de descontos.',
+    intents: ['coupons_query'],
+    tools: ['getPublicCoupons'],
+    systemPrompt: 'Você apresenta os cupons de desconto ativos. Divulgue apenas cupons válidos vindos da base de dados e explique as regras de uso. Nunca invente cupons fictícios.'
+  },
+  {
+    id: 'PromotionsAgent',
+    name: 'Promoções e Ofertas',
+    description: 'Apresenta produtos em oferta no catálogo e os percentuais de desconto.',
+    intents: ['promotions_query'],
+    tools: ['getActivePromotions'],
+    systemPrompt: 'Você apresenta as ofertas e produtos em promoção no catálogo. Destaque os maiores descontos percentuais e incentive a compra dos itens com preço reduzido.'
+  },
+  {
+    id: 'DiscountsAgent',
+    name: 'Resumo de Descontos',
+    description: 'Agrupa cupons e ofertas vigentes em um único resumo dinâmico.',
+    intents: ['discounts_query'],
+    tools: ['getPublicCoupons', 'getActivePromotions'],
+    systemPrompt: 'Você atua como um consolidador de ofertas. Resuma em uma única resposta os cupons disponíveis e os produtos com maiores descontos, facilitando a visualização rápida de oportunidades de economia.'
+  },
+  {
+    id: 'OrdersAgent',
+    name: 'Status de Pedidos',
+    description: 'Verifica o status de entrega, detalhes e justificativas de cancelamento de pedidos.',
+    intents: ['order_status'],
+    tools: ['getOrdersByCustomer', 'getOrderByIdForCustomer'],
+    systemPrompt: 'Você localiza e explica o status dos pedidos do cliente. Detalhe se o pedido está pendente de pagamento, confirmado, faturado, enviado ou cancelado, apresentando explicações claras sobre o passo atual da logística.'
+  },
+  {
+    id: 'AccountSupportAgent',
+    name: 'Suporte de Conta',
+    description: 'Auxilia na recuperação de senha e orienta sobre alteração segura de dados cadastrais.',
+    intents: ['account_password', 'account_email_change', 'account_cpf_change', 'account_profile'],
+    tools: ['getAccountSupportRoutes'],
+    systemPrompt: 'Você ajuda o cliente com dúvidas sobre a conta pessoal. Indique os caminhos de alteração de senha e explique com foco em segurança por que alterações críticas (como e-mail ou CPF) requerem validação adicional por atendente humano.'
+  },
+  {
+    id: 'HumanSupportAgent',
+    name: 'Transição Humana',
+    description: 'Registra a solicitação e realiza a transição segura da conversa para atendentes humanos.',
+    intents: ['human_support_request'],
+    tools: ['getSupportSettings', 'requestHumanSupport'],
+    systemPrompt: 'Você realiza a transição para suporte humano. Explique tranquilamente que um atendente irá assumir o chat em breve e garanta que o histórico do chat foi repassado para agilizar o atendimento.'
+  },
+  {
+    id: 'HealthClarificationAgent',
+    name: 'Esclarecimento de Sintomas',
+    description: 'Trata termos ambíguos de saúde de forma segura antes de sugerir produtos.',
+    intents: ['clarification_needed'],
+    tools: [],
+    systemPrompt: 'Você faz esclarecimentos éticos de saúde. Quando o usuário mencionar dores ou sintomas graves, explique de forma empática que a Kaia não prescreve tratamentos médicos. Ajude-o a refinar sua queixa para encontrar bem-estar geral ou direcione para suporte.'
+  },
+  {
+    id: 'ObjectionHandlingAgent',
+    name: 'Tratamento de Objeções',
+    description: 'Responde de forma comercial e persuasiva sobre segurança, eficácia, preços e fretes.',
+    intents: ['objection_price', 'objection_trust', 'objection_shipping', 'objection_result'],
+    tools: [],
+    systemPrompt: 'Você lida com objeções comerciais de forma altamente persuasiva, empática e qualificada. Apresente os pilares de segurança dos produtos da Kapsu, as avaliações de satisfação, a facilidade de devolução ou simulação de frete grátis, convertendo dúvidas em vendas.'
+  },
+  {
+    id: 'SalesAgent',
+    name: 'Orientação de Vendas',
+    description: 'Auxilia o cliente com dúvidas sobre o processo de compra ou meios de pagamento.',
+    intents: ['sales_question'],
+    tools: [],
+    systemPrompt: 'Você é o assistente de fechamento comercial. Tire dúvidas gerais sobre o checkout, formas de pagamento aceitas (PIX, cartões de crédito em até 12x, boleto) e como funciona o recebimento das notas fiscais e códigos de rastreamento.'
+  },
+  {
+    id: 'CheckoutAgent',
+    name: 'Ajuda no Checkout',
+    description: 'Fornece orientações passo a passo para finalização do pagamento na tela de fechamento.',
+    intents: ['checkout_help'],
+    tools: [],
+    systemPrompt: 'Você orienta o usuário no fluxo final do checkout. Explique detalhadamente cada etapa da tela de finalização de compras para evitar o abandono de carrinho e sanar dificuldades de digitação de dados bancários.'
+  },
+  {
+    id: 'FallbackAgent',
+    name: 'Respostas Gerais & Chit-chat',
+    description: 'Lida com mensagens fora de contexto, saudações gerais e conversas informais.',
+    intents: ['unknown'],
+    tools: [],
+    systemPrompt: 'Você lida com conversas gerais (chit-chat, saudações gerais, perguntas informais sobre inteligência artificial). Responda com simpatia e carisma, e sugira alternativas comerciais para guiar o cliente de volta à jornada de compras.'
+  }
+];
+
 // ==================== COMPONENTE PRINCIPAL ====================
 export default function KaiaChats() {
   const navigate = useNavigate();
@@ -884,7 +1014,422 @@ export default function KaiaChats() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [showMetrics, setShowMetrics] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'chats';
+  const [activeTab, setActiveTab] = useState<'chats' | 'performance' | 'agents' | 'keys'>(
+    ['chats', 'performance', 'agents', 'keys'].includes(initialTab) ? (initialTab as any) : 'chats'
+  );
+
+  useEffect(() => {
+    setSearchParams({ tab: activeTab });
+  }, [activeTab, setSearchParams]);
+
+  // --- Estados de Gestão de Chaves de API ---
+  const [keys, setKeys] = useState<AiApiKey[]>([]);
+  const [loadingKeys, setLoadingKeys] = useState(false);
+  const [showKeyForm, setShowKeyForm] = useState(false);
+  const [keyFormData, setKeyFormData] = useState({
+    name: '',
+    provider: 'gemini',
+    model: '',
+    apiKey: '',
+    priority: 0,
+    testOnCreate: true
+  });
+  const [duplicatePrompt, setDuplicatePrompt] = useState<{
+    message: string;
+    existingKey: { id: string; name: string; enabled: boolean };
+    canReactivate: boolean;
+  } | null>(null);
+  const [auditKey, setAuditKey] = useState<AiApiKey | null>(null);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [actionLoadingKey, setActionLoadingKey] = useState<string | null>(null);
+  const [keyFilters, setKeyFilters] = useState({
+    search: '',
+    provider: 'all',
+    healthStatus: 'all',
+    enabled: 'all',
+    sortBy: 'priority'
+  });
+
+  // --- Estados de Gaveta de Detalhes dos Agentes ---
+  const [selectedAgentDetail, setSelectedAgentDetail] = useState<any | null>(null);
+
+  // --- Agrupamento de Conversas por Usuário ---
+  const [selectedUserGroupKey, setSelectedUserGroupKey] = useState<string | null>(null);
+  const [userMenuOpenKey, setUserMenuOpenKey] = useState<string | null>(null);
+  const [userActionLoading, setUserActionLoading] = useState<string | null>(null);
+  const [ignoredProfiles, setIgnoredProfiles] = useState<any[]>([]);
+
+  const fetchIgnoredProfiles = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}/admin/kaia/v2/ignored-profiles`, { headers });
+      const data = await res.json();
+      if (data.success) setIgnoredProfiles(data.data || []);
+    } catch {}
+  }, []);
+
+  useEffect(() => { fetchIgnoredProfiles(); }, []);
+
+  useEffect(() => {
+    const handleDocumentClick = () => {
+      setUserMenuOpenKey(null);
+      setOpenMenuId(null);
+    };
+    document.addEventListener('click', handleDocumentClick);
+    return () => {
+      document.removeEventListener('click', handleDocumentClick);
+    };
+  }, []);
+
+  const handleIgnoreProfile = async (user: GroupedUser) => {
+    if (!window.confirm(`Ignorar o perfil "${user.name}"?\n\nTodas as conversas existentes serão marcadas como ignoradas e novas conversas também serão ignoradas automaticamente.`)) return;
+    setUserActionLoading(`ignore_${user.groupKey}`);
+    setUserMenuOpenKey(null);
+    try {
+      const body: any = {};
+      if (user.customerId) body.customerId = user.customerId;
+      else body.sessionId = user.sessionId;
+      if (user.email) body.email = user.email;
+      if (user.phone) body.phone = user.phone;
+      const res = await fetch(`${API_URL}/admin/kaia/v2/ignored-profiles`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao ignorar perfil');
+      showToast(`Perfil "${user.name}" adicionado aos ignorados`);
+      await fetchConversations(page, true);
+      await fetchIgnoredProfiles();
+    } catch (err: any) {
+      showToast(err.message || 'Erro ao ignorar perfil', 'error');
+    } finally {
+      setUserActionLoading(null);
+    }
+  };
+
+  const handleUnignoreProfile = async (user: GroupedUser) => {
+    setUserActionLoading(`unignore_${user.groupKey}`);
+    setUserMenuOpenKey(null);
+    try {
+      const body: any = {};
+      if (user.customerId) body.customerId = user.customerId;
+      else body.sessionId = user.sessionId;
+      const res = await fetch(`${API_URL}/admin/kaia/v2/ignored-profiles/remove`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao remover dos ignorados');
+      showToast(`Perfil "${user.name}" removido dos ignorados`);
+      await fetchConversations(page, true);
+      await fetchIgnoredProfiles();
+    } catch (err: any) {
+      showToast(err.message || 'Erro ao remover perfil', 'error');
+    } finally {
+      setUserActionLoading(null);
+    }
+  };
+
+  const handleBulkDeleteUser = async (user: GroupedUser) => {
+    if (!window.confirm(`Excluir todo o histórico de "${user.name}"?\n\n${user.conversations.length} conversa(s) serão marcadas como excluídas e sumirão da lista. Esta ação é respeitada pelo sistema de retenção de dados.`)) return;
+    setUserActionLoading(`delete_${user.groupKey}`);
+    setUserMenuOpenKey(null);
+    try {
+      const body: any = {};
+      if (user.customerId) body.customerId = user.customerId;
+      else body.sessionId = user.sessionId;
+      const res = await fetch(`${API_URL}/admin/kaia/v2/conversations/bulk-delete`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao excluir conversas');
+      showToast(data.message || `Histórico de "${user.name}" excluído`);
+      setSelectedConv(null);
+      setSelectedUserGroupKey(null);
+      await fetchConversations(page, true);
+    } catch (err: any) {
+      showToast(err.message || 'Erro ao excluir histórico', 'error');
+    } finally {
+      setUserActionLoading(null);
+    }
+  };
+
+  interface GroupedUser {
+    groupKey: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    customerId: string | null;
+    sessionId: string;
+    conversations: Conversation[];
+    lastInteractionAt: string;
+  }
+
+  const groupedUsers = useMemo<GroupedUser[]>(() => {
+    const groups: Record<string, GroupedUser> = {};
+    conversations.forEach((conv) => {
+      const key = conv.customer_id ? `cust_${conv.customer_id}` : `sess_${conv.session_id}`;
+      if (!groups[key]) {
+        const name = conv.customer_name || conv.name || `Visitante ${conv.session_id.slice(0, 8)}`;
+        const email = conv.customer_email || conv.email;
+        const phone = conv.customer_phone || conv.phone;
+        groups[key] = {
+          groupKey: key,
+          name,
+          email,
+          phone,
+          customerId: conv.customer_id,
+          sessionId: conv.session_id,
+          conversations: [],
+          lastInteractionAt: conv.last_message_at,
+        };
+      }
+      groups[key].conversations.push(conv);
+      if (new Date(conv.last_message_at) > new Date(groups[key].lastInteractionAt)) {
+        groups[key].lastInteractionAt = conv.last_message_at;
+      }
+    });
+
+    Object.values(groups).forEach(g => {
+      g.conversations.sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
+    });
+
+    return Object.values(groups).sort((a, b) => new Date(b.lastInteractionAt).getTime() - new Date(a.lastInteractionAt).getTime());
+  }, [conversations]);
+
+  // --- Seletores Memoizados para Chaves ---
+  const filteredKeys = useMemo(() => {
+    let result = [...keys];
+    if (keyFilters.search.trim()) {
+      const q = keyFilters.search.trim().toLowerCase();
+      result = result.filter(
+        k => k.name.toLowerCase().includes(q) ||
+             k.key_preview.toLowerCase().includes(q) ||
+             k.provider.toLowerCase().includes(q)
+      );
+    }
+    if (keyFilters.provider !== 'all') {
+      result = result.filter(k => k.provider === keyFilters.provider);
+    }
+    if (keyFilters.healthStatus !== 'all') {
+      result = result.filter(k => k.health_status === keyFilters.healthStatus);
+    }
+    if (keyFilters.enabled === 'active') result = result.filter(k => k.enabled);
+    if (keyFilters.enabled === 'inactive') result = result.filter(k => !k.enabled);
+
+    result.sort((a, b) => {
+      switch (keyFilters.sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'last_success': {
+          const ta = a.last_success_at ? new Date(a.last_success_at).getTime() : 0;
+          const tb = b.last_success_at ? new Date(b.last_success_at).getTime() : 0;
+          return tb - ta;
+        }
+        case 'last_error': {
+          const ta = a.last_error_at ? new Date(a.last_error_at).getTime() : 0;
+          const tb = b.last_error_at ? new Date(b.last_error_at).getTime() : 0;
+          return tb - ta;
+        }
+        case 'updated': {
+          const ta = new Date(a.updated_at).getTime();
+          const tb = new Date(b.updated_at).getTime();
+          return tb - ta;
+        }
+        case 'priority':
+        default:
+          return b.priority - a.priority || a.name.localeCompare(b.name);
+      }
+    });
+    return result;
+  }, [keys, keyFilters]);
+
+  const keyStats = useMemo(() => {
+    const active = keys.filter(k => k.enabled).length;
+    const inactive = keys.length - active;
+    const lastUpdated = keys.reduce<string | null>((latest, k) => {
+      if (!latest || new Date(k.updated_at) > new Date(latest)) return k.updated_at;
+      return latest;
+    }, null);
+    return { active, inactive, lastUpdated };
+  }, [keys]);
+
+  // --- Loader de Chaves ---
+  const [keyStatus, setKeyStatus] = useState<any>(null);
+  const [loadingKeyStatus, setLoadingKeyStatus] = useState(false);
+
+  const loadKeysData = useCallback(async (silent = false) => {
+    try {
+      if (silent) setLoadingKeyStatus(true);
+      else setLoadingKeys(true);
+      const [keysData, statusData] = await Promise.all([
+        aiApiKeysService.listKeys(),
+        aiApiKeysService.getStatus(),
+      ]);
+      setKeys(keysData);
+      setKeyStatus(statusData);
+    } catch (err: any) {
+      showToast(err.message || 'Erro ao carregar chaves', 'error');
+    } finally {
+      setLoadingKeys(false);
+      setLoadingKeyStatus(false);
+    }
+  }, []);
+
+  const runKeyAction = async (
+    key: AiApiKey,
+    actionKey: string,
+    action: () => Promise<unknown>,
+    successMsg: string
+  ) => {
+    try {
+      setActionLoadingKey(`${key.id}:${actionKey}`);
+      setOpenMenuId(null);
+      await action();
+      showToast(successMsg, 'success');
+      await loadKeysData(true);
+    } catch (err: any) {
+      showToast(err.message || 'Erro na operação', 'error');
+    } finally {
+      setActionLoadingKey(null);
+    }
+  };
+
+  const handleTestKey = async (key: AiApiKey) => {
+    try {
+      setActionLoadingKey(`${key.id}:test`);
+      setOpenMenuId(null);
+      const result = await aiApiKeysService.testKey(key.id);
+      if (result.success) {
+        showToast(`Chave "${key.name}" testada com sucesso ${result.responseTimeMs ? `(${result.responseTimeMs}ms)` : ''}`);
+      } else {
+        showToast(`Teste de "${key.name}" falhou: ${result.message}`, 'error');
+      }
+      await loadKeysData(true);
+    } catch (err: any) {
+      showToast(err.message || 'Erro ao testar chave', 'error');
+    } finally {
+      setActionLoadingKey(null);
+    }
+  };
+
+  const handleDisableKey = (key: AiApiKey) => {
+    const isHealthy = key.enabled && key.health_status === 'healthy';
+    const execute = () =>
+      runKeyAction(key, 'disable', () => aiApiKeysService.disableKey(key.id), `Chave "${key.name}" desativada`);
+
+    if (isHealthy) {
+      if (window.confirm(`Desativar a chave "${key.name}"?\n\nEla deixará de ser usada na rotação até ser reativada.`)) {
+        execute();
+      }
+    } else {
+      execute();
+    }
+  };
+
+  const handleEnableKey = (key: AiApiKey) => {
+    runKeyAction(key, 'enable', () => aiApiKeysService.enableKey(key.id), `Chave "${key.name}" ativada`);
+  };
+
+  const handleForceCooldownReset = (key: AiApiKey) => {
+    runKeyAction(key, 'reset_cooldown', () => aiApiKeysService.clearCooldown(key.id), `Cooldown de "${key.name}" reiniciado`);
+  };
+
+  const handleMarkDeadKey = (key: AiApiKey) => {
+    if (window.confirm(`Marcar "${key.name}" como morta?\n\nA chave será desativada e não será usada na rotação automática.`)) {
+      runKeyAction(
+        key,
+        'dead',
+        () => aiApiKeysService.markDead(key.id),
+        `Chave "${key.name}" marcada como morta`
+      );
+    }
+  };
+
+  const handleRemoveKey = (key: AiApiKey) => {
+    if (window.confirm(`Tem certeza que deseja remover a chave "${key.name}"?\n\nEssa ação não exibirá a chave novamente.`)) {
+      runKeyAction(key, 'remove', () => aiApiKeysService.deleteKey(key.id), `Chave "${key.name}" removida com sucesso`);
+    }
+  };
+
+  const handleCreateKey = async () => {
+    if (!keyFormData.name.trim() || !keyFormData.apiKey.trim()) {
+      showToast('Nome e chave de API são obrigatórios', 'error');
+      return;
+    }
+    try {
+      setActionLoadingKey('create');
+      const result = await aiApiKeysService.createKey({
+        name: keyFormData.name.trim(),
+        provider: keyFormData.provider,
+        model: keyFormData.model || undefined,
+        apiKey: keyFormData.apiKey.trim(),
+        priority: keyFormData.priority,
+        testOnCreate: keyFormData.testOnCreate,
+      });
+      if (result.testResult) {
+        if (result.testResult.success) {
+          showToast(`Chave "${keyFormData.name}" criada e testada com sucesso`);
+        } else {
+          showToast(`Chave criada, mas o teste falhou: ${result.testResult.message}`, 'error');
+        }
+      } else {
+        showToast(`Chave "${keyFormData.name}" criada com sucesso`);
+      }
+      setShowKeyForm(false);
+      setKeyFormData({ name: '', provider: 'gemini', model: '', apiKey: '', priority: 0, testOnCreate: true });
+      await loadKeysData(true);
+    } catch (err: any) {
+      if (err instanceof DuplicateApiKeyError) {
+        setDuplicatePrompt({
+          message: err.message,
+          existingKey: err.existingKey,
+          canReactivate: err.canReactivate,
+        });
+        setShowKeyForm(false);
+      } else {
+        showToast(err.message || 'Erro ao criar chave', 'error');
+      }
+    } finally {
+      setActionLoadingKey(null);
+    }
+  };
+
+  const handleReactivateKey = async (keyId: string) => {
+    try {
+      setActionLoadingKey('reactivate');
+      await aiApiKeysService.enableKey(keyId);
+      showToast('Chave reativada com sucesso');
+      setDuplicatePrompt(null);
+      await loadKeysData(true);
+    } catch (err: any) {
+      showToast(err.message || 'Erro ao reativar chave', 'error');
+    } finally {
+      setActionLoadingKey(null);
+    }
+  };
+
+  const openAuditLogs = async (key: AiApiKey) => {
+    setOpenMenuId(null);
+    setAuditKey(key);
+    setAuditLoading(true);
+    try {
+      const history = await aiApiKeysService.getAuditHistory(key.id);
+      setAuditLogs(history.logs || []);
+    } catch (err: any) {
+      showToast(err.message || 'Erro ao carregar histórico', 'error');
+      setAuditKey(null);
+    } finally {
+      setAuditLoading(false);
+    }
+  };
   const [replyText, setReplyText] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
   const [page, setPage] = useState(1);
@@ -901,6 +1446,11 @@ export default function KaiaChats() {
     endDate: '',
     is_archived: '',
     is_ignored: '',
+    is_deleted: '',
+    channel: '',
+    intent: '',
+    has_fallback: '',
+    escalated: '',
   });
   const [showFilters, setShowFilters] = useState(false);
   const [actionLoading, setActionLoading] = useState('');
@@ -945,7 +1495,7 @@ export default function KaiaChats() {
       const res = await fetch(`${API_URL}/admin/kaia/v2/conversations/counts`, { headers });
       const data = await res.json();
       if (data.success && data.data) {
-        setPendingCount(Number(data.data.awaiting_human || 0));
+        setPendingCount(Number(data.data.awaitingHuman ?? data.data.awaiting_human ?? 0));
       }
     } catch (err) {
       console.error('Erro ao buscar contagens:', err);
@@ -1036,6 +1586,14 @@ export default function KaiaChats() {
 
   useEffect(() => { fetchConversations(1); fetchMetrics(); fetchConversationCounts(); }, []);
   useEffect(() => { fetchConversations(page); }, [filters, page, fetchConversations]);
+
+  useEffect(() => {
+    if (activeTab === 'keys') {
+      loadKeysData();
+    } else if (activeTab === 'performance') {
+      fetchMetrics();
+    }
+  }, [activeTab, loadKeysData, fetchMetrics]);
 
   // Auto-refresh a cada 3 segundos
   useEffect(() => {
@@ -1202,33 +1760,86 @@ export default function KaiaChats() {
       {/* Toasts */}
       <Toast toasts={toasts} />
       {/* ===== Header ===== */}
-      <div className="flex-shrink-0 mb-4">
-        <div className="flex items-center justify-between mb-1">
+      <div className="flex-shrink-0 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg">
               <Bot size={20} className="text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Central da IA - Kaia</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Diagnóstico técnico e auditoria de atendimentos</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Diagnóstico técnico, monitoramento de agentes e chaves de API</p>
             </div>
           </div>
-          <div className="flex gap-2">
+
+          {/* Tab selector */}
+          <div className="flex bg-gray-105 dark:bg-gray-800 rounded-lg p-0.5 border border-gray-200 dark:border-gray-700 self-start md:self-auto shadow-sm">
+            <button
+              type="button"
+              onClick={() => setActiveTab('chats')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                activeTab === 'chats'
+                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+            >
+              <MessageSquare size={13} />
+              Atendimentos e Chats
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('performance')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                activeTab === 'performance'
+                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+            >
+              <Activity size={13} />
+              Performance e Métricas
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('agents')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                activeTab === 'agents'
+                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+            >
+              <Bot size={13} />
+              Agentes de IA
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('keys')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                activeTab === 'keys'
+                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+            >
+              <KeyRound size={13} />
+              Chaves de API
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2 self-start md:self-auto">
             {/* Badge pending */}
             {pendingCount > 0 && (
               <button
                 type="button"
-                onClick={() => { setFilters(f => ({ ...f, status: 'awaiting_human' })); setPage(1); fetchConversations(1); }}
-                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 font-semibold animate-pulse hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors"
+                onClick={() => { setActiveTab('chats'); setFilters(f => ({ ...f, status: 'awaiting_human', is_archived: '', is_ignored: '' })); setPage(1); setShowFilters(true); }}
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 font-semibold animate-pulse hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors shadow-sm"
               >
                 <AlertCircle size={14} />
-                {pendingCount} aguardando atendimento
+                {pendingCount} pendente(s)
               </button>
             )}
             {/* Auto-refresh toggle */}
             <button
               onClick={() => setAutoRefresh(a => !a)}
-              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
+              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors shadow-sm ${
                 autoRefresh
                   ? 'border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'
                   : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'
@@ -1238,49 +1849,18 @@ export default function KaiaChats() {
               {autoRefresh ? 'Auto ativo' : 'Auto off'}
             </button>
             <button
-              onClick={() => setShowMetrics(!showMetrics)}
-              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300"
+              onClick={() => { fetchConversations(page); fetchMetrics(); if (activeTab === 'keys') loadKeysData(true); }}
+              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300 shadow-sm"
             >
-              <BarChart2 size={14} />
-              {showMetrics ? 'Ocultar métricas' : 'Ver métricas'}
-            </button>
-            <button
-              onClick={() => { fetchConversations(page); fetchMetrics(); }}
-              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300"
-            >
-              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+              <RefreshCw size={14} className={loading || loadingKeys || loadingKeyStatus ? 'animate-spin' : ''} />
               Atualizar
             </button>
           </div>
         </div>
       </div>
 
-      {/* ===== Métricas Dashboard ===== */}
-      {showMetrics && metrics && (
-        <div className="flex-shrink-0 mb-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-          {[
-            { label: 'Total', value: metrics.totalConversations, icon: MessageSquare, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-50 dark:bg-violet-900/20' },
-            { label: 'Hoje', value: metrics.todayConversations, icon: Calendar, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-            { label: 'Humano', value: metrics.humanConversations, icon: Headphones, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20' },
-            { label: 'Erros', value: metrics.errorConversations, icon: AlertTriangle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20' },
-            { label: 'Fallback', value: `${metrics.fallbackRate}%`, icon: Activity, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
-            { label: 'Escalonamento', value: `${metrics.escalationRate}%`, icon: TrendingUp, color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/20' },
-            { label: 'Resp. Média', value: `${metrics.avgResponseTime}ms`, icon: Clock, color: 'text-cyan-600 dark:text-cyan-400', bg: 'bg-cyan-50 dark:bg-cyan-900/20' },
-            { label: 'Bloqueios', value: metrics.securityBlocksCount, icon: Shield, color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-900/20' },
-          ].map((m, i) => {
-            const Icon = m.icon;
-            return (
-              <div key={i} className={`${m.bg} rounded-xl p-3 flex flex-col gap-1 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-colors`}>
-                <div className={`flex items-center gap-1.5 ${m.color}`}>
-                  <Icon size={13} />
-                  <span className="text-[11px] font-semibold">{m.label}</span>
-                </div>
-                <span className="text-xl font-bold text-gray-800 dark:text-white">{m.value}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {activeTab === 'chats' ? (
+        <>
 
       {/* ===== Layout Principal: Lista | Chat ===== */}
       <div className="flex flex-1 min-h-0 gap-0 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
@@ -1288,6 +1868,37 @@ export default function KaiaChats() {
         <div className="w-80 flex-shrink-0 flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
           {/* Busca e Filtros */}
           <div className="p-3 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {[
+                { id: '', label: 'Todas' },
+                { id: 'ai_active', label: 'IA ativa' },
+                { id: 'awaiting_human', label: 'Aguardando' },
+                { id: 'archived', label: 'Arquivadas' },
+                { id: 'deleted', label: 'Excluídas' },
+              ].map((chip) => (
+                <button
+                  key={chip.id || 'all'}
+                  type="button"
+                  onClick={() => {
+                    setFilters((f) => ({
+                      ...f,
+                      status: chip.id,
+                      is_archived: chip.id === 'archived' ? 'true' : '',
+                      is_deleted: chip.id === 'deleted' ? 'true' : '',
+                      is_ignored: '',
+                    }));
+                    setPage(1);
+                  }}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
+                    filters.status === chip.id
+                      ? 'bg-primary-600 border-primary-600 text-white'
+                      : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
             <form onSubmit={handleSearch} className="flex gap-1.5 mb-2">
               <div className="relative flex-1">
                 <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -1296,13 +1907,13 @@ export default function KaiaChats() {
                   value={filters.search}
                   onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
                   placeholder="Buscar cliente, e-mail, sessão..."
-                  className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
               <button
                 type="button"
                 onClick={() => setShowFilters(!showFilters)}
-                className={`p-1.5 rounded-lg border transition-colors ${showFilters ? 'border-violet-400 bg-violet-50 dark:bg-violet-900/30 text-violet-600' : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                className={`p-1.5 rounded-lg border transition-colors ${showFilters ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/30 text-primary-600' : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
               >
                 <Filter size={14} />
               </button>
@@ -1313,7 +1924,7 @@ export default function KaiaChats() {
                 <select
                   value={filters.status}
                   onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}
-                  className="w-full text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                  className="w-full text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
                 >
                   <option value="">Todos os status</option>
                   <option value="ai_active">IA ativa</option>
@@ -1324,15 +1935,13 @@ export default function KaiaChats() {
                   <option value="ignored">Ignoradas</option>
                   <option value="deleted">Excluídas</option>
                   <option value="resolved">Resolvido</option>
-                  <option value="human_needed">Atendimento Pendente (legado)</option>
-                  <option value="human_assigned">Com Atendente (legado)</option>
                   <option value="closed">Encerrado</option>
                 </select>
                 <div className="flex gap-1.5">
                   <select
                     value={filters.is_archived}
                     onChange={e => setFilters(f => ({ ...f, is_archived: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   >
                     <option value="">Todos (Arq)</option>
                     <option value="false">Não arquivados</option>
@@ -1341,7 +1950,7 @@ export default function KaiaChats() {
                   <select
                     value={filters.is_ignored}
                     onChange={e => setFilters(f => ({ ...f, is_ignored: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   >
                     <option value="">Todos (Ign)</option>
                     <option value="false">Não ignorados</option>
@@ -1350,9 +1959,37 @@ export default function KaiaChats() {
                 </div>
                 <div className="flex gap-1.5">
                   <select
+                    value={filters.channel}
+                    onChange={e => setFilters(f => ({ ...f, channel: e.target.value }))}
+                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  >
+                    <option value="">Todos canais</option>
+                    <option value="site">Site</option>
+                    <option value="whatsapp">WhatsApp</option>
+                    <option value="email">E-mail</option>
+                  </select>
+                  <select
+                    value={filters.is_deleted}
+                    onChange={e => setFilters(f => ({ ...f, is_deleted: e.target.value }))}
+                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  >
+                    <option value="">Todos exclusao</option>
+                    <option value="false">Nao excluidos</option>
+                    <option value="true">Excluidos</option>
+                  </select>
+                </div>
+                <input
+                  type="text"
+                  value={filters.intent}
+                  onChange={e => setFilters(f => ({ ...f, intent: e.target.value }))}
+                  placeholder="Filtrar por intencao"
+                  className="w-full text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                />
+                <div className="flex gap-1.5">
+                  <select
                     value={filters.has_error}
                     onChange={e => setFilters(f => ({ ...f, has_error: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   >
                     <option value="">Todos os erros</option>
                     <option value="true">Com Erro</option>
@@ -1360,10 +1997,30 @@ export default function KaiaChats() {
                   <select
                     value={filters.has_human_support}
                     onChange={e => setFilters(f => ({ ...f, has_human_support: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   >
                     <option value="">Todos suporte</option>
                     <option value="true">Com Humano</option>
+                  </select>
+                </div>
+                <div className="flex gap-1.5">
+                  <select
+                    value={filters.has_fallback}
+                    onChange={e => setFilters(f => ({ ...f, has_fallback: e.target.value }))}
+                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  >
+                    <option value="">Todos fallback</option>
+                    <option value="true">Com fallback</option>
+                    <option value="false">Sem fallback</option>
+                  </select>
+                  <select
+                    value={filters.escalated}
+                    onChange={e => setFilters(f => ({ ...f, escalated: e.target.value }))}
+                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  >
+                    <option value="">Todos escalonamento</option>
+                    <option value="true">Escalonados</option>
+                    <option value="false">Nao escalonados</option>
                   </select>
                 </div>
                 <div className="flex gap-1.5">
@@ -1371,17 +2028,17 @@ export default function KaiaChats() {
                     type="date"
                     value={filters.startDate}
                     onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   />
                   <input
                     type="date"
                     value={filters.endDate}
                     onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-violet-500"
+                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
                   />
                 </div>
                 <button
-                  onClick={() => { setFilters({ search: '', status: '', has_error: '', has_human_support: '', customer_only: '', visitor_only: '', startDate: '', endDate: '', is_archived: '', is_ignored: '' }); setPage(1); }}
+                  onClick={() => { setFilters({ search: '', status: '', has_error: '', has_human_support: '', customer_only: '', visitor_only: '', startDate: '', endDate: '', is_archived: '', is_ignored: '', is_deleted: '', channel: '', intent: '', has_fallback: '', escalated: '' }); setPage(1); }}
                   className="w-full text-xs text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors py-0.5"
                 >
                   Limpar filtros
@@ -1390,27 +2047,179 @@ export default function KaiaChats() {
             )}
 
             <div className="flex items-center justify-between mt-1">
-              <span className="text-xs text-gray-400 dark:text-gray-500">{totalConvs} conversas</span>
-              {loading && <Loader2 size={12} className="animate-spin text-violet-500" />}
+              <span className="text-xs text-gray-400 dark:text-gray-500">{totalConvs} contatos</span>
+              {loading && <Loader2 size={12} className="animate-spin text-primary-500" />}
             </div>
           </div>
 
-          {/* Lista */}
-          <div className="flex-1 overflow-y-auto">
-            {conversations.length === 0 && !loading && (
+          {/* Lista agrupada por usuário */}
+          <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+            {groupedUsers.length === 0 && !loading && (
               <div className="flex flex-col items-center justify-center h-40 text-gray-400 dark:text-gray-600">
                 <MessageSquare size={32} className="mb-2 opacity-50" />
                 <p className="text-sm">Nenhuma conversa encontrada</p>
               </div>
             )}
-            {conversations.map(conv => (
-              <ConversationCard
-                key={conv.id}
-                conv={conv}
-                isSelected={selectedConv?.id === conv.id}
-                onClick={() => setSelectedConv(conv)}
-              />
-            ))}
+            {groupedUsers.map((user: GroupedUser) => {
+              const isSelected = selectedUserGroupKey === user.groupKey;
+              const mostRecentConv = user.conversations[0];
+              const isIgnored = user.conversations.some(c => c.is_ignored);
+              const isUserMenuOpen = userMenuOpenKey === user.groupKey;
+              const isProfileIgnored = ignoredProfiles.some(p =>
+                (user.customerId && p.customer_id === user.customerId) ||
+                (p.session_id === user.sessionId) ||
+                (user.email && p.email === user.email)
+              );
+              const isActionLoading = userActionLoading?.endsWith(user.groupKey);
+              return (
+                <div key={user.groupKey} className="flex flex-col">
+                  {/* Card do Usuário — botão direito abre o menu de contexto */}
+                  <div
+                    className={`relative flex gap-0 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-default ${
+                      isSelected ? 'bg-primary-50/50 dark:bg-primary-950/10' : ''
+                    }`}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setUserMenuOpenKey(isUserMenuOpen ? null : user.groupKey);
+                    }}
+                  >
+                    <button
+                      onClick={() => {
+                        setSelectedUserGroupKey(isSelected ? null : user.groupKey);
+                        if (mostRecentConv) setSelectedConv(mostRecentConv);
+                        setUserMenuOpenKey(null);
+                      }}
+                      className="flex-1 text-left p-3 flex gap-3 min-w-0"
+                    >
+                      <div className="relative flex-shrink-0">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                          isProfileIgnored
+                            ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                            : 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                        }`}>
+                          {isActionLoading
+                            ? <Loader2 size={14} className="animate-spin" />
+                            : user.name.charAt(0).toUpperCase()
+                          }
+                        </div>
+                        {(isIgnored || isProfileIgnored) && (
+                          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center border border-white dark:border-gray-900">
+                            <EyeOff size={10} />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-bold text-xs text-gray-900 dark:text-white truncate">
+                            {user.name}
+                          </span>
+                          <span className="text-[9px] text-gray-400 font-mono whitespace-nowrap">
+                            {formatLastInteraction(user.lastInteractionAt)}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                          {user.email || user.phone || 'Sem contato'}
+                        </p>
+                        <div className="flex items-center justify-between mt-1 text-[10px] text-gray-400 dark:text-gray-500">
+                          <span>{user.conversations.length} {user.conversations.length === 1 ? 'chat' : 'chats'}</span>
+                          {mostRecentConv && (
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${
+                              getStatusInfo(mostRecentConv.status).bg
+                            } ${getStatusInfo(mostRecentConv.status).color}`}>
+                              {getStatusInfo(mostRecentConv.status).label}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Dropdown de Contexto (clique direito) */}
+                    {isUserMenuOpen && (
+                      <div
+                        className="absolute right-2 top-2 z-50 w-52 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+                        onClick={(e) => e.stopPropagation()}
+                        onContextMenu={(e) => e.preventDefault()}
+                      >
+                        <div className="px-3 py-2.5 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                          <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Ações do Perfil</p>
+                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate mt-0.5">{user.name}</p>
+                        </div>
+
+                        {isProfileIgnored ? (
+                          <button
+                            onClick={() => handleUnignoreProfile(user)}
+                            className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                          >
+                            <UserCheck size={13} />
+                            Remover dos Ignorados
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleIgnoreProfile(user)}
+                            className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                          >
+                            <UserX size={13} />
+                            Ignorar Perfil Inteiro
+                          </button>
+                        )}
+
+                        <div className="border-t border-gray-100 dark:border-gray-800">
+                          <button
+                            onClick={() => handleBulkDeleteUser(user)}
+                            className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 text-xs text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          >
+                            <Trash2 size={13} />
+                            Excluir todo o histórico
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Lista Expandida de Chats do Usuário */}
+                  {isSelected && user.conversations.length > 0 && (
+                    <div className="bg-gray-50/50 dark:bg-gray-950/20 pl-4 py-1.5 border-l-2 border-primary-500 space-y-1">
+                      <div className="px-2 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+                        Histórico de Sessões:
+                      </div>
+                      {user.conversations.map((conv) => (
+                        <button
+                          key={conv.id}
+                          onClick={() => setSelectedConv(conv)}
+                          className={`w-full text-left p-2 rounded-l-lg flex flex-col gap-1 transition-all border border-r-0 border-transparent hover:bg-white dark:hover:bg-gray-900 hover:shadow-xs ${
+                            selectedConv?.id === conv.id
+                              ? 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-xs'
+                              : ''
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-1 w-full">
+                            <span className="text-[10px] font-mono text-gray-500 font-bold">
+                              ID: {conv.id.slice(0, 8)}
+                            </span>
+                            <span className="text-[9px] text-gray-400">
+                              {timeAgo(conv.last_message_at)}
+                            </span>
+                          </div>
+                          {conv.last_message && (
+                            <p className="text-[10px] text-gray-600 dark:text-gray-400 truncate w-full italic">
+                              "{conv.last_message.content}"
+                            </p>
+                          )}
+                          <div className="flex items-center justify-between text-[9px] mt-0.5 w-full">
+                            <span className="text-gray-400 font-mono">Canal: {conv.channel}</span>
+                            <span className={`px-1 py-0.1 rounded font-semibold ${getStatusInfo(conv.status).bg} ${getStatusInfo(conv.status).color}`}>
+                              {getStatusInfo(conv.status).label}
+                            </span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Paginação */}
@@ -1443,7 +2252,7 @@ export default function KaiaChats() {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3 min-w-0">
                   <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold ${
-                    selectedConv.customer_id ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                    selectedConv.customer_id ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
                   }`}>
                     {(selectedConv.customer_name || selectedConv.name || 'V').charAt(0).toUpperCase()}
                   </div>
@@ -1456,7 +2265,7 @@ export default function KaiaChats() {
                         {getStatusInfo(selectedConv.status).label}
                       </span>
                       {(selectedConv as any).is_archived && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-850 dark:text-gray-300 font-medium">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 font-medium">
                           Arquivado
                         </span>
                       )}
@@ -1543,7 +2352,7 @@ export default function KaiaChats() {
                     <button
                       onClick={() => requestAction('resume-ai')}
                       disabled={!!actionLoading}
-                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-violet-500 hover:bg-violet-600 text-white transition-colors disabled:opacity-50"
+                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white transition-colors disabled:opacity-50"
                     >
                       {actionLoading === 'resume-ai' ? <Loader2 size={11} className="animate-spin" /> : <Play size={11} />}
                       Retomar IA
@@ -1588,7 +2397,7 @@ export default function KaiaChats() {
                   </span>
                 )}
                 {selectedConv.has_recommendation && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300 font-medium flex items-center gap-1">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300 font-medium flex items-center gap-1">
                     <Package size={9} /> Recomendação
                   </span>
                 )}
@@ -1609,7 +2418,7 @@ export default function KaiaChats() {
             <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4">
               {loadingMessages ? (
                 <div className="flex items-center justify-center h-40">
-                  <Loader2 size={24} className="animate-spin text-violet-500" />
+                  <Loader2 size={24} className="animate-spin text-primary-500" />
                 </div>
               ) : messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-40 text-gray-400 dark:text-gray-600">
@@ -1635,12 +2444,12 @@ export default function KaiaChats() {
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(); } }}
                   placeholder="Responder como administrador... (Enter para enviar)"
                   rows={2}
-                  className="flex-1 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 placeholder-gray-400 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent resize-none"
+                  className="flex-1 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 placeholder-gray-400 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
                 />
                 <button
                   onClick={handleReply}
                   disabled={!replyText.trim() || sendingReply}
-                  className="px-3 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  className="px-3 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
                 >
                   {sendingReply ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                 </button>
@@ -1653,8 +2462,8 @@ export default function KaiaChats() {
         ) : (
           /* Estado Vazio */
           <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-950 text-gray-400 dark:text-gray-600">
-            <div className="w-20 h-20 bg-violet-100 dark:bg-violet-900/20 rounded-2xl flex items-center justify-center mb-4">
-              <Bot size={36} className="text-violet-400 dark:text-violet-500" />
+            <div className="w-20 h-20 bg-primary-100 dark:bg-primary-900/20 rounded-2xl flex items-center justify-center mb-4">
+              <Bot size={36} className="text-primary-400 dark:text-primary-500" />
             </div>
             <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-1">Selecione uma conversa</h3>
             <p className="text-sm text-center max-w-xs">
@@ -1665,7 +2474,7 @@ export default function KaiaChats() {
             {metrics && metrics.topIntents.length > 0 && (
               <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 w-80">
                 <h4 className="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-3 flex items-center gap-1.5">
-                  <TrendingUp size={14} className="text-violet-500" />
+                  <TrendingUp size={14} className="text-primary-500" />
                   Intenções Mais Comuns
                 </h4>
                 <div className="space-y-1.5">
@@ -1681,7 +2490,7 @@ export default function KaiaChats() {
                         </div>
                         <div className="h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-violet-400 to-purple-500 rounded-full"
+                            className="h-full bg-gradient-to-r from-primary-400 to-primary-600 rounded-full"
                             style={{ width: `${(item.count / (metrics.topIntents[0]?.count || 1)) * 100}%` }}
                           />
                         </div>
@@ -1694,6 +2503,768 @@ export default function KaiaChats() {
           </div>
         )}
       </div>
+      </>
+      ) : activeTab === 'performance' ? (
+        /* ===== ABA 2: PERFORMANCE E MÉTRICAS ===== */
+        <div className="flex-1 overflow-y-auto space-y-6 pb-8 pr-2 animate-in fade-in duration-200">
+          {/* Métricas do Dashboard */}
+          {metrics && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
+              {[
+                {
+                  label: 'Conversas',
+                  value: metrics.totalConversations,
+                  icon: MessageSquare,
+                  color: 'text-primary-600 dark:text-primary-400',
+                  bg: 'bg-primary-50 dark:bg-primary-900/20',
+                  tooltip: 'Total geral de conversas históricas atendidas pela IA (chats ignorados não incluídos).'
+                },
+                {
+                  label: 'Hoje',
+                  value: metrics.todayConversations,
+                  icon: Calendar,
+                  color: 'text-emerald-600 dark:text-emerald-400',
+                  bg: 'bg-emerald-50 dark:bg-emerald-900/20',
+                  tooltip: 'Novas conversas iniciadas nas últimas 24 horas.'
+                },
+                {
+                  label: 'Aguardando Suporte',
+                  value: metrics.awaitingHuman ?? 0,
+                  icon: Headphones,
+                  color: 'text-amber-600 dark:text-amber-400',
+                  bg: 'bg-amber-50 dark:bg-amber-900/20',
+                  tooltip: 'Conversas que necessitam de suporte humano (Clique para filtrar chats).',
+                  onClick: () => {
+                    setActiveTab('chats');
+                    setFilters(f => ({ ...f, status: 'awaiting_human', is_archived: '', is_ignored: '', is_deleted: '' }));
+                    setPage(1);
+                  }
+                },
+                {
+                  label: 'Erros',
+                  value: metrics.errorConversations,
+                  icon: AlertTriangle,
+                  color: 'text-red-600 dark:text-red-400',
+                  bg: 'bg-red-50 dark:bg-red-900/20',
+                  tooltip: 'Chats que apresentaram erros de modelo ou fallbacks.'
+                },
+                {
+                  label: 'Fallback',
+                  value: `${metrics.fallbackRate}%`,
+                  icon: Activity,
+                  color: 'text-amber-600 dark:text-amber-400',
+                  bg: 'bg-amber-50 dark:bg-amber-900/20',
+                  tooltip: 'Percentual de mensagens em que a IA recorreu ao fallback.'
+                },
+                {
+                  label: 'Resp. Média',
+                  value: `${metrics.avgResponseTime}ms`,
+                  icon: Clock,
+                  color: 'text-cyan-600 dark:text-cyan-400',
+                  bg: 'bg-cyan-50 dark:bg-cyan-900/20',
+                  tooltip: 'Tempo médio de resposta da inteligência artificial em milissegundos.'
+                },
+                {
+                  label: 'Bloqueios',
+                  value: metrics.securityBlocksCount,
+                  icon: Shield,
+                  color: 'text-rose-600 dark:text-rose-400',
+                  bg: 'bg-rose-50 dark:bg-rose-900/20',
+                  tooltip: 'Mensagens interceptadas por suspeita de prompt injection ou abuso.'
+                },
+              ].map((m, i) => {
+                const Icon = m.icon;
+                const Wrapper = m.onClick ? 'button' : 'div';
+                return (
+                  <Wrapper
+                    key={i}
+                    {...(m.onClick ? { onClick: m.onClick } : {})}
+                    title={m.tooltip}
+                    className={`${m.bg} rounded-xl p-3 flex flex-col gap-1 border border-transparent shadow-sm hover:border-gray-200 dark:hover:border-gray-700 transition-colors w-full text-left relative group cursor-help`}
+                  >
+                    <div className={`flex items-center gap-1.5 ${m.color}`}>
+                      <Icon size={14} />
+                      <span className="text-[10px] font-semibold uppercase tracking-wider">{m.label}</span>
+                    </div>
+                    <span className="text-xl font-bold text-gray-800 dark:text-white mt-0.5">{m.value}</span>
+                    <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 p-2 bg-gray-950 text-white text-[9px] rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-30 font-normal leading-relaxed text-center border border-gray-800">
+                      {m.tooltip}
+                    </div>
+                  </Wrapper>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Maiores Consumidores de Tokens */}
+            <div className="lg:col-span-2 space-y-6">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+                <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-700 pb-3">
+                  <div>
+                    <h3 className="font-bold text-gray-800 dark:text-white text-base">Consumo de Tokens por Cliente</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Clientes que mais demandaram processamento da inteligência artificial (estimado)</p>
+                  </div>
+                  <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300">
+                    Top 10 Consumidores
+                  </span>
+                </div>
+                {metrics && metrics.topConsumers && metrics.topConsumers.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-150 dark:border-gray-800 text-gray-400 font-semibold uppercase tracking-wider">
+                          <th className="py-2.5 px-3">#</th>
+                          <th className="py-2.5 px-3">Cliente / Sessão</th>
+                          <th className="py-2.5 px-3 text-center">Mensagens</th>
+                          <th className="py-2.5 px-3 text-right">Tokens Estimados</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                        {metrics.topConsumers.map((item: any, idx: number) => (
+                          <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors">
+                            <td className="py-3 px-3 font-mono text-gray-400">{idx + 1}</td>
+                            <td className="py-3 px-3">
+                              <div className="flex flex-col">
+                                <span className="font-bold text-gray-800 dark:text-gray-200">
+                                  {item.name || `Visitante ${item.sessionId?.slice(0, 12)}`}
+                                </span>
+                                <span className="text-[10px] text-gray-400">
+                                  {item.email ? maskEmail(item.email) : item.phone ? maskPhone(item.phone) : 'Sem contato cadastrado'}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-center font-semibold text-gray-700 dark:text-gray-300">
+                              {item.messageCount}
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded bg-primary-50 text-primary-700 dark:bg-primary-950/20 dark:text-primary-400 font-bold border border-primary-100 dark:border-primary-900/40">
+                                {item.estimatedTokens.toLocaleString('pt-BR')}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 text-center py-6">Nenhum dado de consumo registrado.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Rankings Auxiliares */}
+            <div className="space-y-6">
+              {/* Agente mais acionado */}
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+                <h3 className="font-bold text-gray-800 dark:text-white text-base mb-4 border-b border-gray-100 dark:border-gray-700 pb-3">Agentes Mais Acionados</h3>
+                {metrics && metrics.topAgents && metrics.topAgents.length > 0 ? (
+                  <div className="space-y-3">
+                    {metrics.topAgents.slice(0, 5).map((item: any, i: number) => (
+                      <div key={i} className="space-y-1">
+                        <div className="flex justify-between text-xs font-medium">
+                          <span className="text-gray-700 dark:text-gray-300 font-semibold">{CONFIGURED_AGENTS.find(a => a.id === item.agent)?.name || item.agent}</span>
+                          <span className="text-gray-500 font-mono">{item.count}x</span>
+                        </div>
+                        <div className="w-full bg-gray-105 dark:bg-gray-700 rounded-full h-1.5">
+                          <div
+                            className="bg-primary-600 h-1.5 rounded-full"
+                            style={{ width: `${(item.count / (metrics.topAgents?.[0]?.count || 1)) * 100}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 text-center py-4">Nenhum agente acionado hoje.</p>
+                )}
+              </div>
+
+              {/* Raking de Intenções do Usuário */}
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+                <h3 className="font-bold text-gray-800 dark:text-white text-base mb-4 border-b border-gray-100 dark:border-gray-700 pb-3">Intenções Mais Comuns</h3>
+                {metrics && metrics.topIntents.length > 0 ? (
+                  <div className="space-y-3">
+                    {metrics.topIntents.slice(0, 5).map((item, i) => (
+                      <div key={i} className="space-y-1">
+                        <div className="flex justify-between text-xs font-medium">
+                          <span className="text-gray-700 dark:text-gray-300 capitalize">{item.intent.replace(/_/g, ' ')}</span>
+                          <span className="text-gray-500 font-mono">{item.count}x</span>
+                        </div>
+                        <div className="w-full bg-gray-105 dark:bg-gray-700 rounded-full h-1.5">
+                          <div
+                            className="bg-primary-600 h-1.5 rounded-full"
+                            style={{ width: `${(item.count / (metrics.topIntents[0]?.count || 1)) * 100}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 text-center py-4">Nenhuma intenção registrada hoje.</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : activeTab === 'agents' ? (
+        /* ===== ABA 3: VISÃO GERAL DOS AGENTES ===== */
+        <div className="flex-1 overflow-y-auto space-y-6 pb-8 pr-2 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4 border-b border-gray-100 dark:border-gray-700 pb-3">
+              <div>
+                <h3 className="font-bold text-gray-800 dark:text-white text-base">Agentes de IA Configurados</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Todos os agentes configurados e rodando em tempo real no Chat Flutuante. Clique para ver detalhes e System Instructions.</p>
+              </div>
+              <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 font-mono">
+                {CONFIGURED_AGENTS.length} Agentes
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {CONFIGURED_AGENTS.map((agent) => (
+                <button
+                  key={agent.id}
+                  onClick={() => setSelectedAgentDetail(selectedAgentDetail?.id === agent.id ? null : agent)}
+                  className="w-full text-left p-4 rounded-xl border border-gray-100 dark:border-gray-750 bg-gray-50/50 dark:bg-gray-900/30 flex flex-col gap-2 hover:border-primary-350 dark:hover:border-primary-850 hover:shadow-md transition-all group"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span className="font-bold text-sm text-gray-950 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">{agent.name}</span>
+                    <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                      Ativo
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">{agent.description}</p>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-800 w-full">
+                    <span className="text-[9px] font-mono text-gray-400 dark:text-gray-500">{agent.id}</span>
+                    <span className="text-[10px] text-primary-600 dark:text-primary-400 font-semibold group-hover:underline">Visualizar regras &rarr;</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* ===== ABA 4: GESTÃO DE CHAVES DE API ===== */
+        <div className="flex-1 overflow-y-auto space-y-6 pb-8 pr-2 animate-in fade-in duration-200">
+          {/* Métricas de Chaves */}
+          {keyStatus && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-3">
+              <div className="p-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl flex flex-col gap-1 shadow-sm">
+                <span className="text-[10px] text-gray-400 uppercase font-semibold">Total de Chaves</span>
+                <span className="text-xl font-bold text-gray-800 dark:text-white">{keyStatus.totalKeys}</span>
+              </div>
+              <div className="p-3.5 bg-green-50/50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
+                <span className="text-[10px] text-green-700 dark:text-green-400 uppercase font-semibold">Ativas</span>
+                <span className="text-xl font-bold text-green-700 dark:text-green-400">
+                  {keyStats.active}
+                </span>
+              </div>
+              <div className="p-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl flex flex-col gap-1 shadow-sm">
+                <span className="text-[10px] text-gray-400 uppercase font-semibold">Desativadas</span>
+                <span className="text-xl font-bold text-gray-800 dark:text-white">
+                  {keyStats.inactive}
+                </span>
+              </div>
+              <div className="p-3.5 bg-green-50/50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
+                <span className="text-[10px] text-green-700 dark:text-green-400 uppercase font-semibold">Saudáveis</span>
+                <span className="text-xl font-bold text-green-700 dark:text-green-400">{keyStatus.healthyKeys}</span>
+              </div>
+              <div className="p-3.5 bg-yellow-50/50 dark:bg-yellow-950/20 border border-yellow-100 dark:border-yellow-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
+                <span className="text-[10px] text-yellow-700 dark:text-yellow-400 uppercase font-semibold">Cooldown</span>
+                <span className="text-xl font-bold text-yellow-700 dark:text-yellow-400">{keyStatus.cooldownKeys}</span>
+              </div>
+              <div className="p-3.5 bg-orange-50/50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
+                <span className="text-[10px] text-orange-700 dark:text-orange-400 uppercase font-semibold">Suspeitas</span>
+                <span className="text-xl font-bold text-orange-700 dark:text-orange-400">{keyStatus.suspectedDeadKeys}</span>
+              </div>
+              <div className="p-3.5 bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
+                <span className="text-[10px] text-red-700 dark:text-red-400 uppercase font-semibold">Mortas</span>
+                <span className="text-xl font-bold text-red-700 dark:text-red-400">{keyStatus.deadKeys}</span>
+              </div>
+              <div className="p-3.5 bg-primary-50/50 dark:bg-primary-950/20 border border-primary-100 dark:border-primary-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
+                <span className="text-[10px] text-primary-700 dark:text-primary-400 uppercase font-semibold">Origem</span>
+                <span className="text-sm font-bold text-primary-700 dark:text-primary-400 truncate mt-1">
+                  {keyStatus.keySource === 'db' ? 'Banco Encriptado' : keyStatus.keySource}
+                </span>
+              </div>
+              <div className="p-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl flex flex-col gap-1 shadow-sm">
+                <span className="text-[10px] text-gray-400 uppercase font-semibold">Atualizado</span>
+                <span className="text-xs font-bold text-gray-800 dark:text-white mt-1">
+                  {keyStats.lastUpdated ? new Date(keyStats.lastUpdated).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Filtros e Ação */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3 flex-1">
+                {/* Busca */}
+                <div className="relative w-full max-w-xs">
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
+                    <Search size={14} />
+                  </span>
+                  <input
+                    type="text"
+                    value={keyFilters.search}
+                    onChange={e => setKeyFilters(f => ({ ...f, search: e.target.value }))}
+                    placeholder="Buscar chaves..."
+                    className="w-full text-xs rounded-lg pl-9 pr-3 py-2 border border-gray-205 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Provedor */}
+                <select
+                  value={keyFilters.provider}
+                  onChange={e => setKeyFilters(f => ({ ...f, provider: e.target.value }))}
+                  className="text-xs rounded-lg px-2.5 py-2 border border-gray-205 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:outline-none"
+                >
+                  <option value="all">Todos Provedores</option>
+                  <option value="gemini">Gemini</option>
+                </select>
+
+                {/* Saúde */}
+                <select
+                  value={keyFilters.healthStatus}
+                  onChange={e => setKeyFilters(f => ({ ...f, healthStatus: e.target.value }))}
+                  className="text-xs rounded-lg px-2.5 py-2 border border-gray-205 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:outline-none"
+                >
+                  <option value="all">Todos Status Saúde</option>
+                  <option value="healthy">Saudável</option>
+                  <option value="cooling_down">Em Cooldown</option>
+                  <option value="suspected_dead">Suspeita de Morte</option>
+                  <option value="dead">Morta</option>
+                </select>
+
+                {/* Ativa/Desativada */}
+                <select
+                  value={keyFilters.enabled}
+                  onChange={e => setKeyFilters(f => ({ ...f, enabled: e.target.value }))}
+                  className="text-xs rounded-lg px-2.5 py-2 border border-gray-205 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:outline-none"
+                >
+                  <option value="all">Todas Ativações</option>
+                  <option value="active">Apenas Ativas</option>
+                  <option value="inactive">Apenas Desativadas</option>
+                </select>
+
+                {/* Ordenação */}
+                <select
+                  value={keyFilters.sortBy}
+                  onChange={e => setKeyFilters(f => ({ ...f, sortBy: e.target.value }))}
+                  className="text-xs rounded-lg px-2.5 py-2 border border-gray-205 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:outline-none"
+                >
+                  <option value="priority">Prioridade (Maior)</option>
+                  <option value="name">Nome (A-Z)</option>
+                  <option value="last_success">Último Sucesso</option>
+                  <option value="last_error">Último Erro</option>
+                  <option value="updated">Última Atualização</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => loadKeysData(true)}
+                  disabled={loadingKeys || loadingKeyStatus}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-all font-semibold"
+                >
+                  <RefreshCw size={12} className={loadingKeys || loadingKeyStatus ? 'animate-spin' : ''} />
+                  Atualizar
+                </button>
+                <button
+                  onClick={() => setShowKeyForm(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-primary-600 text-white text-xs hover:bg-primary-700 transition-all font-semibold shadow-sm"
+                >
+                  <Plus size={13} /> Nova Chave
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Listagem de Chaves */}
+          {loadingKeys && !keys.length ? (
+            <div className="flex items-center justify-center h-48 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
+              <Loader2 className="animate-spin text-primary-500" size={32} />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredKeys.map((key: AiApiKey) => {
+                const isHealthy = key.enabled && key.health_status === 'healthy';
+                const isCooldown = key.enabled && key.health_status === 'cooling_down';
+                const isSuspected = key.enabled && key.health_status === 'suspected_dead';
+                const isDead = key.health_status === 'dead';
+
+                return (
+                  <div key={key.id} className={`bg-white dark:bg-gray-800 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md flex flex-col gap-3.5 relative ${
+                    !key.enabled
+                      ? 'border-gray-205 dark:border-gray-750 opacity-60'
+                      : isHealthy
+                      ? 'border-green-200 hover:border-green-300 dark:border-green-900/50'
+                      : isCooldown
+                      ? 'border-yellow-250 hover:border-yellow-350 dark:border-yellow-900/50'
+                      : isSuspected
+                      ? 'border-orange-250 hover:border-orange-355 dark:border-orange-900/50'
+                      : 'border-red-200 hover:border-red-300 dark:border-red-900/50'
+                  }`}>
+                    {/* Top Row: Name and health status badge */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-sm text-gray-900 dark:text-white truncate">{key.name}</h4>
+                        <span className="text-[9px] px-1.5 py-0.2 bg-gray-105 dark:bg-gray-900 text-gray-400 font-mono rounded">
+                          {key.provider}
+                        </span>
+                      </div>
+                      
+                      {/* Action Dropdown Toggle Button */}
+                      <div className="relative">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === key.id ? null : key.id); }}
+                          className="p-1 rounded-lg border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors"
+                        >
+                          <MoreVertical size={14} className="text-gray-500" />
+                        </button>
+                        
+                        {openMenuId === key.id && (
+                          <div
+                            className="absolute right-0 mt-1 w-44 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-150 dark:border-gray-800 py-1.5 z-10 animate-in fade-in slide-in-from-top-2 duration-100"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => handleTestKey(key)}
+                              disabled={!!actionLoadingKey}
+                              className="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1.5"
+                            >
+                              <Zap size={11} /> Testar Chave
+                            </button>
+                            {key.enabled ? (
+                              <button
+                                onClick={() => handleDisableKey(key)}
+                                disabled={!!actionLoadingKey}
+                                className="w-full text-left px-3 py-1.5 text-xs text-amber-600 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1.5"
+                              >
+                                <Pause size={11} /> Desativar
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleEnableKey(key)}
+                                disabled={!!actionLoadingKey}
+                                className="w-full text-left px-3 py-1.5 text-xs text-green-600 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1.5"
+                              >
+                                <Play size={11} /> Ativar
+                              </button>
+                            )}
+                            {isCooldown && (
+                              <button
+                                onClick={() => handleForceCooldownReset(key)}
+                                disabled={!!actionLoadingKey}
+                                className="w-full text-left px-3 py-1.5 text-xs text-yellow-600 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1.5"
+                              >
+                                <RotateCcw size={11} /> Reset Cooldown
+                              </button>
+                            )}
+                            {key.enabled && !isDead && (
+                              <button
+                                onClick={() => handleMarkDeadKey(key)}
+                                disabled={!!actionLoadingKey}
+                                className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1.5"
+                              >
+                                <AlertTriangle size={11} /> Marcar como Morta
+                              </button>
+                            )}
+                            <button
+                              onClick={() => openAuditLogs(key)}
+                              disabled={!!actionLoadingKey}
+                              className="w-full text-left px-3 py-1.5 text-xs text-gray-750 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1.5"
+                            >
+                              <Layers size={11} /> Logs Auditoria
+                            </button>
+                            <div className="border-t border-gray-100 dark:border-gray-800 my-1"></div>
+                            <button
+                              onClick={() => handleRemoveKey(key)}
+                              disabled={!!actionLoadingKey}
+                              className="w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-1.5 font-semibold"
+                            >
+                              <Trash2 size={11} /> Remover
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Masked Preview of key with copy button */}
+                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-2 flex items-center justify-between text-xs font-mono text-gray-550 border border-gray-150 dark:border-gray-800">
+                      <span className="truncate mr-2">{key.key_preview}</span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(key.key_preview);
+                          showToast('Preview copiado!');
+                        }}
+                        className="p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+                        title="Copiar preview"
+                      >
+                        <Copy size={11} />
+                      </button>
+                    </div>
+
+                    {/* Health metrics counters grid */}
+                    <div className="grid grid-cols-3 gap-2 text-center text-[10px] mt-1 border-t border-b border-gray-100 dark:border-gray-800 py-2">
+                      <div className="flex flex-col">
+                        <span className="text-gray-400 uppercase font-semibold">Requisições</span>
+                        <span className="font-bold text-gray-700 dark:text-gray-300 font-mono mt-0.5">{key.total_requests}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-gray-400 uppercase font-semibold">Sucessos</span>
+                        <span className="font-bold text-green-600 dark:text-green-400 font-mono mt-0.5">{key.total_successes}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-gray-400 uppercase font-semibold">Falhas Seguidas</span>
+                        <span className="font-bold text-red-500 font-mono mt-0.5">{key.consecutive_failures}</span>
+                      </div>
+                    </div>
+
+                    {/* Health Status & Meta */}
+                    <div className="flex items-center justify-between mt-auto pt-1 text-[10px] text-gray-400">
+                      <span>Prioridade: <strong className="text-gray-700 dark:text-gray-300">{key.priority}</strong></span>
+                      <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
+                        !key.enabled
+                          ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                          : isHealthy
+                          ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400'
+                          : isCooldown
+                          ? 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/20 dark:text-yellow-400'
+                          : 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400'
+                      }`}>
+                        {!key.enabled ? 'Desativada' : key.health_status}
+                      </span>
+                    </div>
+
+                    {/* Action loading overlay spinner */}
+                    {actionLoadingKey && actionLoadingKey.startsWith(`${key.id}:`) && (
+                      <div className="absolute inset-0 bg-white/70 dark:bg-gray-900/70 rounded-xl flex items-center justify-center z-10">
+                        <Loader2 className="animate-spin text-primary-600" size={20} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== GAVETA DE DETALHES DE AGENTE (TABS AGENTES) ===== */}
+      {selectedAgentDetail && (
+        <div className="fixed inset-y-0 right-0 w-full max-w-lg bg-white dark:bg-gray-900 shadow-2xl border-l border-gray-200 dark:border-gray-700 p-6 overflow-y-auto z-50 animate-in slide-in-from-right duration-300">
+          <div className="flex items-center justify-between mb-6 border-b border-gray-100 dark:border-gray-800 pb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400">
+                <Bot size={16} />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-950 dark:text-white text-base">{selectedAgentDetail.name}</h3>
+                <span className="text-[10px] font-mono text-gray-400">{selectedAgentDetail.id}</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setSelectedAgentDetail(null)}
+              className="p-1.5 rounded-lg border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-505 hover:text-gray-800 transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="space-y-5">
+            <div>
+              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Papel no Sistema</span>
+              <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 font-medium leading-relaxed">{selectedAgentDetail.description}</p>
+            </div>
+
+            <div>
+              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Intenções Mapeadas</span>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {selectedAgentDetail.intents.map((intent: string) => (
+                  <span key={intent} className="text-[10px] px-2.5 py-1 bg-primary-50 dark:bg-primary-950/20 text-primary-650 dark:text-primary-400 border border-primary-100 dark:border-primary-900/50 rounded-full font-medium font-mono">
+                    {intent}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Ferramentas (Tools) Permitidas</span>
+              {selectedAgentDetail.tools && selectedAgentDetail.tools.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {selectedAgentDetail.tools.map((tool: string) => (
+                    <span key={tool} className="text-[10px] px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-650 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/50 rounded-full font-medium font-mono">
+                      {tool}()
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500 mt-1 italic">Nenhuma ferramenta de banco/serviço autorizada para este agente.</p>
+              )}
+            </div>
+
+            <div>
+              <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Instrução Base de Personalidade (System Prompt)</span>
+              <div className="mt-1.5 p-3.5 rounded-xl border border-gray-150 dark:border-gray-800 bg-gray-50 dark:bg-gray-950/50 font-mono text-[11px] text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                {selectedAgentDetail.systemPrompt}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== FORMULARIO MODAL CADASTRO CHAVE API ===== */}
+      <AdminModal isOpen={showKeyForm} onClose={() => setShowKeyForm(false)} title="Nova Chave de IA">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-750 dark:text-gray-300 mb-1">Identificador da Chave</label>
+            <input
+              type="text"
+              value={keyFormData.name}
+              onChange={e => setKeyFormData(f => ({ ...f, name: e.target.value }))}
+              placeholder="ex: Gemini Principal - Produção"
+              className="w-full text-xs rounded-lg px-3 py-2 border border-gray-205 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-250 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-750 dark:text-gray-300 mb-1">Provedor</label>
+            <select
+              value={keyFormData.provider}
+              onChange={e => setKeyFormData(f => ({ ...f, provider: e.target.value }))}
+              className="w-full text-xs rounded-lg px-3 py-2 border border-gray-205 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-250 focus:outline-none"
+            >
+              <option value="gemini">Gemini AI</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-750 dark:text-gray-300 mb-1">Modelo Específico (opcional)</label>
+            <input
+              type="text"
+              value={keyFormData.model}
+              onChange={e => setKeyFormData(f => ({ ...f, model: e.target.value }))}
+              placeholder="Vazio para usar padrão do env (ex: gemini-2.5-flash)"
+              className="w-full text-xs rounded-lg px-3 py-2 border border-gray-205 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-250 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-750 dark:text-gray-300 mb-1">Chave de API Secreta</label>
+            <input
+              type="password"
+              value={keyFormData.apiKey}
+              onChange={e => setKeyFormData(f => ({ ...f, apiKey: e.target.value }))}
+              placeholder="AIzaSy..."
+              className="w-full text-xs rounded-lg px-3 py-2 border border-gray-205 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-250 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-750 dark:text-gray-300 mb-1">Prioridade na Rotação (0 = Padrão)</label>
+            <input
+              type="number"
+              value={keyFormData.priority}
+              onChange={e => setKeyFormData(f => ({ ...f, priority: Number(e.target.value) }))}
+              className="w-full text-xs rounded-lg px-3 py-2 border border-gray-205 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-250 focus:outline-none"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="testOnCreate"
+              checked={keyFormData.testOnCreate}
+              onChange={e => setKeyFormData(f => ({ ...f, testOnCreate: e.target.checked }))}
+              className="rounded text-primary-600 focus:ring-primary-500"
+            />
+            <label htmlFor="testOnCreate" className="text-xs font-medium text-gray-700 dark:text-gray-300">
+              Testar integridade da chave no ato de criação
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-100 dark:border-gray-800 mt-4">
+            <button
+              onClick={() => setShowKeyForm(false)}
+              className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleCreateKey}
+              disabled={actionLoadingKey === 'create'}
+              className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {actionLoadingKey === 'create' ? <Loader2 size={12} className="animate-spin" /> : null}
+              Cadastrar
+            </button>
+          </div>
+        </div>
+      </AdminModal>
+
+      {/* ===== MODAL DE DUPLICIDADE DE CHAVE ===== */}
+      <AdminModal isOpen={!!duplicatePrompt} onClose={() => setDuplicatePrompt(null)} title="Chave já cadastrada">
+        <div className="space-y-4">
+          <p className="text-xs text-gray-650 dark:text-gray-350 leading-relaxed">
+            {duplicatePrompt?.message}
+          </p>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => setDuplicatePrompt(null)}
+              className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+            >
+              Fechar
+            </button>
+            {duplicatePrompt?.canReactivate && duplicatePrompt.existingKey && (
+              <button
+                onClick={() => handleReactivateKey(duplicatePrompt.existingKey.id)}
+                disabled={actionLoadingKey === 'reactivate'}
+                className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-bold disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {actionLoadingKey === 'reactivate' ? <Loader2 size={12} className="animate-spin" /> : null}
+                Reativar Chave Existente
+              </button>
+            )}
+          </div>
+        </div>
+      </AdminModal>
+
+      {/* ===== MODAL DE LOGS DE AUDITORIA ===== */}
+      <AdminModal
+        isOpen={!!auditKey}
+        onClose={() => setAuditKey(null)}
+        title={auditKey ? `Auditoria: ${auditKey.name}` : 'Histórico da Chave'}
+      >
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+          {auditLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 size={24} className="animate-spin text-primary-500" />
+            </div>
+          ) : auditLogs.length === 0 ? (
+            <p className="text-xs text-gray-500 text-center py-6">Nenhum evento registrado para esta chave.</p>
+          ) : (
+            <div className="relative border-l border-gray-150 dark:border-gray-800 pl-4 space-y-4 font-mono text-[10px]">
+              {auditLogs.map((log: any, i: number) => (
+                <div key={i} className="relative">
+                  <div className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-primary-500 border border-white dark:border-gray-900" />
+                  <div className="flex flex-col gap-1 p-2.5 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/40">
+                    <div className="flex items-center justify-between flex-wrap gap-1">
+                      <span className="font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">{log.action_type}</span>
+                      <span className="text-[9px] text-gray-400">{new Date(log.created_at).toLocaleString('pt-BR')}</span>
+                    </div>
+                    {log.error_message && (
+                      <p className="text-red-500 bg-red-50/40 dark:bg-red-950/10 p-1.5 rounded mt-1 border border-red-100 dark:border-red-900/30 whitespace-pre-wrap">{log.error_message}</p>
+                    )}
+                    {log.metadata && (
+                      <div className="mt-1 bg-gray-100 dark:bg-gray-950 p-2 rounded text-[9px] text-gray-500 whitespace-pre-wrap max-h-36 overflow-y-auto">
+                        {typeof log.metadata === 'string' ? log.metadata : JSON.stringify(log.metadata, null, 2)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </AdminModal>
 
       {confirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -1711,7 +3282,7 @@ export default function KaiaChats() {
               <button
                 type="button"
                 onClick={() => handleAction(confirmModal.action)}
-                className="px-4 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-700 text-white"
+                className="px-4 py-2 text-sm rounded-lg bg-primary-600 hover:bg-primary-700 text-white"
               >
                 Confirmar
               </button>

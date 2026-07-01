@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link, useSearchParams } from 'react-router-dom'
-import { Mail, Lock, User, Phone, FileText, Loader2, CheckCircle, ShoppingCart, Eye, EyeOff, XCircle } from 'lucide-react'
+import { Mail, Lock, User, Phone, FileText, Loader2, CheckCircle, ShoppingCart, Eye, EyeOff, XCircle, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { authService } from '../services/auth.service'
 import { cartService } from '../services/cart.service'
@@ -8,12 +8,13 @@ import { validateCPF, formatCPF, validatePhone, formatPhone, validateEmail, vali
 import AnimatedLogo from '../components/AnimatedLogo'
 import loginBannerPortrait from '../images/3x4.png'
 import loginBannerLandscape from '../images/4x3.png'
+import { env } from '../config/env'
 
 export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
-  const { login } = useAuth()
+  const { login, loginWithToken } = useAuth()
 
   // Determina se o modo inicial é cadastro baseado na URL (/cadastro)
   const isRegisterInitial = location.pathname === '/cadastro'
@@ -38,6 +39,23 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [hasPendingCart, setHasPendingCart] = useState(false)
+
+  // Login Social
+  const [socialRegisterRequired, setSocialRegisterRequired] = useState(false)
+  const [socialData, setSocialData] = useState<{
+    provider: string
+    providerUserId: string
+    email: string
+    name: string
+    picture?: string
+    emailVerified: boolean
+  } | null>(null)
+  const [socialToken, setSocialToken] = useState('')
+  const [socialPhone, setSocialPhone] = useState('')
+  const [socialCpf, setSocialCpf] = useState('')
+  const [socialName, setSocialName] = useState('')
+  const [passwordNotSetEmail, setPasswordNotSetEmail] = useState('')
+  const [sendingPasswordCreationEmail, setSendingPasswordCreationEmail] = useState(false)
 
   // Controles de visibilidade de senha
   const [showLoginPassword, setShowLoginPassword] = useState(false)
@@ -87,6 +105,246 @@ export default function Login() {
       setHasPendingCart(true)
     }
   }, [searchParams])
+
+  // Inicialização do Google GSI com Logs de Diagnóstico Detalhados
+  useEffect(() => {
+    console.log('[GSI DIAGNOSTICS] useEffect disparado. Estado:', {
+      isLogin,
+      socialRegisterRequired,
+      googleClientId: env.googleClientId || 'NÃO DEFINIDO/VAZIO',
+      documentReadyState: document.readyState
+    });
+
+    const checkScriptLoaded = () => {
+      const scripts = Array.from(document.getElementsByTagName('script'));
+      const gsiScript = scripts.find(s => s.src.includes('accounts.google.com/gsi/client'));
+      return {
+        tagPresent: !!gsiScript,
+        asyncAttribute: gsiScript?.async,
+        deferAttribute: gsiScript?.defer
+      };
+    };
+
+    const initializeGoogle = () => {
+      const scriptInfo = checkScriptLoaded();
+      const hasGoogle = typeof window !== 'undefined' && !!(window as any).google;
+      const hasClientId = !!env.googleClientId;
+
+      console.log('[GSI DIAGNOSTICS] Executando initializeGoogle...', {
+        scriptTagPresent: scriptInfo.tagPresent,
+        scriptLoadedInWindow: hasGoogle,
+        hasClientId,
+        clientIdValue: env.googleClientId
+      });
+
+      if (!scriptInfo.tagPresent) {
+        console.warn('[GSI DIAGNOSTICS] AVISO: Tag de script do Google GSI não foi encontrada no DOM (index.html).');
+      }
+
+      if (!hasGoogle) {
+        console.warn('[GSI DIAGNOSTICS] AVISO: window.google está undefined. O script ainda não terminou de carregar ou falhou.');
+        return;
+      }
+
+      if (!hasClientId) {
+        console.error('[GSI DIAGNOSTICS] ERRO CRÍTICO: Client ID do Google está vazio ou indefinido no frontend! Verifique VITE_GOOGLE_CLIENT_ID no seu arquivo .env');
+        return;
+      }
+
+      try {
+        console.log('[GSI DIAGNOSTICS] Chamando google.accounts.id.initialize...');
+        (window as any).google.accounts.id.initialize({
+          client_id: env.googleClientId,
+          callback: handleGoogleCredentialResponse,
+          auto_select: false,
+          itp_support: true
+        });
+        console.log('[GSI DIAGNOSTICS] google.accounts.id.initialize executado com sucesso.');
+
+        // Renderiza botão de login se visível
+        const btnLogin = document.getElementById('google-signin-btn-login');
+        console.log('[GSI DIAGNOSTICS] Buscando elemento google-signin-btn-login:', {
+          found: !!btnLogin,
+          isLogin,
+          socialRegisterRequired
+        });
+
+        if (isLogin && !socialRegisterRequired) {
+          if (btnLogin) {
+            console.log('[GSI DIAGNOSTICS] Chamando google.accounts.id.renderButton para Login...');
+            const isDark = document.documentElement.classList.contains('dark');
+            btnLogin.innerHTML = ''; // Limpa botões antigos/duplicados!
+            (window as any).google.accounts.id.renderButton(btnLogin, {
+              theme: isDark ? 'filled_black' : 'outline',
+              size: 'large',
+              width: btnLogin.clientWidth || 320,
+              text: 'continue_with',
+              shape: 'rectangular'
+            });
+            console.log('[GSI DIAGNOSTICS] renderButton para Login concluído.');
+          } else {
+            console.error('[GSI DIAGNOSTICS] ERRO: Elemento com ID google-signin-btn-login deveria existir, mas não foi encontrado no DOM.');
+          }
+        }
+
+        // Renderiza botão de cadastro se visível
+        const btnRegister = document.getElementById('google-signin-btn-register');
+        console.log('[GSI DIAGNOSTICS] Buscando elemento google-signin-btn-register:', {
+          found: !!btnRegister,
+          isLogin,
+          socialRegisterRequired
+        });
+
+        if (!isLogin && !socialRegisterRequired) {
+          if (btnRegister) {
+            console.log('[GSI DIAGNOSTICS] Chamando google.accounts.id.renderButton para Cadastro...');
+            const isDark = document.documentElement.classList.contains('dark');
+            btnRegister.innerHTML = ''; // Limpa botões antigos/duplicados!
+            (window as any).google.accounts.id.renderButton(btnRegister, {
+              theme: isDark ? 'filled_black' : 'outline',
+              size: 'large',
+              width: btnRegister.clientWidth || 320,
+              text: 'continue_with',
+              shape: 'rectangular'
+            });
+            console.log('[GSI DIAGNOSTICS] renderButton para Cadastro concluído.');
+          } else {
+            console.error('[GSI DIAGNOSTICS] ERRO: Elemento com ID google-signin-btn-register deveria existir, mas não foi encontrado no DOM.');
+          }
+        }
+      } catch (e: any) {
+        console.error('[GSI DIAGNOSTICS] EXCEÇÃO capturada durante inicialização:', e.message, e);
+      }
+    };
+
+    initializeGoogle();
+    
+    // Configura polling/timeout apenas se o script do Google ainda não estiver pronto
+    let checkInterval: any = null;
+    if (typeof window !== 'undefined' && !(window as any).google) {
+      checkInterval = setInterval(() => {
+        if ((window as any).google) {
+          console.log('[GSI DIAGNOSTICS] Script carregado tardiamente (via setInterval). Inicializando...');
+          initializeGoogle();
+          clearInterval(checkInterval);
+        }
+      }, 500);
+    }
+
+    return () => {
+      console.log('[GSI DIAGNOSTICS] Limpando useEffect/Interval.');
+      if (checkInterval) {
+        clearInterval(checkInterval);
+      }
+    };
+  }, [isLogin, socialRegisterRequired, env.googleClientId])
+
+  const handleGoogleCredentialResponse = async (response: any) => {
+    setLoading(true)
+    setGeneralError('')
+    setSuccessMessage('')
+    try {
+      const data = await authService.socialLogin('google', response.credential)
+      
+      if (data.action === 'register_required') {
+        setSocialData(data.socialUser)
+        setSocialToken(response.credential)
+        setSocialPhone('')
+        setSocialCpf('')
+        setSocialName(data.socialUser.name || '')
+        setSocialRegisterRequired(true)
+      } else if (data.token && data.user) {
+        loginWithToken(data.user, data.token)
+        
+        // Redireciona
+        const redirect = searchParams.get('redirect')
+        const returnTo = searchParams.get('returnTo')
+        if (redirect) navigate(redirect)
+        else if (returnTo) navigate(returnTo)
+        else navigate('/')
+      }
+    } catch (err: any) {
+      setGeneralError(err.message || 'Erro ao autenticar com o Google')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSocialRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setGeneralError('')
+    setFieldErrors({})
+
+    const errors: Record<string, string> = {}
+    if (!socialName.trim()) {
+      errors.name = 'Nome é obrigatório'
+    } else if (socialName.trim().length < 3) {
+      errors.name = 'Nome deve ter pelo menos 3 caracteres'
+    }
+
+    if (!socialPhone) {
+      errors.phone = 'Telefone é obrigatório'
+    } else if (!validatePhone(socialPhone)) {
+      errors.phone = 'Telefone inválido. Formato: (11) 99999-9999'
+    }
+
+    if (!socialCpf) {
+      errors.cpf = 'CPF é obrigatório'
+    } else if (!validateCPF(socialCpf)) {
+      errors.cpf = 'CPF inválido'
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      return
+    }
+
+    setLoading(true)
+    try {
+      const data = await authService.socialRegister(
+        socialData!.provider,
+        socialToken,
+        socialPhone,
+        socialCpf,
+        socialName
+      )
+
+      if (data.token && data.user) {
+        loginWithToken(data.user, data.token)
+        
+        // Redireciona
+        const redirect = searchParams.get('redirect')
+        const returnTo = searchParams.get('returnTo')
+        if (redirect) navigate(redirect)
+        else if (returnTo) navigate(returnTo)
+        else navigate('/')
+      }
+    } catch (err: any) {
+      setGeneralError(err.message || 'Erro ao concluir cadastro social')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSendPasswordCreationEmail = async () => {
+    if (!passwordNotSetEmail) return
+    setSendingPasswordCreationEmail(true)
+    setGeneralError('')
+    setSuccessMessage('')
+    try {
+      const res = await authService.forgotPassword(passwordNotSetEmail)
+      if (res.success) {
+        setSuccessMessage('E-mail de criação de senha enviado com sucesso! Verifique sua caixa de entrada.')
+        setPasswordNotSetEmail('')
+      } else {
+        setGeneralError(res.message || 'Erro ao enviar e-mail. Tente novamente.')
+      }
+    } catch (err: any) {
+      setGeneralError(err.message || 'Erro de conexão ao solicitar e-mail.')
+    } finally {
+      setSendingPasswordCreationEmail(false)
+    }
+  }
 
   // Alterna dinamicamente entre login e cadastro, atualizando a URL sem recarregar a página
   const handleToggleMode = (toLogin: boolean) => {
@@ -212,6 +470,9 @@ export default function Login() {
         navigate('/')
       }
     } catch (err: any) {
+      if (err.code === 'PASSWORD_NOT_SET') {
+        setPasswordNotSetEmail(loginEmail)
+      }
       setGeneralError(err.message || 'Erro ao fazer login. Verifique suas credenciais.')
     } finally {
       setLoading(false)
@@ -292,7 +553,11 @@ export default function Login() {
           </div>
 
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-6 text-center tracking-tight">
-            {isLogin ? (
+            {socialRegisterRequired ? (
+              <>
+                Completar <span className="text-[#00A86B]">Cadastro</span>
+              </>
+            ) : isLogin ? (
               <>
                 Bem-vindo a <span className="text-[#00A86B]">Kapsu</span>
               </>
@@ -327,9 +592,196 @@ export default function Login() {
             </div>
           )}
 
-          {isLogin ? (
+          {passwordNotSetEmail && (
+            <div className="mb-5 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl shadow-sm text-sm text-amber-800 dark:text-amber-300 leading-relaxed space-y-3">
+              <div className="flex items-start gap-2">
+                <ShieldCheck size={18} className="flex-shrink-0 text-amber-500 mt-0.5" />
+                <span>
+                  Sua conta foi criada utilizando o Google. Deseja criar uma senha para também poder acessar utilizando e-mail e senha?
+                </span>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleSendPasswordCreationEmail}
+                  disabled={sendingPasswordCreationEmail}
+                  className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-bold text-xs shadow transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                >
+                  {sendingPasswordCreationEmail && <Loader2 size={12} className="animate-spin" />}
+                  Enviar e-mail de criação de senha
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPasswordNotSetEmail('')}
+                  className="px-3 py-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-400 font-semibold text-xs cursor-pointer"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {socialRegisterRequired ? (
+            /* --- FORMULÁRIO DE COMPLEMENTAR CADASTRO SOCIAL --- */
+            <form key="social-register-form" onSubmit={handleSocialRegisterSubmit} className="space-y-4 animate-in fade-in duration-300">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 text-center leading-relaxed">
+                Olá, <strong>{socialData?.name}</strong>! Confirme seus dados e informe os campos obrigatórios restantes para concluir seu cadastro na Kapsu.
+              </p>
+
+              {/* Nome */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Nome Completo *
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={socialName}
+                    onChange={(e) => {
+                      if (fieldErrors.name) {
+                        setFieldErrors(prev => {
+                          const next = { ...prev };
+                          delete next.name;
+                          return next;
+                        });
+                      }
+                      setSocialName(e.target.value);
+                    }}
+                    placeholder="Seu nome completo"
+                    className={`w-full pl-10 pr-4 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#00A86B] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
+                      fieldErrors.name ? 'ring-2 ring-red-500' : ''
+                    }`}
+                    required
+                  />
+                  <User className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
+                </div>
+                {fieldErrors.name && (
+                  <p className="mt-1 text-xs text-red-600 dark:text-red-400 flex items-center">
+                    <XCircle size={12} className="mr-1 flex-shrink-0" />
+                    <span>{fieldErrors.name}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Email (Readonly) */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-400 dark:text-gray-500 mb-1.5">
+                  E-mail
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={socialData?.email || ''}
+                    disabled
+                    className="w-full pl-10 pr-4 py-3 bg-[#eef2f6]/50 dark:bg-gray-800/50 border-none rounded-xl text-gray-400 dark:text-gray-500 font-sans outline-none cursor-not-allowed"
+                  />
+                  <Mail className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-600 w-5 h-5" />
+                </div>
+              </div>
+
+              {/* Telefone */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Telefone Celular *
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={socialPhone}
+                    onChange={(e) => {
+                      if (fieldErrors.phone) {
+                        setFieldErrors(prev => {
+                          const next = { ...prev };
+                          delete next.phone;
+                          return next;
+                        });
+                      }
+                      setSocialPhone(formatPhone(e.target.value));
+                    }}
+                    placeholder="(11) 99999-9999"
+                    maxLength={15}
+                    className={`w-full pl-10 pr-4 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#00A86B] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
+                      fieldErrors.phone ? 'ring-2 ring-red-500' : ''
+                    }`}
+                    required
+                  />
+                  <Phone className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
+                </div>
+                {fieldErrors.phone && (
+                  <p className="mt-1 text-xs text-red-600 dark:text-red-400 flex items-center">
+                    <XCircle size={12} className="mr-1 flex-shrink-0" />
+                    <span>{fieldErrors.phone}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* CPF */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                  CPF *
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={socialCpf}
+                    onChange={(e) => {
+                      if (fieldErrors.cpf) {
+                        setFieldErrors(prev => {
+                          const next = { ...prev };
+                          delete next.cpf;
+                          return next;
+                        });
+                      }
+                      setSocialCpf(formatCPF(e.target.value));
+                    }}
+                    placeholder="000.000.000-00"
+                    maxLength={14}
+                    className={`w-full pl-10 pr-4 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#00A86B] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none ${
+                      fieldErrors.cpf ? 'ring-2 ring-red-500' : ''
+                    }`}
+                    required
+                  />
+                  <FileText className="absolute left-3.5 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
+                </div>
+                {fieldErrors.cpf && (
+                  <p className="mt-1 text-xs text-red-600 dark:text-red-400 flex items-center">
+                    <XCircle size={12} className="mr-1 flex-shrink-0" />
+                    <span>{fieldErrors.cpf}</span>
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSocialRegisterRequired(false);
+                    setSocialData(null);
+                    setSocialToken('');
+                  }}
+                  className="w-full sm:w-1/3 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold py-3.5 px-4 rounded-xl transition-all duration-200 cursor-pointer text-sm"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full sm:w-2/3 bg-[#00A86B] hover:bg-[#008A57] text-white font-bold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#00A86B]/25 hover:shadow-[#00A86B]/35 text-sm tracking-wide cursor-pointer"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 size={16} className="mr-1.5 animate-spin" />
+                      <span>Concluindo...</span>
+                    </>
+                  ) : (
+                    <span>Concluir Cadastro</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          ) : isLogin ? (
             /* --- FORMULÁRIO DE LOGIN --- */
-            <form onSubmit={handleLoginSubmit} className="space-y-5">
+            <form key="login-form" onSubmit={handleLoginSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
                   E-mail
@@ -404,10 +856,17 @@ export default function Login() {
                   <span>&rarr; Entrar</span>
                 )}
               </button>
+
+              <div className="relative flex items-center justify-center my-4">
+                <div className="border-t border-gray-200 dark:border-gray-800 w-full"></div>
+                <span className="bg-white dark:bg-gray-900 px-3 text-xs text-gray-400 absolute">ou</span>
+              </div>
+
+              <div id="google-signin-btn-login" className="w-full flex justify-center mt-2 min-h-[44px]"></div>
             </form>
           ) : (
             /* --- FORMULÁRIO DE CADASTRO --- */
-            <form onSubmit={handleRegisterSubmit} className="space-y-4">
+            <form key="register-form" onSubmit={handleRegisterSubmit} className="space-y-4">
               {/* Nome Completo */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
@@ -610,6 +1069,13 @@ export default function Login() {
                   <span>&rarr; Criar Conta</span>
                 )}
               </button>
+
+              <div className="relative flex items-center justify-center my-4">
+                <div className="border-t border-gray-200 dark:border-gray-800 w-full"></div>
+                <span className="bg-white dark:bg-gray-900 px-3 text-xs text-gray-400 absolute">ou</span>
+              </div>
+
+              <div id="google-signin-btn-register" className="w-full flex justify-center mt-2 min-h-[44px]"></div>
             </form>
           )}
 

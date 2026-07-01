@@ -11,12 +11,12 @@ import { paymentService, PaymentResult } from '../services/payment.service'
 import { useFavorites } from '../context/FavoritesContext'
 import { reviewsService, Review } from '../services/reviews.service'
 import { Product } from '../types'
-import { User, Camera, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Package, Calendar, CreditCard, ShoppingBag, Download, ArrowLeft, Mail, FileText, Heart, Bell, HelpCircle, LogOut, Copy, QrCode, Barcode } from 'lucide-react'
+import { User, Camera, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Package, Calendar, CreditCard, ShoppingBag, Download, ArrowLeft, Mail, FileText, Heart, Bell, HelpCircle, LogOut, Copy, QrCode, Barcode, ShieldCheck } from 'lucide-react'
 import { env } from '../config/env'
 import { confirm, toast } from '../utils/toast'
 import { getOrderStatusLabel, getOrderStatusBadgeClass, isInvoiceEligibleStatus } from '../utils/orderStatus'
 
-type ProfileSection = 'info' | 'password' | 'image' | 'addresses' | 'orders' | 'favorites' | 'reviews' | 'notifications' | 'help' | null
+type ProfileSection = 'info' | 'password' | 'image' | 'addresses' | 'orders' | 'favorites' | 'reviews' | 'notifications' | 'help' | 'connected-accounts' | null
 
 const TAB_TO_SECTION: Record<string, ProfileSection> = {
   info: 'info',
@@ -26,6 +26,7 @@ const TAB_TO_SECTION: Record<string, ProfileSection> = {
   reviews: 'reviews',
   notifications: 'notifications',
   help: 'help',
+  'connected-accounts': 'connected-accounts',
 }
 
 function resolveProfileSection(
@@ -141,6 +142,11 @@ export default function Profile() {
   const [myReviews, setMyReviews] = useState<Review[]>([])
   const [loadingReviews, setLoadingReviews] = useState(false)
 
+  // Connected Accounts states
+  const [connectedProviders, setConnectedProviders] = useState<string[]>([])
+  const [loadingProviders, setLoadingProviders] = useState(false)
+  const [loadingSocialAction, setLoadingSocialAction] = useState(false)
+
   // Notification states derived from auth context user settings
   const notifWhatsApp = user?.whatsapp_notifications_enabled ?? true
   const notifEmail = user?.email_notifications_enabled ?? true
@@ -236,12 +242,151 @@ export default function Profile() {
       loadFavorites()
     } else if (activeSection === 'reviews') {
       loadReviews()
+    } else if (activeSection === 'connected-accounts') {
+      loadConnectedProviders()
     }
 
     return () => {
       if (intervalId) clearInterval(intervalId);
     }
   }, [activeSection])
+
+  const loadConnectedProviders = async () => {
+    try {
+      setLoadingProviders(true)
+      const data = await authService.getLinkedProviders()
+      if (data.success && data.providers) {
+        setConnectedProviders(data.providers)
+      }
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Erro ao carregar provedores conectados' })
+    } finally {
+      setLoadingProviders(false)
+    }
+  }
+
+  useEffect(() => {
+    console.log('[GSI LINK DIAGNOSTICS] useEffect disparado. Estado:', {
+      activeSection,
+      googleConnected: connectedProviders.includes('google'),
+      googleClientId: env.googleClientId || 'NÃO DEFINIDO/VAZIO'
+    });
+
+    if (activeSection === 'connected-accounts' && !connectedProviders.includes('google')) {
+      const initializeGoogleLink = () => {
+        const hasGoogle = typeof window !== 'undefined' && !!(window as any).google;
+        const hasClientId = !!env.googleClientId;
+
+        console.log('[GSI LINK DIAGNOSTICS] Executando initializeGoogleLink...', {
+          scriptLoaded: hasGoogle,
+          hasClientId,
+          clientIdValue: env.googleClientId
+        });
+
+        if (!hasGoogle) {
+          console.warn('[GSI LINK DIAGNOSTICS] AVISO: window.google está undefined.');
+          return;
+        }
+
+        if (!hasClientId) {
+          console.error('[GSI LINK DIAGNOSTICS] ERRO CRÍTICO: Google Client ID está vazio no frontend.');
+          return;
+        }
+
+        try {
+          console.log('[GSI LINK DIAGNOSTICS] Chamando google.accounts.id.initialize...');
+          (window as any).google.accounts.id.initialize({
+            client_id: env.googleClientId,
+            callback: handleGoogleLinkResponse,
+            auto_select: false,
+            itp_support: true
+          });
+
+          const linkContainer = document.getElementById('google-link-btn-container');
+          console.log('[GSI LINK DIAGNOSTICS] Buscando elemento google-link-btn-container:', {
+            found: !!linkContainer
+          });
+
+          if (linkContainer) {
+            console.log('[GSI LINK DIAGNOSTICS] Chamando google.accounts.id.renderButton para link...');
+            const isDark = document.documentElement.classList.contains('dark');
+            linkContainer.innerHTML = ''; // Limpa botões antigos/duplicados!
+            (window as any).google.accounts.id.renderButton(linkContainer, {
+              theme: isDark ? 'filled_black' : 'outline',
+              size: 'medium',
+              text: 'signup_with',
+              shape: 'rectangular'
+            });
+            console.log('[GSI LINK DIAGNOSTICS] renderButton para link concluído.');
+          } else {
+            console.error('[GSI LINK DIAGNOSTICS] ERRO: Elemento google-link-btn-container não encontrado no DOM.');
+          }
+        } catch (e: any) {
+          console.error('[GSI LINK DIAGNOSTICS] EXCEÇÃO capturada:', e.message, e);
+        }
+      };
+
+      initializeGoogleLink();
+      
+      // Configura polling/timeout apenas se o script do Google ainda não estiver pronto
+      let checkInterval: any = null;
+      if (typeof window !== 'undefined' && !(window as any).google) {
+        checkInterval = setInterval(() => {
+          if ((window as any).google) {
+            console.log('[GSI LINK DIAGNOSTICS] Script carregado tardiamente. Inicializando...');
+            initializeGoogleLink();
+            clearInterval(checkInterval);
+          }
+        }, 500);
+      }
+
+      return () => {
+        console.log('[GSI LINK DIAGNOSTICS] Limpando interval.');
+        if (checkInterval) {
+          clearInterval(checkInterval);
+        }
+      };
+    }
+  }, [activeSection, connectedProviders, env.googleClientId])
+
+  const handleGoogleLinkResponse = async (response: any) => {
+    try {
+      setLoadingSocialAction(true)
+      const res = await authService.linkSocial('google', response.credential)
+      if (res.success) {
+        toast.success('Conta Google vinculada com sucesso!')
+        loadConnectedProviders()
+      } else {
+        toast.error(res.message || 'Erro ao vincular conta Google')
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Erro de conexão ao vincular conta')
+    } finally {
+      setLoadingSocialAction(false)
+    }
+  }
+
+  const handleUnlinkProvider = async (provider: string) => {
+    confirm.show(
+      `Tem certeza de que deseja desvincular o provedor ${provider === 'google' ? 'Google' : provider}?`,
+      async () => {
+        try {
+          setLoadingSocialAction(true)
+          const res = await authService.unlinkSocial(provider)
+          if (res.success) {
+            toast.success('Provedor desvinculado com sucesso!')
+            loadConnectedProviders()
+          } else {
+            toast.error(res.message || 'Erro ao desvincular provedor')
+          }
+        } catch (e: any) {
+          toast.error(e.message || 'Erro de conexão ao desvincular')
+        } finally {
+          setLoadingSocialAction(false)
+        }
+      }
+    )
+  }
 
   useEffect(() => {
     if (message) {
@@ -690,6 +835,7 @@ export default function Profile() {
     { id: 'reviews', label: 'Avaliações', icon: Star, desc: 'Seu histórico de comentários e notas enviadas' },
     { id: 'notifications', label: 'Notificações', icon: Bell, desc: 'Avisos sobre seus pedidos e ofertas exclusivas' },
     { id: 'help', label: 'Ajuda', icon: HelpCircle, desc: 'Perguntas frequentes e central de suporte' },
+    { id: 'connected-accounts', label: 'Contas conectadas', icon: ShieldCheck, desc: 'Gerencie logins vinculados à sua conta' },
   ]
 
   if (!user) {
@@ -1763,6 +1909,143 @@ export default function Profile() {
                       Respondemos em até 1 dia útil.
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* ─────────────────────────────────────────────────────── */}
+              {/* CONTAS CONECTADAS                                       */}
+              {/* ─────────────────────────────────────────────────────── */}
+              {activeSection === 'connected-accounts' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <ShieldCheck className="text-primary-500" />
+                      Contas Conectadas
+                    </h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Gerencie as contas de provedores externos vinculadas à sua conta Kapsu.
+                    </p>
+                  </div>
+
+                  {loadingProviders ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="animate-spin w-6 h-6 text-primary-500" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Google Connection Card */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl gap-4">
+                        <div className="flex items-center gap-3.5">
+                          {/* Google Icon SVG */}
+                          <div className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
+                            <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
+                              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335"/>
+                            </svg>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="block text-sm font-bold text-gray-900 dark:text-white">Google</span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                              {connectedProviders.includes('google')
+                                ? 'Conta vinculada e ativa para login social.'
+                                : 'Conecte sua conta Google para fazer login com um clique.'}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {connectedProviders.includes('google') ? (
+                            <button
+                              type="button"
+                              onClick={() => handleUnlinkProvider('google')}
+                              disabled={loadingSocialAction}
+                              className="px-3.5 py-2 border border-red-250 hover:border-red-300 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer animate-in fade-in"
+                            >
+                              {loadingSocialAction ? 'Aguarde...' : 'Desvincular'}
+                            </button>
+                          ) : (
+                            <div id="google-link-btn-container" className="min-h-[38px] flex items-center"></div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Microsoft Connection Card (Placeholder) */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/50 rounded-2xl gap-4 opacity-75">
+                        <div className="flex items-center gap-3.5">
+                          <div className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
+                            <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg">
+                              <path fill="#F25022" d="M1 1h10v10H1z"/>
+                              <path fill="#7FBA00" d="M12 1h10v10H12z"/>
+                              <path fill="#00A4EF" d="M1 12h10v10H1z"/>
+                              <path fill="#FFB900" d="M12 12h10v10H12z"/>
+                            </svg>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="block text-sm font-bold text-gray-900 dark:text-white">Microsoft</span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                              Entrar com conta pessoal ou corporativa Microsoft. (Em breve)
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled
+                          className="px-3.5 py-2 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-xl text-xs font-bold cursor-not-allowed"
+                        >
+                          Conectar
+                        </button>
+                      </div>
+
+                      {/* Apple Connection Card (Placeholder) */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/50 rounded-2xl gap-4 opacity-75">
+                        <div className="flex items-center gap-3.5">
+                          <div className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
+                            <svg className="w-5 h-5 flex-shrink-0 fill-current text-gray-900 dark:text-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.62.71-1.16 1.85-1.02 2.96 1.1.09 2.23-.55 2.97-1.4z"/>
+                            </svg>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="block text-sm font-bold text-gray-900 dark:text-white">Apple</span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                              Entrar com o ID Apple de forma segura. (Em breve)
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled
+                          className="px-3.5 py-2 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-xl text-xs font-bold cursor-not-allowed"
+                        >
+                          Conectar
+                        </button>
+                      </div>
+
+                      {/* GitHub Connection Card (Placeholder) */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/50 rounded-2xl gap-4 opacity-75">
+                        <div className="flex items-center gap-3.5">
+                          <div className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
+                            <svg className="w-5 h-5 flex-shrink-0 fill-current text-gray-900 dark:text-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 7.65 6.84 8.97.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.64-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.1.39-1.99 1.03-2.69-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.69 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85 0 1.34-.01 2.42-.01 2.75 0 .27.18.58.69.48C19.14 19.65 22 15.92 22 12c0-5.523-4.477-10-10-10z"/>
+                            </svg>
+                          </div>
+                          <div className="min-w-0">
+                            <span className="block text-sm font-bold text-gray-900 dark:text-white">GitHub</span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                              Vincule sua conta de desenvolvedor do GitHub. (Em breve)
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          disabled
+                          className="px-3.5 py-2 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-xl text-xs font-bold cursor-not-allowed"
+                        >
+                          Conectar
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

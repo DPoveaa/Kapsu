@@ -1382,7 +1382,11 @@ class WhatsAppService {
         body: JSON.stringify({
           sessionId,
           action: {
+            id: 'return-to-ai',
+            label: 'Voltar para Kaia',
             type: 'return_to_ai',
+            style: 'secondary',
+            payload: {},
             actionRequestId: `return_ai_${Date.now()}`
           }
         }),

@@ -25,6 +25,9 @@ export interface SiteSettings {
   chatbot_enabled?: boolean
   whatsapp_number?: string
   google_merchant_sync_enabled?: boolean
+  google_sheets_sync_enabled?: boolean
+  google_sheets_id?: string
+  google_sheets_range?: string
   human_support_settings?: any
 }
 
@@ -212,6 +215,27 @@ class SiteSettingsService {
         : ''
 
       throw new Error(`${data.message || 'Sincronização concluída com falhas.'}${details ? `\n${details}${suffix}` : ''}`)
+    }
+
+    return data
+  }
+
+  /**
+   * Sincroniza todos os produtos com a planilha do Google Sheets (apenas admin)
+   */
+  async syncAllGoogleSheetsProducts(): Promise<{ success: boolean; message: string; data?: any }> {
+    const response = await fetch(`${API_URL}/admin/google-sheets/sync`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+    })
+
+    const data = await this.parseJsonResponse(
+      response,
+      'Erro ao sincronizar produtos com o Google Sheets'
+    )
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Erro ao sincronizar produtos com Google Sheets')
     }
 
     return data

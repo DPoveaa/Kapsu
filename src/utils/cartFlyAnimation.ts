@@ -3,6 +3,7 @@ type AnimateCartFlyOptions = {
   productId?: string
   cartElement?: HTMLElement | null
   onArrive?: () => void
+  color?: string
 }
 
 const prefersReducedMotion = () => {
@@ -11,7 +12,7 @@ const prefersReducedMotion = () => {
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
-export const animateCartFly = ({ fromElement, cartElement, onArrive }: AnimateCartFlyOptions): Promise<boolean> => {
+export const animateCartFly = ({ fromElement, cartElement, onArrive, color }: AnimateCartFlyOptions): Promise<boolean> => {
   if (typeof document === 'undefined' || !fromElement || prefersReducedMotion()) {
     onArrive?.()
     return Promise.resolve(false)
@@ -29,6 +30,8 @@ export const animateCartFly = ({ fromElement, cartElement, onArrive }: AnimateCa
   const from = fromElement.getBoundingClientRect()
   const to = target.getBoundingClientRect()
 
+  const dotColor = color || '#00A86B'
+
   const dot = document.createElement('span')
   dot.setAttribute('aria-hidden', 'true')
   dot.style.position = 'fixed'
@@ -37,12 +40,12 @@ export const animateCartFly = ({ fromElement, cartElement, onArrive }: AnimateCa
   dot.style.width = '10px'
   dot.style.height = '10px'
   dot.style.borderRadius = '9999px'
-  dot.style.background = '#10b981'
-  dot.style.boxShadow = '0 8px 18px rgba(16, 185, 129, 0.35)'
+  dot.style.background = dotColor
+  dot.style.boxShadow = `0 8px 18px ${dotColor}5c`
   dot.style.zIndex = '9999'
   dot.style.pointerEvents = 'none'
   dot.style.transform = 'translate3d(0, 0, 0) scale(1)'
-  dot.style.transition = 'transform 520ms cubic-bezier(.2,.8,.2,1), opacity 180ms ease 420ms'
+  dot.style.transition = 'transform 650ms cubic-bezier(.2,.8,.2,1), opacity 200ms ease 550ms'
 
   document.body.appendChild(dot)
 
@@ -64,7 +67,7 @@ export const animateCartFly = ({ fromElement, cartElement, onArrive }: AnimateCa
       dot.style.opacity = '0.25'
     })
 
-    window.setTimeout(() => cleanup(true), 560)
+    window.setTimeout(() => cleanup(true), 700)
   })
 }
 

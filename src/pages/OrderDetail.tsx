@@ -50,6 +50,7 @@ const ORDER_STATUS_OPTIONS = [
   'PENDING',
   'CONFIRMED',
   'PROCESSING',
+  'READY_FOR_SHIPPING',
   'SHIPPED',
   'DELIVERED',
   'CANCELLED',
@@ -61,6 +62,7 @@ export default function OrderDetail() {
   const { isAdmin } = useAuth()
   const [order, setOrder] = useState<OrderDetail | null>(null)
   const [pendingStatus, setPendingStatus] = useState('')
+  const [statusExplanation, setStatusExplanation] = useState('')
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -128,12 +130,18 @@ export default function OrderDetail() {
   const handleUpdateStatus = async () => {
     if (!id || !order || pendingStatus === order.status) return
 
+    if (!statusExplanation.trim()) {
+      toast.error('Por favor, insira a justificativa/motivo para esta alteração manual.')
+      return
+    }
+
     try {
       setUpdatingStatus(true)
-      const response = await adminService.updateOrderStatus(id, pendingStatus)
+      const response = await adminService.updateOrderStatus(id, pendingStatus, statusExplanation)
       if (response.success) {
         setOrder(response.data)
         setPendingStatus(response.data.status)
+        setStatusExplanation('')
         toast.success('Status do pedido atualizado com sucesso')
       }
     } catch (err: any) {
@@ -211,36 +219,66 @@ export default function OrderDetail() {
 
         {isAdmin && (
           <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md p-4">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-              <div className="flex-1">
-                <label htmlFor="order-status" className="block text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">
-                  Status do pedido
-                </label>
-                <select
-                  id="order-status"
-                  value={pendingStatus}
-                  onChange={(e) => setPendingStatus(e.target.value)}
-                  disabled={updatingStatus}
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-60"
-                >
-                  {ORDER_STATUS_OPTIONS.map((status) => (
-                    <option key={status} value={status}>
-                      {getOrderStatusLabel(status)}
-                    </option>
-                  ))}
-                </select>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+                <div className="flex-1 w-full">
+                  <label htmlFor="order-status" className="block text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">
+                    Status do pedido
+                  </label>
+                  <select
+                    id="order-status"
+                    value={pendingStatus}
+                    onChange={(e) => setPendingStatus(e.target.value)}
+                    disabled={updatingStatus}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-60"
+                  >
+                    {ORDER_STATUS_OPTIONS.map((status) => (
+                      <option key={status} value={status}>
+                        {getOrderStatusLabel(status)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {pendingStatus === order.status && (
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 text-sm font-medium bg-gray-400 dark:bg-gray-700 text-white rounded-lg min-w-[140px]"
+                  >
+                    Salvar status
+                  </button>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={handleUpdateStatus}
-                disabled={updatingStatus || pendingStatus === order.status}
-                className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium bg-primary-600 hover:bg-primary-700 disabled:bg-gray-400 dark:disabled:bg-gray-700 text-white rounded-lg transition-colors min-w-[140px]"
-              >
-                {updatingStatus ? (
-                  <Loader2 size={18} className="animate-spin mr-2" />
-                ) : null}
-                Salvar status
-              </button>
+              
+              {pendingStatus !== order.status && (
+                <div className="mt-2 w-full animate-fade-in">
+                  <label htmlFor="status-explanation" className="block text-xs font-semibold uppercase text-red-500 dark:text-red-400 mb-1">
+                    Justificativa da Alteração Manual *
+                  </label>
+                  <textarea
+                    id="status-explanation"
+                    placeholder="Explique o porquê desta alteração de status (ex: Cliente solicitou cancelamento por arrependimento, pagamento via pix não compensado, etc). Esta justificativa ficará disponível para auditoria e no chatbot."
+                    value={statusExplanation}
+                    onChange={(e) => setStatusExplanation(e.target.value)}
+                    disabled={updatingStatus}
+                    rows={3}
+                    className="w-full px-3 py-2 text-sm border border-red-300 dark:border-red-600 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent disabled:opacity-60"
+                  />
+                  <div className="mt-3 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleUpdateStatus}
+                      disabled={updatingStatus || !statusExplanation.trim()}
+                      className="w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 text-sm font-semibold bg-red-600 hover:bg-red-700 disabled:bg-gray-400 dark:disabled:bg-gray-700 text-white rounded-lg transition-colors min-w-[150px] shadow"
+                    >
+                      {updatingStatus ? (
+                        <Loader2 size={18} className="animate-spin mr-2" />
+                      ) : null}
+                      Confirmar Alteração
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

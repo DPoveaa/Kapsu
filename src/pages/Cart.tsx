@@ -24,6 +24,7 @@ import {
   isPaidOrderStatus,
   setPendingCheckoutOrderId,
 } from '../utils/checkout'
+import { generateProductUrl } from '../utils/productUrl'
 
 const formatEstimatedDateFriendly = (estimatedDateStr: string): string => {
   if (!estimatedDateStr) return ''
@@ -1593,7 +1594,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
               {/* Product image container */}
               {item.product && (
                 <Link
-                  to={`/produtos/${item.product.id}`}
+                  to={generateProductUrl(item.product)}
                   className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-xl flex items-center justify-center p-2 flex-shrink-0 relative border border-gray-100 dark:border-gray-700 block"
                 >
                   <img
@@ -1610,7 +1611,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     {item.product ? (
-                      <Link to={`/produtos/${item.product.id}`} className="block">
+                      <Link to={generateProductUrl(item.product)} className="block">
                         <h3 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white truncate hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
                           {item.product.name}
                         </h3>

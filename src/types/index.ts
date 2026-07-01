@@ -19,6 +19,13 @@ export interface Product {
   compositions?: string | null;
   markup?: number | null;
   benefits?: string | null;
+  slug?: string | null;
+  sku?: string;
+  quantity?: string | null;
+  meta_title?: string | null;
+  meta_description?: string | null;
+  tags?: string | null;
+  last_sync?: string | null;
   created_at?: string;
   updated_at?: string;
 }

@@ -24,6 +24,13 @@ export interface BackendProduct {
   free_shipping?: boolean
   target_audience?: ProductTargetAudience | null
   markup?: number | null
+  slug: string | null
+  sku: string | null
+  quantity: string | null
+  meta_title: string | null
+  meta_description: string | null
+  tags: string | null
+  last_sync: string | null
   created_at: string | Date
   updated_at: string | Date
 }
@@ -100,6 +107,13 @@ class ProductsService {
       indication: product.indication,
       contraindication: product.contraindication,
       benefits: product.benefits ?? null,
+      slug: product.slug || null,
+      sku: product.sku || '',
+      quantity: product.quantity,
+      meta_title: product.meta_title,
+      meta_description: product.meta_description,
+      tags: product.tags,
+      last_sync: product.last_sync ? String(product.last_sync) : null,
       created_at: product.created_at ? String(product.created_at) : undefined,
       updated_at: product.updated_at ? String(product.updated_at) : undefined,
     }
@@ -251,6 +265,11 @@ class ProductsService {
     free_shipping?: boolean
     target_audience?: ProductTargetAudience | null
     markup?: number | null
+    sku?: string
+    quantity?: string | null
+    meta_title?: string | null
+    meta_description?: string | null
+    tags?: string | null
   }): Promise<Product> {
     try {
       const response = await fetch(`${this.baseUrl}`, {
@@ -418,6 +437,11 @@ class ProductsService {
     free_shipping?: boolean
     target_audience?: ProductTargetAudience | null
     markup?: number | null
+    sku?: string
+    quantity?: string | null
+    meta_title?: string | null
+    meta_description?: string | null
+    tags?: string | null
   }): Promise<Product> {
     try {
       const response = await fetch(`${this.baseUrl}/${id}`, {

@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { 
   Settings, MessageSquare, Users, Package, ShoppingCart, BarChart3, 
   Truck, Gift, Tag, Image, Star, Layout, Menu, ChevronLeft, ChevronRight, Menu as MenuIcon, X,
-  ShieldCheck, Bot, KeyRound, CreditCard
+  ShieldCheck, Bot, CreditCard, Globe
 } from 'lucide-react'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -40,12 +40,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     {
       title: "Sistema",
       items: [
-        { title: "Central da IA", icon: Bot, link: "/admin/kaia-chats" },
-        { title: "Chaves de IA", icon: KeyRound, link: "/admin/ai-keys" },
+        { title: "Central da IA", icon: Bot, link: "/admin/central-ia" },
         { title: "WhatsApp", icon: MessageSquare, link: "/admin/whatsapp" },
         { title: "Usuários", icon: Users, link: "/admin/users" },
         { title: "Auditoria", icon: ShieldCheck, link: "/admin/audit" },
         { title: "Relatórios", icon: BarChart3, link: "/admin/reports" },
+        { title: "Google Sheets", icon: Globe, link: "/admin/google-sheets" },
         { title: "Configurações", icon: Settings, link: "/admin/settings" }
       ]
     }

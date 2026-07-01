@@ -9,6 +9,7 @@ import { homeSectionsService, HomeSection } from '../services/home-sections.serv
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import { getImageUrl } from '../utils/imageUrl'
 import { HorizontalScrollContainer } from '../components/HorizontalScrollContainer'
+import { generateProductUrl } from '../utils/productUrl'
 
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
@@ -626,7 +627,7 @@ export default function Home() {
               {featuredProducts.map(product => (
                 <div key={product.id} className="w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] lg:w-[calc(16.66%-10px)] flex-shrink-0">
                   <Link
-                    to={`/produtos/${product.id}`}
+                    to={generateProductUrl(product)}
                     className="bg-white dark:bg-gray-700 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 hover:shadow-md dark:hover:shadow-xl transition-all flex flex-col h-full group"
                   >
                     {/* 1:1 image fills top of card */}
@@ -743,7 +744,7 @@ export default function Home() {
                   {products.map(product => (
                     <div key={product.id} className="w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] lg:w-[calc(16.66%-10px)] flex-shrink-0">
                       <Link
-                        to={`/produtos/${product.id}`}
+                        to={generateProductUrl(product)}
                         className="bg-white dark:bg-gray-700 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 hover:shadow-md dark:hover:shadow-xl transition-all flex flex-col h-full group"
                       >
                         {/* 1:1 image fills top of card */}

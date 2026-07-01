@@ -6,6 +6,8 @@ import { Product } from '../types'
 import { useCart } from '../context/CartContext'
 import { productsService } from '../services/products.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
+import { animateAddToCart } from '../utils/cartFlyAnimation'
+import { generateProductUrl } from '../utils/productUrl'
 
 // ─── Color palettes ────────────────────────────────────────────────────────
 const BURST_COLORS = [
@@ -134,6 +136,17 @@ export default function ProductCard({ product }: ProductCardProps) {
     if (clickResetTimer.current) clearTimeout(clickResetTimer.current)
     clickResetTimer.current = setTimeout(() => { clickCount.current = 0 }, 2000)
 
+    // Determine fly color dynamically
+    let flyColor = '#00A86B'
+    const count = clickCount.current
+    if (count >= 15) {
+      flyColor = '#FBBF24'
+    } else if (count >= 10) {
+      flyColor = '#3B82F6'
+    }
+
+    animateAddToCart({ fromElement: btnRef.current, color: flyColor })
+
     // Always burst
     spawnBurst()
 
@@ -156,7 +169,7 @@ export default function ProductCard({ product }: ProductCardProps) {
   // ── Render ────────────────────────────────────────────────────────────
   return (
     <>
-      <Link to={`/produtos/${product.id}`} className="block h-full group">
+      <Link to={generateProductUrl(product)} className="block h-full group">
         <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg dark:hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5">
 
           {/* ── Image ── */}

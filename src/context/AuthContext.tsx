@@ -22,6 +22,7 @@ interface User {
 interface AuthContextType {
   user: User | null
   login: (email: string, password: string) => Promise<void>
+  loginWithToken: (userData: User, token: string) => void
   logout: () => void
   updateUser: (userData: Partial<User>) => void
   isAuthenticated: boolean
@@ -195,7 +196,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }, 500) // Pequeno delay para garantir que o token foi salvo
     } else {
-      throw new Error(response.message || 'Erro ao fazer login')
+      const err = new Error(response.message || 'Erro ao fazer login') as any;
+      if ((response as any).code) {
+        err.code = (response as any).code;
+      }
+      throw err;
     }
   }
 
@@ -213,10 +218,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const loginWithToken = (userData: User, token: string) => {
+    setUser(userData)
+    localStorage.setItem('sanare_user', JSON.stringify(userData))
+    localStorage.setItem('sanare_token', token)
+  }
+
   return (
     <AuthContext.Provider value={{
       user,
       login,
+      loginWithToken,
       logout,
       updateUser,
       isAuthenticated: !!user,

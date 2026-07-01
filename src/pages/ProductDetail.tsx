@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   ShoppingCart, Loader2, Truck, CheckCircle, AlertCircle,
   Info, Star, ChevronLeft, ChevronRight, X, ShieldCheck,
@@ -6,7 +6,7 @@ import {
   AlertTriangle, Check, Camera, Trash2, MessageSquare,
   Share2, Heart
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useCart } from '../context/CartContext'
 import { useFavorites } from '../context/FavoritesContext'
 import { Product } from '../types'
@@ -14,6 +14,8 @@ import { productsService } from '../services/products.service'
 import { uploadService } from '../services/upload.service'
 import { env } from '../config/env'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
+import { animateAddToCart } from '../utils/cartFlyAnimation'
+import { generateProductUrl, parseProductId } from '../utils/productUrl'
 
 interface ProductDetails {
   id: string
@@ -63,8 +65,10 @@ const getProductBenefits = (productName: string, category: string | null) => {
 
 
 export default function ProductDetail() {
-  const { id } = useParams()
+  const { idSlug } = useParams<{ idSlug: string }>()
+  const id = idSlug ? parseProductId(idSlug) : undefined
   const navigate = useNavigate()
+  const location = useLocation()
   const { addProduct, items } = useCart()
   const { isFavorite, toggleFavorite } = useFavorites()
   const [quantity, setQuantity] = useState(1)
@@ -73,6 +77,7 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState(0)
+  const addToCartBtnRef = useRef<HTMLButtonElement>(null)
 
   // Reviews State
   const [reviews, setReviews] = useState<any[]>([])
@@ -119,6 +124,12 @@ export default function ProductDetail() {
         setError(null)
         const data = await productsService.getById(id)
         setProduct(data)
+
+        // Redirect 301: if slug is missing or wrong in URL, navigate to canonical URL
+        const expectedUrl = generateProductUrl(data)
+        if (location.pathname !== expectedUrl) {
+          navigate(expectedUrl, { replace: true })
+        }
 
         try {
           const response = await fetch(`${env.apiUrl}/products/${id}`)
@@ -209,6 +220,9 @@ export default function ProductDetail() {
       setTimeout(() => {
         setIsAdded(false)
       }, 1500)
+      if (addToCartBtnRef.current) {
+        animateAddToCart({ fromElement: addToCartBtnRef.current })
+      }
     }
   }
 
@@ -685,6 +699,7 @@ export default function ProductDetail() {
               </button>
 
               <button
+                ref={addToCartBtnRef}
                 onClick={handleAddToCart}
                 disabled={!product.active}
                 className={`w-full py-3.5 border font-bold rounded-xl transition-all active:scale-98 flex items-center justify-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed duration-200 uppercase tracking-wide ${isAdded

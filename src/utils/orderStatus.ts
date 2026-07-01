@@ -14,6 +14,7 @@ const ORDER_STATUS_LABELS: Record<string, string> = {
   AUTHORIZED: 'Pago',
   PROCESSING: 'Preparação',
   DISTRIBUTOR_INFORMED: 'Preparação',
+  READY_FOR_SHIPPING: 'Pronto para Envio',
   SHIPPED: 'Enviado',
   DELIVERED: 'Entregue',
   CANCELLED: 'Cancelado',
@@ -54,6 +55,8 @@ export function getOrderStatusBadgeClass(status: string): string {
     case 'PROCESSING':
     case 'DISTRIBUTOR_INFORMED':
       return 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300';
+    case 'READY_FOR_SHIPPING':
+      return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300';
     case 'SHIPPED':
       return 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300';
     case 'DELIVERED':
@@ -87,6 +90,7 @@ export const INVOICE_ELIGIBLE_STATUS_CODES = [
   ...PAID_ORDER_STATUS_CODES,
   'PROCESSING',
   'DISTRIBUTOR_INFORMED',
+  'READY_FOR_SHIPPING',
   'SHIPPED',
   'DELIVERED',
 ] as const;

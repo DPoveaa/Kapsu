@@ -300,7 +300,7 @@ class AuthService {
 
       return result
     } catch (error: any) {
-      throw new Error(error.message || 'Erro de conexão ao validar link de redefinição')
+        throw new Error(error.message || 'Erro de conexão ao validar link de redefinição')
     }
   }
 
@@ -331,7 +331,177 @@ class AuthService {
       throw new Error(error.message || 'Erro de conexão ao redefinir senha')
     }
   }
+
+  /**
+   * Login social
+   */
+  async socialLogin(provider: string, token: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/social/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ provider, token }),
+      })
+
+      const text = await response.text()
+      let data
+      try {
+        data = text ? JSON.parse(text) : {}
+      } catch (e) {
+        throw new Error('Resposta inválida do servidor')
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro no login social')
+      }
+
+      return data
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro de conexão no login social')
+    }
+  }
+
+  /**
+   * Completa cadastro social
+   */
+  async socialRegister(provider: string, token: string, phone: string, cpf: string, name?: string): Promise<any> {
+    try {
+      const response = await fetch(`${this.baseUrl}/social/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ provider, token, phone, cpf, name }),
+      })
+
+      const text = await response.text()
+      let data
+      try {
+        data = text ? JSON.parse(text) : {}
+      } catch (e) {
+        throw new Error('Resposta inválida do servidor')
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao concluir cadastro social')
+      }
+
+      return data
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro de conexão ao concluir cadastro social')
+    }
+  }
+
+  /**
+   * Vincula conta social
+   */
+  async linkSocial(provider: string, token: string): Promise<any> {
+    try {
+      const sessionToken = localStorage.getItem('sanare_token')
+      if (!sessionToken) {
+        throw new Error('Usuário não autenticado')
+      }
+
+      const response = await fetch(`${this.baseUrl}/social/link`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({ provider, token }),
+      })
+
+      const text = await response.text()
+      let data
+      try {
+        data = text ? JSON.parse(text) : {}
+      } catch (e) {
+        throw new Error('Resposta inválida do servidor')
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao vincular conta')
+      }
+
+      return data
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro de conexão ao vincular conta')
+    }
+  }
+
+  /**
+   * Desvincula conta social
+   */
+  async unlinkSocial(provider: string): Promise<any> {
+    try {
+      const sessionToken = localStorage.getItem('sanare_token')
+      if (!sessionToken) {
+        throw new Error('Usuário não autenticado')
+      }
+
+      const response = await fetch(`${this.baseUrl}/social/unlink`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({ provider }),
+      })
+
+      const text = await response.text()
+      let data
+      try {
+        data = text ? JSON.parse(text) : {}
+      } catch (e) {
+        throw new Error('Resposta inválida do servidor')
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao desvincular conta')
+      }
+
+      return data
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro de conexão ao desvincular conta')
+    }
+  }
+
+  /**
+   * Obtém provedores vinculados
+   */
+  async getLinkedProviders(): Promise<any> {
+    try {
+      const sessionToken = localStorage.getItem('sanare_token')
+      if (!sessionToken) {
+        throw new Error('Usuário não autenticado')
+      }
+
+      const response = await fetch(`${this.baseUrl}/social/providers`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${sessionToken}`,
+        },
+      })
+
+      const text = await response.text()
+      let data
+      try {
+        data = text ? JSON.parse(text) : {}
+      } catch (e) {
+        throw new Error('Resposta inválida do servidor')
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao obter provedores vinculados')
+      }
+
+      return data
+    } catch (error: any) {
+      throw new Error(error.message || 'Erro de conexão ao obter provedores vinculados')
+    }
+  }
 }
 
 export const authService = new AuthService()
-

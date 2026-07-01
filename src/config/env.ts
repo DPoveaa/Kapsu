@@ -42,6 +42,9 @@ export const env = {
   
   // Modo de produção
   isProd: import.meta.env.PROD,
+
+  // Google Client ID
+  googleClientId: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
 } as const
 
 /**

@@ -882,7 +882,7 @@ class AdminService {
   /**
    * Atualiza o status de um pedido manualmente (apenas admin)
    */
-  async updateOrderStatus(orderId: string, status: string): Promise<{ success: boolean; message: string; data: any }> {
+  async updateOrderStatus(orderId: string, status: string, statusExplanation?: string): Promise<{ success: boolean; message: string; data: any }> {
     try {
       const token = localStorage.getItem('sanare_token')
       if (!token) {
@@ -895,7 +895,7 @@ class AdminService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, status_explanation: statusExplanation }),
       })
 
       const text = await response.text()

@@ -17,13 +17,13 @@ import ManageProducts from './pages/ManageProducts'
 import ManageOrders from './pages/ManageOrders'
 import Reports from './pages/Reports'
 import SiteSettings from './pages/SiteSettings'
+import GoogleSheetsSettings from './pages/GoogleSheetsSettings'
 import ShippingSettings from './pages/ShippingSettings'
 import FreeShippingRules from './pages/FreeShippingRules'
 import ManagePromotions from './pages/ManagePromotions'
 import ManagePromoCodes from './pages/ManagePromoCodes'
 import AuditLogs from './pages/AuditLogs'
 import KaiaChats from './pages/KaiaChats'
-import ManageAIKeys from './pages/ManageAIKeys'
 import ManageInstallmentRules from './pages/ManageInstallmentRules'
 
 import ManageBanners from './pages/ManageBanners'
@@ -31,6 +31,7 @@ import ManageReviews from './pages/ManageReviews'
 import ManageHomeSections from './pages/ManageHomeSections'
 import ManageHeaderCategories from './pages/ManageHeaderCategories'
 import OrderDetail from './pages/OrderDetail'
+import SupplierOrderDetail from './pages/SupplierOrderDetail'
 import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentFailure from './pages/PaymentFailure'
 import Profile from './pages/Profile'
@@ -88,7 +89,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/produtos" element={<Products />} />
-        <Route path="/produtos/:id" element={<ProductDetail />} />
+        <Route path="/produtos/:idSlug" element={<ProductDetail />} />
         <Route path="/carrinho" element={<Cart />} />
         <Route path="/carrinho/payment/card" element={<CheckoutCardPayment />} />
         <Route path="/checkout" element={<Navigate to="/carrinho?step=delivery" replace />} />
@@ -100,6 +101,7 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/cadastro" element={<Login />} />
         <Route path="/recuperar-senha" element={<RecoverPassword />} />
+        <Route path="/fornecedor/pedidos/:id" element={<SupplierOrderDetail />} />
         <Route
           path="/perfil"
           element={
@@ -205,6 +207,16 @@ function AppContent() {
             <ProtectedRoute requireAdmin>
               <AdminLayout>
                 <SiteSettings />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/google-sheets"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <GoogleSheetsSettings />
               </AdminLayout>
             </ProtectedRoute>
           }
@@ -321,16 +333,10 @@ function AppContent() {
         />
         <Route
           path="/admin/ai-keys"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <ManageAIKeys />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
+          element={<Navigate to="/admin/central-ia?tab=keys" replace />}
         />
         <Route
-          path="/admin/kaia-chats"
+          path="/admin/central-ia"
           element={
             <ProtectedRoute requireAdmin>
               <AdminLayout>

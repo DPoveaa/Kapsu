@@ -12,6 +12,7 @@ import { productsService } from '../services/products.service'
 import { Product } from '../types'
 import { getImageUrl } from '../utils/imageUrl'
 import { searchProducts } from '../utils/productSearch'
+import { generateProductUrl } from '../utils/productUrl'
 
 const SEARCH_PLACEHOLDERS = [
   'Quero mais energia',
@@ -244,7 +245,7 @@ export default function Header() {
                 onClick={() => {
                   setShowSuggestions(false)
                   setSearchTerm('')
-                  navigate(`/produtos/${p.id}`)
+                  navigate(generateProductUrl(p))
                 }}
                 className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:hover:bg-gray-700/70"
               >

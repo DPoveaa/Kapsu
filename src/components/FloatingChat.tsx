@@ -9,6 +9,11 @@ import { useNavigate } from 'react-router-dom'
 import { env } from '../config/env'
 import { normalizeActionsForLayout, getActionStateKey } from '../utils/kaiaActions'
 import { searchProducts } from '../utils/productSearch'
+import { PromotionChatCards } from './chat/PromotionChatCards'
+import { animateAddToCart } from '../utils/cartFlyAnimation'
+import { getOrderStatusLabel } from '../utils/orderStatus'
+import { generateProductUrl } from '../utils/productUrl'
+
 
 interface ChatAction {
   label: string
@@ -294,6 +299,117 @@ const scoreAudienceFit = (targetAudience: AudienceGender | 'unisex', audienceGen
   if (targetAudience === 'unisex' || targetAudience === 'unknown') return 0.25
   return -1
 }
+
+const getCartAfterSnapshot = (payload: any) => {
+  const metadata = payload?.metadata || {}
+  const diagnostics = payload?.diagnostics || metadata?.diagnostics || metadata?.clientDiagnostics || {}
+  const parts = Array.isArray(payload?.parts) ? payload.parts : Array.isArray(metadata?.parts) ? metadata.parts : []
+  const cartPart = parts.find((part: any) => ['cart_summary', 'cart_items'].includes(part?.type) && (part.cartAfter || part.cart || part.summary))
+  const emptyCartItemsPart = parts.find((part: any) => part?.type === 'cart_items' && Array.isArray(part.items) && part.items.length === 0)
+  return payload?.cartAfter || diagnostics?.cartAfter || metadata?.cartAfter || cartPart?.cartAfter || cartPart?.cart || cartPart?.summary || (emptyCartItemsPart ? { itemCount: 0, total: 0 } : null)
+}
+
+const hasCartClearSuccessText = (payload: any) => {
+  const text = [
+    payload?.message,
+    payload?.content,
+    ...(Array.isArray(payload?.parts) ? payload.parts : []).filter((part: any) => part?.type === 'text').map((part: any) => part.text),
+  ].filter(Boolean).join(' ').toLowerCase()
+  return /esvaziei|limpei|removi tudo|carrinho vazio|foi esvaziado|carrinho foi esvaziado|ja esta vazio|já está vazio/.test(text)
+}
+
+const getEmptyCartSummaryPart = (parts: any[]) =>
+  (parts || []).find((part: any) => {
+    if (part?.type !== 'cart_summary') return false
+    const itemCount = Number(part.itemCount ?? part.item_count ?? part.data?.itemCount ?? part.data?.item_count)
+    return part.empty === true || itemCount === 0
+  })
+
+const isConfirmedEmptyCartClearPayload = (payload: any) => {
+  const metadata = payload?.metadata || {}
+  const diagnostics = payload?.diagnostics || metadata?.diagnostics || {}
+  const action = payload?.action || metadata?.action || {}
+  const intent = payload?.intent || metadata?.intent || diagnostics?.intent
+  const mutationType = payload?.mutationType || metadata?.mutationType || diagnostics?.mutationType
+  const parts = Array.isArray(payload?.parts) ? payload.parts : Array.isArray(metadata?.parts) ? metadata.parts : []
+  const cartAfter = getCartAfterSnapshot(payload)
+  const itemCount = Number(cartAfter?.itemCount ?? cartAfter?.item_count ?? cartAfter?.count)
+  const summaryEmpty = Boolean(getEmptyCartSummaryPart(parts))
+  const clearText = hasCartClearSuccessText(payload)
+  const isClear =
+    intent === 'cart_clear' ||
+    mutationType === 'clear' ||
+    action?.type === 'cart_clear' ||
+    action?.actionType === 'cart_clear' ||
+    (payload?.layout === 'cart_update' && (clearText || summaryEmpty))
+
+  return Boolean(isClear && (summaryEmpty || (Number.isFinite(itemCount) && itemCount === 0)))
+}
+
+const sanitizeCartClearResponseParts = (parts: any[], payload: any) => {
+  if (!isConfirmedEmptyCartClearPayload({ ...payload, parts })) return parts
+
+  const alreadyEmpty = /ja esta vazio|já está vazio/i.test(
+    [
+      payload?.message,
+      ...(parts || []).filter((part: any) => part?.type === 'text').map((part: any) => part.text),
+    ].filter(Boolean).join(' ')
+  )
+
+  const filtered = (parts || []).filter((part: any) => !['free_shipping_progress', 'cart_items'].includes(part?.type))
+  const hasCartSummary = filtered.some((part: any) => part?.type === 'cart_summary')
+  const defaultActions = {
+    type: 'actions',
+    actions: [
+      { id: 'view-products', label: 'Ver produtos', type: 'navigate', style: 'primary', payload: { path: '/produtos' } },
+      { id: 'view-promotions', label: 'Ver promocoes', type: 'navigate', style: 'secondary', payload: { path: '/produtos?promocao=true' } },
+    ],
+  }
+
+  const nextParts = hasCartSummary
+    ? filtered
+    : [
+        ...filtered.filter((part: any) => part?.type !== 'actions'),
+        { type: 'cart_summary', itemCount: 0, total: 0, empty: true, cartAfter: { itemCount: 0, total: 0 } },
+        ...filtered.filter((part: any) => part?.type === 'actions'),
+      ]
+
+  const actionsPart = nextParts.find((part: any) => part?.type === 'actions')
+  const safeActions = (actionsPart?.actions || [])
+    .filter((action: any) => action?.type !== 'cart_open' && !/\bver carrinho\b/i.test(String(action?.label || '')))
+
+  if (actionsPart) {
+    actionsPart.actions = safeActions.length > 0 ? safeActions : defaultActions.actions
+  } else {
+    nextParts.push(defaultActions)
+  }
+
+  const textPart = nextParts.find((part: any) => part?.type === 'text')
+  if (textPart) {
+    if (alreadyEmpty) {
+      textPart.text = 'Seu carrinho já está vazio.'
+    } else if (!/esvaziei|limpei/i.test(String(textPart.text || ''))) {
+      textPart.text = 'Pronto, esvaziei seu carrinho.'
+    }
+  }
+
+  return nextParts
+}
+
+const messageSuppressesLegacyCartCards = (msg: ChatMessage) => {
+  const parts = msg.metadata?.parts || []
+  if (isConfirmedEmptyCartClearPayload({
+    layout: msg.metadata?.responseLayout,
+    message: msg.content,
+    parts,
+    metadata: msg.metadata,
+    action: (msg.metadata as any)?.action,
+    diagnostics: (msg.metadata as any)?.diagnostics,
+  })) {
+    return true
+  }
+  return Boolean(getEmptyCartSummaryPart(parts) && hasCartClearSuccessText({ message: msg.content, parts }))
+}
 const buildProductRecommendationParts = (
   content: string,
   products: any[],
@@ -339,12 +455,22 @@ const buildClientChatMessage = (historyMessage: any): ChatMessage => {
   const sanitized = sanitizeClientMessageText(rawContent)
   const metadataActions = normalizeChatActions(metadata?.actionButtons || metadata?.actions)
   const actions = metadataActions
+  const historyParts = sanitizeCartClearResponseParts(
+    v2Parts || metadata?.parts || [],
+    {
+      layout: historyMessage.layout || metadata?.responseLayout,
+      message: sanitized.content,
+      parts: v2Parts || metadata?.parts || [],
+      metadata,
+      diagnostics: historyMessage.diagnostics || metadata?.diagnostics,
+    }
+  )
 
   // Para mensagens v2, cria metadata sintética com as parts do nível raiz
-  const clientMetadata: ChatMessage['metadata'] = v2Parts
+  const clientMetadata: ChatMessage['metadata'] = (v2Parts || historyParts.length > 0)
     ? {
-        parts: v2Parts,
-        responseLayout: historyMessage.layout || 'text',
+        parts: historyParts,
+        responseLayout: historyMessage.layout || metadata?.responseLayout || 'text',
         ...(metadata || {})
       }
     : metadata || (sanitized.followUpText ? {} : undefined)
@@ -357,7 +483,7 @@ const buildClientChatMessage = (historyMessage: any): ChatMessage => {
     if (Array.isArray(clientMetadata.recommendedProducts)) {
       clientMetadata.recommendedProducts = clientMetadata.recommendedProducts.map((prod: any) => ({
         ...prod,
-        url: prod.url || `/produtos/${prod.id}`
+        url: prod.url || generateProductUrl(prod)
       }))
     }
 
@@ -469,6 +595,15 @@ const persistLocalActionMessage = (msg: ChatMessage) => {
   }
 }
 
+const isVisibleCustomerSession = (session: any) => {
+  if (!session) return false
+  const archivedAt = session.archived_at || session.archivedAt
+  const deletedAt = session.deleted_at || session.deletedAt
+  const hiddenAt = session.hidden_from_customer_at || session.hiddenFromCustomerAt || session.archived_for_customer_at || session.archivedForCustomerAt
+  const status = String(session.status || '').toLowerCase()
+  return !archivedAt && !deletedAt && !hiddenAt && !['archived', 'deleted'].includes(status)
+}
+
 const mergeLocalActionMessages = (serverMessages: ChatMessage[]): ChatMessage[] => {
   const localMsgs = getLocalActionMessages()
   if (localMsgs.length === 0) return serverMessages
@@ -566,7 +701,7 @@ const FloatingChat: React.FC = () => {
         targetAudience,
         audienceMatch: audienceFit,
         goalMatch: 'libido_support',
-        url: '/produtos/' + product.id
+        url: generateProductUrl(product)
       }))
 
       if (products.length === 0) return false
@@ -1121,9 +1256,6 @@ const FloatingChat: React.FC = () => {
               } else {
                 setEscalationChannel('site')
               }
-            } else if (conv.status === 'human_needed' || conv.status === 'human_assigned') {
-              setEscalationStatus(conv.status)
-              setEscalationChannel(conv.preferred_contact || 'site')
             } else {
               setEscalationStatus('none')
               setEscalationChannel(null)
@@ -1939,7 +2071,7 @@ const FloatingChat: React.FC = () => {
               description: product.description,
               benefits: product.benefits,
               image: product.image,
-              url: `/produtos/${product.id}`
+              url: generateProductUrl(product)
             }))
 
             if (products.length > 0) {
@@ -1982,7 +2114,7 @@ const FloatingChat: React.FC = () => {
         }
 
         const v2Message = effectiveAiData.message || ''
-        const v2Parts = effectiveAiData.parts as Array<any>
+        const v2Parts = sanitizeCartClearResponseParts(effectiveAiData.parts as Array<any>, effectiveAiData)
         const v2Timestamp = Date.now()
 
         // Detecta se a resposta indica suporte humano acionado (layout = 'support_handoff')
@@ -2048,8 +2180,11 @@ const FloatingChat: React.FC = () => {
         })
 
         // Sincroniza carrinho se foi modificado pela Kaia v2
-        const hasCartUpdate = v2Parts.some((p: any) => p.type === 'cart_items')
-        if (hasCartUpdate && isAuthenticated) {
+        const hasCartUpdate = v2Parts.some((p: any) => ['cart_items', 'cart_summary'].includes(p.type))
+        if (isConfirmedEmptyCartClearPayload({ ...effectiveAiData, parts: v2Parts })) {
+          await clearCart()
+          await refreshCart()
+        } else if (hasCartUpdate && isAuthenticated) {
           await refreshCart()
         }
 
@@ -2737,14 +2872,18 @@ const FloatingChat: React.FC = () => {
 
         // On success cart_add: sync client side cart
         if (type === 'cart_add') {
+          if (options?.fromElement) {
+            animateAddToCart({ fromElement: options.fromElement });
+          }
           await refreshCart();
         }
 
         if (type === 'cart_clear' || type === 'cart_remove') {
-          const cartPart = msgData.parts?.find((p: any) => p.type === 'cart_items');
-          const cartAfter = cartPart?.cartAfter;
-          if (type === 'cart_clear' && (cartAfter?.itemCount === 0 || !cartPart?.items?.length)) {
+          const sanitizedParts = sanitizeCartClearResponseParts(msgData.parts || [], { ...msgData, action: { type }, diagnostics: msgData.diagnostics });
+          msgData.parts = sanitizedParts;
+          if (type === 'cart_clear' && isConfirmedEmptyCartClearPayload({ ...msgData, parts: sanitizedParts, action: { type } })) {
             await clearCart();
+            await refreshCart();
           } else {
             await refreshCart();
           }
@@ -2757,6 +2896,18 @@ const FloatingChat: React.FC = () => {
           setPendingContext('none');
         }
 
+        if (type === 'return_to_ai') {
+          msgData.diagnostics = {
+            ...(msgData.diagnostics || {}),
+            agent: msgData.diagnostics?.agent || 'HumanSupportAgent',
+            intent: msgData.diagnostics?.intent || 'return_to_ai',
+            toolsUsed: msgData.diagnostics?.toolsUsed || ['returnConversationToAI'],
+            humanInLoopAfter: false,
+            autoResponsePausedAfter: false,
+            conversationStatusAfter: 'ai_active'
+          };
+        }
+
         const textPart = msgData.parts?.find((p: any) => p.type === 'text');
         const content = textPart?.text || msgData.message || '';
         
@@ -2767,18 +2918,21 @@ const FloatingChat: React.FC = () => {
           timestamp: Date.now(),
           metadata: msgData.metadata || {
             parts: msgData.parts,
-            responseLayout: msgData.layout
+            responseLayout: msgData.layout,
+            diagnostics: msgData.diagnostics
           },
           actions: msgData.parts?.find((p: any) => p.type === 'actions')?.actions || []
         };
 
-        persistLocalActionMessage(assistantMsg);
+        if (type !== 'cart_add') {
+          persistLocalActionMessage(assistantMsg);
 
-        setMessages(prev => {
-          const alreadyExists = prev.some(m => m.id === assistantMsg.id);
-          if (alreadyExists) return prev;
-          return [...prev, assistantMsg];
-        });
+          setMessages(prev => {
+            const alreadyExists = prev.some(m => m.id === assistantMsg.id);
+            if (alreadyExists) return prev;
+            return [...prev, assistantMsg];
+          });
+        }
         setActionStates(prev => ({ ...prev, [stateKey]: 'success' }));
         setTimeout(() => {
           setActionStates(prev => {
@@ -2817,9 +2971,16 @@ const FloatingChat: React.FC = () => {
     }
   };
 
-  const handleAddProductDirectly = async (product: { id: string; name: string; price: number }) => {
+  const handleAddProductDirectly = async (
+    product: { id: string; name: string; price: number },
+    options?: { stateKey?: string; fromElement?: HTMLElement | null }
+  ) => {
     // 1. Mostra aviso visual de loading no botão do card
     setLocalAddingProds(prev => ({ ...prev, [product.id]: 'loading' }));
+
+    if (options?.fromElement) {
+      animateAddToCart({ fromElement: options.fromElement });
+    }
 
     try {
       const actionRequestId = `act_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
@@ -2850,31 +3011,6 @@ const FloatingChat: React.FC = () => {
         });
       }, 1500);
 
-      // 3. Adiciona a mensagem do assistente retornada do backend no histórico local
-      const msgData = result.data || result;
-      const textPart = msgData.parts?.find((p: any) => p.type === 'text');
-      const content = textPart?.text || msgData.message || '';
-
-      const assistantMsg = {
-        id: msgData.assistantMessage?.id || msgData.aiMessage?.id || `msg-${Date.now()}`,
-        role: 'assistant' as const,
-        content,
-        timestamp: Date.now(),
-        metadata: msgData.metadata || {
-          parts: msgData.parts,
-          responseLayout: msgData.layout
-        },
-        actions: msgData.parts?.find((p: any) => p.type === 'actions')?.actions || []
-      };
-
-      persistLocalActionMessage(assistantMsg);
-
-      setMessages(prev => {
-        const alreadyExists = prev.some(m => m.id === assistantMsg.id);
-        if (alreadyExists) return prev;
-        return [...prev, assistantMsg];
-      });
-
     } catch (error: any) {
       console.error('Erro ao adicionar produto diretamente:', error);
       setLocalAddingProds(prev => {
@@ -2903,11 +3039,25 @@ const FloatingChat: React.FC = () => {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
       }
-      const response = await fetch(`${env.apiUrl}/kaia/v2/conversations`, { headers })
+      const response = await fetch(
+        `${env.apiUrl}/kaia/v2/conversations?sessionId=${encodeURIComponent(currentSessionId)}`,
+        { headers }
+      )
       if (response.ok) {
         const result = await response.json()
-        if (result.success && Array.isArray(result.conversations)) {
-          setSessionsList(result.conversations)
+        const rawList = Array.isArray(result.conversations)
+          ? result.conversations
+          : Array.isArray(result.data?.conversations)
+            ? result.data.conversations
+            : []
+        if (result.success && Array.isArray(rawList)) {
+          const visibleSessions = rawList
+            .filter(isVisibleCustomerSession)
+            .sort((a: any, b: any) => new Date(b.last_message_at || b.lastMessageAt || 0).getTime() - new Date(a.last_message_at || a.lastMessageAt || 0).getTime())
+          setSessionsList(visibleSessions)
+          if (visibleSessions.length === 0) {
+            setActiveTab('chat')
+          }
         }
       }
     } catch (err) {
@@ -2915,7 +3065,7 @@ const FloatingChat: React.FC = () => {
     } finally {
       setLoadingSessions(false)
     }
-  }, [])
+  }, [currentSessionId])
 
   const handleStartNewChat = async () => {
     setShowNewChatConfirm(false)
@@ -3258,7 +3408,6 @@ const FloatingChat: React.FC = () => {
                         {(msg.content || msg.metadata?.parts?.length || msg.metadata?.recommendedProducts?.length || msg.metadata?.cartProducts?.length || msg.metadata?.followUpText || msg.actions?.length) && (() => {
                           // ===== LAYOUT COMPOSTO COM PARTS (Carrinho estruturado) =====
                           if (msg.role === 'assistant' && msg.metadata?.parts && msg.metadata.parts.length > 0) {
-                          const cartProds = msg.metadata.cartProducts || []
 
                           const renderCartCard = (prod: any) => {
                               const liveItem = items.find(ci => ci.product?.id === prod.id)
@@ -3363,7 +3512,7 @@ const FloatingChat: React.FC = () => {
                                   </div>
                                   <div className="border-t border-gray-100 dark:border-gray-700 w-full">
                                     <button
-                                      onClick={() => { navigate(`/produtos/${prod.id}`); setIsOpen(false) }}
+                                      onClick={() => { navigate(generateProductUrl(prod)); setIsOpen(false) }}
                                       className="w-full py-1.5 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
                                     >
                                       Ver produto →
@@ -3408,7 +3557,7 @@ const FloatingChat: React.FC = () => {
                                   <div className="grid grid-cols-2 gap-1.5 pt-1">
                                     <button
                                       onClick={() => {
-                                        navigate(prod.url || `/produtos/${prod.id}`)
+                                        navigate(prod.url || generateProductUrl(prod))
                                         setIsOpen(false)
                                       }}
                                       className="py-1 text-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-[10px] font-semibold transition-colors cursor-pointer"
@@ -3416,7 +3565,7 @@ const FloatingChat: React.FC = () => {
                                       Ver Produto
                                     </button>
                                     <button
-                                      onClick={() => handleAddProductDirectly(prod)}
+                                      onClick={(e) => handleAddProductDirectly(prod, { fromElement: e.currentTarget })}
                                       disabled={localAddingProds[prod.id] === 'loading'}
                                       className={`py-1 text-center rounded text-[10px] font-semibold transition-colors flex items-center justify-center space-x-1 cursor-pointer
                                           ${localAddingProds[prod.id] === 'success'
@@ -3460,7 +3609,9 @@ const FloatingChat: React.FC = () => {
                                     )
                                   }
                                   if (part.type === 'cart_items') {
-                                    const cartProdsList = part.items || cartProds
+                                    if (messageSuppressesLegacyCartCards(msg)) return null
+                                    const cartProdsList = part.items || []
+                                    if (!Array.isArray(cartProdsList) || cartProdsList.length === 0) return null
                                     const MAX_VISIBLE = 4
                                     const visible = cartProdsList.slice(0, MAX_VISIBLE)
                                     const overflow = cartProdsList.length - MAX_VISIBLE
@@ -3488,6 +3639,7 @@ const FloatingChat: React.FC = () => {
                                 }
                                 if (part.type === 'actions') {
                                     const layout = msg.metadata?.responseLayout || (msg.metadata as any)?.layout || 'text'
+                                    const hasPromotionCards = msg.metadata?.parts?.some((p: any) => p.type === 'promotion_cards')
 
                                     // Extract products context if available to help normalize actions
                                     const productsPart = msg.metadata?.parts?.find((p: any) => p.type === 'product_cards' || p.type === 'promotion_cards')
@@ -3495,11 +3647,19 @@ const FloatingChat: React.FC = () => {
                                     const productIds = actionProducts.map((p: any) => p.id).filter(Boolean)
                                     const primaryProductId = productIds[0]
 
-                                    const partActions = normalizeActionsForLayout(layout, part.actions || [], {
+                                    const rawActions = (part.actions || []).filter((action: any) => {
+                                      if (!hasPromotionCards) return true
+                                      const label = String(action?.label || '').toLowerCase()
+                                      return !label.includes('ver todas as promo')
+                                    })
+
+                                    const partActions = normalizeActionsForLayout(layout, rawActions, {
                                       primaryProductId,
                                       productIds,
                                       productAlreadyInCart: (id: string) => items.some((item: any) => item.product?.id === id)
                                     })
+
+                                    if (partActions.length === 0) return null
 
                                     return (
                                       <div key={`part-actions-${index}-${partIdx}`} className="flex flex-wrap gap-2 w-full max-w-[85%] sm:max-w-[80%] justify-start">
@@ -3579,16 +3739,32 @@ const FloatingChat: React.FC = () => {
                                             )}
                                             <div className="mt-2.5 flex gap-2">
                                               <button
-                                                onClick={() => { navigate(`/produtos/${prod.id}`); setIsOpen(false) }}
+                                                onClick={() => { navigate(generateProductUrl(prod)); setIsOpen(false) }}
                                                 className="flex-1 py-1 text-center bg-gray-105 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-[10px] font-semibold cursor-pointer"
                                               >
                                                 Ver Produto
                                               </button>
                                               <button
-                                                onClick={() => handleAddProductDirectly(prod)}
-                                                className="flex-1 py-1 text-center bg-green-600 hover:bg-green-700 text-white rounded text-[10px] font-semibold cursor-pointer"
+                                                onClick={(e) => handleAddProductDirectly(prod, { fromElement: e.currentTarget })}
+                                                disabled={localAddingProds[prod.id] === 'loading'}
+                                                className={`flex-1 py-1 text-center rounded text-[10px] font-semibold transition-colors flex items-center justify-center space-x-1 cursor-pointer
+                                                  ${localAddingProds[prod.id] === 'success'
+                                                    ? 'bg-green-700 text-white border border-green-500 scale-95'
+                                                    : localAddingProds[prod.id] === 'loading'
+                                                      ? 'bg-green-600 opacity-70 text-white cursor-not-allowed'
+                                                      : 'bg-green-600 hover:bg-green-700 text-white'
+                                                  }`}
                                               >
-                                                Adicionar
+                                                {localAddingProds[prod.id] === 'loading' ? (
+                                                  <>
+                                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                                    <span>Adicionando...</span>
+                                                  </>
+                                                ) : localAddingProds[prod.id] === 'success' ? (
+                                                  <span>Adicionado! ✓</span>
+                                                ) : (
+                                                  <span>Adicionar</span>
+                                                )}
                                               </button>
                                             </div>
                                           </div>
@@ -3607,13 +3783,13 @@ const FloatingChat: React.FC = () => {
                                               <span>{new Date(order.createdAt).toLocaleDateString('pt-BR')}</span>
                                             </div>
                                             <p className="text-xs text-gray-700 dark:text-gray-200 mt-1 font-semibold">
-                                              Status: <span className="text-[#00A86B]">{order.status}</span>
+                                              Status: <span className="text-[#00A86B]">{getOrderStatusLabel(order.status)}</span>
                                             </p>
                                             <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
                                               Total: <span className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.totalValue)}</span>
                                             </p>
                                             <button
-                                              onClick={() => { navigate(`/profile`); setIsOpen(false) }}
+                                              onClick={() => { navigate(`/perfil?tab=orders`); setIsOpen(false) }}
                                               className="w-full mt-2 py-1 text-center bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-200 rounded text-[10px] font-semibold cursor-pointer"
                                             >
                                               Ver Detalhes
@@ -3659,55 +3835,38 @@ const FloatingChat: React.FC = () => {
                                   if (part.type === 'promotion_cards') {
                                     const items = part.products || part.promotions || part.items || []
                                     return (
-                                      <div key={`part-promos-${index}-${partIdx}`} className="w-full max-w-[85%] sm:max-w-[80%] space-y-2">
-                                        {items.map((prod: any) => {
-                                          const isPromo = prod.promoPrice || prod.promo_price || null;
-                                          const discountPercent = isPromo ? Math.round(((prod.price - Number(isPromo)) / prod.price) * 100) : 0;
-                                          return (
-                                            <div key={prod.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2.5 shadow-sm text-left flex items-center space-x-2.5">
-                                              {prod.image && (
-                                                <img src={productsService.getImageUrl(prod.image)} alt={prod.name} className="w-10 h-10 object-contain rounded bg-gray-50" />
-                                              )}
-                                              <div className="flex-1 min-w-0">
-                                                <h4 className="font-semibold text-xs text-gray-800 dark:text-gray-100 line-clamp-1">{prod.name}</h4>
-                                                <div className="flex items-baseline space-x-1.5 mt-0.5">
-                                                  {isPromo ? (
-                                                    <>
-                                                      <span className="text-[10px] text-gray-400 line-through">
-                                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.price)}
-                                                      </span>
-                                                      <span className="text-xs font-bold text-green-600 dark:text-green-400">
-                                                        Por apenas {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(isPromo))}
-                                                      </span>
-                                                      <span className="text-[9px] bg-red-100 text-red-700 px-1 rounded font-bold">
-                                                        Economize {discountPercent}%
-                                                      </span>
-                                                    </>
-                                                  ) : (
-                                                    <span className="text-xs font-bold text-gray-800 dark:text-gray-100">
-                                                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.price)}
-                                                    </span>
-                                                  )}
-                                                </div>
-                                              </div>
-                                              <div className="flex flex-col space-y-1">
-                                                <button
-                                                  onClick={() => { navigate(`/produtos/${prod.id}`); setIsOpen(false) }}
-                                                  className="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-750 text-gray-700 dark:text-gray-200 rounded text-[9px] font-semibold cursor-pointer"
-                                                >
-                                                  Ver Produto
-                                                </button>
-                                                <button
-                                                  onClick={() => handleAddProductDirectly(prod)}
-                                                  disabled={localAddingProds[prod.id] === 'loading'}
-                                                  className="px-2 py-0.5 bg-green-600 hover:bg-green-700 text-white rounded text-[9px] font-semibold cursor-pointer"
-                                                >
-                                                  {localAddingProds[prod.id] === 'loading' ? 'Adicionando...' : 'Adicionar'}
-                                                </button>
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
+                                      <PromotionChatCards
+                                        key={`part-promos-${index}-${partIdx}`}
+                                        items={items}
+                                        totalCount={part.totalCount}
+                                        hasMore={part.hasMore}
+                                        addingState={localAddingProds}
+                                        onViewProduct={(productId) => {
+                                          navigate(generateProductUrl({ id: productId }))
+                                          setIsOpen(false)
+                                        }}
+                                        onAddProduct={(product, fromElement) => handleAddProductDirectly(product, { fromElement })}
+                                        onViewAll={() => {
+                                          navigate('/produtos?promocao=true')
+                                          setIsOpen(false)
+                                        }}
+                                      />
+                                    )
+                                  }
+                                  if (part.type === 'cart_summary') {
+                                    const summary = part.data || part
+                                    const itemCount = Number(summary.itemCount ?? summary.item_count ?? 0)
+                                    const total = Number(summary.total ?? 0)
+                                    return (
+                                      <div key={`part-cart-summary-${index}-${partIdx}`} className="w-full max-w-[85%] sm:max-w-[80%] bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-left">
+                                        <p className="text-xs font-semibold text-gray-800 dark:text-gray-100">
+                                          {itemCount === 0 ? 'Carrinho vazio' : `Carrinho: ${itemCount} ${itemCount === 1 ? 'item' : 'itens'}`}
+                                        </p>
+                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                                          {itemCount === 0
+                                            ? 'Nenhum produto no carrinho agora.'
+                                            : `Total: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}`}
+                                        </p>
                                       </div>
                                     )
                                   }
@@ -3729,9 +3888,11 @@ const FloatingChat: React.FC = () => {
                                     )
                                   }
                                   if (part.type === 'free_shipping_progress') {
-                                    const isCartClearResponse = (msg.metadata as any)?.intent === 'cart_clear' || (msg.metadata as any)?.action?.type === 'cart_clear'
-                                    if (isCartClearResponse) return null
+                                    if (messageSuppressesLegacyCartCards(msg)) return null
                                     const progress = part.data || {}
+                                    if (Number(progress.remainingValue ?? progress.remaining_value ?? -1) === 0 && Number(progress.cartValue ?? progress.cart_value ?? progress.currentValue ?? progress.current_value ?? -1) === 0) {
+                                      return null
+                                    }
                                     return (
                                       <div key={`part-shipping-prog-${index}-${partIdx}`} className="w-full max-w-[85%] sm:max-w-[80%] bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm text-left flex flex-col space-y-2">
                                         <div className="flex justify-between items-center text-[10px] font-semibold text-gray-500">
@@ -3756,7 +3917,7 @@ const FloatingChat: React.FC = () => {
                           }
 
                           // ===== LAYOUT COMPOSTO LEGADO: cart_summary (intro + cards + followUp + botões) =====
-                          if (msg.role === 'assistant' && msg.metadata?.responseLayout === 'cart_summary') {
+                          if (msg.role === 'assistant' && msg.metadata?.responseLayout === 'cart_summary' && !messageSuppressesLegacyCartCards(msg)) {
                             const cartProds = msg.metadata.cartProducts || []
                             const MAX_VISIBLE = 4
                             const visible = cartProds.slice(0, MAX_VISIBLE)
@@ -3870,7 +4031,7 @@ const FloatingChat: React.FC = () => {
                                   {/* Link para o produto */}
                                   <div className="border-t border-gray-100 dark:border-gray-700 w-full">
                                     <button
-                                      onClick={() => { navigate(`/produtos/${prod.id}`); setIsOpen(false) }}
+                                      onClick={() => { navigate(generateProductUrl(prod)); setIsOpen(false) }}
                                       className="w-full py-1.5 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
                                     >
                                       Ver produto →
@@ -4020,7 +4181,7 @@ const FloatingChat: React.FC = () => {
                                           Ver Produto
                                         </button>
                                         <button
-                                          onClick={() => handleAddProductDirectly(prod)}
+                                          onClick={(e) => handleAddProductDirectly(prod, { fromElement: e.currentTarget })}
                                           disabled={localAddingProds[prod.id] === 'loading'}
                                           className={`py-1 text-center rounded text-[10px] font-semibold transition-colors flex items-center justify-center space-x-1 cursor-pointer
                                             ${localAddingProds[prod.id] === 'success'
@@ -4133,7 +4294,7 @@ const FloatingChat: React.FC = () => {
                                 </div>
                               )}
                               {/* Mini cards do carrinho — layout padrão (sem responseLayout=cart_summary) */}
-                              {msg.role === 'assistant' && msg.metadata?.cartProducts && msg.metadata.cartProducts.length > 0 && msg.metadata.responseLayout !== 'cart_summary' && (() => {
+                              {msg.role === 'assistant' && msg.metadata?.cartProducts && msg.metadata.cartProducts.length > 0 && msg.metadata.responseLayout !== 'cart_summary' && !messageSuppressesLegacyCartCards(msg) && (() => {
                                 const MAX_VISIBLE = 4
                                 const cartProds = msg.metadata.cartProducts!
                                 const visible = cartProds.slice(0, MAX_VISIBLE)
@@ -4159,7 +4320,7 @@ const FloatingChat: React.FC = () => {
                                             </div>
                                           </div>
                                           <div className="border-t border-gray-100 dark:border-gray-700">
-                                            <button onClick={() => { navigate(`/produtos/${prod.id}`); setIsOpen(false) }} className="w-full py-1.5 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer">Ver produto</button>
+                                            <button onClick={() => { navigate(generateProductUrl(prod)); setIsOpen(false) }} className="w-full py-1.5 text-center text-[10px] font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer">Ver produto</button>
                                           </div>
                                         </div>
                                       )
