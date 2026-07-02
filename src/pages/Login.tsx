@@ -9,6 +9,8 @@ import AnimatedLogo from '../components/AnimatedLogo'
 import loginBannerPortrait from '../images/3x4.png'
 import loginBannerLandscape from '../images/4x3.png'
 import { env } from '../config/env'
+import LegalAcceptanceCheckbox from '../components/legal/LegalAcceptanceCheckbox'
+import { getLegalAcceptancePayload } from '../content/legal'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -61,6 +63,8 @@ export default function Login() {
   const [showLoginPassword, setShowLoginPassword] = useState(false)
   const [showRegisterPassword, setShowRegisterPassword] = useState(false)
   const [showRegisterConfirmPassword, setShowRegisterConfirmPassword] = useState(false)
+  const [acceptedLegalTerms, setAcceptedLegalTerms] = useState(false)
+  const [legalAcceptanceError, setLegalAcceptanceError] = useState('')
 
   // Sincroniza o modo visual caso o usuário navegue usando o histórico do navegador (botão voltar/avançar)
   useEffect(() => {
@@ -71,6 +75,8 @@ export default function Login() {
     setShowLoginPassword(false)
     setShowRegisterPassword(false)
     setShowRegisterConfirmPassword(false)
+    setAcceptedLegalTerms(false)
+    setLegalAcceptanceError('')
   }, [location.pathname])
 
   useEffect(() => {
@@ -197,6 +203,9 @@ export default function Login() {
 
         if (!isLogin && !socialRegisterRequired) {
           if (btnRegister) {
+            if (!acceptedLegalTerms) {
+              btnRegister.innerHTML = ''
+            } else {
             console.log('[GSI DIAGNOSTICS] Chamando google.accounts.id.renderButton para Cadastro...');
             const isDark = document.documentElement.classList.contains('dark');
             btnRegister.innerHTML = ''; // Limpa botões antigos/duplicados!
@@ -208,6 +217,7 @@ export default function Login() {
               shape: 'rectangular'
             });
             console.log('[GSI DIAGNOSTICS] renderButton para Cadastro concluído.');
+            }
           } else {
             console.error('[GSI DIAGNOSTICS] ERRO: Elemento com ID google-signin-btn-register deveria existir, mas não foi encontrado no DOM.');
           }
@@ -237,7 +247,7 @@ export default function Login() {
         clearInterval(checkInterval);
       }
     };
-  }, [isLogin, socialRegisterRequired, env.googleClientId])
+  }, [isLogin, socialRegisterRequired, env.googleClientId, acceptedLegalTerms])
 
   const handleGoogleCredentialResponse = async (response: any) => {
     setLoading(true)
@@ -294,7 +304,13 @@ export default function Login() {
       errors.cpf = 'CPF inválido'
     }
 
-    if (Object.keys(errors).length > 0) {
+    if (!acceptedLegalTerms) {
+      setLegalAcceptanceError('Você precisa aceitar os Termos de Serviço e a Política de Privacidade')
+    } else {
+      setLegalAcceptanceError('')
+    }
+
+    if (Object.keys(errors).length > 0 || !acceptedLegalTerms) {
       setFieldErrors(errors)
       return
     }
@@ -306,7 +322,8 @@ export default function Login() {
         socialToken,
         socialPhone,
         socialCpf,
-        socialName
+        socialName,
+        getLegalAcceptancePayload()
       )
 
       if (data.token && data.user) {
@@ -355,6 +372,8 @@ export default function Login() {
     setShowLoginPassword(false)
     setShowRegisterPassword(false)
     setShowRegisterConfirmPassword(false)
+    setAcceptedLegalTerms(false)
+    setLegalAcceptanceError('')
     
     const redirect = searchParams.get('redirect')
     const redirectQuery = redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''
@@ -431,8 +450,14 @@ export default function Login() {
       newErrors.confirmPassword = 'As senhas não coincidem'
     }
 
+    if (!acceptedLegalTerms) {
+      setLegalAcceptanceError('Você precisa aceitar os Termos de Serviço e a Política de Privacidade')
+    } else {
+      setLegalAcceptanceError('')
+    }
+
     setFieldErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    return Object.keys(newErrors).length === 0 && acceptedLegalTerms
   }
 
   // Submissão do Login
@@ -498,6 +523,7 @@ export default function Login() {
         password: registerData.password,
         phone: `55${registerData.phone.replace(/\D/g, '')}`,
         cpf: registerData.cpf.replace(/\D/g, ''),
+        ...getLegalAcceptancePayload(),
       })
 
       // Sucesso no cadastro: limpa os campos de senha e exibe mensagem
@@ -751,6 +777,16 @@ export default function Login() {
                 )}
               </div>
 
+              <LegalAcceptanceCheckbox
+                checked={acceptedLegalTerms}
+                onChange={(checked) => {
+                  setAcceptedLegalTerms(checked)
+                  if (checked) setLegalAcceptanceError('')
+                }}
+                error={legalAcceptanceError}
+                id="social-legal-acceptance"
+              />
+
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
                 <button
                   type="button"
@@ -765,7 +801,7 @@ export default function Login() {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !acceptedLegalTerms}
                   className="w-full sm:w-2/3 bg-[#00A86B] hover:bg-[#008A57] text-white font-bold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#00A86B]/25 hover:shadow-[#00A86B]/35 text-sm tracking-wide cursor-pointer"
                 >
                   {loading ? (
@@ -1055,9 +1091,19 @@ export default function Login() {
                 </span>
               </div>
 
+              <LegalAcceptanceCheckbox
+                checked={acceptedLegalTerms}
+                onChange={(checked) => {
+                  setAcceptedLegalTerms(checked)
+                  if (checked) setLegalAcceptanceError('')
+                }}
+                error={legalAcceptanceError}
+                id="register-legal-acceptance"
+              />
+
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !acceptedLegalTerms}
                 className="w-full bg-[#00A86B] hover:bg-[#008A57] text-white font-bold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#00A86B]/25 hover:shadow-[#00A86B]/35 text-base tracking-wide"
               >
                 {loading ? (
@@ -1074,6 +1120,12 @@ export default function Login() {
                 <div className="border-t border-gray-200 dark:border-gray-800 w-full"></div>
                 <span className="bg-white dark:bg-gray-900 px-3 text-xs text-gray-400 absolute">ou</span>
               </div>
+
+              {!acceptedLegalTerms && (
+                <p className="text-xs text-center text-gray-500 dark:text-gray-400 mb-2 font-normal">
+                  Aceite os Termos e a Política de Privacidade acima para cadastrar com o Google.
+                </p>
+              )}
 
               <div id="google-signin-btn-register" className="w-full flex justify-center mt-2 min-h-[44px]"></div>
             </form>

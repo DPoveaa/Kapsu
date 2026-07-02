@@ -13,6 +13,8 @@ export interface RegisterRequest {
   password: string
   phone: string
   cpf: string
+  termsOfServiceVersion: string
+  privacyPolicyVersion: string
 }
 
 export interface AuthResponse {
@@ -366,14 +368,28 @@ class AuthService {
   /**
    * Completa cadastro social
    */
-  async socialRegister(provider: string, token: string, phone: string, cpf: string, name?: string): Promise<any> {
+  async socialRegister(
+    provider: string,
+    token: string,
+    phone: string,
+    cpf: string,
+    name?: string,
+    legalAcceptance?: { termsOfServiceVersion: string; privacyPolicyVersion: string }
+  ): Promise<any> {
     try {
       const response = await fetch(`${this.baseUrl}/social/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ provider, token, phone, cpf, name }),
+        body: JSON.stringify({
+          provider,
+          token,
+          phone,
+          cpf,
+          name,
+          ...legalAcceptance,
+        }),
       })
 
       const text = await response.text()

@@ -25,6 +25,12 @@ export default function Footer() {
           </Link>
 
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+            <Link to="/termos-de-servico" className="hover:opacity-80 transition-opacity">
+              Termos de Serviço
+            </Link>
+            <Link to="/politica-de-privacidade" className="hover:opacity-80 transition-opacity">
+              Política de Privacidade
+            </Link>
             <a href={phoneHref} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
               <Phone size={12} style={{ color: '#ffffff' }} />
               <span>{contactPhone}</span>

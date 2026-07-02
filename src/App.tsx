@@ -36,6 +36,8 @@ import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentFailure from './pages/PaymentFailure'
 import Profile from './pages/Profile'
 import RecoverPassword from './pages/RecoverPassword'
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
+import TermsOfServicePage from './pages/TermsOfServicePage'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
@@ -101,6 +103,8 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/cadastro" element={<Login />} />
         <Route path="/recuperar-senha" element={<RecoverPassword />} />
+        <Route path="/politica-de-privacidade" element={<PrivacyPolicyPage />} />
+        <Route path="/termos-de-servico" element={<TermsOfServicePage />} />
         <Route path="/fornecedor/pedidos/:id" element={<SupplierOrderDetail />} />
         <Route
           path="/perfil"

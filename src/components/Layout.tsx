@@ -14,7 +14,8 @@ export default function Layout({ children }: LayoutProps) {
   const isAdminRoute = location.pathname.startsWith('/admin')
   
   // Rotas que não devem mostrar Header e Footer
-  const hideHeaderFooter = ['/login', '/cadastro', '/recuperar-senha'].includes(location.pathname)
+  const legalRoutes = ['/termos-de-servico', '/politica-de-privacidade']
+  const hideHeaderFooter = ['/login', '/cadastro', '/recuperar-senha', ...legalRoutes].includes(location.pathname)
   const showFooter = !hideHeaderFooter && !isAdminRoute
 
   // Rastreia acessos automaticamente
