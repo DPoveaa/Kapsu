@@ -9,22 +9,25 @@ import { confirm } from '../utils/toast'
 import AdminModal from '../components/AdminModal'
 
 // Componente para preview de imagem com fallback automático via API
-function BannerImagePreview({ banner }: { banner: Banner }) {
-  const [imageUrl, setImageUrl] = useState(getImageUrl(banner.image_url))
+function BannerImagePreview({ banner, type = 'desktop' }: { banner: Banner, type?: 'desktop' | 'mobile' }) {
+  const imagePath = type === 'mobile' ? banner.mobile_image_url : banner.image_url
+  const [imageUrl, setImageUrl] = useState(getImageUrl(imagePath || ''))
   const [triedApiUrl, setTriedApiUrl] = useState(false)
   const [hasError, setHasError] = useState(false)
 
   useEffect(() => {
-    setImageUrl(getImageUrl(banner.image_url))
+    setImageUrl(getImageUrl(imagePath || ''))
     setTriedApiUrl(false)
     setHasError(false)
-  }, [banner.image_url])
+  }, [imagePath])
+
+  if (!imagePath) return null
 
   const handleError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const target = e.target as HTMLImageElement
     
     if (!triedApiUrl) {
-      const apiUrl = getImageUrl(banner.image_url)
+      const apiUrl = getImageUrl(imagePath)
       if (apiUrl === imageUrl) {
         setTriedApiUrl(true)
         setHasError(true)
@@ -39,7 +42,7 @@ function BannerImagePreview({ banner }: { banner: Banner }) {
       console.error('❌ Erro ao carregar imagem do banner:', {
         bannerId: banner.id,
         attemptedUrl: target.src,
-        originalPath: banner.image_url
+        originalPath: imagePath
       })
       setHasError(true)
       target.onerror = null
@@ -102,6 +105,7 @@ export default function ManageBanners() {
   const [uploading, setUploading] = useState(false)
   const [formData, setFormData] = useState<CreateBannerData>({
     image_url: '',
+    mobile_image_url: '',
     title: '',
     subtitle: '',
     link: '',
@@ -147,9 +151,11 @@ export default function ManageBanners() {
       const maxOrder = banners.length > 0 ? Math.max(...banners.map(b => b.order)) : -1
       // Garante que salvamos apenas o caminho relativo normalizado
       const imagePath = normalizeImagePath(formData.image_url)
+      const mobileImagePath = formData.mobile_image_url ? normalizeImagePath(formData.mobile_image_url) : ''
       await bannersService.create({
         ...formData,
         image_url: imagePath,
+        mobile_image_url: mobileImagePath || null,
         order: maxOrder + 1,
       })
       await loadBanners()
@@ -172,9 +178,11 @@ export default function ManageBanners() {
     try {
       // Garante que salvamos apenas o caminho relativo normalizado
       const imagePath = normalizeImagePath(formData.image_url)
+      const mobileImagePath = formData.mobile_image_url ? normalizeImagePath(formData.mobile_image_url) : ''
       await bannersService.update(editingBanner.id, {
         ...formData,
         image_url: imagePath,
+        mobile_image_url: mobileImagePath || null,
       })
       await loadBanners()
       resetForm()
@@ -204,8 +212,10 @@ export default function ManageBanners() {
     setEditingBanner(banner)
     // Normaliza o caminho relativo (pode vir como URL completa do getImageUrl)
     const imagePath = normalizeImagePath(banner.image_url)
+    const mobileImagePath = banner.mobile_image_url ? normalizeImagePath(banner.mobile_image_url) : ''
     setFormData({
       image_url: imagePath,
+      mobile_image_url: mobileImagePath,
       title: banner.title || '',
       subtitle: banner.subtitle || '',
       link: banner.link || '',
@@ -226,7 +236,7 @@ export default function ManageBanners() {
     const [removed] = newBanners.splice(currentIndex, 1)
     newBanners.splice(newIndex, 0, removed)
 
-    // Atualiza a ordem
+    /// Atualiza a ordem
     const bannerIds = newBanners.map((b, index) => {
       const updatedBanner = { ...b, order: index }
       return updatedBanner.id
@@ -244,6 +254,7 @@ export default function ManageBanners() {
   const resetForm = () => {
     setFormData({
       image_url: '',
+      mobile_image_url: '',
       title: '',
       subtitle: '',
       link: '',
@@ -337,11 +348,27 @@ export default function ManageBanners() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Imagem * <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1">(Recomendado: 1920x1080 - 16:9)</span>
+                Imagem Desktop * <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1">(Recomendado: 1920x1080 - 16:9)</span>
               </label>
               <BannerImageUpload
                 value={formData.image_url}
                 onChange={handleImageChange}
+                onError={(err) => { if (err) alert(err) }}
+                onUploadingChange={setUploading}
+                disabled={uploading}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Imagem Mobile (Opcional) <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1">(Recomendado: 800x600 ou 1:1 - ex: 800x800)</span>
+              </label>
+              <BannerImageUpload
+                value={formData.mobile_image_url || ''}
+                onChange={(url) => {
+                  const imagePath = normalizeImagePath(url)
+                  setFormData(prev => ({ ...prev, mobile_image_url: imagePath }))
+                }}
                 onError={(err) => { if (err) alert(err) }}
                 onUploadingChange={setUploading}
                 disabled={uploading}
@@ -434,7 +461,18 @@ export default function ManageBanners() {
                     </div>
 
                     {/* Preview da imagem */}
-                    <BannerImagePreview banner={banner} />
+                    <div className="flex gap-3">
+                      <div className="relative">
+                        <span className="absolute top-1 left-1 bg-black/60 text-white text-[9px] px-1 py-0.2 rounded font-semibold z-10">Desktop</span>
+                        <BannerImagePreview banner={banner} type="desktop" />
+                      </div>
+                      {banner.mobile_image_url && (
+                        <div className="relative">
+                          <span className="absolute top-1 left-1 bg-black/60 text-white text-[9px] px-1 py-0.2 rounded font-semibold z-10">Mobile</span>
+                          <BannerImagePreview banner={banner} type="mobile" />
+                        </div>
+                      )}
+                    </div>
 
                     {/* Informações */}
                     <div className="flex-1 min-w-0">

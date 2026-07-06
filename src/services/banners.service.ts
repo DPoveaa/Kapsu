@@ -7,6 +7,7 @@ const API_URL = env.apiUrl
 export interface Banner {
   id: string
   image_url: string
+  mobile_image_url?: string | null
   title?: string
   subtitle?: string
   link?: string
@@ -18,6 +19,7 @@ export interface Banner {
 
 export interface CreateBannerData {
   image_url: string
+  mobile_image_url?: string | null
   title?: string
   subtitle?: string
   link?: string
@@ -27,6 +29,7 @@ export interface CreateBannerData {
 
 export interface UpdateBannerData {
   image_url?: string
+  mobile_image_url?: string | null
   title?: string
   subtitle?: string
   link?: string
@@ -92,7 +95,8 @@ class BannersService {
     // Converte URLs relativas para URLs completas
     return banners.map(banner => ({
       ...banner,
-      image_url: this.convertImageUrl(banner.image_url)
+      image_url: this.convertImageUrl(banner.image_url),
+      mobile_image_url: banner.mobile_image_url ? this.convertImageUrl(banner.mobile_image_url) : null
     }))
   }
 
@@ -112,7 +116,8 @@ class BannersService {
     const data: BannerResponse = await response.json()
     return {
       ...data.data,
-      image_url: this.convertImageUrl(data.data.image_url)
+      image_url: this.convertImageUrl(data.data.image_url),
+      mobile_image_url: data.data.mobile_image_url ? this.convertImageUrl(data.data.mobile_image_url) : null
     }
   }
 
@@ -193,9 +198,9 @@ class BannersService {
       })
     } catch (error: any) {
       if (error?.name === 'AbortError') {
-        throw new Error('Tempo esgotado ao enviar a imagem. Verifique sua conex„o e tente novamente.')
+        throw new Error('Tempo esgotado ao enviar a imagem. Verifique sua conex√£o e tente novamente.')
       }
-      throw new Error(error?.message || 'Erro de conex„o ao enviar a imagem')
+      throw new Error(error?.message || 'Erro de conex√£o ao enviar a imagem')
     } finally {
       window.clearTimeout(timeoutId)
     }
@@ -216,7 +221,7 @@ class BannersService {
 
     const imagePath = data?.data?.path || data?.data?.url
     if (!imagePath) {
-      throw new Error('O servidor n„o retornou o caminho da imagem enviada')
+      throw new Error('O servidor n√£o retornou o caminho da imagem enviada')
     }
 
     return normalizeImagePath(imagePath)
@@ -240,4 +245,3 @@ class BannersService {
 }
 
 export const bannersService = new BannersService()
-
