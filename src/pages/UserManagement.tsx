@@ -24,7 +24,7 @@ export default function UserManagement() {
   } | null>(null)
 
   // Filtros rápidos: 'all' | 'user' | 'admin' | 'nocpf'
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'user' | 'admin' | 'nocpf'>('all')
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'user' | 'admin' | 'nocpf' | 'ignored' | 'notIgnored'>('all')
 
   // Estados para modal de edição de dados básicos
   const [showEditModal, setShowEditModal] = useState(false)
@@ -117,6 +117,25 @@ export default function UserManagement() {
     )
   }
 
+
+  const handleToggleBusinessIgnore = async (user: UserType) => {
+    const nextValue = !user.ignore_business_metrics
+    confirm.show(
+      nextValue
+        ? 'Os pedidos deste usuário serão excluídos de relatórios, estatísticas, Google Sheets e exportações para fornecedores.'
+        : 'Remover este usuário dos ignorados para pedidos futuros?',
+      async () => {
+        await adminService.updateUser(user.id, {
+          ignore_business_metrics: nextValue,
+          ignore_reason: nextValue ? 'internal_test_account' : null,
+          apply_to_existing_orders: false,
+        })
+        await loadUsers()
+        if (selectedUser?.id === user.id) await loadUserDetails(user.id)
+        toast.success(nextValue ? 'Usuário marcado como ignorado' : 'Usuário removido dos ignorados')
+      }
+    )
+  }
   const handleOpenEditModal = (user: UserType) => {
     setEditingUser(user)
     setEditForm({
@@ -367,12 +386,14 @@ export default function UserManagement() {
             
             {/* Filtros Rápidos */}
             <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-              {(['all', 'user', 'admin', 'nocpf'] as const).map((filter) => {
+              {(['all', 'user', 'admin', 'nocpf', 'ignored', 'notIgnored'] as const).map((filter) => {
                 const labels = {
                   all: 'Todos os Usuários',
                   user: 'Apenas Clientes',
                   admin: 'Administradores',
                   nocpf: 'Contas Sem CPF',
+                  ignored: 'Ignorados',
+                  notIgnored: 'Não Ignorados',
                 }
                 const active = selectedFilter === filter
                 return (
@@ -445,6 +466,9 @@ export default function UserManagement() {
                                   {user.name}
                                 </h3>
                                 {getRoleBadge(user.role)}
+                                {user.ignore_business_metrics && (
+                                  <span className='inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'>Ignorado</span>
+                                )}
                               </div>
                               <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4">
                                 <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 break-words flex items-center">
@@ -649,6 +673,16 @@ export default function UserManagement() {
                               >
                                 <Edit2 className="w-4 h-4" />
                                 Editar Dados Básicos
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleToggleBusinessIgnore(userDetails)
+                                }}
+                                className={`inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${userDetails.ignore_business_metrics ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-300'}`}
+                              >
+                                <ShieldAlert className="w-4 h-4" />
+                                {userDetails.ignore_business_metrics ? 'Remover Ignorado' : 'Ignorar em métricas'}
                               </button>
                               <button
                                 onClick={(e) => {

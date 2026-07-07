@@ -13,6 +13,10 @@ export interface User {
   last_login: string | null
   created_at: string
   updated_at: string
+  ignore_business_metrics?: boolean
+  ignore_reason?: string | null
+  ignore_enabled_at?: string | null
+  ignore_enabled_by?: string | null
 }
 
 export interface UserDetails extends User {
@@ -87,7 +91,8 @@ class AdminService {
     limit: number = 50,
     search: string = '',
     role: string = '',
-    noCpf: string = ''
+    noCpf: string = '',
+    ignored: string = ''
   ): Promise<UsersListResponse> {
     try {
       const token = localStorage.getItem('sanare_token')
@@ -101,6 +106,7 @@ class AdminService {
         ...(search && { search }),
         ...(role && { role }),
         ...(noCpf && { noCpf }),
+        ...(ignored && { ignored }),
       })
 
       const response = await fetch(`${this.baseUrl}/users?${params}`, {
@@ -206,7 +212,7 @@ class AdminService {
   /**
    * Atualiza dados básicos de um usuário
    */
-  async updateUser(userId: string, data: { name?: string; cpf?: string | null; phone?: string | null; email?: string }): Promise<{ success: boolean; message: string; user: User }> {
+  async updateUser(userId: string, data: { name?: string; cpf?: string | null; phone?: string | null; email?: string; ignore_business_metrics?: boolean; ignore_reason?: string | null; apply_to_existing_orders?: boolean }): Promise<{ success: boolean; message: string; user: User }> {
     try {
       const token = localStorage.getItem('sanare_token')
       if (!token) {
@@ -841,6 +847,24 @@ class AdminService {
       }
       throw new Error('Erro de conexão ao criar pedido')
     }
+  }
+
+
+  async updateOrderBusinessIgnore(orderId: string, ignore: boolean, reason?: string): Promise<{ success: boolean; order: any }> {
+    const token = localStorage.getItem('sanare_token')
+    if (!token) throw new Error('Token não encontrado')
+
+    const response = await fetch(`${this.baseUrl}/orders/${orderId}/business-ignore`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ ignore, reason }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao atualizar pedido ignorado')
+    return data
   }
 
   /**

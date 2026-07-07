@@ -86,7 +86,7 @@ export default function CheckoutConfirmation({
       <CheckoutStepper
         currentStep="confirmed"
         maxReachableStep={maxReachableStep}
-        onStepClick={onStepClick ?? (() => {})}
+        onStepClick={onStepClick ?? (() => { })}
       />
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
@@ -140,7 +140,7 @@ export default function CheckoutConfirmation({
               className="flex-1 inline-flex items-center justify-center gap-1.5 whitespace-nowrap border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-bold rounded-lg py-2.5 px-3 text-xs sm:text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
             >
               <ShoppingBag size={15} />
-              Comprar mais
+              Ver catalogo
             </button>
           </div>
         </div>

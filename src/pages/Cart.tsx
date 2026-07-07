@@ -207,6 +207,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   const [pendingAsyncPayments, setPendingAsyncPayments] = useState<PaymentAttemptsByMethod>(() => getStoredPaymentAttempts())
   const [cartId, setCartId] = useState<string | null>(null)
   const [paymentProcessingState, setPaymentProcessingState] = useState<PaymentProcessingVisualState | null>(null)
+  const [pendingCheckoutConfirmation, setPendingCheckoutConfirmation] = useState<ConfirmedCheckoutPayment | null>(null)
   const [activePaymentAttemptKey, setActivePaymentAttemptKey] = useState<string | null>(null)
   const [copiedPix, setCopiedPix] = useState(false)
   const [timeLeft, setTimeLeft] = useState('')
@@ -526,14 +527,8 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
             paymentAttemptId: status.paymentAttemptId,
             cartId,
           }
-          setConfirmedCheckoutPayment(confirmed)
-          setPaymentResult(confirmed)
-          setMaxReachableStep('confirmed')
-          setCheckoutStep('confirmed')
-          setSearchParams(
-            { step: 'confirmed', orderId, paid: confirmationType === 'paid' ? '1' : '0' },
-            { replace: true }
-          )
+          beginConfirmationTransition(confirmed)
+
           return
         }
 
@@ -546,9 +541,9 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
         }
 
         if (status.paymentStatus === 'awaiting_payment') {
-          if (selectedPaymentMethod === 'pix') {
-          setPaymentProcessingState('awaiting_payment')
-        }
+          if (selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'boleto') {
+            setPaymentProcessingState('awaiting_payment')
+          }
         } else if (status.paymentStatus === 'processing') {
           setPaymentProcessingState('processing')
         }
@@ -1171,16 +1166,28 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     return 'pix'
   }
 
+  const resetCompletedCheckoutSession = () => {
+    clearPendingCheckoutPayment()
+    clearPendingCheckoutOrderId()
+    clearStoredCheckoutState()
+    setStoredPaymentAttempts({})
+    sessionStorage.removeItem('cart_checkout_step')
+    sessionStorage.removeItem('cart_max_reachable_step')
+    sessionStorage.removeItem(SELECTED_PAYMENT_METHOD_KEY)
+    setPendingPayment(null)
+    setPendingAsyncPayments({})
+    setActivePaymentAttemptKey(null)
+    setCheckoutError(null)
+  }
+
   const showOrderConfirmation = (
     orderId: string,
     paymentMethod: PaymentMethod | string,
     extra: Partial<ConfirmedCheckoutPayment> = {}
   ) => {
-    sessionStorage.removeItem('cart_checkout_step')
-    sessionStorage.removeItem('cart_max_reachable_step')
-    clearPendingCheckoutPayment()
-    setPendingPayment(null)
+    resetCompletedCheckoutSession()
     setPaymentProcessingState(null)
+    setPendingCheckoutConfirmation(null)
 
     const confirmationType: ConfirmedCheckoutPayment['confirmationType'] =
       extra.confirmationType ||
@@ -1209,6 +1216,21 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     )
   }
 
+  const beginConfirmationTransition = (confirmation: ConfirmedCheckoutPayment) => {
+    resetCompletedCheckoutSession()
+    setPendingCheckoutConfirmation(confirmation)
+    setPaymentProcessingState('confirmed')
+  }
+
+  const finishConfirmationTransition = () => {
+    if (!pendingCheckoutConfirmation) return
+    showOrderConfirmation(
+      pendingCheckoutConfirmation.orderId,
+      pendingCheckoutConfirmation.paymentMethod,
+      pendingCheckoutConfirmation
+    )
+  }
+
   const handleNormalizedPaymentResult = async (
     result: NormalizedPaymentResult,
     paymentMethod: PaymentMethod
@@ -1222,14 +1244,12 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     }
 
     if (result.shouldAdvanceToConfirmation) {
-      setPaymentProcessingState('confirmed')
-      clearPendingCheckoutOrderId()
-
       if (result.shouldClearCart) {
         await clearCart()
       }
 
-      showOrderConfirmation(result.orderId, paymentMethod, {
+      beginConfirmationTransition({
+        orderId: result.orderId,
         paymentMethod,
         paymentStatus: result.paymentStatus,
         status: result.providerStatus,
@@ -1237,6 +1257,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
         paymentAttemptId: result.paymentAttemptId,
         confirmationType: paymentMethod === 'boleto' ? 'awaiting_boleto' : 'paid',
         isPaid: paymentMethod !== 'boleto',
+        cartId,
       })
       return
     }
@@ -1281,13 +1302,14 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     setSearchParams({ step: 'payment', orderId }, { replace: true })
   }
 
-  const handleBoletoOpened = () => {
+  const handleBoletoOpened = async () => {
     if (!pendingPayment || pendingPayment.paymentMethod !== 'boleto') return
 
     const orderId = pendingPayment.orderId
     clearPendingCheckoutPayment()
     setPendingPayment(null)
     setPaymentProcessingState(null)
+    await clearCart()
     showOrderConfirmation(orderId, 'boleto', {
       confirmationType: 'awaiting_boleto',
       isPaid: false,
@@ -3037,7 +3059,12 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       </div>
 
       <div className="mt-4">
-        {selectedPaymentMethod === 'pix' && (
+        {pendingCheckoutConfirmation && paymentProcessingState === 'confirmed' ? (
+          <PaymentProcessingState
+            state="confirmed"
+            onConfirmedTransitionEnd={finishConfirmationTransition}
+          />
+        ) : selectedPaymentMethod === 'pix' && (
           <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
             <PixPayment
               pixQrCode={hasPendingPix ? pendingPix?.pixQrCode : undefined}
@@ -3050,7 +3077,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
             />
           </div>
         )}
-        {selectedPaymentMethod === 'boleto' && (
+        {!pendingCheckoutConfirmation && selectedPaymentMethod === 'boleto' && (
           <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
             <BoletoPayment
               bankSlipUrl={hasPendingBoleto ? pendingBoleto?.bankSlipUrl : undefined}
@@ -3063,7 +3090,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
             />
           </div>
         )}
-        {isCardProcessing ? (
+        {!pendingCheckoutConfirmation && isCardProcessing ? (
           <PaymentProcessingState
             state={paymentProcessingState}
             onRetry={() => {
@@ -3072,7 +3099,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
               setActivePaymentAttemptKey(null)
             }}
           />
-        ) : selectedPaymentMethod === 'credit_card' && (
+        ) : !pendingCheckoutConfirmation && selectedPaymentMethod === 'credit_card' && (
           <CreditCardPayment
             formData={cardFormData}
             onChange={(data) => {
@@ -3120,7 +3147,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
             )}
           </button>
         )}
-        {!selectedAsyncPayment && (!isCardProcessing || paymentProcessingState === 'failed') && (
+        {!pendingCheckoutConfirmation && !selectedAsyncPayment && (!isCardProcessing || paymentProcessingState === 'failed') && (
           <button
             type="button"
             onClick={handlePaymentSubmit}
