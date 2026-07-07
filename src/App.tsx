@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useSearchParams } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminLayout from './components/AdminLayout'
@@ -7,7 +7,6 @@ import Home from './pages/Home'
 import Products from './pages/Products'
 import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
-import CheckoutCardPayment from './pages/CheckoutCardPayment'
 import Login from './pages/Login'
 import AdminPanel from './pages/AdminPanel'
 import WhatsAppConnection from './pages/WhatsAppConnection'
@@ -32,7 +31,6 @@ import ManageHomeSections from './pages/ManageHomeSections'
 import ManageHeaderCategories from './pages/ManageHeaderCategories'
 import OrderDetail from './pages/OrderDetail'
 import SupplierOrderDetail from './pages/SupplierOrderDetail'
-import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentFailure from './pages/PaymentFailure'
 import Profile from './pages/Profile'
 import RecoverPassword from './pages/RecoverPassword'
@@ -45,6 +43,15 @@ import { FavoritesProvider } from './context/FavoritesContext'
 import FloatingChat from './components/FloatingChat'
 import ToastContainer from './components/ToastContainer'
 import { siteSettingsService, SiteSettings as SiteSettingsType } from './services/site-settings.service'
+
+function PaymentSuccessRedirect() {
+  const [searchParams] = useSearchParams()
+  const orderId = searchParams.get('order_id') || searchParams.get('external_reference')
+  const target = orderId
+    ? `/carrinho?step=confirmed&orderId=${encodeURIComponent(orderId)}&paid=1`
+    : '/carrinho?step=confirmed&paid=1'
+  return <Navigate to={target} replace />
+}
 
 function AppContent() {
   const location = useLocation()
@@ -93,12 +100,12 @@ function AppContent() {
         <Route path="/produtos" element={<Products />} />
         <Route path="/produtos/:idSlug" element={<ProductDetail />} />
         <Route path="/carrinho" element={<Cart />} />
-        <Route path="/carrinho/payment/card" element={<CheckoutCardPayment />} />
+        <Route path="/carrinho/payment/card" element={<Navigate to="/carrinho?step=payment" replace />} />
         <Route path="/checkout" element={<Navigate to="/carrinho?step=delivery" replace />} />
         <Route path="/checkout/payment/card" element={<Navigate to="/carrinho/payment/card" replace />} />
-        <Route path="/checkout/success" element={<PaymentSuccess />} />
+        <Route path="/checkout/success" element={<PaymentSuccessRedirect />} />
         <Route path="/checkout/failure" element={<PaymentFailure />} />
-        <Route path="/payment-success" element={<PaymentSuccess />} />
+        <Route path="/payment-success" element={<PaymentSuccessRedirect />} />
         <Route path="/payment-failure" element={<PaymentFailure />} />
         <Route path="/login" element={<Login />} />
         <Route path="/cadastro" element={<Login />} />

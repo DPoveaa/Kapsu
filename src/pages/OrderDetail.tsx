@@ -119,8 +119,7 @@ export default function OrderDetail() {
     if (!method) return 'Não informado'
     const methods: Record<string, string> = {
       credit: 'Cartão de Crédito',
-      credit_card: 'Cartão de Crédito',
-      debit: 'Cartão de Débito',
+      credit_card: 'Cartão de Crédito',
       pix: 'PIX',
       cash: 'Dinheiro',
     }
@@ -249,7 +248,7 @@ export default function OrderDetail() {
                   </button>
                 )}
               </div>
-              
+
               {pendingStatus !== order.status && (
                 <div className="mt-2 w-full animate-fade-in">
                   <label htmlFor="status-explanation" className="block text-xs font-semibold uppercase text-red-500 dark:text-red-400 mb-1">

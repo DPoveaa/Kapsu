@@ -91,6 +91,7 @@ export interface CreditCardPaymentResult {
   installments: number
 }
 
+
 /** Resultado legado (redirect para checkout externo) */
 export interface RedirectPaymentResult {
   paymentMethod?: string
@@ -171,6 +172,7 @@ class PaymentService {
         return raw as CreditCardPaymentResult
       }
 
+
       // Legado: redirect
       const redirectUrl = raw.redirectUrl ?? raw.initPoint
       if (!redirectUrl) throw new Error('Resposta sem URL de redirecionamento')
@@ -250,6 +252,7 @@ class PaymentService {
         return raw as CreditCardPaymentResult
       }
 
+
       const redirectUrl = raw.redirectUrl ?? raw.initPoint
       if (!redirectUrl) throw new Error('Resposta sem URL de redirecionamento')
 
@@ -268,6 +271,7 @@ class PaymentService {
    */
   async payWithCard(params: {
     orderId: string
+    paymentMethod?: 'credit_card'
     creditCard: {
       holderName: string
       number: string
@@ -279,7 +283,7 @@ class PaymentService {
       cpfCnpj: string
     }
     installments: number
-  }): Promise<{ status: string; orderId: string; paymentId?: string }> {
+  }): Promise<{ status: string; orderId: string; paymentId?: string; paymentMethod?: string }> {
     try {
       const response = await fetch(`${this.baseUrl}/card/pay`, {
         method: 'POST',

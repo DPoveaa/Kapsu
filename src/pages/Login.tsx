@@ -545,10 +545,10 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex relative overflow-hidden bg-white dark:bg-gray-900">
+    <div className="min-h-screen lg:h-screen flex relative lg:overflow-hidden bg-white dark:bg-gray-900">
       
       {/* Lado Esquerdo - Formulário de Login / Cadastro */}
-      <div className="w-full lg:w-[42%] xl:w-[38%] flex items-center justify-center p-6 sm:p-10 lg:p-12 xl:p-16 relative z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md">
+      <div className="w-full lg:w-[42%] xl:w-[38%] lg:h-screen lg:overflow-y-auto flex items-center justify-center p-6 sm:p-10 lg:p-12 xl:p-16 relative z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md scrollbar-hide">
         
         {/* Glows decorativos de fundo */}
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#00A86B]/10 rounded-full blur-[100px] -translate-x-1/2 translate-y-1/2 pointer-events-none z-0" />
@@ -1121,11 +1121,11 @@ export default function Login() {
                 <span className="bg-white dark:bg-gray-900 px-3 text-xs text-gray-400 absolute">ou</span>
               </div>
 
-              {!acceptedLegalTerms && (
-                <p className="text-xs text-center text-gray-500 dark:text-gray-400 mb-2 font-normal">
-                  Aceite os Termos e a Política de Privacidade acima para cadastrar com o Google.
-                </p>
-              )}
+              <p className={`text-xs text-center text-gray-500 dark:text-gray-400 mb-2 font-normal transition-opacity duration-200 ${
+                acceptedLegalTerms ? 'opacity-0 pointer-events-none' : 'opacity-100'
+              }`}>
+                Aceite os Termos e a Política de Privacidade acima para cadastrar com o Google.
+              </p>
 
               <div id="google-signin-btn-register" className="w-full flex justify-center mt-2 min-h-[44px]"></div>
             </form>

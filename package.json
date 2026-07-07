@@ -13,7 +13,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test:kaia-local": "node scripts/kaia-local-structure-check.mjs",
     "test:kaia-mode": "node scripts/kaia-conversation-mode-check.mjs",
-    "test:kaia-critical": "node scripts/kaia-v2-critical-contract-check.mjs"
+    "test:kaia-critical": "node scripts/kaia-v2-critical-contract-check.mjs",
+    "test:checkout-flow": "node scripts/checkout-flow-check.mjs"
   },
   "engines": {
     "node": ">=16.0.0",

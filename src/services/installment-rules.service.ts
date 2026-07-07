@@ -7,6 +7,8 @@ export interface InstallmentRule {
   min_cart_value: number
   max_interest_free_installments: number
   is_active: boolean
+  rule_type: 'standard' | 'every_x_reais'
+  every_x_reais: number | null
   created_at: string
   updated_at: string
 }

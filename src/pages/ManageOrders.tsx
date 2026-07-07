@@ -455,8 +455,6 @@ export default function ManageOrders() {
                                 ? 'Cartão de Crédito'
                                 : order.payment_method === 'pix'
                                 ? 'PIX'
-                                : order.payment_method === 'debit'
-                                ? 'Cartão de Débito'
                                 : order.payment_method === 'cash'
                                 ? 'Dinheiro'
                                 : order.payment_method || 'Não informado'}

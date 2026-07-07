@@ -17,8 +17,7 @@ interface CreateOrderModalProps {
 }
 
 const paymentMethods = [
-  { value: 'credit', label: 'Cartão de Crédito' },
-  { value: 'debit', label: 'Cartão de Débito' },
+  { value: 'credit', label: 'Cartão de Crédito' },
   { value: 'pix', label: 'PIX' },
   { value: 'cash', label: 'Dinheiro' },
 ]

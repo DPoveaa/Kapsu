@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="4 2 57 37" fill="none">
+  <!-- Mastercard overlapping circles — viewBox cropped to circle content -->
+  <circle cx="22" cy="20" r="16" fill="#EB001B"/>
+  <circle cx="42" cy="20" r="16" fill="#F79E1B"/>
+  <!-- Intersection area -->
+  <path
+    d="M32 7.2C35.5 10.1 37.8 14.8 37.8 20C37.8 25.2 35.5 29.9 32 32.8C28.5 29.9 26.2 25.2 26.2 20C26.2 14.8 28.5 10.1 32 7.2Z"
+    fill="#FF5F00"
+  />
+</svg>

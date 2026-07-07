@@ -38,6 +38,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           name: item.product.name,
           description: item.product.description || '',
           price: Number(item.product.price),
+          promo_price: item.product.promo_price != null ? Number(item.product.promo_price) : null,
           image: productsService.getImageUrl(item.product.image),
           category: (item.product.category as any) || 'outros',
           active: ((item.product as any).active ?? true),

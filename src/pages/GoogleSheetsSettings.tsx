@@ -23,12 +23,14 @@ const TYPE_LABELS: Record<IntegrationType, string> = {
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
     connected: 'bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800/40',
+    connecting: 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40 animate-pulse',
     syncing: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800/40',
     error: 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800/40',
     disconnected: 'bg-gray-50 dark:bg-gray-800/40 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700/40',
   }
   const labels: Record<string, string> = {
     connected: 'Conectado',
+    connecting: 'Conectando...',
     syncing: 'Sincronizando',
     error: 'Erro',
     disconnected: 'Desconectado',

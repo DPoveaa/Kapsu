@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, CreditCard, ShieldCheck, Loader2 } from 'lucide-react'
+import { ArrowLeft, CreditCard, ShieldCheck, Loader2, Truck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { orderService } from '../services/order.service'
 import { paymentService } from '../services/payment.service'
@@ -268,6 +268,10 @@ export default function CheckoutCardPayment() {
   const displayTotalAmount = selectedOption ? selectedOption.totalValue : totalAmount
   const interestLabel = selectedOption ? (selectedOption.hasInterest ? 'com juros' : 'sem juros') : (formData.installments === 1 ? 'sem juros' : '')
 
+  const subtotal = order.items?.reduce((sum: number, item: any) => sum + (Number(item.price) * item.quantity), 0) || 0
+  const orderBaseTotal = totalAmount
+  const diff = orderBaseTotal - subtotal
+
   return (
     <div className="bg-gradient-to-b from-gray-50 dark:from-gray-950 to-white dark:to-gray-900 min-h-screen pb-16 animate-fade-in">
       <div className="container mx-auto px-4 py-6 sm:py-10 max-w-5xl">
@@ -470,36 +474,94 @@ export default function CheckoutCardPayment() {
 
           {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 sticky top-24">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Resumo do Pedido</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg border border-gray-200 dark:border-gray-700 p-5 sm:p-6 sticky top-24 animate-fade-in">
+              <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-3 sm:mb-4 uppercase tracking-wider text-xs">Resumo do Pedido</h2>
               
-              <div className="space-y-3 mb-6 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                {order.items?.map((item: any, idx: number) => (
-                  <div key={idx} className="flex justify-between text-sm">
-                    <div className="flex-1 pr-2">
-                      <p className="font-medium text-gray-800 dark:text-gray-200 truncate">{item.product_name || 'Produto'}</p>
-                      <p className="text-gray-500 dark:text-gray-400 text-xs">Qtd: {item.quantity}</p>
+              <div className="space-y-3 mb-4 max-h-[200px] overflow-y-auto pr-1 scrollbar-hide">
+                {order.items?.map((item: any, idx: number) => {
+                  const product = item.product || { name: item.product_name || 'Produto', price: Number(item.price) }
+                  const price = Number(item.price)
+                  const itemTotal = price * item.quantity
+
+                  return (
+                    <div key={idx} className="text-xs sm:text-sm pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0 last:pb-0">
+                      <p className="font-semibold text-gray-850 dark:text-gray-200 line-clamp-2">
+                        {product.name}
+                      </p>
+                      <div className="flex justify-between text-gray-500 mt-1">
+                        <span>Qtd: {item.quantity} × R$ {price.toFixed(2).replace('.', ',')}</span>
+                        <span className="font-extrabold text-gray-700 dark:text-gray-300">
+                          R$ {itemTotal.toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
                     </div>
-                    <p className="font-semibold text-gray-900 dark:text-white">R$ {(Number(item.price) * item.quantity).toFixed(2).replace('.', ',')}</p>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
 
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
-                  <span className="font-semibold text-gray-900 dark:text-white">R$ {totalAmount.toFixed(2).replace('.', ',')}</span>
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4 space-y-2.5 sm:space-y-3">
+                <div className="flex justify-between items-center text-xs sm:text-sm">
+                  <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
+                  <span className="font-extrabold text-gray-900 dark:text-white">R$ {subtotal.toFixed(2).replace('.', ',')}</span>
                 </div>
-                {/* Note: In a real scenario we'd show shipping separately if the order has it. Here we use the final total. */}
-                <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <span className="font-bold text-gray-900 dark:text-white">Total</span>
-                  <span className="text-xl font-black text-primary-600 dark:text-primary-400">R$ {displayTotalAmount.toFixed(2).replace('.', ',')}</span>
+
+                {/* Se houver desconto no pedido original */}
+                {diff < 0 && (
+                  <div className="flex justify-between items-center text-xs sm:text-sm">
+                    <span className="text-gray-500 dark:text-gray-400">Desconto</span>
+                    <span className="text-green-600 dark:text-green-400 font-extrabold">
+                      - R$ {Math.abs(diff).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                )}
+
+                {/* Se houver frete no pedido original */}
+                <div className="flex justify-between items-center text-xs sm:text-sm pt-2 border-t border-gray-150 dark:border-gray-700">
+                  <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                    Frete
+                    <div className={`h-8 w-8 rounded-lg flex flex-col items-center justify-center flex-shrink-0 relative overflow-hidden ${diff > 0
+                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+                      : 'bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-400'
+                      }`}>
+                      <div className="flex flex-col items-center justify-center translate-y-[1.5px]">
+                        <Truck className="w-3.5 h-3.5" />
+                        <div className={`w-5 h-[1px] mt-[-1.5px] opacity-85 ${diff > 0
+                          ? 'text-gray-400 dark:text-gray-500'
+                          : 'text-green-600 dark:text-green-400'
+                          }`} />
+                      </div>
+                    </div>
+                  </span>
+                  <div className="text-right">
+                    {diff > 0 ? (
+                      <span className="text-gray-900 dark:text-white font-extrabold">R$ {diff.toFixed(2).replace('.', ',')}</span>
+                    ) : (
+                      <span className="text-green-600 dark:text-green-400 font-extrabold text-xs sm:text-sm">Grátis</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Se houver juros de parcelamento */}
+                {selectedOption?.hasInterest && (displayTotalAmount > orderBaseTotal) && (
+                  <div className="flex justify-between items-center text-xs sm:text-sm text-amber-600 dark:text-amber-400 font-bold">
+                    <span>Juros de Parcelamento</span>
+                    <span>
+                      R$ {(displayTotalAmount - orderBaseTotal).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center border-t border-gray-250 dark:border-gray-700 pt-3">
+                  <span className="text-base font-extrabold text-gray-900 dark:text-white">Total</span>
+                  <span className="text-2xl font-black text-primary-600 dark:text-primary-400">
+                    R$ {displayTotalAmount.toFixed(2).replace('.', ',')}
+                  </span>
                 </div>
               </div>
 
               <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl">
                 <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Endereço de Entrega</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed text-left">
                   {order.shipping_address ? (
                     typeof order.shipping_address === 'string' ? order.shipping_address : `${order.shipping_address.address}, ${order.shipping_address.number}`
                   ) : 'Endereço padrão'}

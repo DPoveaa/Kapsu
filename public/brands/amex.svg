@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 36" fill="none">
+  <!-- American Express brand badge — viewBox matched to content -->
+  <rect width="64" height="36" rx="4" fill="#2E77BC"/>
+  <text
+    x="32" y="25"
+    text-anchor="middle"
+    font-family="'Helvetica Neue', Arial, sans-serif"
+    font-weight="800"
+    font-size="16"
+    fill="white"
+    letter-spacing="1.5"
+  >AMEX</text>
+</svg>

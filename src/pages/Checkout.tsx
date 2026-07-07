@@ -89,7 +89,17 @@ export default function Checkout() {
   const [editAddressData, setEditAddressData] = useState<SavedAddress | null>(null)
   const [saveAddressToProfile, setSaveAddressToProfile] = useState(false)
   const [newAddressNickname, setNewAddressNickname] = useState('')
-  const [checkoutStep, setCheckoutStep] = useState<1 | 2>(1)
+  const [checkoutStep, setCheckoutStep] = useState<1 | 2>(() => {
+    const saved = sessionStorage.getItem('checkout_step')
+    return (saved === '2' ? 2 : 1) as 1 | 2
+  })
+  const [visitedSteps, setVisitedSteps] = useState<Set<number>>(() => {
+    try {
+      const saved = sessionStorage.getItem('checkout_visited_steps')
+      if (saved) return new Set(JSON.parse(saved) as number[])
+    } catch {}
+    return new Set([1])
+  })
   const [attemptedSubmit, setAttemptedSubmit] = useState(false)
 
   const isFieldInvalid = (name: 'cep' | 'address' | 'number' | 'bairro' | 'city' | 'state') => {
@@ -590,6 +600,10 @@ export default function Checkout() {
       }
     }
 
+    const newVisited = new Set([...visitedSteps, 2])
+    setVisitedSteps(newVisited)
+    sessionStorage.setItem('checkout_visited_steps', JSON.stringify([...newVisited]))
+    sessionStorage.setItem('checkout_step', '2')
     setCheckoutStep(2)
   }
 
@@ -598,6 +612,10 @@ export default function Checkout() {
       alert('Por favor, selecione um endereço de entrega')
       return
     }
+    const newVisited = new Set([...visitedSteps, 2])
+    setVisitedSteps(newVisited)
+    sessionStorage.setItem('checkout_visited_steps', JSON.stringify([...newVisited]))
+    sessionStorage.setItem('checkout_step', '2')
     setCheckoutStep(2)
   }
 
@@ -664,12 +682,16 @@ export default function Checkout() {
 
       // Redireciona para a nova tela de cartão de crédito
       if (preference.paymentMethod === 'credit_card' && pref.status === 'PENDING_CARD_DETAILS') {
+        sessionStorage.removeItem('checkout_step')
+        sessionStorage.removeItem('checkout_visited_steps')
         setCreatingOrder(false)
         navigate(`/checkout/payment/card?orderId=${pref.orderId}`)
         return
       }
 
       // Define o resultado na tela
+      sessionStorage.removeItem('checkout_step')
+      sessionStorage.removeItem('checkout_visited_steps')
       setPaymentResult(preference)
       setCreatingOrder(false)
 
@@ -938,51 +960,89 @@ export default function Checkout() {
         {/* Modern Stepper header */}
         <div className="mb-8 flex items-center justify-center">
           <div className="flex items-start justify-between w-full max-w-lg relative">
-            {/* Progress Bar Line Container */}
-            <div className="absolute top-4 left-[16.667%] right-[16.667%] h-0.5 bg-gray-200 dark:bg-gray-800 -translate-y-1/2 z-0">
-              <div
-                className={`h-full bg-gradient-to-r ${checkoutStep === 1 ? 'from-green-500 to-primary-600' : 'from-green-500 via-green-600 to-primary-600'} transition-all duration-500 ease-in-out`}
-                style={{ width: `${checkoutStep === 1 ? 50 : 100}%` }}
-              ></div>
-            </div>
 
-            {/* Step 1: Carrinho */}
+            {/* Linha de fundo (não visitada) - preta/cinza escura */}
+            <div className="absolute top-4 left-[16.667%] right-[16.667%] h-0.5 bg-gray-800 dark:bg-gray-600 -translate-y-1/2 z-0" />
+
+            {/* Linha segmento 1→2: verde se step2 visitado, cinza se voltou */}
+            <div
+              className="absolute top-4 h-0.5 -translate-y-1/2 z-0 transition-all duration-500"
+              style={{
+                left: '16.667%',
+                width: '66.666%',
+                background: visitedSteps.has(2)
+                  ? checkoutStep === 1
+                    ? '#6b7280' /* cinza: visitou mas voltou */
+                    : '#16a34a' /* verde: passou e está aqui ou além */
+                  : 'transparent'
+              }}
+            />
+
+            {/* Step 1: Carrinho - sempre concluído (já estava no carrinho) */}
             <div className="flex-1 flex flex-col items-center gap-1.5 z-10">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-green-600 text-white font-black text-xs shadow-md border-4 border-white dark:border-gray-900 transition-all duration-300">
+              <button
+                type="button"
+                onClick={() => navigate('/cart')}
+                className="flex items-center justify-center w-8 h-8 rounded-full bg-green-600 text-white font-black text-xs shadow-md border-4 border-white dark:border-gray-900 transition-all duration-300 hover:scale-110 cursor-pointer"
+                title="Voltar ao Carrinho"
+              >
                 ✓
-              </span>
+              </button>
               <span className="text-[11px] font-extrabold text-green-600 dark:text-green-400 uppercase tracking-wider text-center">Carrinho</span>
             </div>
 
-            {/* Step 2: Endereço */}
+            {/* Step 2: Entrega */}
             <div className="flex-1 flex flex-col items-center gap-1.5 z-10">
-              <span className={`flex items-center justify-center w-8 h-8 rounded-full font-black text-xs transition-all duration-300 border-4 border-white dark:border-gray-900 ${checkoutStep === 1
-                ? 'bg-primary-600 text-white shadow-md'
-                : 'bg-green-600 text-white shadow-md'
-                }`}>
-                {checkoutStep > 1 ? '✓' : '2'}
-              </span>
-              <span className={`text-[11px] font-extrabold uppercase tracking-wider text-center ${checkoutStep === 1
-                ? 'text-primary-600 dark:text-primary-400'
-                : 'text-green-600 dark:text-green-400'
+              <button
+                type="button"
+                onClick={() => {
+                  if (checkoutStep === 2) {
+                    sessionStorage.setItem('checkout_step', '1')
+                    setCheckoutStep(1)
+                  }
+                }}
+                disabled={checkoutStep === 1}
+                className={`flex items-center justify-center w-8 h-8 rounded-full font-black text-xs transition-all duration-300 border-4 border-white dark:border-gray-900
+                  ${checkoutStep === 1
+                    ? 'bg-primary-600 text-white shadow-md scale-110 cursor-default'
+                    : visitedSteps.has(2)
+                      ? 'bg-green-600 text-white shadow-md hover:scale-110 cursor-pointer'
+                      : 'bg-gray-800 dark:bg-gray-600 text-white cursor-default'
+                  }`}
+                title={checkoutStep === 2 ? 'Voltar para Entrega' : ''}
+              >
+                {visitedSteps.has(2) && checkoutStep !== 1 ? '✓' : '2'}
+              </button>
+              <span className={`text-[11px] font-extrabold uppercase tracking-wider text-center transition-colors duration-300
+                ${checkoutStep === 1
+                  ? 'text-primary-600 dark:text-primary-400'
+                  : visitedSteps.has(2)
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-gray-500 dark:text-gray-400'
                 }`}>
                 Entrega
               </span>
             </div>
 
-            {/* Step 3: Confirmação */}
+            {/* Step 3: Pagamento */}
             <div className="flex-1 flex flex-col items-center gap-1.5 z-10">
-              <span className={`flex items-center justify-center w-8 h-8 rounded-full font-black text-xs transition-all duration-300 border-4 border-white dark:border-gray-900 ${checkoutStep === 2
-                ? 'bg-primary-600 text-white shadow-md'
-                : 'bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-2 border-gray-200 dark:border-gray-800'
-                }`}>
+              <button
+                type="button"
+                disabled={true}
+                className={`flex items-center justify-center w-8 h-8 rounded-full font-black text-xs transition-all duration-300 border-4 border-white dark:border-gray-900
+                  ${checkoutStep === 2
+                    ? 'bg-primary-600 text-white shadow-md scale-110 cursor-default'
+                    : 'bg-gray-800 dark:bg-gray-600 text-white cursor-default'
+                  }`}
+              >
                 3
-              </span>
-              <span className={`text-[11px] font-bold uppercase tracking-wider text-center ${checkoutStep === 2
-                ? 'text-primary-600 dark:text-primary-400'
-                : 'text-gray-500 dark:text-gray-400'
+              </button>
+              <span className={`text-[11px] font-bold uppercase tracking-wider text-center transition-colors duration-300
+                ${checkoutStep === 2
+                  ? 'text-primary-600 dark:text-primary-400'
+                  : 'text-gray-500 dark:text-gray-400'
                 }`}>
-                Confirmação
+                Pagamento
               </span>
             </div>
           </div>
@@ -1443,40 +1503,21 @@ export default function Checkout() {
           {/* Order Summary */}
           <div className="lg:col-span-1">
             <div className="card p-4 sm:p-6 sticky top-20 sm:top-24">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">Resumo do Pedido</h2>
-              <div className="space-y-2 mb-3 sm:mb-4">
-                {items.map(item => {
-                  const price = item.product?.price || 0
-                  const itemTotal = price * item.quantity
-                  const itemDiscountedPrice = isSubscription
-                    ? itemTotal * (1 - subscriptionDiscount)
-                    : itemTotal
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">Resumo do Pedido</h2>
 
-                  return (
-                    <div key={item.id} className="text-xs sm:text-sm">
-                      <p className="font-medium dark:text-white line-clamp-2">
-                        {item.product?.name}
-                      </p>
-                      <p className="text-gray-600 dark:text-gray-300">
-                        Qtd: {item.quantity} × R$ {price.toFixed(2).replace('.', ',')}
-                      </p>
-                      {isSubscription && itemTotal !== itemDiscountedPrice && (
-                        <p className="text-xs text-gray-400 dark:text-gray-500 line-through">
-                          R$ {itemTotal.toFixed(2).replace('.', ',')}
-                        </p>
-                      )}
-                      {isSubscription && (
-                        <p className="text-primary-600 dark:text-primary-400 font-semibold">
-                          R$ {itemDiscountedPrice.toFixed(2).replace('.', ',')}
-                        </p>
-                      )}
-                    </div>
-                  )
-                })}
+              {/* Quantidade de itens */}
+              <div className="mb-3 sm:mb-4 flex items-center gap-2">
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs font-bold">
+                  {items.reduce((acc, item) => acc + item.quantity, 0)}
+                </span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {items.reduce((acc, item) => acc + item.quantity, 0) === 1 ? 'item no pedido' : 'itens no pedido'}
+                </span>
               </div>
+
               <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4 space-y-2 sm:space-y-3">
                 <div className="flex justify-between items-center text-xs sm:text-sm">
-                  <span className="text-gray-600 dark:text-gray-300">Subtotal</span>
+                  <span className="text-gray-600 dark:text-gray-300">Subtotal dos produtos</span>
                   <span className="font-semibold text-gray-900 dark:text-white">R$ {subtotal.toFixed(2).replace('.', ',')}</span>
                 </div>
 
@@ -1517,10 +1558,8 @@ export default function Checkout() {
                     {calculatingShipping ? (
                       <Loader2 className="animate-spin text-gray-400 dark:text-gray-500" size={14} />
                     ) : hasInvalidCep() ? (
-                      // CEP inválido - mostra apenas "Inválido" mesmo com cupom de frete grátis
                       <span className="text-red-600 dark:text-red-400 text-xs">Inválido</span>
                     ) : (promoCodesValidation?.freeShipping || isFreeShipping || isSubscription) ? (
-                      // Frete grátis válido (CEP é válido)
                       <span className="text-green-600 dark:text-green-400 font-semibold text-xs sm:text-sm">
                         {isSubscription ? 'Grátis (Assinatura)' : promoCodesValidation?.freeShipping ? 'Grátis (cupom)' : 'Grátis'}
                       </span>
@@ -1529,12 +1568,12 @@ export default function Checkout() {
                     ) : formData.cep.length === 9 ? (
                       <span className="text-red-600 dark:text-red-400 text-xs">Não disponível</span>
                     ) : (
-                      <span className="text-gray-400 dark:text-gray-500">-</span>
+                      <span className="text-gray-400 dark:text-gray-500">Calcular no endereço</span>
                     )}
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700/50">
                   <span className="text-base sm:text-lg font-semibold dark:text-white">Total</span>
                   <div className="text-right">
                     {isSubscription && baseTotal !== subtotal && (

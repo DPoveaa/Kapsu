@@ -61,32 +61,41 @@ export default function LegalDocumentPageLayout({
   const handleScroll = useCallback(() => {
     const { scrollY, innerHeight } = window
     const totalHeight = document.documentElement.scrollHeight - innerHeight
+    
+    // Verifica se chegou ao final da página
+    const isAtBottom = totalHeight <= 0 || innerHeight + scrollY >= document.documentElement.scrollHeight - 50
+    
     const currentProgress = totalHeight > 0 ? (scrollY / totalHeight) * 100 : 100
-    const rounded = Math.min(100, Math.round(currentProgress))
+    const rounded = isAtBottom ? 100 : Math.min(100, Math.round(currentProgress))
 
     // Atualiza progresso apenas se avançou
     setReadProgress(prev => {
       const next = Math.max(prev, rounded)
-      try { localStorage.setItem(storageKey, String(next)) } catch {}
+      try { localStorage.setItem(storageKey, String(next)) } catch { /* ignore error */ }
       return next
     })
 
-    // Detecta seção visível atual
     let currentIdx = 0
-    for (let i = doc.sections.length - 1; i >= 0; i--) {
-      const el = document.getElementById(doc.sections[i].id)
-      if (!el) continue
-      if (el.getBoundingClientRect().top <= 120) {
-        currentIdx = i
-        setActiveSection(doc.sections[i].id)
-        break
+    if (isAtBottom) {
+      currentIdx = doc.sections.length - 1
+      setActiveSection(doc.sections[currentIdx].id)
+    } else {
+      // Detecta seção visível atual
+      for (let i = doc.sections.length - 1; i >= 0; i--) {
+        const el = document.getElementById(doc.sections[i].id)
+        if (!el) continue
+        if (el.getBoundingClientRect().top <= 120) {
+          currentIdx = i
+          setActiveSection(doc.sections[i].id)
+          break
+        }
       }
     }
 
     // Atualiza seção mais funda apenas se avançou
     setDeepestSectionIdx(prev => {
       const next = Math.max(prev, currentIdx)
-      try { localStorage.setItem(`${storageKey}-section`, String(next)) } catch {}
+      try { localStorage.setItem(`${storageKey}-section`, String(next)) } catch { /* ignore error */ }
       return next
     })
   }, [doc.sections, storageKey])
@@ -142,6 +151,23 @@ export default function LegalDocumentPageLayout({
     const offsetTop = target.getBoundingClientRect().top + window.scrollY - 24
     window.scrollTo({ top: offsetTop, behavior: 'smooth' })
     setActiveSection(sectionId)
+
+    // Atualiza a seção mais funda lida
+    const clickedIdx = doc.sections.findIndex(s => s.id === sectionId)
+    if (clickedIdx !== -1) {
+      setDeepestSectionIdx(prev => {
+        const next = Math.max(prev, clickedIdx)
+        try { localStorage.setItem(`${storageKey}-section`, String(next)) } catch { /* ignore error */ }
+        return next
+      })
+
+      // Se clicar no último item, marca progresso como 100%
+      if (clickedIdx === doc.sections.length - 1) {
+        setReadProgress(100)
+        try { localStorage.setItem(storageKey, '100') } catch { /* ignore error */ }
+      }
+    }
+
     window.history.pushState(null, '', `#${sectionId}`)
   }
 
@@ -216,8 +242,11 @@ export default function LegalDocumentPageLayout({
               <nav className="p-2 max-h-[50vh] lg:max-h-[70vh] overflow-y-auto">
                 {doc.sections.map((section, idx) => {
                   const isActive = activeSection === section.id
-                  const isRead = idx < deepestSectionIdx
-                  const isCurrent = idx === deepestSectionIdx && !isActive
+                  const isRead =
+                    idx < deepestSectionIdx ||
+                    (idx === doc.sections.length - 1 && deepestSectionIdx === doc.sections.length - 1) ||
+                    readProgress === 100
+                  const isCurrent = idx === deepestSectionIdx && !isActive && !isRead
                   return (
                     <a
                       key={section.id}

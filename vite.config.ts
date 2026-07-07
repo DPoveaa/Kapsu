@@ -7,6 +7,9 @@ export default defineConfig({
   server: {
     port: parseInt(process.env.VITE_PORT || process.env.PORT || '3000', 10),
     host: true, // Permite acesso de outros dispositivos na rede
+    watch: {
+      usePolling: true, // Necessário no Windows para detectar mudanças de ferramentas externas
+    },
   },
   build: {
     rollupOptions: {

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 26" fill="none">
+  <!-- VISA wordmark — white bold italic, viewBox matches text bounds tightly -->
+  <text
+    x="1" y="22"
+    font-family="'Helvetica Neue', 'Arial Black', Arial, sans-serif"
+    font-weight="900"
+    font-style="italic"
+    font-size="24"
+    fill="white"
+    letter-spacing="-0.5"
+  >VISA</text>
+</svg>

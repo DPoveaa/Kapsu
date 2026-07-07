@@ -1,5 +1,5 @@
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ShoppingCart, Plus, Minus, Trash2, ArrowRight, Loader2, Calendar, Check, Sparkles, Truck, Gift, Tag, X, ChevronLeft, ChevronRight, ShoppingBag, ArrowLeft, MapPin, Edit2, TestTube, Copy, Download, CheckCircle } from 'lucide-react'
+﻿import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { ShoppingCart, Plus, Trash2, ArrowRight, Loader2, Check, Sparkles, Truck, Gift, Tag, X, ChevronLeft, ChevronRight, ShoppingBag, ArrowLeft, Edit2, TestTube } from 'lucide-react'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
@@ -13,18 +13,33 @@ import { paymentService, buildShippingAddress } from '../services/payment.servic
 import { orderService } from '../services/order.service'
 import { cepService } from '../services/cep.service'
 import { Product } from '../types'
-import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import { HorizontalScrollContainer } from '../components/HorizontalScrollContainer'
 import ProductCard from '../components/ProductCard'
-import { CheckoutPayment } from '../components/Checkout/CheckoutPayment'
+import CheckoutStepper from '../components/Checkout/CheckoutStepper'
+import PaymentSelector from '../components/Checkout/PaymentSelector'
+import CreditCardPayment from '../components/Checkout/CreditCardPayment'
+import ShippingCard from '../components/Checkout/ShippingCard'
+import CartItemCard from '../components/Checkout/CartItemCard'
+import CheckoutConfirmation from '../components/Checkout/CheckoutConfirmation'
+import { CheckoutStep, PaymentMethod, parseCheckoutStep } from '../types/checkout'
+import { CreditCardFormData, validateCreditCardForm } from '../utils/cardValidation'
 import { toast } from '../utils/toast'
 import {
   clearPendingCheckoutOrderId,
+  clearPendingCheckoutPayment,
+  clearConfirmedCheckoutPayment,
   getPendingCheckoutOrderId,
+  getPendingCheckoutPayment,
+  getConfirmedCheckoutPayment,
   isPaidOrderStatus,
+  PendingCheckoutPayment,
+  resolveCheckoutStep,
   setPendingCheckoutOrderId,
+  setPendingCheckoutPayment,
+  setConfirmedCheckoutPayment,
 } from '../utils/checkout'
-import { generateProductUrl } from '../utils/productUrl'
+import PixPayment from '../components/Checkout/PixPayment'
+import BoletoPayment from '../components/Checkout/BoletoPayment'
 
 const formatEstimatedDateFriendly = (estimatedDateStr: string): string => {
   if (!estimatedDateStr) return ''
@@ -66,7 +81,23 @@ const formatEstimatedDateFriendly = (estimatedDateStr: string): string => {
 }
 
 interface CartProps {
-  initialStep?: 'cart' | 'delivery' | 'payment'
+  initialStep?: CheckoutStep
+}
+
+const isPendingPaymentExpired = (payment: PendingCheckoutPayment | null | undefined): boolean => {
+  if (!payment) return true
+
+  const dateValue = payment.paymentMethod === 'pix' ? payment.expirationDate : payment.dueDate
+  if (!dateValue) return false
+
+  const expiresAt = new Date(dateValue)
+  if (Number.isNaN(expiresAt.getTime())) return false
+
+  if (payment.paymentMethod === 'boleto' && dateValue.length <= 10) {
+    expiresAt.setHours(23, 59, 59, 999)
+  }
+
+  return expiresAt.getTime() <= Date.now()
 }
 
 export default function Cart({ initialStep = 'cart' }: CartProps) {
@@ -99,13 +130,45 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   const [freeShippingThreshold, setFreeShippingThreshold] = useState<number>(0)
 
   // --- ESTADOS DO CHECKOUT ---
-  const urlStep = searchParams.get('step') as 'cart' | 'delivery' | 'payment' | null
-  const [checkoutStep, setCheckoutStep] = useState<'cart' | 'delivery' | 'payment'>(urlStep || initialStep)
+  const urlStep = parseCheckoutStep(searchParams.get('step')) || (initialStep !== 'confirmed' ? initialStep : 'cart')
+  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>(() => {
+    const saved = sessionStorage.getItem('cart_checkout_step')
+    if (getPendingCheckoutPayment()) return 'payment'
+    if (saved) {
+      const parsed = parseCheckoutStep(saved)
+      if (parsed && parsed !== 'confirmed') return parsed
+    }
+    return urlStep || 'cart'
+  })
+  const [maxReachableStep, setMaxReachableStep] = useState<CheckoutStep>(() => {
+    const saved = sessionStorage.getItem('cart_max_reachable_step')
+    if (saved) {
+      const parsed = parseCheckoutStep(saved)
+      if (parsed) return parsed
+    }
+    return 'cart'
+  })
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [creatingOrderWithoutPayment, setCreatingOrderWithoutPayment] = useState(false)
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'pix' | 'boleto' | 'credit_card'>('pix')
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('pix')
+  const [cardFormData, setCardFormData] = useState<CreditCardFormData>({
+    holderName: '', cpf: '', number: '', expiry: '', ccv: '', installments: 1,
+  })
+  const [cardFormErrors, setCardFormErrors] = useState<Record<string, string>>({})
+  const [installmentOptions, setInstallmentOptions] = useState<any[]>([])
+  const [maxInterestFree, setMaxInterestFree] = useState(1)
+  const [loadingInstallments, setLoadingInstallments] = useState(false)
+  const [copiedBoleto, setCopiedBoleto] = useState(false)
   const [subscriptionPlan] = useState<'monthly' | 'quarterly'>('monthly')
-  const [paymentResult, setPaymentResult] = useState<any>(null)
+  const [paymentResult, setPaymentResult] = useState<any>(() => getConfirmedCheckoutPayment())
+  const [pendingPayment, setPendingPayment] = useState<PendingCheckoutPayment | null>(() => {
+    const saved = getPendingCheckoutPayment()
+    return isPendingPaymentExpired(saved) ? null : saved
+  })
+  const [pendingAsyncPayments, setPendingAsyncPayments] = useState<Partial<Record<'pix' | 'boleto', PendingCheckoutPayment>>>(() => {
+    const saved = getPendingCheckoutPayment()
+    return saved && !isPendingPaymentExpired(saved) ? { [saved.paymentMethod]: saved } : {}
+  })
   const [copiedPix, setCopiedPix] = useState(false)
   const [timeLeft, setTimeLeft] = useState('')
   const [existingOrderId, setExistingOrderId] = useState<string | null>(null)
@@ -127,19 +190,19 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   const [saveAddressToProfile, setSaveAddressToProfile] = useState(true)
 
   useEffect(() => {
-    if (items.length === 0 && !paymentResult) return
+    if (items.length === 0 && !paymentResult && !pendingPayment) return
 
     const urlOrderId = searchParams.get('orderId')
     const storedOrderId = getPendingCheckoutOrderId()
-    const resolvedOrderId = urlOrderId || storedOrderId
+    const resolvedOrderId = urlOrderId || storedOrderId || pendingPayment?.orderId || paymentResult?.orderId
     if (resolvedOrderId) {
       setExistingOrderId(resolvedOrderId)
     }
-  }, [searchParams, items.length, paymentResult])
+  }, [searchParams, items.length, paymentResult, pendingPayment])
 
   // Carrinho vazio: limpa checkout e só redireciona se o pedido pendente já foi pago
   useEffect(() => {
-    if (authLoading || cartLoading || items.length > 0 || paymentResult) return
+    if (authLoading || cartLoading || items.length > 0 || paymentResult || pendingPayment) return
 
     const pendingOrderId = getPendingCheckoutOrderId() || existingOrderId || searchParams.get('orderId')
 
@@ -147,6 +210,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       setExistingOrderId(null)
       clearPendingCheckoutOrderId()
       setCheckoutStep('cart')
+      setMaxReachableStep('cart')
       if (searchParams.get('step') || searchParams.get('orderId')) {
         setSearchParams({}, { replace: true })
       }
@@ -171,7 +235,11 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
         if (isPaidOrderStatus(order.status)) {
           clearPendingCheckoutOrderId()
           setExistingOrderId(null)
-          navigate(`/payment-success?order_id=${pendingOrderId}`, { replace: true })
+          showOrderConfirmation(
+            pendingOrderId,
+            normalizePaymentMethod(order.payment_method),
+            { status: order.status }
+          )
           return
         }
 
@@ -190,16 +258,16 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     return () => {
       cancelled = true
     }
-  }, [authLoading, cartLoading, items.length, paymentResult, existingOrderId, navigate, searchParams, setSearchParams])
+  }, [authLoading, cartLoading, items.length, paymentResult, pendingPayment, existingOrderId, navigate, searchParams, setSearchParams])
 
   useEffect(() => {
-    if ((checkoutStep === 'delivery' || checkoutStep === 'payment') && isAuthenticated) {
+    if (['delivery', 'payment'].includes(checkoutStep) && isAuthenticated) {
       loadAddresses()
     }
   }, [checkoutStep, isAuthenticated])
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated && (checkoutStep === 'delivery' || checkoutStep === 'payment')) {
+    if (!authLoading && !isAuthenticated && ['delivery', 'payment'].includes(checkoutStep)) {
       navigate(`/login?redirect=/carrinho?step=${checkoutStep}`)
     }
   }, [authLoading, isAuthenticated, checkoutStep, navigate])
@@ -258,8 +326,8 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   }, [showCepWarning])
 
   useEffect(() => {
-    if (paymentResult?.paymentMethod === 'pix' && paymentResult.expirationDate) {
-      const expirationTime = new Date(paymentResult.expirationDate).getTime()
+    if (pendingPayment?.paymentMethod === 'pix' && pendingPayment.expirationDate) {
+      const expirationTime = new Date(pendingPayment.expirationDate).getTime()
 
       const interval = setInterval(() => {
         const now = new Date().getTime()
@@ -281,17 +349,20 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       }, 1000)
 
       return () => clearInterval(interval)
+    } else {
+      setTimeLeft('')
     }
-  }, [paymentResult])
+  }, [pendingPayment])
 
   useEffect(() => {
     const orderId =
+      pendingPayment?.orderId ||
       paymentResult?.orderId ||
       existingOrderId ||
       getPendingCheckoutOrderId() ||
       searchParams.get('orderId')
 
-    if (!orderId || !paymentResult) return
+    if (!orderId || !pendingPayment || paymentResult?.isPaid) return
 
     const pollInterval = setInterval(async () => {
       try {
@@ -299,10 +370,26 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
         if (isPaidOrderStatus(order.status)) {
           clearInterval(pollInterval)
+          const paidMethod = pendingPayment.paymentMethod
           clearPendingCheckoutOrderId()
+          clearPendingCheckoutPayment()
+          setPendingPayment(null)
           setExistingOrderId(null)
           await clearCart()
-          navigate(`/payment-success?order_id=${orderId}`, { replace: true })
+          const confirmed = {
+            orderId,
+            paymentMethod: paidMethod,
+            isPaid: true as const,
+            status: order.status,
+          }
+          setConfirmedCheckoutPayment(confirmed)
+          setPaymentResult(confirmed)
+          setMaxReachableStep('confirmed')
+          setCheckoutStep('confirmed')
+          setSearchParams(
+            { step: 'confirmed', orderId, paid: '1' },
+            { replace: true }
+          )
         }
       } catch (err) {
         console.error('Erro ao consultar status do pagamento:', err)
@@ -310,7 +397,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     }, 5000)
 
     return () => clearInterval(pollInterval)
-  }, [paymentResult, existingOrderId, searchParams, clearCart, navigate])
+  }, [pendingPayment, paymentResult, existingOrderId, searchParams, clearCart, setSearchParams])
 
   // Alias para retrocompatibilidade com o simulador de frete do carrinho
   const shippingCep = formData.cep
@@ -335,10 +422,6 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
     checkRegionEligibility()
   }, [shippingCep])
-
-  const handleProductImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    handleImageError(e, PRODUCT_IMAGE_FALLBACK)
-  }
 
   // Tipo de compra global do carrinho (assinaturas desativadas)
   const isSubscription = false
@@ -718,6 +801,30 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     }
   }
 
+  const persistCheckoutAddressIfNeeded = async () => {
+    if (editingAddressId && selectedAddressId) {
+      await handleUpdateAddress()
+    } else if (!selectedAddressId && saveAddressToProfile) {
+      try {
+        const savedAddr = await addressService.createSavedAddress({
+          nickname: newAddressNickname || formData.bairro || 'Meu Endereço',
+          cep: formData.cep,
+          address: formData.address,
+          number: formData.number,
+          complement: formData.complement || undefined,
+          bairro: formData.bairro,
+          city: formData.city,
+          state: formData.state,
+        })
+        await loadAddresses()
+        if (savedAddr?.id) selectAddress(savedAddr)
+        setNewAddressNickname('')
+      } catch (err) {
+        console.error('Erro ao auto-salvar endereço (ignorando):', err)
+      }
+    }
+  }
+
   const handleEditAddress = (address: SavedAddress, e: React.MouseEvent) => {
     e.stopPropagation()
     setEditAddressData(address)
@@ -841,13 +948,200 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     return { ...base, shippingAddress: buildShippingAddress(formData) }
   }
 
+  const goToStep = (step: CheckoutStep, replace = true) => {
+    const resolvedStep = step === 'confirmed' && !paymentResult?.isPaid ? 'payment' : step
+    setCheckoutStep(resolvedStep)
+    sessionStorage.setItem('cart_checkout_step', resolvedStep)
+    const orderId =
+      pendingPayment?.orderId ||
+      paymentResult?.orderId ||
+      existingOrderId ||
+      getPendingCheckoutOrderId() ||
+      searchParams.get('order_id') ||
+      searchParams.get('orderId')
+    const params: Record<string, string> = { step: resolvedStep }
+    if (orderId && resolvedStep !== 'cart') {
+      params.orderId = orderId
+      if (resolvedStep === 'confirmed') {
+        params.paid = paymentResult?.isPaid ? '1' : '0'
+      }
+    }
+    setSearchParams(params, { replace })
+    const order: CheckoutStep[] = ['cart', 'delivery', 'payment', 'confirmed']
+    if (order.indexOf(resolvedStep) > order.indexOf(maxReachableStep)) {
+      setMaxReachableStep(resolvedStep)
+      sessionStorage.setItem('cart_max_reachable_step', resolvedStep)
+    }
+    if (resolvedStep === 'confirmed') {
+      setMaxReachableStep('confirmed')
+      sessionStorage.setItem('cart_max_reachable_step', 'confirmed')
+    }
+  }
+
+  const handleStepClick = (step: CheckoutStep) => {
+    if (step === 'confirmed' && !paymentResult?.isPaid) return
+    const order: CheckoutStep[] = ['cart', 'delivery', 'payment', 'confirmed']
+    if (order.indexOf(step) > order.indexOf(maxReachableStep)) return
+
+    if (paymentResult?.isPaid || pendingPayment) {
+      setPendingPayment(null)
+      clearPendingCheckoutPayment()
+      setPaymentResult(null)
+      clearConfirmedCheckoutPayment()
+      setCheckoutError(null)
+      setCardFormData({
+        holderName: '',
+        cpf: '',
+        number: '',
+        expiry: '',
+        ccv: '',
+        installments: 1,
+      })
+      setCardFormErrors({})
+      setMaxReachableStep(step)
+      sessionStorage.setItem('cart_max_reachable_step', step)
+    }
+
+    goToStep(step)
+  }
+
+  const normalizePaymentMethod = (method: string | null | undefined): PaymentMethod => {
+    if (method === 'credit_card' || method === 'boleto' || method === 'pix') return method
+    return 'pix'
+  }
+
+  const showOrderConfirmation = (
+    orderId: string,
+    paymentMethod: PaymentMethod | string,
+    extra: Record<string, unknown> = {}
+  ) => {
+    sessionStorage.removeItem('cart_checkout_step')
+    sessionStorage.removeItem('cart_max_reachable_step')
+    clearPendingCheckoutPayment()
+    setPendingPayment(null)
+    const result = { orderId, paymentMethod, isPaid: true as const, ...extra }
+    setConfirmedCheckoutPayment(result)
+    setPaymentResult(result)
+    setMaxReachableStep('confirmed')
+    setCheckoutStep('confirmed')
+    setSearchParams(
+      { step: 'confirmed', orderId, paid: '1' },
+      { replace: true }
+    )
+  }
+
+  const applyPendingPayment = (result: PendingCheckoutPayment) => {
+    setPendingCheckoutPayment(result)
+    setPendingPayment(result)
+    setPendingAsyncPayments((current) => ({ ...current, [result.paymentMethod]: result }))
+    setCheckoutStep('payment')
+    sessionStorage.setItem('cart_checkout_step', 'payment')
+    if (maxReachableStep !== 'payment' && maxReachableStep !== 'confirmed') {
+      setMaxReachableStep('payment')
+      sessionStorage.setItem('cart_max_reachable_step', 'payment')
+    }
+    const orderId = result.orderId
+    setExistingOrderId(orderId)
+    setPendingCheckoutOrderId(orderId)
+    setSearchParams({ step: 'payment', orderId }, { replace: true })
+  }
+
+  const handlePaymentMethodChange = (method: PaymentMethod) => {
+    if (creatingOrder) return
+    if (method !== selectedPaymentMethod) {
+      setCheckoutError(null)
+
+      if (method === 'pix' || method === 'boleto') {
+        const cachedPayment = pendingAsyncPayments[method]
+        if (cachedPayment && !isPendingPaymentExpired(cachedPayment)) {
+          setPendingCheckoutPayment(cachedPayment)
+          setPendingPayment(cachedPayment)
+        } else if (cachedPayment) {
+          setPendingAsyncPayments((current) => {
+            const next = { ...current }
+            delete next[method]
+            return next
+          })
+          if (pendingPayment?.paymentMethod === method) {
+            setPendingPayment(null)
+            clearPendingCheckoutPayment()
+          }
+        }
+      }
+    }
+    setSelectedPaymentMethod(method)
+  }
+
+  // Restaura confirmação a partir da URL (ex.: redirect de /payment-success)
+  useEffect(() => {
+    const step = parseCheckoutStep(searchParams.get('step'))
+    const orderIdParam = searchParams.get('order_id') || searchParams.get('orderId')
+    const paidFromUrl = searchParams.get('paid') === '1'
+
+    if (step !== 'confirmed' || !orderIdParam || paymentResult?.isPaid) return
+
+    try {
+      const saved = getConfirmedCheckoutPayment()
+      if (saved?.orderId === orderIdParam) {
+        setPaymentResult(saved)
+        setCheckoutStep('confirmed')
+        setMaxReachableStep('confirmed')
+        return
+      }
+    } catch { }
+
+    let cancelled = false
+
+    const loadConfirmedOrder = async () => {
+      setResolvingPendingOrder(true)
+      try {
+        const order = await orderService.getOrder(orderIdParam)
+        if (cancelled) return
+
+        const isPaid = paidFromUrl || isPaidOrderStatus(order.status)
+        if (!isPaid) {
+          if (!cancelled) {
+            setCheckoutStep('payment')
+            setSearchParams({ step: 'payment', orderId: orderIdParam }, { replace: true })
+          }
+          return
+        }
+        const result = {
+          orderId: orderIdParam,
+          paymentMethod: normalizePaymentMethod(order.payment_method),
+          isPaid: true as const,
+          status: order.status,
+        }
+        setConfirmedCheckoutPayment(result)
+        setPaymentResult(result)
+        setCheckoutStep('confirmed')
+        setMaxReachableStep('confirmed')
+
+        if (isPaid) {
+          clearPendingCheckoutOrderId()
+        }
+      } catch (err) {
+        console.error('Erro ao carregar pedido confirmado:', err)
+        if (!cancelled) {
+          toast.error('Não foi possível carregar o pedido.')
+          setCheckoutStep('cart')
+          setSearchParams({ step: 'cart' }, { replace: true })
+        }
+      } finally {
+        if (!cancelled) setResolvingPendingOrder(false)
+      }
+    }
+
+    void loadConfirmedOrder()
+    return () => { cancelled = true }
+  }, [searchParams, paymentResult?.isPaid])
+
   const handleContinueToDelivery = () => {
     if (!isAuthenticated) {
       navigate('/login?redirect=/carrinho?step=delivery')
       return
     }
-    setCheckoutStep('delivery')
-    setSearchParams({ step: 'delivery' })
+    goToStep('delivery')
   }
 
   const handleContinueToPayment = async (e?: React.FormEvent) => {
@@ -898,8 +1192,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       }
     }
 
-    setCheckoutStep('payment')
-    setSearchParams({ step: 'payment' })
+    goToStep('payment')
   }
 
   const handleContinueWithSavedAddress = () => {
@@ -908,119 +1201,184 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       if (reason) toast.warning(reason)
       return
     }
-    setCheckoutStep('payment')
-    setSearchParams({ step: 'payment' })
+    goToStep('payment')
   }
 
-  const handleBackToCart = () => {
-    setCheckoutStep('cart')
-    setSearchParams({ step: 'cart' })
-  }
 
-  const handleBackToDelivery = () => {
-    setCheckoutStep('delivery')
-    setSearchParams({ step: 'delivery' })
-  }
 
-  // Efeito para escutar mudanças no histórico do navegador
   useEffect(() => {
-    if (items.length === 0 && !paymentResult) return
-
-    const stepParam = searchParams.get('step') as 'cart' | 'delivery' | 'payment' | null
-    if (stepParam && stepParam !== checkoutStep) {
-      setCheckoutStep(stepParam)
-    } else if (!stepParam && checkoutStep !== 'cart') {
-      setCheckoutStep('cart')
+    if (checkoutStep === 'payment' && selectedPaymentMethod === 'credit_card' && currentTotal > 0) {
+      let cancelled = false
+        ; (async () => {
+          try {
+            setLoadingInstallments(true)
+            const opts = await paymentService.getInstallmentOptions(currentTotal)
+            if (cancelled) return
+            setInstallmentOptions(opts.options)
+            setMaxInterestFree(opts.maxInterestFreeInstallments)
+          } catch {
+            if (!cancelled) {
+              setInstallmentOptions([{
+                installments: 1, installmentValue: currentTotal, totalValue: currentTotal,
+                hasInterest: false, label: `1x de R$ ${currentTotal.toFixed(2).replace('.', ',')} sem juros`,
+              }])
+            }
+          } finally {
+            if (!cancelled) setLoadingInstallments(false)
+          }
+        })()
+      return () => { cancelled = true }
     }
-  }, [searchParams, items.length, paymentResult, checkoutStep])
+  }, [checkoutStep, selectedPaymentMethod, currentTotal])
+
+  const handleCopyBoleto = () => {
+    if (pendingPayment?.identificationField) {
+      navigator.clipboard.writeText(pendingPayment.identificationField)
+      setCopiedBoleto(true)
+      setTimeout(() => setCopiedBoleto(false), 2000)
+    }
+  }
+
+  useEffect(() => {
+    if (items.length === 0 && !paymentResult && !pendingPayment) return
+    const stepParam = parseCheckoutStep(searchParams.get('step'))
+    if (stepParam === 'confirmed' && !paymentResult?.isPaid) {
+      if (pendingPayment) {
+        setCheckoutStep('payment')
+      }
+      return
+    }
+    if (stepParam && stepParam !== checkoutStep && stepParam !== 'confirmed') setCheckoutStep(stepParam)
+    else if (!stepParam && checkoutStep !== 'cart' && checkoutStep !== 'confirmed' && checkoutStep !== 'payment') setCheckoutStep('cart')
+  }, [searchParams, items.length, paymentResult, pendingPayment, checkoutStep])
 
   const handleCopyPix = () => {
-    if (paymentResult?.pixPayload) {
-      navigator.clipboard.writeText(paymentResult.pixPayload)
+    if (pendingPayment?.pixPayload) {
+      navigator.clipboard.writeText(pendingPayment.pixPayload)
       setCopiedPix(true)
       setTimeout(() => setCopiedPix(false), 2000)
     }
   }
 
-  const handleResetPayment = () => {
-    const orderId = paymentResult?.orderId || existingOrderId || getPendingCheckoutOrderId()
+  const handlePaymentSubmit = () => {
+    if (selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'boleto') {
+      void handleGenerateAsyncPayment()
+      return
+    }
+    void handleSubmit()
+  }
 
-    setPaymentResult(null)
-    setCheckoutError(null)
+  const handleGenerateAsyncPayment = async () => {
+    if (creatingOrder) return
+    const cachedPayment = selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'boleto'
+      ? pendingAsyncPayments[selectedPaymentMethod]
+      : null
 
-    if (items.length === 0) {
-      setExistingOrderId(null)
-      clearPendingCheckoutOrderId()
-      setCheckoutStep('cart')
-      setSearchParams({}, { replace: true })
+    if (cachedPayment && !isPendingPaymentExpired(cachedPayment)) {
+      setPendingCheckoutPayment(cachedPayment)
+      setPendingPayment(cachedPayment)
       return
     }
 
-    if (orderId) {
-      setExistingOrderId(orderId)
-      setPendingCheckoutOrderId(orderId)
+    if (cachedPayment && isPendingPaymentExpired(cachedPayment)) {
+      setPendingAsyncPayments((current) => {
+        const next = { ...current }
+        delete next[selectedPaymentMethod as 'pix' | 'boleto']
+        return next
+      })
     }
-    setCheckoutStep('payment')
-    setSearchParams(orderId ? { step: 'payment', orderId } : { step: 'payment' })
-  }
 
-  const handlePaymentSubmit = () => {
     const blockReason = getPaymentBlockReason()
     if (blockReason) {
       toast.warning(blockReason)
       return
     }
-    void handleSubmit()
+
+    try {
+      setCreatingOrder(true)
+      setCheckoutError(null)
+      await persistCheckoutAddressIfNeeded()
+
+      const params = buildCreatePreferenceParams()
+      const preference = await paymentService.createPreference(params as any)
+      const orderId = preference.orderId
+      if (!orderId) {
+        throw new Error('Pedido não foi criado. Tente novamente.')
+      }
+
+      setExistingOrderId(orderId)
+      setPendingCheckoutOrderId(orderId)
+
+      if (preference.paymentMethod === 'pix') {
+        const pix = preference as any
+        applyPendingPayment({
+          orderId,
+          paymentMethod: 'pix',
+          paymentId: pix.paymentId,
+          pixQrCode: pix.pixQrCode,
+          pixPayload: pix.pixPayload,
+          expirationDate: pix.expirationDate,
+        })
+      } else if (preference.paymentMethod === 'boleto') {
+        const boleto = preference as any
+        applyPendingPayment({
+          orderId,
+          paymentMethod: 'boleto',
+          paymentId: boleto.paymentId,
+          bankSlipUrl: boleto.bankSlipUrl,
+          identificationField: boleto.identificationField,
+          dueDate: boleto.dueDate,
+        })
+      } else {
+        throw new Error('Resposta inesperada ao gerar pagamento.')
+      }
+    } catch (error: any) {
+      console.error('Erro ao gerar pagamento:', error)
+      const message = error.message || 'Erro ao processar pagamento. Tente novamente.'
+      setCheckoutError(message)
+      toast.error(message)
+    } finally {
+      setCreatingOrder(false)
+    }
   }
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
     if (creatingOrder) return
 
-    // Valida endereço
+    const blockReason = getPaymentBlockReason()
+    if (blockReason) {
+      toast.warning(blockReason)
+      return
+    }
+
+    if (selectedPaymentMethod !== 'credit_card') {
+      void handleGenerateAsyncPayment()
+      return
+    }
+
+    const errors = validateCreditCardForm(cardFormData)
+    setCardFormErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      toast.warning('Verifique os dados do cartão')
+      return
+    }
+
     if (!formData.address || !formData.number || !formData.city || !formData.state || !formData.cep) {
       toast.warning('Por favor, preencha todos os campos do endereço')
       return
     }
 
-    // Valida se há entrega disponível
     if (hasInvalidCep()) {
       toast.error('Infelizmente, não estamos enviando para este CEP no momento. Por favor, verifique o endereço ou entre em contato conosco.')
       return
     }
 
-    // Se estiver editando um endereço salvo, salva as alterações primeiro
-    if (editingAddressId && selectedAddressId) {
-      await handleUpdateAddress()
-    } else if (!selectedAddressId && saveAddressToProfile) {
-      try {
-        const savedAddr = await addressService.createSavedAddress({
-          nickname: newAddressNickname || formData.bairro || 'Meu Endereço',
-          cep: formData.cep,
-          address: formData.address,
-          number: formData.number,
-          complement: formData.complement || undefined,
-          bairro: formData.bairro,
-          city: formData.city,
-          state: formData.state,
-        })
-        await loadAddresses()
-        if (savedAddr && savedAddr.id) {
-          selectAddress(savedAddr)
-        }
-        setNewAddressNickname('')
-      } catch (err) {
-        console.error('Erro ao auto-salvar endereço (ignorando):', err)
-      }
-    }
+    await persistCheckoutAddressIfNeeded()
 
     try {
       setCreatingOrder(true)
       setCheckoutError(null)
-
-      if (editingAddressId && selectedAddressId) {
-        await handleUpdateAddress()
-      }
 
       const params = buildCreatePreferenceParams()
       const preference = await paymentService.createPreference(params as any)
@@ -1031,18 +1389,48 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       }
 
       const pref = preference as any
+      const isCardFlow =
+        preference.paymentMethod === 'credit_card' &&
+        pref.status === 'PENDING_CARD_DETAILS'
 
-      if (preference.paymentMethod === 'credit_card' && pref.status !== 'FAILED' && pref.status !== 'PENDING_CARD_DETAILS') {
+      if (!isCardFlow) {
+        throw new Error('Não foi possível iniciar o pagamento com cartão.')
+      }
+
+      const orderId = pref.orderId || preference.orderId
+      const [expiryMonth, expiryYear] = cardFormData.expiry.split('/')
+      const response = await paymentService.payWithCard({
+        orderId: orderId!,
+        paymentMethod: selectedPaymentMethod,
+        creditCard: {
+          holderName: cardFormData.holderName,
+          number: cardFormData.number.replace(/\D/g, ''),
+          expiryMonth,
+          expiryYear: `20${expiryYear}`,
+          ccv: cardFormData.ccv,
+        },
+        payer: {
+          cpfCnpj: cardFormData.cpf.replace(/\D/g, ''),
+        },
+        installments: cardFormData.installments,
+      })
+
+      const declinedStatuses = ['DECLINED', 'REFUSED', 'CHARGEBACK_REQUESTED', 'REFUNDED', 'REFUND_REQUESTED']
+
+      if (isPaidOrderStatus(response.status)) {
+        clearPendingCheckoutOrderId()
         await clearCart()
+        showOrderConfirmation(orderId!, selectedPaymentMethod, {
+          paymentMethod: selectedPaymentMethod,
+          status: response.status,
+          paymentId: response.paymentId,
+        })
+      } else if (declinedStatuses.includes(response.status)) {
+        setCheckoutError('O pagamento foi recusado. Verifique os dados ou tente outro cartão.')
+        toast.error('Pagamento recusado. Verifique os dados do cartão.')
+      } else {
+        toast.info('Pagamento em processamento. Aguarde a confirmação.')
       }
-
-      if (preference.paymentMethod === 'credit_card' && pref.status === 'PENDING_CARD_DETAILS') {
-        setCreatingOrder(false)
-        navigate(`/carrinho/payment/card?orderId=${pref.orderId}`)
-        return
-      }
-
-      setPaymentResult(preference)
       setCreatingOrder(false)
     } catch (error: any) {
       console.error('Erro ao criar preferência de pagamento:', error)
@@ -1101,7 +1489,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
       await clearCart()
 
-      navigate(`/payment-success?order_id=${order.id}`)
+      showOrderConfirmation(order.id, 'pix', { status: 'CONFIRMED' })
     } catch (error: any) {
       console.error('Erro ao criar pedido sem pagamento:', error)
       toast.error(error.message || 'Erro ao criar pedido. Tente novamente.')
@@ -1312,9 +1700,21 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     }
   }, [appliedPromoCodes.length])
 
-  // Busca produtos recomendados (até 16 itens para garantir variedade de categorias)
+  // Busca produtos recomendados (carrinho com itens: por categoria; vazio: destaques)
   useEffect(() => {
     const loadRecommendations = async () => {
+      if (items.length === 0) {
+        try {
+          const products = await productsService.getAll()
+          const active = products.filter((p) => p.active !== false)
+          setRecommendedProducts(active.slice(0, 16))
+        } catch (error) {
+          console.error('Erro ao carregar recomendações para carrinho vazio:', error)
+          setRecommendedProducts([])
+        }
+        return
+      }
+
       if (cartCategories.length === 0) {
         setRecommendedProducts([])
         return
@@ -1344,7 +1744,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     }
 
     loadRecommendations()
-  }, [cartCategories, cartProductIds])
+  }, [cartCategories, cartProductIds, items.length])
   // Tipo de compra recorrente removido.
 
   // Agrupa as recomendações por categoria para navegação por abas (suporta tags compostas separadas por vírgula)
@@ -1380,7 +1780,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     }
   }, [recommendationsByCategory, activeRecommendationTab])
 
-  if (authLoading || resolvingPendingOrder || (cartLoading && items.length === 0 && !paymentResult)) {
+  if (authLoading || resolvingPendingOrder || (cartLoading && items.length === 0 && !paymentResult && !pendingPayment)) {
     return (
       <div className="bg-gray-50 dark:bg-gray-950 min-h-[75vh] flex items-center justify-center py-12 px-4 animate-fade-in">
         <div className="text-center">
@@ -1391,293 +1791,31 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     )
   }
 
-  if (paymentResult) {
-    return (
-      <div className="bg-gray-50 dark:bg-gray-950 min-h-[75vh] flex items-center justify-center py-12 px-4 animate-fade-in">
-        <div className="max-w-2xl w-full bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 p-8 text-center shadow-xl">
-          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-6" />
-          <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2">Pedido Confirmado!</h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-8">Seu pedido foi registrado com sucesso.</p>
+  const isEmptyCart = items.length === 0 && !paymentResult && !pendingPayment && !existingOrderId
 
-          {paymentResult.paymentMethod === 'pix' && (
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 mb-8 inline-block max-w-sm w-full border border-gray-200 dark:border-gray-700 text-left">
-              <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-center">Pague via PIX</h3>
-              {timeLeft && (
-                <div className="mb-4 flex justify-center">
-                  <span className="inline-block bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-400 px-3 py-1.5 rounded-full text-sm font-semibold">
-                    Expira em: {timeLeft}
-                  </span>
-                </div>
-              )}
-              <div className="bg-white p-2 rounded-lg flex justify-center mb-4">
-                <img src={`data:image/png;base64,${paymentResult.pixQrCode}`} alt="QR Code PIX" className="w-48 h-48" />
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 text-center">
-                Abra o app do seu banco, escolha PIX e aponte a câmera para o QR Code, ou copie a chave abaixo:
-              </p>
-              <div className="flex flex-col gap-2 items-stretch">
-                <input type="text" readOnly value={paymentResult.pixPayload} className="w-full text-xs p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-500" />
-                <button onClick={handleCopyPix} className="btn-primary flex items-center justify-center gap-2 py-3 w-full">
-                  <Copy size={16} />
-                  {copiedPix ? 'Copiado!' : 'Copiar Código PIX'}
-                </button>
-                <button onClick={handleResetPayment} className="btn-secondary flex items-center justify-center gap-2 py-3 w-full">
-                  Trocar forma de pagamento
-                </button>
-              </div>
-            </div>
-          )}
-
-          {paymentResult.paymentMethod === 'boleto' && (
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 mb-8 inline-block max-w-sm w-full border border-gray-200 dark:border-gray-700 text-left">
-              <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-center">Boleto Gerado</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 text-center">
-                O seu boleto foi gerado com sucesso. O pagamento pode demorar até 3 dias úteis para ser confirmado.
-              </p>
-              <div className="flex flex-col gap-2 items-stretch">
-                <a href={paymentResult.bankSlipUrl} target="_blank" rel="noreferrer" className="btn-primary flex items-center justify-center gap-2 py-3 w-full">
-                  <Download size={16} />
-                  Baixar Boleto
-                </a>
-                <button onClick={handleResetPayment} className="btn-secondary flex items-center justify-center gap-2 py-3 w-full">
-                  Trocar forma de pagamento
-                </button>
-              </div>
-            </div>
-          )}
-
-          {paymentResult.paymentMethod === 'credit_card' && (
-            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-6 mb-8 border border-gray-200 dark:border-gray-700">
-              <h3 className="font-bold text-green-600 dark:text-green-400 mb-2">Pagamento Aprovado</h3>
-              <p className="text-gray-600 dark:text-gray-300">
-                Seu pagamento no cartão de crédito foi confirmado e seu pedido já está sendo preparado!
-              </p>
-            </div>
-          )}
-
-          {paymentResult.redirectUrl && !['pix', 'boleto', 'credit_card'].includes(paymentResult.paymentMethod) && (
-            <div className="mb-8">
-              <a href={paymentResult.redirectUrl} target="_blank" rel="noreferrer" className="btn-primary inline-flex items-center justify-center gap-2 py-3 px-8">
-                Continuar Pagamento
-              </a>
-            </div>
-          )}
-
-          <div className="pt-6 border-t border-gray-100 dark:border-gray-700">
-            <button onClick={() => navigate('/perfil?section=orders')} className="text-primary-600 dark:text-primary-400 font-medium hover:underline">
-              Acompanhar meus pedidos
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (items.length === 0 && !paymentResult) {
-    return (
-      <div className="bg-gray-50 dark:bg-gray-950 min-h-[75vh] flex items-center justify-center py-12 px-4 animate-fade-in">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 p-8 text-center shadow-xl">
-          <div className="w-20 h-20 bg-primary-50 dark:bg-primary-950/20 text-primary-600 dark:text-primary-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner animate-pulse-subtle">
-            <ShoppingBag size={38} className="transition-transform duration-300 hover:rotate-12" />
-          </div>
-          <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-3">Seu carrinho está vazio</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-8 max-w-xs mx-auto leading-relaxed">
-            Parece que você ainda não adicionou nenhum item. Explore nossas categorias para encontrar os melhores produtos de saúde e bem-estar.
-          </p>
-          <Link
-            to="/produtos"
-            className="w-full inline-flex items-center justify-center bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-extrabold py-3.5 px-6 rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-98 text-sm gap-2"
-          >
-            <ShoppingCart size={16} />
-            Explorar
-          </Link>
-        </div>
-      </div>
-    )
-  }
-
-  const renderStepper = () => {
-    let progressPercent = 0
-    if (checkoutStep === 'delivery') progressPercent = 50
-    if (checkoutStep === 'payment') progressPercent = 100
-
-    return (
-      <div className="mb-8 flex items-center justify-center animate-fade-in">
-        <div className="flex items-start justify-between w-full max-w-lg relative">
-          {/* Progress Bar Line */}
-          <div className="absolute top-4 left-[16.667%] right-[16.667%] h-0.5 bg-gray-200 dark:bg-gray-800 -translate-y-1/2 z-0">
-            <div
-              className="h-full bg-gradient-to-r from-green-500 via-green-600 to-primary-600 transition-all duration-500 ease-in-out"
-              style={{ width: `${progressPercent}%` }}
-            ></div>
-          </div>
-
-          {/* Step 1: Carrinho */}
-          <button
-            onClick={() => checkoutStep !== 'cart' && handleBackToCart()}
-            className="flex-1 flex flex-col items-center gap-1.5 z-10 focus:outline-none group cursor-pointer"
-          >
-            <span className={`flex items-center justify-center w-8 h-8 rounded-full font-black text-xs border-4 border-white dark:border-gray-900 transition-all duration-300 ${checkoutStep !== 'cart'
-              ? 'bg-green-600 text-white shadow-md group-hover:scale-105'
-              : 'bg-primary-600 text-white shadow-md'
-              }`}>
-              {checkoutStep !== 'cart' ? '✓' : '1'}
-            </span>
-            <span className={`text-[11px] font-extrabold uppercase tracking-wider text-center ${checkoutStep !== 'cart'
-              ? 'text-green-600 dark:text-green-400 group-hover:text-green-700'
-              : 'text-primary-600 dark:text-primary-400'
-              }`}>
-              Carrinho
-            </span>
-          </button>
-
-          {/* Step 2: Entrega */}
-          <button
-            onClick={() => checkoutStep === 'payment' ? handleBackToDelivery() : undefined}
-            disabled={checkoutStep === 'cart'}
-            className="flex-1 flex flex-col items-center gap-1.5 z-10 focus:outline-none group disabled:cursor-not-allowed cursor-pointer"
-          >
-            <span className={`flex items-center justify-center w-8 h-8 rounded-full font-black text-xs transition-all duration-300 border-4 border-white dark:border-gray-900 ${checkoutStep === 'cart'
-              ? 'bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-2 border-gray-200 dark:border-gray-800'
-              : checkoutStep === 'payment'
-                ? 'bg-green-600 text-white shadow-md group-hover:scale-105'
-                : 'bg-primary-600 text-white shadow-md'
-              }`}>
-              {checkoutStep === 'payment' ? '✓' : '2'}
-            </span>
-            <span className={`text-[11px] font-extrabold uppercase tracking-wider text-center ${checkoutStep === 'cart'
-              ? 'text-gray-500 dark:text-gray-400'
-              : checkoutStep === 'payment'
-                ? 'text-green-600 dark:text-green-400 group-hover:text-green-700'
-                : 'text-primary-600 dark:text-primary-400'
-              }`}>
-              Entrega
-            </span>
-          </button>
-
-          {/* Step 3: Confirmação */}
-          <button
-            disabled={checkoutStep !== 'payment'}
-            className="flex-1 flex flex-col items-center gap-1.5 z-10 focus:outline-none disabled:cursor-default"
-          >
-            <span className={`flex items-center justify-center w-8 h-8 rounded-full font-black text-xs transition-all duration-300 border-4 border-white dark:border-gray-900 ${checkoutStep === 'payment'
-              ? 'bg-primary-600 text-white shadow-md'
-              : 'bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-2 border-gray-200 dark:border-gray-800'
-              }`}>
-              3
-            </span>
-            <span className={`text-[11px] font-extrabold uppercase tracking-wider text-center ${checkoutStep === 'payment'
-              ? 'text-primary-600 dark:text-primary-400'
-              : 'text-gray-500 dark:text-gray-400'
-              }`}>
-              Confirmação
-            </span>
-          </button>
-        </div>
-      </div>
-    )
-  }
+  const effectiveStep: CheckoutStep = resolveCheckoutStep(checkoutStep, pendingPayment, paymentResult)
 
 
+
+  const renderStepper = () => (
+    <CheckoutStepper
+      currentStep={effectiveStep}
+      maxReachableStep={paymentResult?.isPaid ? 'confirmed' : (pendingPayment ? 'payment' : maxReachableStep)}
+      onStepClick={handleStepClick}
+    />
+  )
 
   const renderCartItems = () => (
     <div className="space-y-4">
-      {items.map(item => {
-        const price = item.product?.price || 0
-        const itemTotal = price * item.quantity
-        const itemDiscountedPrice = itemTotal
-
-        return (
-          <div key={item.id} className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all duration-300 overflow-hidden group animate-fade-in">
-            <div className="p-4 sm:p-5 flex gap-4 sm:gap-5 items-center">
-
-              {/* Product image container */}
-              {item.product && (
-                <Link
-                  to={generateProductUrl(item.product)}
-                  className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-xl flex items-center justify-center p-2 flex-shrink-0 relative border border-gray-100 dark:border-gray-700 block"
-                >
-                  <img
-                    src={productsService.getImageUrl(item.product.image)}
-                    alt={item.product.name}
-                    className="max-w-full max-h-full object-contain transition-transform duration-300"
-                    onError={handleProductImageError}
-                  />
-                </Link>
-              )}
-
-              {/* Product Details info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    {item.product ? (
-                      <Link to={generateProductUrl(item.product)} className="block">
-                        <h3 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white truncate hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
-                          {item.product.name}
-                        </h3>
-                      </Link>
-                    ) : (
-                      <h3 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white truncate">
-                        Produto Indisponível
-                      </h3>
-                    )}
-                    {item.product && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
-                        {item.product.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => removeItem(item.id)}
-                    className="p-2 text-gray-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/10 rounded-xl transition-all flex-shrink-0"
-                    title="Remover produto do carrinho"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-3 mt-4 sm:mt-5">
-                  {/* Qty controls */}
-                  <div className="flex items-center bg-gray-50 dark:bg-gray-900 rounded-xl p-1 border border-gray-100 dark:border-gray-700">
-                    <button
-                      type="button"
-                      onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 active:scale-95 disabled:opacity-30 transition-all cursor-pointer"
-                      disabled={item.quantity <= 1}
-                    >
-                      <Minus size={12} />
-                    </button>
-                    <span className="w-8 text-center text-xs font-black text-gray-900 dark:text-white">
-                      {item.quantity}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white dark:hover:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 active:scale-95 transition-all cursor-pointer"
-                    >
-                      <Plus size={12} />
-                    </button>
-                  </div>
-
-                  {/* Item price details */}
-                  <div className="text-right">
-                    {isSubscription && itemTotal !== itemDiscountedPrice && (
-                      <p className="text-[10px] text-gray-500 dark:text-gray-500 line-through">
-                        R$ {itemTotal.toFixed(2).replace('.', ',')}
-                      </p>
-                    )}
-                    <p className="text-base sm:text-lg font-black text-primary-700 dark:text-primary-400">
-                      R$ {itemDiscountedPrice.toFixed(2).replace('.', ',')}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      })}
+      {items.map((item) => (
+        <CartItemCard
+          key={item.id}
+          item={item}
+          onUpdateQuantity={updateQuantity}
+          onRemove={removeItem}
+          getImageUrl={productsService.getImageUrl}
+        />
+      ))}
     </div>
   )
 
@@ -1814,7 +1952,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
                                   </span>
                                   {appliedDiscount && appliedDiscount.discount > 0 && (
                                     <span className="text-[10px] font-black text-green-600 dark:text-green-400">
-                                      • {pc.discount_type === 'percentage'
+                                      � {pc.discount_type === 'percentage'
                                         ? `${pc.discount_value}% OFF`
                                         : `R$ ${appliedDiscount.discount.toFixed(2).replace('.', ',')} OFF`}
                                     </span>
@@ -1892,7 +2030,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
                               </span>
                               {appliedDiscount && appliedDiscount.discount > 0 && (
                                 <span className="text-[10px] font-black text-green-600 dark:text-green-400">
-                                  • {pc.discount_type === 'percentage'
+                                  � {pc.discount_type === 'percentage'
                                     ? `${pc.discount_value}% OFF`
                                     : `R$ ${appliedDiscount.discount.toFixed(2).replace('.', ',')} OFF`}
                                 </span>
@@ -2061,7 +2199,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
         {shippingFee !== null && displayedDeliveryTime && displayedDeliveryTimeType && !hasInvalidCep() && (
           <div className="text-[11px] text-gray-550 dark:text-gray-455 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800/60 animate-fade-in text-left">
             <span className="text-gray-455 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-primary-500 flex-shrink-0" /> Previsão:
+              Previsão:
             </span>
             <span className="font-semibold text-gray-750 dark:text-gray-305 text-right ml-2">
               {displayedDeliveryTime} {displayedDeliveryTimeType === 'business' ? (Number(displayedDeliveryTime) === 1 ? 'dia útil' : 'dias úteis') : (Number(displayedDeliveryTime) === 1 ? 'dia corrido' : 'dias corridos')}{displayedEstimatedDate ? ` (${displayedEstimatedDate})` : ''}{service ? ` via ${service.toLowerCase()}` : ''}
@@ -2099,19 +2237,80 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     </div>
   )
 
-  const renderCheckoutStepsHeader = () => {
-    return (
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-150 dark:border-gray-700">
-        <button
-          onClick={checkoutStep === 'payment' ? handleBackToDelivery : handleBackToCart}
-          className="flex items-center gap-1.5 text-xs sm:text-sm font-extrabold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer"
+  const renderEmptyCartMain = () => (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8 animate-fade-in">
+      <div className="flex flex-col items-center text-center py-6 sm:py-10">
+        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-primary-50 dark:bg-primary-950/20 text-primary-600 dark:text-primary-400 rounded-full flex items-center justify-center mb-6 shadow-inner">
+          <ShoppingBag size={40} className="sm:w-11 sm:h-11" />
+        </div>
+        <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white mb-2">
+          Seu carrinho está vazio
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-8 max-w-sm leading-relaxed">
+          Adicione produtos de saúde e bem-estar para começar seu pedido. Confira as sugestões abaixo!
+        </p>
+        <Link
+          to="/produtos"
+          className="inline-flex items-center justify-center bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-extrabold py-3.5 px-8 rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg active:scale-[0.98] text-sm gap-2"
         >
-          <ArrowLeft size={16} />
-          <span>Voltar</span>
-        </button>
+          <ShoppingCart size={16} />
+          Explorar produtos
+        </Link>
       </div>
-    )
-  }
+    </div>
+  )
+
+  const renderEmptyCartSidebar = () => (
+    <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl shadow-lg border border-gray-200 dark:border-gray-700 p-5 sm:p-6 sticky top-24 animate-fade-in">
+      <h2 className="text-xs font-black text-gray-900 dark:text-white mb-4 uppercase tracking-wider">
+        Resumo do Pedido
+      </h2>
+
+      <div className="rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 p-5 text-center mb-5">
+        <ShoppingCart className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+        <p className="text-sm text-gray-500 dark:text-gray-400 font-semibold">
+          Nenhum item no carrinho
+        </p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+          Os valores aparecerão aqui quando você adicionar produtos.
+        </p>
+      </div>
+
+      {freeShippingThreshold > 0 && (
+        <div className="mb-5 p-4 bg-gray-50/50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-400 flex items-center justify-center flex-shrink-0">
+              <Truck className="w-4 h-4" />
+            </div>
+            <p className="text-xs font-bold text-gray-700 dark:text-gray-300 leading-snug">
+              Frete grátis a partir de{' '}
+              <span className="text-primary-600 dark:text-primary-400">
+                R$ {freeShippingThreshold.toFixed(2).replace('.', ',')}
+              </span>
+            </p>
+          </div>
+        </div>
+      )}
+
+      <Link
+        to="/produtos"
+        className="w-full inline-flex items-center justify-center bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-black py-3.5 px-6 rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg text-sm gap-2"
+      >
+        <ArrowRight size={16} />
+        Começar a comprar
+      </Link>
+
+      <Link
+        to="/"
+        className="w-full inline-flex items-center justify-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 font-extrabold transition-colors py-3 text-center"
+      >
+        <ArrowLeft size={12} />
+        Voltar ao início
+      </Link>
+    </div>
+  )
+
+
 
   const renderDeliveryStep = () => {
     const isEditingSelected = editingAddressId === selectedAddressId
@@ -2470,6 +2669,22 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
               </div>
             )}
 
+            {formData.cep.replace(/\D/g, '').length === 8 && (
+              <div className="mt-4 sm:mt-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3">Frete</h3>
+                <ShippingCard
+                  service={service}
+                  deliveryTime={displayedDeliveryTime}
+                  deliveryTimeType={displayedDeliveryTimeType}
+                  estimatedDateFormatted={displayedEstimatedDate || ''}
+                  shippingFee={shippingFee}
+                  hasFreeShipping={hasFreeShipping}
+                  calculatingShipping={calculatingShipping}
+                  hasInvalidCep={hasInvalidCep()}
+                />
+              </div>
+            )}
+
             <div className="flex flex-col sm:flex-row justify-end mt-4 sm:mt-6">
               <button
                 type="submit"
@@ -2484,6 +2699,21 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
         {!showNewAddressForm && selectedAddressId && !isEditingSelected && (
           <div className="mt-4 sm:mt-6">
+            {formData.cep.replace(/\D/g, '').length === 8 && (
+              <div className="mb-4 sm:mb-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3">Frete</h3>
+                <ShippingCard
+                  service={service}
+                  deliveryTime={displayedDeliveryTime}
+                  deliveryTimeType={displayedDeliveryTimeType}
+                  estimatedDateFormatted={displayedEstimatedDate || ''}
+                  shippingFee={shippingFee}
+                  hasFreeShipping={hasFreeShipping}
+                  calculatingShipping={calculatingShipping}
+                  hasInvalidCep={hasInvalidCep()}
+                />
+              </div>
+            )}
             {showCepWarning && cepWarning && (
               <div className="mb-3 sm:mb-4 p-2 sm:p-2.5 bg-red-50 dark:bg-red-950/10 border border-red-200 dark:border-red-900/20 rounded-xl animate-fade-in transition-all duration-300">
                 <p className="text-xs text-red-650 dark:text-red-400 font-semibold flex items-center gap-1.5">
@@ -2508,224 +2738,246 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   }
 
   const renderPaymentStep = () => {
+    const pendingPix = pendingAsyncPayments.pix && !isPendingPaymentExpired(pendingAsyncPayments.pix) ? pendingAsyncPayments.pix : null
+    const pendingBoleto = pendingAsyncPayments.boleto && !isPendingPaymentExpired(pendingAsyncPayments.boleto) ? pendingAsyncPayments.boleto : null
+    const hasPendingPix = selectedPaymentMethod === 'pix' && Boolean(pendingPix)
+    const hasPendingBoleto = selectedPaymentMethod === 'boleto' && Boolean(pendingBoleto)
+    const awaitingAsyncPayment = hasPendingPix || hasPendingBoleto
+
     return (
-      <>
-        <div className="bg-gray-50 dark:bg-gray-900/40 p-4 rounded-2xl border border-gray-150 dark:border-gray-700 mb-6">
-          <div className="flex justify-between items-start mb-2">
-            <span className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white flex items-center gap-1.5">
-              <MapPin className="text-primary-600 dark:text-primary-400" size={16} />
-              Enviar para: {selectedAddressId ? savedAddresses.find(a => a.id === selectedAddressId)?.nickname || 'Endereço Selecionado' : 'Novo Endereço'}
-            </span>
-            <button
-              type="button"
-              onClick={handleBackToDelivery}
-              className="text-xs text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1 cursor-pointer font-bold"
-            >
-              <Edit2 size={12} />
-              Alterar endereço
-            </button>
-          </div>
-          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1 pl-5">
-            {formData.address}, {formData.number} {formData.complement && `- ${formData.complement}`}
-          </p>
-          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 pl-5">
-            {formData.bairro ? `${formData.bairro}, ` : ''}{formData.city} - {formData.state}
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 pl-5 font-semibold">
-            CEP: {formData.cep}
-          </p>
-        </div>
+    <>
+      <div className="mb-4">
+        <PaymentSelector
+          selectedMethod={selectedPaymentMethod}
+          onSelectMethod={handlePaymentMethodChange}
+          disabled={creatingOrder}
+        />
+      </div>
 
-        <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700">
-          <CheckoutPayment
-            selectedMethod={selectedPaymentMethod}
-            onSelectMethod={(method) => setSelectedPaymentMethod(method)}
+      <div className="mt-4">
+        {selectedPaymentMethod === 'pix' && (
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
+            <PixPayment
+              pixQrCode={hasPendingPix ? pendingPix?.pixQrCode : undefined}
+              pixPayload={hasPendingPix ? pendingPix?.pixPayload : undefined}
+              timeLeft={hasPendingPix ? timeLeft : undefined}
+              copied={copiedPix}
+              onCopy={handleCopyPix}
+              isGenerating={creatingOrder && selectedPaymentMethod === 'pix' && !hasPendingPix}
+              awaitingPayment={hasPendingPix}
+            />
+          </div>
+        )}
+        {selectedPaymentMethod === 'boleto' && (
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
+            <BoletoPayment
+              bankSlipUrl={hasPendingBoleto ? pendingBoleto?.bankSlipUrl : undefined}
+              identificationField={hasPendingBoleto ? pendingBoleto?.identificationField : undefined}
+              dueDate={hasPendingBoleto ? pendingBoleto?.dueDate : undefined}
+              copied={copiedBoleto}
+              onCopy={handleCopyBoleto}
+              isGenerating={creatingOrder && selectedPaymentMethod === 'boleto' && !hasPendingBoleto}
+            />
+          </div>
+        )}
+        {selectedPaymentMethod === 'credit_card' && (
+          <CreditCardPayment
+            formData={cardFormData}
+            onChange={(data) => {
+              setCardFormData(data)
+              if (Object.keys(cardFormErrors).length > 0) setCardFormErrors({})
+            }}
+            errors={cardFormErrors}
+            installmentOptions={installmentOptions}
+            loadingOptions={loadingInstallments}
+            maxInterestFree={maxInterestFree}
+            disabled={creatingOrder}
           />
+        )}
+      </div>
+
+      {checkoutError && (
+        <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-300">
+          {checkoutError}
         </div>
+      )}
 
-        {checkoutError && (
-          <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-300">
-            {checkoutError}
-          </div>
+      {getPaymentBlockReason() && !creatingOrder && !calculatingShipping && (
+        <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">
+          {getPaymentBlockReason()}
+        </p>
+      )}
+
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-6 sm:mt-8 gap-2 sm:gap-3 border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6">
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={handleCreateOrderWithoutPayment}
+            className="text-xs px-2.5 sm:px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer font-black shadow-sm"
+            disabled={!canProceedToPayment() || creatingOrderWithoutPayment || creatingOrder}
+            title="Criar pedido sem pagamento (apenas para testes)"
+          >
+            {creatingOrderWithoutPayment ? (
+              <>
+                <Loader2 className="animate-spin" size={12} /> Criando...
+              </>
+            ) : (
+              <>
+                <TestTube size={12} /> Teste (sem pagamento)
+              </>
+            )}
+          </button>
         )}
-
-        {getPaymentBlockReason() && !creatingOrder && (
-          <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">
-            {getPaymentBlockReason()}
-          </p>
-        )}
-
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-6 sm:mt-8 gap-2 sm:gap-3 border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6">
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={handleCreateOrderWithoutPayment}
-              className="text-xs px-2.5 sm:px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer font-black shadow-sm"
-              disabled={!canProceedToPayment() || creatingOrderWithoutPayment || creatingOrder}
-              title="Criar pedido sem pagamento (apenas para testes)"
-            >
-              {creatingOrderWithoutPayment ? (
-                <>
-                  <Loader2 className="animate-spin" size={12} /> Criando...
-                </>
-              ) : (
-                <>
-                  <TestTube size={12} /> Teste (sem pagamento)
-                </>
-              )}
-            </button>
-          )}
+        {!awaitingAsyncPayment && (
           <button
             type="button"
             onClick={handlePaymentSubmit}
-            className="btn-primary flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3 px-6 sm:ml-auto font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={creatingOrder || creatingOrderWithoutPayment}
+            className="btn-primary flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3 px-6 sm:ml-auto font-bold disabled:opacity-50 disabled:cursor-not-allowed min-w-[200px]"
+            disabled={creatingOrder || creatingOrderWithoutPayment || !canProceedToPayment()}
           >
             {creatingOrder ? (
               <>
-                <Loader2 className="animate-spin mr-2" size={18} /> <span>Processando...</span>
+                <Loader2 className="animate-spin mr-2" size={18} />
+                <span>Processando...</span>
               </>
             ) : (
-              <span>{selectedPaymentMethod === 'credit_card' ? 'Continuar para Cartão' : 'Finalizar Compra'}</span>
+              <span>
+                {selectedPaymentMethod === 'credit_card'
+                  ? 'Pagar com Cartão'
+                  : selectedPaymentMethod === 'pix'
+                    ? 'Continuar'
+                    : 'Continuar'}
+              </span>
             )}
           </button>
+        )}
+      </div>
+    </>
+  )}
+
+
+
+  const renderCheckoutSidebar = () => {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg border border-gray-200 dark:border-gray-700 p-5 sm:p-6 sticky top-24 animate-fade-in">
+        <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-3 sm:mb-4 uppercase tracking-wider text-xs">Resumo do Pedido</h2>
+
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4 space-y-2.5 sm:space-y-3">
+          <div className="flex justify-between items-center text-xs sm:text-sm">
+            <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
+            <span className="font-extrabold text-gray-900 dark:text-white">R$ {baseTotal.toFixed(2).replace('.', ',')}</span>
+          </div>
+
+          {promoCodesValidation && promoCodesValidation.totalDiscount > 0 && (
+            <div className="flex justify-between items-center text-xs sm:text-sm">
+              <span className="text-gray-500 dark:text-gray-400">
+                {promoCodesValidation.promoCodes.length > 1 ? `Cupons (${promoCodesValidation.promoCodes.length})` : 'Cupom'}
+              </span>
+              <span className="text-green-600 dark:text-green-400 font-extrabold">
+                - R$ {promoCodesValidation.totalDiscount.toFixed(2).replace('.', ',')}
+              </span>
+            </div>
+          )}
+
+          {applicablePromotions.length > 0 && (
+            <div className="space-y-1">
+              {applicablePromotions.map((promo) => {
+                let discountText = ''
+                if (promo.type === 'discount_percentage') {
+                  discountText = `${promo.discount_value}% OFF`
+                } else if (promo.type === 'discount_fixed') {
+                  discountText = `R$ ${Number(promo.discount_value).toFixed(2).replace('.', ',')} OFF`
+                }
+                if (promo.free_shipping) {
+                  discountText += discountText ? ' + Frete Grátis' : 'Frete Grátis'
+                }
+                return (
+                  <div key={promo.id} className="flex justify-between text-[11px] text-pink-600 dark:text-pink-400 font-semibold">
+                    <span className="truncate max-w-[150px]">{promo.name}</span>
+                    <span>{discountText}</span>
+                  </div>
+                )
+              })}
+              {promotionDiscount > 0 && (
+                <div className="flex justify-between items-center text-xs text-pink-600 dark:text-pink-400 font-bold pt-1">
+                  <span>Desconto Ofertas</span>
+                  <span>- R$ {promotionDiscount.toFixed(2).replace('.', ',')}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-between items-center text-xs sm:text-sm pt-2 border-t border-gray-150 dark:border-gray-700">
+            <span className="text-gray-500 dark:text-gray-400">Frete</span>
+            <div className="text-right">
+              {calculatingShipping ? (
+                <span className="text-gray-400 dark:text-gray-500 text-xs flex items-center gap-1 font-semibold">
+                  <Loader2 className="animate-spin w-3 h-3" /> Calculando...
+                </span>
+              ) : hasInvalidCep() ? (
+                <span className="text-red-655 dark:text-red-400 text-xs font-black">Inválido</span>
+              ) : hasFreeShipping ? (
+                <span className="text-green-600 dark:text-green-400 font-extrabold text-xs sm:text-sm">Grátis</span>
+              ) : shippingFee !== null ? (
+                <span className="text-gray-900 dark:text-white font-extrabold">R$ {shippingFee.toFixed(2).replace('.', ',')}</span>
+              ) : (
+                <span className="text-gray-400 dark:text-gray-500 font-semibold">-</span>
+              )}
+            </div>
+          </div>
+
+          {shippingFee !== null && displayedDeliveryTime && displayedDeliveryTimeType && !hasInvalidCep() && (
+            <div className="text-[11px] text-gray-550 dark:text-gray-455 mt-2 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800/60 animate-fade-in text-left">
+              <span className="text-gray-455 flex items-center gap-1">
+                <div className="h-8 w-8 rounded-lg flex flex-col items-center justify-center flex-shrink-0 relative overflow-hidden bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-400">
+                  <div className="flex flex-col items-center justify-center translate-y-[1.5px]">
+                    <Truck className="w-3.5 h-3.5" />
+                    <div className="w-5 h-[1px] mt-[-1.5px] opacity-85 animate-road-move text-green-600 dark:text-green-400" />
+                  </div>
+                </div>
+                Previsão:
+              </span>
+              <span className="font-semibold text-gray-750 dark:text-gray-305 text-right ml-2">
+                {displayedDeliveryTime} {displayedDeliveryTimeType === 'business' ? (Number(displayedDeliveryTime) === 1 ? 'dia útil' : 'dias úteis') : (Number(displayedDeliveryTime) === 1 ? 'dia corrido' : 'dias corridos')}{displayedEstimatedDate ? ` (${displayedEstimatedDate})` : ''}{service ? ` via ${service.toLowerCase()}` : ''}
+              </span>
+            </div>
+          )}
+
+          {checkoutStep === 'payment' && (
+            <div className="flex justify-between items-center text-xs sm:text-sm">
+              <span className="text-gray-500 dark:text-gray-400">Pagamento</span>
+              <span className="font-semibold text-gray-800 dark:text-gray-200 text-right">
+                {selectedPaymentMethod === 'pix' && 'PIX'}
+                {selectedPaymentMethod === 'boleto' && 'Boleto'}
+                {selectedPaymentMethod === 'credit_card' && (
+                  <>
+                    Cartão de Crédito
+                    {cardFormData.installments > 1 ? ` • ${cardFormData.installments}x` : ''}
+                  </>
+                )}
+              </span>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center border-t border-gray-250 dark:border-gray-700 pt-3">
+            <span className="text-base font-extrabold text-gray-900 dark:text-white">Total</span>
+            <span className="text-2xl font-black text-primary-600 dark:text-primary-400">
+              R$ {currentTotal.toFixed(2).replace('.', ',')}
+            </span>
+          </div>
         </div>
-      </>
+      </div>
     )
   }
 
-  const renderCheckoutSidebar = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg border border-gray-200 dark:border-gray-700 p-5 sm:p-6 sticky top-24 animate-fade-in">
-      <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-3 sm:mb-4 uppercase tracking-wider text-xs">Resumo do Pedido</h2>
-      <div className="space-y-3 mb-4 max-h-[200px] overflow-y-auto pr-1 scrollbar-hide">
-        {items.map(item => {
-          const price = item.product?.price || 0
-          const itemTotal = price * item.quantity
-          const itemDiscountedPrice = itemTotal
-
-          return (
-            <div key={item.id} className="text-xs sm:text-sm pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0 last:pb-0">
-              <p className="font-semibold text-gray-850 dark:text-gray-200 line-clamp-2">
-                {item.product?.name}
-              </p>
-              <div className="flex justify-between text-gray-500 mt-1">
-                <span>Qtd: {item.quantity} × R$ {price.toFixed(2).replace('.', ',')}</span>
-                <span className="font-extrabold text-gray-700 dark:text-gray-300">
-                  R$ {itemDiscountedPrice.toFixed(2).replace('.', ',')}
-                </span>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4 space-y-2.5 sm:space-y-3">
-        <div className="flex justify-between items-center text-xs sm:text-sm">
-          <span className="text-gray-500 dark:text-gray-400">Subtotal</span>
-          <span className="font-extrabold text-gray-900 dark:text-white">R$ {baseTotal.toFixed(2).replace('.', ',')}</span>
-        </div>
-
-        {promoCodesValidation && promoCodesValidation.totalDiscount > 0 && (
-          <div className="flex justify-between items-center text-xs sm:text-sm">
-            <span className="text-gray-500 dark:text-gray-400">
-              {promoCodesValidation.promoCodes.length > 1 ? `Cupons (${promoCodesValidation.promoCodes.length})` : 'Cupom'}
-            </span>
-            <span className="text-green-600 dark:text-green-400 font-extrabold">
-              - R$ {promoCodesValidation.totalDiscount.toFixed(2).replace('.', ',')}
-            </span>
-          </div>
-        )}
-
-        {applicablePromotions.length > 0 && (
-          <div className="space-y-1">
-            {applicablePromotions.map((promo) => {
-              let discountText = ''
-              if (promo.type === 'discount_percentage') {
-                discountText = `${promo.discount_value}% OFF`
-              } else if (promo.type === 'discount_fixed') {
-                discountText = `R$ ${Number(promo.discount_value).toFixed(2).replace('.', ',')} OFF`
-              }
-              if (promo.free_shipping) {
-                discountText += discountText ? ' + Frete Grátis' : 'Frete Grátis'
-              }
-              return (
-                <div key={promo.id} className="flex justify-between text-[11px] text-pink-600 dark:text-pink-400 font-semibold">
-                  <span className="truncate max-w-[150px]">{promo.name}</span>
-                  <span>{discountText}</span>
-                </div>
-              )
-            })}
-            {promotionDiscount > 0 && (
-              <div className="flex justify-between items-center text-xs text-pink-600 dark:text-pink-400 font-bold pt-1">
-                <span>Desconto Ofertas</span>
-                <span>- R$ {promotionDiscount.toFixed(2).replace('.', ',')}</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        <div className="flex justify-between items-center text-xs sm:text-sm pt-2 border-t border-gray-150 dark:border-gray-700">
-          <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-            <div className={`h-8 w-8 rounded-lg flex flex-col items-center justify-center flex-shrink-0 relative overflow-hidden ${hasFreeShipping
-              ? 'bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-400'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
-              }`}>
-              <div className="flex flex-col items-center justify-center translate-y-[1.5px]">
-                <Truck className="w-3.5 h-3.5" />
-                <div className={`w-5 h-[1px] mt-[-1.5px] opacity-85 animate-road-move ${hasFreeShipping
-                  ? 'text-green-600 dark:text-green-400'
-                  : 'text-gray-400 dark:text-gray-500'
-                  }`} />
-              </div>
-            </div>
-            Frete
-          </span>
-          <div className="text-right">
-            {calculatingShipping ? (
-              <span className="text-gray-400 dark:text-gray-500 text-xs flex items-center gap-1 font-semibold">
-                <Loader2 className="animate-spin w-3 h-3" /> Calculando...
-              </span>
-            ) : hasInvalidCep() ? (
-              <span className="text-red-655 dark:text-red-400 text-xs font-black">Inválido</span>
-            ) : hasFreeShipping ? (
-              <span className="text-green-600 dark:text-green-400 font-extrabold text-xs sm:text-sm">Grátis</span>
-            ) : shippingFee !== null ? (
-              <span className="text-gray-900 dark:text-white font-extrabold">R$ {shippingFee.toFixed(2).replace('.', ',')}</span>
-            ) : (
-              <span className="text-gray-400 dark:text-gray-500 font-semibold">-</span>
-            )}
-          </div>
-        </div>
-
-        {shippingFee !== null && displayedDeliveryTime && displayedDeliveryTimeType && !hasInvalidCep() && (
-          <div className="text-[11px] text-gray-550 dark:text-gray-455 mt-2 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800/60 animate-fade-in text-left">
-            <span className="text-gray-455 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5 text-primary-500 flex-shrink-0" /> Previsão:
-            </span>
-            <span className="font-semibold text-gray-750 dark:text-gray-305 text-right ml-2">
-              {displayedDeliveryTime} {displayedDeliveryTimeType === 'business' ? (Number(displayedDeliveryTime) === 1 ? 'dia útil' : 'dias úteis') : (Number(displayedDeliveryTime) === 1 ? 'dia corrido' : 'dias corridos')}{displayedEstimatedDate ? ` (${displayedEstimatedDate})` : ''}{service ? ` via ${service.toLowerCase()}` : ''}
-            </span>
-          </div>
-        )}
-
-        <div className="flex justify-between items-center border-t border-gray-250 dark:border-gray-700 pt-3">
-          <span className="text-base font-extrabold text-gray-900 dark:text-white">Total</span>
-          <span className="text-2xl font-black text-primary-600 dark:text-primary-400">
-            R$ {currentTotal.toFixed(2).replace('.', ',')}
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-
   const renderRecommendations = () => (
     <>
-      {checkoutStep === 'cart' && recommendedProducts.length > 0 && (
-        <div className="mt-16 pt-8">
+      {(checkoutStep === 'cart' || isEmptyCart) && recommendedProducts.length > 0 && (
+        <div className={`mt-8 sm:mt-12 pt-6 sm:pt-8`}>
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-primary-600 dark:text-primary-400" />
-              Complemente seu pedido
+              {isEmptyCart ? 'Você também pode gostar' : 'Complemente seu pedido'}
             </h2>
             <div className="hidden sm:flex gap-2">
               <button
@@ -3048,36 +3300,50 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       `}</style>
 
       <div className="container mx-auto px-4 py-6 sm:py-10 max-w-7xl">
-        {renderStepper()}
+        {effectiveStep !== 'confirmed' && renderStepper()}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
-          {checkoutStep === 'cart' ? (
-            <>
-              <div className="lg:col-span-2 space-y-6">
-                {renderCartItems()}
-              </div>
-              <div className="lg:col-span-1 self-stretch">
-                {renderCartSidebar()}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="lg:col-span-2">
-                <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 animate-fade-in">
-                  {renderCheckoutStepsHeader()}
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 flex items-center">
-                    <MapPin className="mr-2" size={20} />
-                    {checkoutStep === 'delivery' ? 'Endereço de Entrega' : 'Pagamento'}
-                  </h2>
-                  {checkoutStep === 'delivery' ? renderDeliveryStep() : renderPaymentStep()}
+        {effectiveStep === 'confirmed' && paymentResult?.isPaid ? (
+          <CheckoutConfirmation
+            paymentResult={paymentResult}
+            maxReachableStep="confirmed"
+            onStepClick={handleStepClick}
+          />
+        ) : isEmptyCart ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
+            <div className="lg:col-span-2 order-1">
+              {renderEmptyCartMain()}
+            </div>
+            <div className="lg:col-span-1 order-2">
+              {renderEmptyCartSidebar()}
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
+            {checkoutStep === 'cart' ? (
+              <>
+                <div className="lg:col-span-2 space-y-6 order-1">
+                  {renderCartItems()}
                 </div>
-              </div>
-              <div className="lg:col-span-1">
-                {renderCheckoutSidebar()}
-              </div>
-            </>
-          )}
-        </div>
+                <div className="lg:col-span-1 self-stretch order-2">
+                  {renderCartSidebar()}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="lg:col-span-2 order-1">
+                  <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6 animate-fade-in">
+
+                    {checkoutStep === 'delivery' && renderDeliveryStep()}
+                    {checkoutStep === 'payment' && renderPaymentStep()}
+                  </div>
+                </div>
+                <div className="lg:col-span-1 order-2">
+                  {renderCheckoutSidebar()}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {renderRecommendations()}
         {renderModals()}

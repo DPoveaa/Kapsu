@@ -98,7 +98,7 @@
     color: #000000 !important;
   }
   
-  /* Evita texto preto invisÃ­vel em superfÃ­cies escuras */
+  /* Evita texto preto invisível em superfícies escuras */
   html.dark .text-black {
     @apply text-gray-50;
   }
@@ -118,6 +118,7 @@
     padding: 0;
     background-color: #FFFFFF;
     transition: background-color 0.3s ease;
+    scrollbar-gutter: stable;
   }
   
   html.dark {
@@ -240,7 +241,6 @@
     display: none;
   }
 }
-
 
 /* Custom Animations for Product Details */
 @keyframes fadeIn {
@@ -418,5 +418,30 @@ html.dark select:focus {
   animation: btn-pop 0.38s cubic-bezier(0.36, 0.07, 0.19, 0.97) forwards;
 }
 
+@keyframes brand-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
 
+.animate-brand-fade-out {
+  animation: brand-fade-out 0.25s ease-out forwards;
+  will-change: opacity;
+}
 
+@keyframes brand-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-brand-fade-in {
+  animation: brand-fade-in 0.25s ease-out forwards;
+  will-change: opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-brand-fade-out,
+  .animate-brand-fade-in {
+    animation: none;
+    opacity: 1;
+  }
+}
