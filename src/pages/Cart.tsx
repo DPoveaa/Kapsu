@@ -1,4 +1,4 @@
-﻿import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ShoppingCart, Plus, Trash2, ArrowRight, Loader2, Check, Sparkles, Truck, Gift, Tag, X, ChevronLeft, ChevronRight, ShoppingBag, ArrowLeft, Edit2, TestTube } from 'lucide-react'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useCart } from '../context/CartContext'
@@ -92,6 +92,38 @@ interface CartProps {
   initialStep?: CheckoutStep
 }
 
+const PAYMENT_ATTEMPTS_KEY = 'cart_payment_attempts_by_method'
+const SELECTED_PAYMENT_METHOD_KEY = 'cart_selected_payment_method'
+
+type AsyncPaymentMethod = 'pix' | 'boleto'
+type PaymentAttemptsByMethod = Partial<Record<AsyncPaymentMethod, PendingCheckoutPayment>>
+
+const parsePaymentMethod = (value: string | null): PaymentMethod => {
+  return value === 'pix' || value === 'boleto' || value === 'credit_card' ? value : 'pix'
+}
+
+const getStoredPaymentAttempts = (): PaymentAttemptsByMethod => {
+  try {
+    const saved = sessionStorage.getItem(PAYMENT_ATTEMPTS_KEY)
+    if (!saved) return {}
+    const parsed = JSON.parse(saved) as PaymentAttemptsByMethod
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+const setStoredPaymentAttempts = (attempts: PaymentAttemptsByMethod) => {
+  const activeAttempts = Object.fromEntries(
+    Object.entries(attempts).filter(([, attempt]) => attempt && !isPendingPaymentExpired(attempt))
+  ) as PaymentAttemptsByMethod
+
+  if (Object.keys(activeAttempts).length > 0) {
+    sessionStorage.setItem(PAYMENT_ATTEMPTS_KEY, JSON.stringify(activeAttempts))
+  } else {
+    sessionStorage.removeItem(PAYMENT_ATTEMPTS_KEY)
+  }
+}
 const isPendingPaymentExpired = (payment: PendingCheckoutPayment | null | undefined): boolean => {
   if (!payment) return true
 
@@ -157,7 +189,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   })
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [creatingOrderWithoutPayment, setCreatingOrderWithoutPayment] = useState(false)
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>('pix')
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>(() => parsePaymentMethod(sessionStorage.getItem(SELECTED_PAYMENT_METHOD_KEY)))
   const [cardFormData, setCardFormData] = useState<CreditCardFormData>({
     holderName: '', cpf: '', number: '', expiry: '', ccv: '', installments: 1,
   })
@@ -167,9 +199,12 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   const [loadingInstallments, setLoadingInstallments] = useState(false)
   const [copiedBoleto, setCopiedBoleto] = useState(false)
   const [subscriptionPlan] = useState<'monthly' | 'quarterly'>('monthly')
-  const [paymentResult, setPaymentResult] = useState<ConfirmedCheckoutPayment | null>(() => getConfirmedCheckoutPayment())
+  const [paymentResult, setPaymentResult] = useState<ConfirmedCheckoutPayment | null>(() => {
+    const step = parseCheckoutStep(searchParams.get('step'))
+    return step === 'confirmed' ? getConfirmedCheckoutPayment() : null
+  })
   const [pendingPayment, setPendingPayment] = useState<PendingCheckoutPayment | null>(null)
-  const [pendingAsyncPayments, setPendingAsyncPayments] = useState<Partial<Record<'pix' | 'boleto', PendingCheckoutPayment>>>({})
+  const [pendingAsyncPayments, setPendingAsyncPayments] = useState<PaymentAttemptsByMethod>(() => getStoredPaymentAttempts())
   const [cartId, setCartId] = useState<string | null>(null)
   const [paymentProcessingState, setPaymentProcessingState] = useState<PaymentProcessingVisualState | null>(null)
   const [activePaymentAttemptKey, setActivePaymentAttemptKey] = useState<string | null>(null)
@@ -183,6 +218,22 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   useEffect(() => {
     clearPendingCheckoutPayment()
   }, [])
+
+  useEffect(() => {
+    sessionStorage.setItem(SELECTED_PAYMENT_METHOD_KEY, selectedPaymentMethod)
+  }, [selectedPaymentMethod])
+
+  useEffect(() => {
+    setStoredPaymentAttempts(pendingAsyncPayments)
+
+    if (selectedPaymentMethod !== 'pix' && selectedPaymentMethod !== 'boleto') return
+    const selectedAttempt = pendingAsyncPayments[selectedPaymentMethod]
+    if (selectedAttempt && !isPendingPaymentExpired(selectedAttempt)) {
+      setPendingPayment(selectedAttempt)
+      return
+    }
+    setPendingPayment(null)
+  }, [pendingAsyncPayments, selectedPaymentMethod])
 
   useEffect(() => {
     let cancelled = false
@@ -240,6 +291,20 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       setSearchParams({ step: 'cart' }, { replace: true })
     }
   }, [cartId, items, paymentResult, pendingPayment, existingOrderId, searchParams, setSearchParams])
+  useEffect(() => {
+    const step = parseCheckoutStep(searchParams.get('step'))
+    if (step === 'confirmed') return
+
+    clearConfirmedCheckoutPayment()
+    if (!paymentResult) return
+
+    clearStoredCheckoutState()
+    setPaymentResult(null)
+    setCheckoutStep('cart')
+    setMaxReachableStep('cart')
+    sessionStorage.removeItem('cart_checkout_step')
+    sessionStorage.removeItem('cart_max_reachable_step')
+  }, [paymentResult, searchParams])
 
   // Estados para endereços salvos
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([])
@@ -481,7 +546,9 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
         }
 
         if (status.paymentStatus === 'awaiting_payment') {
+          if (selectedPaymentMethod === 'pix') {
           setPaymentProcessingState('awaiting_payment')
+        }
         } else if (status.paymentStatus === 'processing') {
           setPaymentProcessingState('processing')
         }
@@ -491,7 +558,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     }, 5000)
 
     return () => clearInterval(pollInterval)
-  }, [pendingPayment, paymentResult, existingOrderId, paymentProcessingState, searchParams, clearCart, setSearchParams, cartId])
+  }, [pendingPayment, paymentResult, existingOrderId, paymentProcessingState, searchParams, clearCart, setSearchParams, cartId, selectedPaymentMethod])
 
   // Alias para retrocompatibilidade com o simulador de frete do carrinho
   const shippingCep = formData.cep
@@ -1235,6 +1302,9 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     if (method !== selectedPaymentMethod) {
       setCheckoutError(null)
 
+      setPaymentProcessingState(null)
+      setActivePaymentAttemptKey(null)
+
       if (method !== 'pix' && method !== 'boleto') {
         setPendingPayment(null)
         clearPendingCheckoutPayment()
@@ -1462,8 +1532,9 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   }, [searchParams, items.length, paymentResult, pendingPayment, checkoutStep])
 
   const handleCopyPix = () => {
-    if (pendingPayment?.pixPayload) {
-      navigator.clipboard.writeText(pendingPayment.pixPayload)
+    const pixAttempt = pendingAsyncPayments.pix
+    if (pixAttempt?.pixPayload) {
+      navigator.clipboard.writeText(pixAttempt.pixPayload)
       setCopiedPix(true)
       setTimeout(() => setCopiedPix(false), 2000)
     }
@@ -1485,7 +1556,9 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
     if (cachedPayment && !isPendingPaymentExpired(cachedPayment)) {
       clearPendingCheckoutPayment()
-      setPendingPayment(cachedPayment)
+      if (selectedPaymentMethod === 'pix' || selectedPaymentMethod === 'boleto') {
+        setPendingPayment(cachedPayment)
+      }
       return
     }
 
@@ -1529,7 +1602,9 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
           pixPayload: preference.pixPayload,
           expirationDate: preference.expirationDate,
         })
-        setPaymentProcessingState('awaiting_payment')
+        if (selectedPaymentMethod === 'pix') {
+          setPaymentProcessingState('awaiting_payment')
+        }
       } else if (preference.paymentMethod === 'boleto') {
         applyPendingPayment({
           orderId,
@@ -1541,7 +1616,9 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
           identificationField: preference.identificationField,
           dueDate: preference.dueDate,
         })
-        setPaymentProcessingState('awaiting_payment')
+        if (selectedPaymentMethod === 'boleto') {
+          setPaymentProcessingState('awaiting_payment')
+        }
       } else {
         throw new Error('Resposta inesperada ao gerar pagamento.')
       }
@@ -2946,7 +3023,8 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     const pendingBoleto = pendingAsyncPayments.boleto && !isPendingPaymentExpired(pendingAsyncPayments.boleto) ? pendingAsyncPayments.boleto : null
     const hasPendingPix = selectedPaymentMethod === 'pix' && Boolean(pendingPix)
     const hasPendingBoleto = selectedPaymentMethod === 'boleto' && Boolean(pendingBoleto)
-    const awaitingAsyncPayment = hasPendingPix || hasPendingBoleto
+    const selectedAsyncPayment = selectedPaymentMethod === 'pix' ? pendingPix : selectedPaymentMethod === 'boleto' ? pendingBoleto : null
+    const isCardProcessing = selectedPaymentMethod === 'credit_card' && paymentProcessingState && paymentProcessingState !== 'awaiting_payment'
 
     return (
     <>
@@ -2985,7 +3063,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
             />
           </div>
         )}
-        {selectedPaymentMethod === 'credit_card' && paymentProcessingState ? (
+        {isCardProcessing ? (
           <PaymentProcessingState
             state={paymentProcessingState}
             onRetry={() => {
@@ -3042,7 +3120,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
             )}
           </button>
         )}
-        {!awaitingAsyncPayment && (!paymentProcessingState || paymentProcessingState === 'failed') && (
+        {!selectedAsyncPayment && (!isCardProcessing || paymentProcessingState === 'failed') && (
           <button
             type="button"
             onClick={handlePaymentSubmit}
