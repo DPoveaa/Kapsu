@@ -123,12 +123,12 @@ export default function UserManagement() {
     confirm.show(
       nextValue
         ? 'Os pedidos deste usuário serão excluídos de relatórios, estatísticas, Google Sheets e exportações para fornecedores.'
-        : 'Remover este usuário dos ignorados para pedidos futuros?',
+        : 'Remover este usuário dos ignorados? Os pedidos já marcados como ignorados continuarão assim até serem alterados individualmente.',
       async () => {
         await adminService.updateUser(user.id, {
           ignore_business_metrics: nextValue,
           ignore_reason: nextValue ? 'internal_test_account' : null,
-          apply_to_existing_orders: false,
+          apply_to_existing_orders: nextValue,
         })
         await loadUsers()
         if (selectedUser?.id === user.id) await loadUserDetails(user.id)
