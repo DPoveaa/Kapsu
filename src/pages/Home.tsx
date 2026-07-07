@@ -28,7 +28,7 @@ export default function Home() {
   const [currentX, setCurrentX] = useState(0)
   const [autoRotatePaused, setAutoRotatePaused] = useState(false)
   const bannerRef = useRef<HTMLDivElement>(null)
-  
+
   // Carrega banners da API ou usa fallback
   useEffect(() => {
     const loadBanners = async () => {
@@ -38,17 +38,17 @@ export default function Home() {
           // Ordena por order
           const sorted = apiBanners.sort((a, b) => a.order - b.order)
           setBanners(sorted)
-        } 
-        // Se não houver banners, não usa imagem local; deixa vazio para placeholder genérico
-        } catch (error) {
-          console.error('Erro ao carregar banners:', error)
-          // Em caso de erro, não usa imagem local; deixa vazio para placeholder genérico
-          setBanners([])
         }
+        // Se não houver banners, não usa imagem local; deixa vazio para placeholder genérico
+      } catch (error) {
+        console.error('Erro ao carregar banners:', error)
+        // Em caso de erro, não usa imagem local; deixa vazio para placeholder genérico
+        setBanners([])
       }
-      loadBanners()
-    }, [])
-  
+    }
+    loadBanners()
+  }, [])
+
   // Reseta o bannerIndex para 1 quando os banners são carregados (ou 0 se for apenas 1 banner)
   useEffect(() => {
     if (banners === null) return
@@ -83,12 +83,12 @@ export default function Home() {
     }
     loadReviews()
   }, [])
-  
+
   // Usa o array de banners da API (sem fallback durante carregamento)
   const bannerImages = banners || []
-  
+
   const isInfinite = bannerImages.length > 1
-  
+
   // Cria array com clones para loop infinito apenas se houver mais de 1 banner
   const infiniteBannerImages = isInfinite ? [
     bannerImages[bannerImages.length - 1], // Clone da última no início
@@ -114,7 +114,7 @@ export default function Home() {
     const loadProducts = async () => {
       try {
         setLoading(true)
-        
+
         // Busca produtos em destaque da API (seção "featured")
         try {
           const featured = await homeSectionsService.getFeaturedProducts()
@@ -125,10 +125,10 @@ export default function Home() {
           const allProducts = await productsService.getAll()
           setFeaturedProducts(allProducts.slice(0, 6))
         }
-        
+
         // Busca produtos de todas as seções ativas (exceto "featured")
         const activeSections = sections.filter(s => s.active && s.key !== 'featured')
-        
+
         const promises = activeSections.map(async (section) => {
           try {
             const products = await homeSectionsService.getSectionProducts(section.id)
@@ -138,7 +138,7 @@ export default function Home() {
             return { sectionId: section.id, products: [] }
           }
         })
-        
+
         const results = await Promise.all(promises)
         const productsMap: Record<string, Product[]> = {}
         results.forEach(({ sectionId, products }) => {
@@ -159,7 +159,7 @@ export default function Home() {
   // Auto-rotaciona banners com loop infinito (pausa quando hover/touch)
   useEffect(() => {
     if (autoRotatePaused || !isInfinite) return
-    
+
     const interval = setInterval(() => {
       setBannerIndex((prev) => {
         const next = prev + 1
@@ -177,7 +177,7 @@ export default function Home() {
     }, 6000)
     return () => clearInterval(interval)
   }, [infiniteBannerImages.length, autoRotatePaused, isInfinite])
-  
+
   // Reseta para o final quando volta para o clone inicial
   useEffect(() => {
     if (!isInfinite) return
@@ -212,10 +212,10 @@ export default function Home() {
 
     const handleGlobalMouseUp = () => {
       if (!isDragging) return
-      
+
       const diff = startX - currentX
       const threshold = 50
-      
+
       if (Math.abs(diff) > threshold) {
         if (diff > 0) {
           // Arrastou da direita para esquerda - próximo banner (seguindo a direção do arrasto)
@@ -249,7 +249,7 @@ export default function Home() {
           })
         }
       }
-      
+
       setIsDragging(false)
       setStartX(0)
       setCurrentX(0)
@@ -316,10 +316,10 @@ export default function Home() {
 
   const handleBannerMouseUp = () => {
     if (!isDragging || !isInfinite) return
-    
+
     const diff = startX - currentX
     const threshold = 50 // Pixels mínimos para mudar de banner
-    
+
     if (Math.abs(diff) > threshold) {
       if (diff > 0) {
         // Arrastou da direita para esquerda - próximo banner (seguindo a direção do arrasto)
@@ -353,7 +353,7 @@ export default function Home() {
         })
       }
     }
-    
+
     setIsDragging(false)
     setStartX(0)
     setCurrentX(0)
@@ -390,10 +390,10 @@ export default function Home() {
 
   const handleBannerTouchEnd = () => {
     if (!isDragging || !isInfinite) return
-    
+
     const diff = startX - currentX
     const threshold = 50 // Pixels mínimos para mudar de banner
-    
+
     if (Math.abs(diff) > threshold) {
       if (diff > 0) {
         // Arrastou da direita para esquerda - próximo banner (seguindo a direção do arrasto)
@@ -427,7 +427,7 @@ export default function Home() {
         })
       }
     }
-    
+
     setIsDragging(false)
     setStartX(0)
     setCurrentX(0)
@@ -441,10 +441,10 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-palette-light dark:bg-gray-950 transition-colors duration-300">
       {banners === null ? (
-        <section className="relative overflow-hidden w-full aspect-[12/5] bg-gray-100 dark:bg-gray-800 animate-pulse" />
+        <section className="relative overflow-hidden w-full aspect-[4/3] sm:aspect-[12/5] bg-gray-100 dark:bg-gray-800 animate-pulse" />
       ) : banners.length > 0 ? (
-        <section 
-          className="relative overflow-hidden w-full aspect-[12/5] group"
+        <section
+          className="relative overflow-hidden w-full aspect-[4/3] sm:aspect-[12/5] group"
           onMouseEnter={() => {
             if (isInfinite) {
               setAutoRotatePaused(true)
@@ -458,10 +458,10 @@ export default function Home() {
             }
           }}
         >
-          <div 
+          <div
             ref={bannerRef}
             className={`flex w-full h-full ${isInfinite ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
-            style={{ 
+            style={{
               transform: `translateX(calc(-${bannerIndex * 100}% + ${isDragging ? (currentX - startX) : 0}px))`,
               transition: isTransitioning && !isDragging ? 'transform 700ms cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
               userSelect: 'none',
@@ -478,9 +478,9 @@ export default function Home() {
               const bannerContent = (
                 <div className="min-w-full h-full relative bg-gray-100 dark:bg-gray-800 select-none">
                   <img
-                    src={getImageUrl(banner.image_url)}
+                    src={getImageUrl((isMobile && banner.mobile_image_url) ? banner.mobile_image_url : banner.image_url)}
                     alt={banner.title || `Banner ${index + 1}`}
-                    className="w-full h-full object-fill select-none pointer-events-none"
+                    className="w-full h-full object-cover object-center select-none pointer-events-none"
                     draggable={false}
                     onDragStart={(e) => e.preventDefault()}
                     onError={(e) => {
@@ -489,13 +489,13 @@ export default function Home() {
                       target.style.display = 'none'
                     }}
                   />
-                  <div 
+                  <div
                     className="absolute inset-0 z-10 pointer-events-none dark:hidden"
                     style={{
                       background: 'linear-gradient(to top, #FFFFFF 0%, rgba(255, 255, 255, 0.4) 7%, transparent 14%, transparent 100%)'
                     }}
                   ></div>
-                  <div 
+                  <div
                     className="absolute inset-0 z-10 pointer-events-none hidden dark:block"
                     style={{
                       background: 'linear-gradient(to top, #0A0F0D 0%, rgba(10, 15, 13, 0.4) 7%, transparent 14%, transparent 100%)'
@@ -534,9 +534,9 @@ export default function Home() {
           {isInfinite && (
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-center space-x-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               {bannerImages.map((_, index) => {
-                const realIndex = bannerIndex === 0 ? bannerImages.length - 1 : 
-                                 bannerIndex === infiniteBannerImages.length - 1 ? 0 : 
-                                 bannerIndex - 1
+                const realIndex = bannerIndex === 0 ? bannerImages.length - 1 :
+                  bannerIndex === infiniteBannerImages.length - 1 ? 0 :
+                    bannerIndex - 1
                 return (
                   <button
                     key={index}
@@ -544,11 +544,10 @@ export default function Home() {
                       setIsTransitioning(true)
                       setBannerIndex(index + 1)
                     }}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      index === realIndex
+                    className={`h-2 rounded-full transition-all duration-300 ${index === realIndex
                         ? 'w-6 bg-white'
                         : 'w-2 bg-white/50 hover:bg-white/80'
-                    }`}
+                      }`}
                     aria-label={`Ir para imagem ${index + 1}`}
                   />
                 )
@@ -557,8 +556,8 @@ export default function Home() {
           )}
         </section>
       ) : (
-        <section 
-          className="relative overflow-hidden w-full aspect-[12/5]"
+        <section
+          className="relative overflow-hidden w-full aspect-[4/3] sm:aspect-[12/5]"
         >
           <div className="absolute inset-0">
             <div className="w-full h-full"
@@ -600,7 +599,7 @@ export default function Home() {
       {(() => {
         const featuredSection = sections.find(s => s.key === 'featured' && s.active)
         if (!featuredSection && featuredProducts.length === 0) return null
-        
+
         return (
           <section className="bg-white dark:bg-gray-800 py-4 sm:py-6 rounded-lg mb-4 shadow-sm dark:shadow-lg transition-colors duration-300 mx-2 sm:mx-4 md:mx-8 lg:mx-16 xl:mx-40">
             <div className="px-2 sm:px-3 md:px-4">
@@ -615,91 +614,91 @@ export default function Home() {
                   </Link>
                 )}
               </div>
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-            </div>
-          ) : featuredProducts.length > 0 ? (
-            <HorizontalScrollContainer
-              className="flex gap-3 sm:gap-4 pb-4 scrollbar-hide px-2"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              {featuredProducts.map(product => (
-                <div key={product.id} className="w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] lg:w-[calc(16.66%-10px)] flex-shrink-0">
-                  <Link
-                    to={generateProductUrl(product)}
-                    className="bg-white dark:bg-gray-700 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 hover:shadow-md dark:hover:shadow-xl transition-all flex flex-col h-full group"
-                  >
-                    {/* 1:1 image fills top of card */}
-                    <div className="w-full aspect-square bg-white overflow-hidden flex-shrink-0 relative">
-                      <img
-                        src={productsService.getImageUrl(product.image)}
-                        alt={product.name}
-                        className="w-full h-full object-contain select-none pointer-events-none group-hover:scale-105 transition-transform duration-300"
-                        draggable={false}
-                        onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
-                      />
-                      {product.promo_price && (
-                        <span className="absolute top-2 left-2 bg-primary-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
-                          {Math.round(((Number(product.price) - Number(product.promo_price)) / Number(product.price)) * 100)}% OFF
-                        </span>
-                      )}
-                    </div>
-                    <div className="p-2.5 sm:p-3.5 flex flex-col flex-1 justify-between bg-white dark:bg-gray-700">
-                      {/* Fixed-height Title to prevent shifting */}
-                      <div className="h-[36px] sm:h-[40px] overflow-hidden mb-1 flex items-start">
-                        <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-primary-600 dark:group-hover:text-primary-450 transition-colors">
-                          {product.name}
-                        </h3>
-                      </div>
-
-                      {/* Fixed-height Description */}
-                      <div className="h-[30px] sm:h-[34px] overflow-hidden mb-2">
-                        <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
-                          {product.description || 'Fórmula manipulada com alto padrão de qualidade e eficácia.'}
-                        </p>
-                      </div>
-
-                      {/* Price and Promotion container */}
-                      <div className="flex flex-col justify-end mt-auto">
-                        {product.promo_price ? (
-                          <div>
-                            <p className="text-[10px] text-gray-400 line-through leading-none mb-1">
-                              R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
-                            </p>
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400 leading-none">
-                                R$ {Number(product.promo_price || 0).toFixed(2).replace('.', ',')}
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div>
-                            {/* Spacer to keep same height layout */}
-                            <p className="text-[10px] text-transparent leading-none mb-1 select-none">&nbsp;</p>
-                            <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-none">
-                              R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Free shipping banner with fixed height */}
-                      <div className="h-4 mt-1.5 flex items-center">
-                        {product.free_shipping ? (
-                          <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold flex items-center">
-                            🚚 Frete grátis
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-transparent select-none">&nbsp;</span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
+              {loading ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
                 </div>
-              ))}
-            </HorizontalScrollContainer>
-          ) : null}
+              ) : featuredProducts.length > 0 ? (
+                <HorizontalScrollContainer
+                  className="flex gap-3 sm:gap-4 pb-4 scrollbar-hide px-2"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                  {featuredProducts.map(product => (
+                    <div key={product.id} className="w-[calc(50%-6px)] sm:w-[calc(33.33%-8px)] lg:w-[calc(16.66%-10px)] flex-shrink-0">
+                      <Link
+                        to={generateProductUrl(product)}
+                        className="bg-white dark:bg-gray-700 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-600 hover:shadow-md dark:hover:shadow-xl transition-all flex flex-col h-full group"
+                      >
+                        {/* 1:1 image fills top of card */}
+                        <div className="w-full aspect-square bg-white overflow-hidden flex-shrink-0 relative">
+                          <img
+                            src={productsService.getImageUrl(product.image)}
+                            alt={product.name}
+                            className="w-full h-full object-contain select-none pointer-events-none group-hover:scale-105 transition-transform duration-300"
+                            draggable={false}
+                            onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
+                          />
+                          {product.promo_price && (
+                            <span className="absolute top-2 left-2 bg-primary-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+                              {Math.round(((Number(product.price) - Number(product.promo_price)) / Number(product.price)) * 100)}% OFF
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-2.5 sm:p-3.5 flex flex-col flex-1 justify-between bg-white dark:bg-gray-700">
+                          {/* Fixed-height Title to prevent shifting */}
+                          <div className="h-[36px] sm:h-[40px] overflow-hidden mb-1 flex items-start">
+                            <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-primary-600 dark:group-hover:text-primary-450 transition-colors">
+                              {product.name}
+                            </h3>
+                          </div>
+
+                          {/* Fixed-height Description */}
+                          <div className="h-[30px] sm:h-[34px] overflow-hidden mb-2">
+                            <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                              {product.description || 'Fórmula manipulada com alto padrão de qualidade e eficácia.'}
+                            </p>
+                          </div>
+
+                          {/* Price and Promotion container */}
+                          <div className="flex flex-col justify-end mt-auto">
+                            {product.promo_price ? (
+                              <div>
+                                <p className="text-[10px] text-gray-400 line-through leading-none mb-1">
+                                  R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
+                                </p>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400 leading-none">
+                                    R$ {Number(product.promo_price || 0).toFixed(2).replace('.', ',')}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                {/* Spacer to keep same height layout */}
+                                <p className="text-[10px] text-transparent leading-none mb-1 select-none">&nbsp;</p>
+                                <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-none">
+                                  R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Free shipping banner with fixed height */}
+                          <div className="h-4 mt-1.5 flex items-center">
+                            {product.free_shipping ? (
+                              <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold flex items-center">
+                                🚚 Frete grátis
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-transparent select-none">&nbsp;</span>
+                            )}
+                          </div>
+                        </div>
+                      </Link>
+                    </div>
+                  ))}
+                </HorizontalScrollContainer>
+              ) : null}
             </div>
           </section>
         )
@@ -713,12 +712,12 @@ export default function Home() {
           const products = sectionProducts[section.id] || []
           if (products.length === 0) return null
 
-          const categoryLink = section.category 
+          const categoryLink = section.category
             ? `/produtos?categoria=${section.category}`
             : '/produtos'
 
           return (
-            <section 
+            <section
               key={section.id}
               className="bg-white dark:bg-gray-800 py-4 sm:py-6 rounded-lg mb-4 shadow-sm dark:shadow-lg transition-colors duration-300 mx-2 sm:mx-4 md:mx-8 lg:mx-16 xl:mx-40"
             >
@@ -728,8 +727,8 @@ export default function Home() {
                     {section.name}
                   </h2>
                   {section.show_link !== false && (
-                    <Link 
-                      to={categoryLink} 
+                    <Link
+                      to={categoryLink}
                       className="text-xs sm:text-sm text-primary-600 hover:text-primary-700 font-semibold flex items-center"
                     >
                       Ver todos
@@ -826,11 +825,11 @@ export default function Home() {
         <section className="bg-white dark:bg-gray-800 py-6 sm:py-8 rounded-lg mb-4 shadow-sm dark:shadow-lg transition-colors duration-300 mx-2 sm:mx-4 md:mx-8 lg:mx-16 xl:mx-40">
           <div className="px-2 sm:px-3 md:px-4">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 text-center px-2">O que nossos clientes dizem</h2>
-            
+
             <div className="relative">
               {/* Container do carrossel */}
               <div className="overflow-hidden">
-                <div 
+                <div
                   className="flex transition-transform duration-500 ease-in-out"
                   style={{ transform: `translateX(-${reviewIndex * (isMobile ? 100 : 50)}%)` }}
                 >
@@ -890,7 +889,7 @@ export default function Home() {
                 >
                   <ChevronLeft size={20} />
                 </button>
-                
+
                 {/* Indicadores (dots) - mostra um dot para cada par de reviews */}
                 <div className="flex space-x-2">
                   {Array.from({ length: Math.ceil(reviews.length / 2) }).map((_, index) => {
@@ -899,18 +898,17 @@ export default function Home() {
                       <button
                         key={index}
                         onClick={() => setReviewIndex(currentIndex)}
-                        className={`h-2 w-2 rounded-full transition-all ${
-                          currentIndex === reviewIndex
+                        className={`h-2 w-2 rounded-full transition-all ${currentIndex === reviewIndex
                             ? ''
                             : 'bg-gray-300 dark:bg-gray-700'
-                        }`}
+                          }`}
                         style={currentIndex === reviewIndex ? { backgroundColor: '#00A86B' } : {}}
                         aria-label={`Ir para reviews ${currentIndex + 1}-${currentIndex + 2}`}
                       />
                     )
                   })}
                 </div>
-                
+
                 <button
                   onClick={nextReview}
                   className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-primary-500 text-gray-700 dark:text-white transition-colors"
