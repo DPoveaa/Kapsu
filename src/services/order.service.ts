@@ -1,5 +1,7 @@
 import { env } from '../config/env'
 import type { ShippingAddress } from './payment.service'
+import type { NormalizedPaymentResult } from '../types/payment'
+import { unwrapNormalizedPaymentResult } from '../types/payment'
 
 const API_URL = env.apiUrl
 
@@ -91,6 +93,41 @@ class OrderService {
       }
 
       return data.data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão. Verifique se o servidor está rodando.')
+    }
+  }
+
+  /**
+   * Status normalizado de pagamento do pedido (polling do checkout)
+   */
+  async getOrderPaymentStatus(orderId: string): Promise<NormalizedPaymentResult> {
+    try {
+      const response = await fetch(`${this.baseUrl}/${orderId}/payment-status`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const data = JSON.parse(text) as { success: boolean; data: unknown; message?: string }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao buscar status de pagamento do pedido')
+      }
+
+      const normalized = unwrapNormalizedPaymentResult(data.data)
+      if (!normalized) {
+        throw new Error('Resposta de status inválida do servidor')
+      }
+
+      return normalized
     } catch (error: any) {
       if (error.message) {
         throw error

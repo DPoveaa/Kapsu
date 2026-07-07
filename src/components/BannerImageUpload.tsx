@@ -12,13 +12,13 @@ interface BannerImageUploadProps {
   disabled?: boolean
 }
 
-export default function BannerImageUpload({ 
-  value, 
-  onChange, 
-  onError, 
+export default function BannerImageUpload({
+  value,
+  onChange,
+  onError,
   onUploadingChange,
   className = '',
-  disabled = false 
+  disabled = false
 }: BannerImageUploadProps) {
   // Converte caminho relativo para URL completa para exibição
   // Usa função utilitária compartilhada para garantir consistência
@@ -67,10 +67,10 @@ export default function BannerImageUpload({
       onUploadingChange?.(true)
       // bannersService.uploadImage já retorna o caminho relativo normalizado
       const imagePath = await bannersService.uploadImage(file)
-      
+
       // Garante que está normalizado (deve começar com /)
       const normalizedPath = normalizeImagePath(imagePath)
-      
+
       // Salva apenas o caminho relativo (começando com /)
       onChange(normalizedPath)
       // Mantém o preview base64 local (já definido pelo FileReader acima)
@@ -144,7 +144,7 @@ export default function BannerImageUpload({
             className="hidden"
             disabled={disabled || uploading}
           />
-          
+
           <button
             type="button"
             onClick={handleClick}

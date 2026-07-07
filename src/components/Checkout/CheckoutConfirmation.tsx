@@ -1,6 +1,7 @@
 import CheckoutStepper from './CheckoutStepper'
 import type { CheckoutStep } from '../../types/checkout'
-import { CheckCircle, Package, ShoppingBag, ArrowRight } from 'lucide-react'
+import type { CheckoutConfirmationType } from '../../utils/checkout'
+import { CheckCircle, Package, ShoppingBag, ArrowRight, Clock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 interface CheckoutConfirmationProps {
@@ -8,6 +9,7 @@ interface CheckoutConfirmationProps {
     orderId?: string
     paymentMethod?: string
     isPaid?: boolean
+    confirmationType?: CheckoutConfirmationType
   }
   maxReachableStep: CheckoutStep
   onStepClick?: (step: CheckoutStep) => void
@@ -19,6 +21,30 @@ const METHOD_LABELS: Record<string, string> = {
   boleto: 'Boleto',
 }
 
+const COPY: Record<
+  CheckoutConfirmationType,
+  { title: string; subtitle: string; statusTitle: string; statusBody: string }
+> = {
+  paid: {
+    title: 'Pedido confirmado',
+    subtitle: 'Seu pagamento foi confirmado.',
+    statusTitle: 'Pagamento confirmado',
+    statusBody: 'Você receberá um e-mail com os detalhes do envio.',
+  },
+  awaiting_boleto: {
+    title: 'Pedido criado',
+    subtitle: 'Seu pedido foi registrado com sucesso.',
+    statusTitle: 'Aguardando pagamento do boleto',
+    statusBody: 'O pagamento pode levar até 3 dias úteis para ser confirmado após o pagamento.',
+  },
+  awaiting_payment: {
+    title: 'Aguardando pagamento',
+    subtitle: 'Estamos aguardando a confirmação do pagamento.',
+    statusTitle: 'Pagamento pendente',
+    statusBody: 'Você pode acompanhar o status do pedido a qualquer momento.',
+  },
+}
+
 export default function CheckoutConfirmation({
   paymentResult,
   maxReachableStep,
@@ -28,6 +54,14 @@ export default function CheckoutConfirmation({
   const methodLabel = paymentResult.paymentMethod
     ? METHOD_LABELS[paymentResult.paymentMethod] || paymentResult.paymentMethod
     : null
+
+  const confirmationType: CheckoutConfirmationType =
+    paymentResult.confirmationType ||
+    (paymentResult.isPaid ? 'paid' : 'awaiting_payment')
+
+  const copy = COPY[confirmationType]
+
+  const StatusIcon = confirmationType === 'paid' ? Package : Clock
 
   return (
     <div className="animate-fade-in space-y-6 max-w-2xl mx-auto">
@@ -44,10 +78,10 @@ export default function CheckoutConfirmation({
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2">
-            Compra realizada!
+            {copy.title}
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-            Seu pagamento foi confirmado e o pedido já está em preparação.
+            {copy.subtitle}
           </p>
           {paymentResult.orderId && (
             <p className="text-xs text-gray-400 dark:text-gray-500 font-mono mb-8">
@@ -56,12 +90,12 @@ export default function CheckoutConfirmation({
           )}
 
           <div className="w-full max-w-sm bg-[#00A86B]/5 border border-[#00A86B]/20 rounded-2xl p-4 mb-8 flex items-start gap-3 text-left">
-            <Package className="w-5 h-5 text-[#00A86B] mt-0.5 flex-shrink-0" />
+            <StatusIcon className="w-5 h-5 text-[#00A86B] mt-0.5 flex-shrink-0" />
             <div>
-              <p className="text-sm font-bold text-gray-800 dark:text-gray-100">Em processamento</p>
+              <p className="text-sm font-bold text-gray-800 dark:text-gray-100">{copy.statusTitle}</p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Você receberá um e-mail com os detalhes do envio.
-                {methodLabel && (
+                {copy.statusBody}
+                {methodLabel && confirmationType === 'paid' && (
                   <span className="block mt-0.5 text-[#00A86B] font-medium">
                     Pago via {methodLabel}
                   </span>

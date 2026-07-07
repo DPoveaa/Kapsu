@@ -28,18 +28,26 @@ import {
   clearPendingCheckoutOrderId,
   clearPendingCheckoutPayment,
   clearConfirmedCheckoutPayment,
+  clearStoredCheckoutState,
+  createPaymentIdempotencyKey,
   getPendingCheckoutOrderId,
-  getPendingCheckoutPayment,
   getConfirmedCheckoutPayment,
+  getStoredCheckoutState,
   isPaidOrderStatus,
   PendingCheckoutPayment,
+  ConfirmedCheckoutPayment,
+  resolveCheckoutState,
   resolveCheckoutStep,
   setPendingCheckoutOrderId,
-  setPendingCheckoutPayment,
   setConfirmedCheckoutPayment,
+  setStoredCheckoutState,
 } from '../utils/checkout'
 import PixPayment from '../components/Checkout/PixPayment'
 import BoletoPayment from '../components/Checkout/BoletoPayment'
+import PaymentProcessingState from '../components/Checkout/PaymentProcessingState'
+import type { NormalizedPaymentResult } from '../types/payment'
+import { toProcessingVisualState } from '../types/payment'
+import type { PaymentProcessingVisualState } from '../types/payment'
 
 const formatEstimatedDateFriendly = (estimatedDateStr: string): string => {
   if (!estimatedDateStr) return ''
@@ -133,7 +141,6 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   const urlStep = parseCheckoutStep(searchParams.get('step')) || (initialStep !== 'confirmed' ? initialStep : 'cart')
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>(() => {
     const saved = sessionStorage.getItem('cart_checkout_step')
-    if (getPendingCheckoutPayment()) return 'payment'
     if (saved) {
       const parsed = parseCheckoutStep(saved)
       if (parsed && parsed !== 'confirmed') return parsed
@@ -160,21 +167,79 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   const [loadingInstallments, setLoadingInstallments] = useState(false)
   const [copiedBoleto, setCopiedBoleto] = useState(false)
   const [subscriptionPlan] = useState<'monthly' | 'quarterly'>('monthly')
-  const [paymentResult, setPaymentResult] = useState<any>(() => getConfirmedCheckoutPayment())
-  const [pendingPayment, setPendingPayment] = useState<PendingCheckoutPayment | null>(() => {
-    const saved = getPendingCheckoutPayment()
-    return isPendingPaymentExpired(saved) ? null : saved
-  })
-  const [pendingAsyncPayments, setPendingAsyncPayments] = useState<Partial<Record<'pix' | 'boleto', PendingCheckoutPayment>>>(() => {
-    const saved = getPendingCheckoutPayment()
-    return saved && !isPendingPaymentExpired(saved) ? { [saved.paymentMethod]: saved } : {}
-  })
+  const [paymentResult, setPaymentResult] = useState<ConfirmedCheckoutPayment | null>(() => getConfirmedCheckoutPayment())
+  const [pendingPayment, setPendingPayment] = useState<PendingCheckoutPayment | null>(null)
+  const [pendingAsyncPayments, setPendingAsyncPayments] = useState<Partial<Record<'pix' | 'boleto', PendingCheckoutPayment>>>({})
+  const [cartId, setCartId] = useState<string | null>(null)
+  const [paymentProcessingState, setPaymentProcessingState] = useState<PaymentProcessingVisualState | null>(null)
+  const [activePaymentAttemptKey, setActivePaymentAttemptKey] = useState<string | null>(null)
   const [copiedPix, setCopiedPix] = useState(false)
   const [timeLeft, setTimeLeft] = useState('')
   const [existingOrderId, setExistingOrderId] = useState<string | null>(null)
   const [resolvingPendingOrder, setResolvingPendingOrder] = useState(false)
   const resolvingPendingOrderRef = useRef(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+
+  useEffect(() => {
+    clearPendingCheckoutPayment()
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadCartMeta = async () => {
+      try {
+        const cartData = await cartService.getCart()
+        if (cancelled) return
+        setCartId(cartData.id)
+      } catch {
+        if (!cancelled) setCartId(null)
+      }
+    }
+
+    void loadCartMeta()
+    return () => {
+      cancelled = true
+    }
+  }, [items.length])
+
+  useEffect(() => {
+    const resolution = resolveCheckoutState({
+      cartId,
+      orderId: existingOrderId,
+      cartItems: items,
+      storedCheckoutState: getStoredCheckoutState(),
+      confirmedPayment: paymentResult,
+      pendingPayment,
+    })
+
+    if (!resolution.shouldReset) return
+
+    if (resolution.clearConfirmed) {
+      clearConfirmedCheckoutPayment()
+      setPaymentResult(null)
+    }
+    if (resolution.clearPending) {
+      clearPendingCheckoutPayment()
+      setPendingPayment(null)
+      setPendingAsyncPayments({})
+      clearPendingCheckoutOrderId()
+      setExistingOrderId(null)
+    }
+    if (resolution.clearStoredState) {
+      clearStoredCheckoutState()
+    }
+
+    setPaymentProcessingState(null)
+    setActivePaymentAttemptKey(null)
+    setCheckoutStep('cart')
+    setMaxReachableStep('cart')
+    sessionStorage.removeItem('cart_checkout_step')
+    sessionStorage.removeItem('cart_max_reachable_step')
+    if (searchParams.get('step') === 'confirmed' || searchParams.get('paid')) {
+      setSearchParams({ step: 'cart' }, { replace: true })
+    }
+  }, [cartId, items, paymentResult, pendingPayment, existingOrderId, searchParams, setSearchParams])
 
   // Estados para endereços salvos
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([])
@@ -362,34 +427,63 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       getPendingCheckoutOrderId() ||
       searchParams.get('orderId')
 
-    if (!orderId || !pendingPayment || paymentResult?.isPaid) return
+    if (!orderId || paymentResult?.confirmationType === 'paid' || paymentResult?.isPaid) return
+    if (!pendingPayment && !paymentProcessingState) return
 
     const pollInterval = setInterval(async () => {
       try {
-        const order = await orderService.getOrder(orderId)
+        const status = await orderService.getOrderPaymentStatus(orderId)
 
-        if (isPaidOrderStatus(order.status)) {
+        if (status.shouldAdvanceToConfirmation) {
           clearInterval(pollInterval)
-          const paidMethod = pendingPayment.paymentMethod
+          const paidMethod = pendingPayment?.paymentMethod || status.paymentMethod
           clearPendingCheckoutOrderId()
           clearPendingCheckoutPayment()
           setPendingPayment(null)
           setExistingOrderId(null)
-          await clearCart()
-          const confirmed = {
+          setPaymentProcessingState('confirmed')
+
+          if (status.shouldClearCart) {
+            await clearCart()
+          }
+
+          const confirmationType =
+            paidMethod === 'boleto' ? 'awaiting_boleto' : 'paid'
+
+          const confirmed: ConfirmedCheckoutPayment = {
             orderId,
             paymentMethod: paidMethod,
-            isPaid: true as const,
-            status: order.status,
+            isPaid: confirmationType === 'paid',
+            confirmationType,
+            paymentStatus: status.paymentStatus,
+            status: status.providerStatus,
+            paymentId: status.paymentId,
+            paymentAttemptId: status.paymentAttemptId,
+            cartId,
           }
           setConfirmedCheckoutPayment(confirmed)
           setPaymentResult(confirmed)
           setMaxReachableStep('confirmed')
           setCheckoutStep('confirmed')
           setSearchParams(
-            { step: 'confirmed', orderId, paid: '1' },
+            { step: 'confirmed', orderId, paid: confirmationType === 'paid' ? '1' : '0' },
             { replace: true }
           )
+          return
+        }
+
+        if (status.paymentStatus === 'failed' || status.paymentStatus === 'cancelled' || status.paymentStatus === 'expired') {
+          clearInterval(pollInterval)
+          setPaymentProcessingState('failed')
+          setCheckoutError('O pagamento não foi aprovado. Verifique os dados ou tente outro método.')
+          toast.error('Pagamento não aprovado.')
+          return
+        }
+
+        if (status.paymentStatus === 'awaiting_payment') {
+          setPaymentProcessingState('awaiting_payment')
+        } else if (status.paymentStatus === 'processing') {
+          setPaymentProcessingState('processing')
         }
       } catch (err) {
         console.error('Erro ao consultar status do pagamento:', err)
@@ -397,7 +491,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     }, 5000)
 
     return () => clearInterval(pollInterval)
-  }, [pendingPayment, paymentResult, existingOrderId, searchParams, clearCart, setSearchParams])
+  }, [pendingPayment, paymentResult, existingOrderId, paymentProcessingState, searchParams, clearCart, setSearchParams, cartId])
 
   // Alias para retrocompatibilidade com o simulador de frete do carrinho
   const shippingCep = formData.cep
@@ -1013,25 +1107,94 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   const showOrderConfirmation = (
     orderId: string,
     paymentMethod: PaymentMethod | string,
-    extra: Record<string, unknown> = {}
+    extra: Partial<ConfirmedCheckoutPayment> = {}
   ) => {
     sessionStorage.removeItem('cart_checkout_step')
     sessionStorage.removeItem('cart_max_reachable_step')
     clearPendingCheckoutPayment()
     setPendingPayment(null)
-    const result = { orderId, paymentMethod, isPaid: true as const, ...extra }
+    setPaymentProcessingState(null)
+
+    const confirmationType: ConfirmedCheckoutPayment['confirmationType'] =
+      extra.confirmationType ||
+      (paymentMethod === 'boleto' ? 'awaiting_boleto' : 'paid')
+
+    const result: ConfirmedCheckoutPayment = {
+      orderId,
+      paymentMethod,
+      isPaid: confirmationType === 'paid',
+      confirmationType,
+      cartId,
+      ...extra,
+    }
+
     setConfirmedCheckoutPayment(result)
     setPaymentResult(result)
     setMaxReachableStep('confirmed')
     setCheckoutStep('confirmed')
     setSearchParams(
-      { step: 'confirmed', orderId, paid: '1' },
+      {
+        step: 'confirmed',
+        orderId,
+        paid: result.isPaid ? '1' : '0',
+      },
       { replace: true }
     )
   }
 
+  const handleNormalizedPaymentResult = async (
+    result: NormalizedPaymentResult,
+    paymentMethod: PaymentMethod
+  ) => {
+    if (result.paymentAttemptId) {
+      setStoredCheckoutState({
+        cartId,
+        orderId: result.orderId,
+        paymentAttemptId: result.paymentAttemptId,
+      })
+    }
+
+    if (result.shouldAdvanceToConfirmation) {
+      setPaymentProcessingState('confirmed')
+      clearPendingCheckoutOrderId()
+
+      if (result.shouldClearCart) {
+        await clearCart()
+      }
+
+      showOrderConfirmation(result.orderId, paymentMethod, {
+        paymentMethod,
+        paymentStatus: result.paymentStatus,
+        status: result.providerStatus,
+        paymentId: result.paymentId,
+        paymentAttemptId: result.paymentAttemptId,
+        confirmationType: paymentMethod === 'boleto' ? 'awaiting_boleto' : 'paid',
+        isPaid: paymentMethod !== 'boleto',
+      })
+      return
+    }
+
+    if (result.paymentStatus === 'failed' || result.paymentStatus === 'cancelled' || result.paymentStatus === 'expired') {
+      setPaymentProcessingState('failed')
+      setCheckoutError('O pagamento foi recusado. Verifique os dados ou tente outro cartão.')
+      toast.error('Pagamento recusado. Verifique os dados do cartão.')
+      return
+    }
+
+    if (
+      !result.shouldAdvanceToConfirmation &&
+      (result.paymentStatus === 'processing' || result.paymentStatus === 'awaiting_payment')
+    ) {
+      setPaymentProcessingState(toProcessingVisualState(result.paymentStatus))
+      if (result.paymentStatus === 'processing') {
+        toast.info('Pagamento em processamento. Aguarde a confirmação.')
+      }
+      return
+    }
+  }
+
   const applyPendingPayment = (result: PendingCheckoutPayment) => {
-    setPendingCheckoutPayment(result)
+    clearPendingCheckoutPayment()
     setPendingPayment(result)
     setPendingAsyncPayments((current) => ({ ...current, [result.paymentMethod]: result }))
     setCheckoutStep('payment')
@@ -1043,7 +1206,28 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     const orderId = result.orderId
     setExistingOrderId(orderId)
     setPendingCheckoutOrderId(orderId)
+    setStoredCheckoutState({
+      cartId,
+      orderId,
+      paymentAttemptId: result.paymentAttemptId,
+    })
     setSearchParams({ step: 'payment', orderId }, { replace: true })
+  }
+
+  const handleBoletoOpened = () => {
+    if (!pendingPayment || pendingPayment.paymentMethod !== 'boleto') return
+
+    const orderId = pendingPayment.orderId
+    clearPendingCheckoutPayment()
+    setPendingPayment(null)
+    setPaymentProcessingState(null)
+    showOrderConfirmation(orderId, 'boleto', {
+      confirmationType: 'awaiting_boleto',
+      isPaid: false,
+      paymentStatus: 'awaiting_payment',
+      paymentId: pendingPayment.paymentId,
+      paymentAttemptId: pendingPayment.paymentAttemptId,
+    })
   }
 
   const handlePaymentMethodChange = (method: PaymentMethod) => {
@@ -1051,20 +1235,25 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     if (method !== selectedPaymentMethod) {
       setCheckoutError(null)
 
+      if (method !== 'pix' && method !== 'boleto') {
+        setPendingPayment(null)
+        clearPendingCheckoutPayment()
+      }
+
       if (method === 'pix' || method === 'boleto') {
         const cachedPayment = pendingAsyncPayments[method]
         if (cachedPayment && !isPendingPaymentExpired(cachedPayment)) {
-          setPendingCheckoutPayment(cachedPayment)
+          clearPendingCheckoutPayment()
           setPendingPayment(cachedPayment)
-        } else if (cachedPayment) {
-          setPendingAsyncPayments((current) => {
-            const next = { ...current }
-            delete next[method]
-            return next
-          })
-          if (pendingPayment?.paymentMethod === method) {
-            setPendingPayment(null)
-            clearPendingCheckoutPayment()
+        } else {
+          setPendingPayment(null)
+          clearPendingCheckoutPayment()
+          if (cachedPayment) {
+            setPendingAsyncPayments((current) => {
+              const next = { ...current }
+              delete next[method]
+              return next
+            })
           }
         }
       }
@@ -1078,11 +1267,28 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     const orderIdParam = searchParams.get('order_id') || searchParams.get('orderId')
     const paidFromUrl = searchParams.get('paid') === '1'
 
-    if (step !== 'confirmed' || !orderIdParam || paymentResult?.isPaid) return
+    if (step !== 'confirmed' || !orderIdParam || paymentResult) return
 
     try {
       const saved = getConfirmedCheckoutPayment()
       if (saved?.orderId === orderIdParam) {
+        if (items.length > 0) {
+          const resolution = resolveCheckoutState({
+            cartId,
+            orderId: orderIdParam,
+            cartItems: items,
+            storedCheckoutState: getStoredCheckoutState(),
+            confirmedPayment: saved,
+            pendingPayment,
+          })
+          if (resolution.shouldReset) {
+            clearConfirmedCheckoutPayment()
+            setPaymentResult(null)
+            setCheckoutStep('cart')
+            setSearchParams({ step: 'cart' }, { replace: true })
+            return
+          }
+        }
         setPaymentResult(saved)
         setCheckoutStep('confirmed')
         setMaxReachableStep('confirmed')
@@ -1106,11 +1312,14 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
           }
           return
         }
-        const result = {
+        const result: ConfirmedCheckoutPayment = {
           orderId: orderIdParam,
           paymentMethod: normalizePaymentMethod(order.payment_method),
-          isPaid: true as const,
+          isPaid: normalizePaymentMethod(order.payment_method) !== 'boleto',
+          confirmationType:
+            normalizePaymentMethod(order.payment_method) === 'boleto' ? 'awaiting_boleto' : 'paid',
           status: order.status,
+          cartId,
         }
         setConfirmedCheckoutPayment(result)
         setPaymentResult(result)
@@ -1134,7 +1343,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
     void loadConfirmedOrder()
     return () => { cancelled = true }
-  }, [searchParams, paymentResult?.isPaid])
+  }, [searchParams, paymentResult, items.length, cartId, pendingPayment, setSearchParams])
 
   const handleContinueToDelivery = () => {
     if (!isAuthenticated) {
@@ -1275,7 +1484,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       : null
 
     if (cachedPayment && !isPendingPaymentExpired(cachedPayment)) {
-      setPendingCheckoutPayment(cachedPayment)
+      clearPendingCheckoutPayment()
       setPendingPayment(cachedPayment)
       return
     }
@@ -1310,25 +1519,29 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       setPendingCheckoutOrderId(orderId)
 
       if (preference.paymentMethod === 'pix') {
-        const pix = preference as any
         applyPendingPayment({
           orderId,
           paymentMethod: 'pix',
-          paymentId: pix.paymentId,
-          pixQrCode: pix.pixQrCode,
-          pixPayload: pix.pixPayload,
-          expirationDate: pix.expirationDate,
+          paymentId: preference.paymentId,
+          paymentAttemptId: preference.paymentAttemptId,
+          paymentStatus: preference.paymentStatus,
+          pixQrCode: preference.pixQrCode,
+          pixPayload: preference.pixPayload,
+          expirationDate: preference.expirationDate,
         })
+        setPaymentProcessingState('awaiting_payment')
       } else if (preference.paymentMethod === 'boleto') {
-        const boleto = preference as any
         applyPendingPayment({
           orderId,
           paymentMethod: 'boleto',
-          paymentId: boleto.paymentId,
-          bankSlipUrl: boleto.bankSlipUrl,
-          identificationField: boleto.identificationField,
-          dueDate: boleto.dueDate,
+          paymentId: preference.paymentId,
+          paymentAttemptId: preference.paymentAttemptId,
+          paymentStatus: preference.paymentStatus,
+          bankSlipUrl: preference.bankSlipUrl,
+          identificationField: preference.identificationField,
+          dueDate: preference.dueDate,
         })
+        setPaymentProcessingState('awaiting_payment')
       } else {
         throw new Error('Resposta inesperada ao gerar pagamento.')
       }
@@ -1379,6 +1592,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     try {
       setCreatingOrder(true)
       setCheckoutError(null)
+      setPaymentProcessingState('processing')
 
       const params = buildCreatePreferenceParams()
       const preference = await paymentService.createPreference(params as any)
@@ -1388,20 +1602,24 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
         setPendingCheckoutOrderId(preference.orderId)
       }
 
-      const pref = preference as any
       const isCardFlow =
         preference.paymentMethod === 'credit_card' &&
-        pref.status === 'PENDING_CARD_DETAILS'
+        (preference.providerStatus === 'PENDING_CARD_DETAILS' ||
+          preference.paymentStatus === 'awaiting_payment')
 
       if (!isCardFlow) {
         throw new Error('Não foi possível iniciar o pagamento com cartão.')
       }
 
-      const orderId = pref.orderId || preference.orderId
+      const orderId = preference.orderId
+      const idempotencyKey = activePaymentAttemptKey || createPaymentIdempotencyKey(orderId)
+      setActivePaymentAttemptKey(idempotencyKey)
+
       const [expiryMonth, expiryYear] = cardFormData.expiry.split('/')
       const response = await paymentService.payWithCard({
         orderId: orderId!,
         paymentMethod: selectedPaymentMethod,
+        idempotencyKey,
         creditCard: {
           holderName: cardFormData.holderName,
           number: cardFormData.number.replace(/\D/g, ''),
@@ -1415,27 +1633,13 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
         installments: cardFormData.installments,
       })
 
-      const declinedStatuses = ['DECLINED', 'REFUSED', 'CHARGEBACK_REQUESTED', 'REFUNDED', 'REFUND_REQUESTED']
-
-      if (isPaidOrderStatus(response.status)) {
-        clearPendingCheckoutOrderId()
-        await clearCart()
-        showOrderConfirmation(orderId!, selectedPaymentMethod, {
-          paymentMethod: selectedPaymentMethod,
-          status: response.status,
-          paymentId: response.paymentId,
-        })
-      } else if (declinedStatuses.includes(response.status)) {
-        setCheckoutError('O pagamento foi recusado. Verifique os dados ou tente outro cartão.')
-        toast.error('Pagamento recusado. Verifique os dados do cartão.')
-      } else {
-        toast.info('Pagamento em processamento. Aguarde a confirmação.')
-      }
+      await handleNormalizedPaymentResult(response, selectedPaymentMethod)
       setCreatingOrder(false)
     } catch (error: any) {
       console.error('Erro ao criar preferência de pagamento:', error)
       const message = error.message || 'Erro ao processar pagamento. Tente novamente.'
       setCheckoutError(message)
+      setPaymentProcessingState('failed')
       toast.error(message)
       setCreatingOrder(false)
     }
@@ -2777,10 +2981,20 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
               copied={copiedBoleto}
               onCopy={handleCopyBoleto}
               isGenerating={creatingOrder && selectedPaymentMethod === 'boleto' && !hasPendingBoleto}
+              onBoletoOpen={handleBoletoOpened}
             />
           </div>
         )}
-        {selectedPaymentMethod === 'credit_card' && (
+        {selectedPaymentMethod === 'credit_card' && paymentProcessingState ? (
+          <PaymentProcessingState
+            state={paymentProcessingState}
+            onRetry={() => {
+              setPaymentProcessingState(null)
+              setCheckoutError(null)
+              setActivePaymentAttemptKey(null)
+            }}
+          />
+        ) : selectedPaymentMethod === 'credit_card' && (
           <CreditCardPayment
             formData={cardFormData}
             onChange={(data) => {
@@ -2828,7 +3042,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
             )}
           </button>
         )}
-        {!awaitingAsyncPayment && (
+        {!awaitingAsyncPayment && (!paymentProcessingState || paymentProcessingState === 'failed') && (
           <button
             type="button"
             onClick={handlePaymentSubmit}
@@ -3302,7 +3516,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       <div className="container mx-auto px-4 py-6 sm:py-10 max-w-7xl">
         {effectiveStep !== 'confirmed' && renderStepper()}
 
-        {effectiveStep === 'confirmed' && paymentResult?.isPaid ? (
+        {effectiveStep === 'confirmed' && paymentResult ? (
           <CheckoutConfirmation
             paymentResult={paymentResult}
             maxReachableStep="confirmed"

@@ -7,6 +7,7 @@ interface BoletoPaymentProps {
   copied: boolean
   onCopy: () => void
   isGenerating?: boolean
+  onBoletoOpen?: () => void
 }
 
 export default function BoletoPayment({
@@ -16,6 +17,7 @@ export default function BoletoPayment({
   copied,
   onCopy,
   isGenerating = false,
+  onBoletoOpen,
 }: BoletoPaymentProps) {
   if (isGenerating) {
     return (
@@ -89,6 +91,7 @@ export default function BoletoPayment({
           href={bankSlipUrl}
           target="_blank"
           rel="noreferrer"
+          onClick={() => onBoletoOpen?.()}
           className="w-full inline-flex items-center justify-center gap-2 bg-[#00A86B] hover:bg-[#008A57] text-white font-bold py-3 px-5 rounded-xl transition-colors text-sm"
         >
           <Download size={16} />

@@ -199,7 +199,7 @@ export default function CheckoutCardPayment() {
           holderName: formData.holderName,
           number: formData.number.replace(/\D/g, ''),
           expiryMonth,
-          expiryYear: `20${expiryYear}`, // assuming 20XX
+          expiryYear: `20${expiryYear}`,
           ccv: formData.ccv
         },
         payer: {
@@ -208,25 +208,23 @@ export default function CheckoutCardPayment() {
         installments: formData.installments
       })
 
-      // DEBUG: loga a resposta completa da API para diagnóstico
-      console.log('[CheckoutCardPayment] Resposta da API payWithCard:', JSON.stringify(response, null, 2))
-
-      const pendingStatuses   = ['PENDING', 'AWAITING_RISK_ANALYSIS', 'AWAITING_CHARGEBACK_REVERSAL', 'IN_ANALYSIS']
-      const declinedStatuses  = ['DECLINED', 'REFUSED', 'CHARGEBACK_REQUESTED', 'REFUNDED', 'REFUND_REQUESTED']
-
-      if (isPaidOrderStatus(response.status)) {
+      if (response.shouldAdvanceToConfirmation) {
         clearPendingCheckoutOrderId()
-        await clearCart()
+        if (response.shouldClearCart) {
+          await clearCart()
+        }
         navigate(`/payment-success?order_id=${orderId}`)
-      } else if (pendingStatuses.includes(response.status) || !declinedStatuses.includes(response.status)) {
-        // Qualquer status não explicitamente recusado é tratado como pendente (pagamento criado com sucesso)
-        console.log('[CheckoutCardPayment] Pagamento criado, status:', response.status, '→ redirecionando para sucesso com status=pending')
-        clearPendingCheckoutOrderId()
-        await clearCart()
-        navigate(`/payment-success?order_id=${orderId}`)
-      } else {
-        console.warn('[CheckoutCardPayment] Pagamento recusado. Status:', response.status)
+        return
+      }
+
+      if (response.paymentStatus === 'failed' || response.paymentStatus === 'cancelled' || response.paymentStatus === 'expired') {
         setError('O pagamento foi recusado. Por favor, verifique os dados ou tente outro cartão.')
+        setStep(1)
+        return
+      }
+
+      if (!response.shouldAdvanceToConfirmation && (response.paymentStatus === 'processing' || response.paymentStatus === 'awaiting_payment')) {
+        setError('Pagamento em processamento. Aguarde a confirmação.')
         setStep(1)
       }
     } catch (err: any) {

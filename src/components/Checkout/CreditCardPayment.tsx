@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+﻿import { useEffect, useRef, useState } from 'react'
 import { ShieldCheck } from 'lucide-react'
 import {
   CreditCardFormData,
@@ -180,6 +180,8 @@ export default function CreditCardPayment({
   const cardTextColor = isDark ? '#ffffff' : '#111827'
   const cardLabelColor = isDark ? 'rgba(255,255,255,0.4)' : 'rgba(17,24,39,0.48)'
   const cardTextShadow = isDark ? '0 1px 8px rgba(0,0,0,0.5)' : '0 1px 0 rgba(255,255,255,0.75)'
+  const cardNumberDigits = formData.number.replace(/\D/g, '').slice(0, 16)
+  const cardNumberGroups = (cardNumberDigits.padEnd(16, '•').match(/.{1,4}/g) || ['••••', '••••', '••••', '••••']).slice(0, 4)
   const topHighlight = isDark
     ? 'radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 65%)'
     : 'radial-gradient(circle, rgba(255,255,255,0.42) 0%, transparent 66%)'
@@ -402,13 +404,18 @@ export default function CreditCardPayment({
             </div>
 
             {/* ROW 2: Card number — prominent */}
-            <div className={`transition-opacity duration-250 ${isCvvFocused ? 'opacity-35' : 'opacity-100'}`}>
-              <p
-                className="font-mono font-medium tracking-[0.2em] select-all"
-                style={{ color: cardTextColor, fontSize: '1.4rem', letterSpacing: '0.22em', textShadow: cardTextShadow }}
+            <div className={`min-w-0 transition-opacity duration-250 ${isCvvFocused ? 'opacity-35' : 'opacity-100'}`}>
+              <div
+                className="flex w-full min-w-0 items-center justify-between gap-1.5 whitespace-nowrap font-mono font-medium select-all overflow-hidden sm:gap-2"
+                aria-label={formData.number || 'Número do cartão'}
+                style={{ color: cardTextColor, fontSize: 'clamp(0.86rem, 4.4vw, 1.4rem)', letterSpacing: 'clamp(0.02em, 0.75vw, 0.22em)', textShadow: cardTextShadow }}
               >
-                {formData.number || '•••• •••• •••• ••••'}
-              </p>
+                {cardNumberGroups.map((group, index) => (
+                  <span key={index} className="shrink min-w-0 tabular-nums leading-none">
+                    {group}
+                  </span>
+                ))}
+              </div>
             </div>
 
             {/* ROW 3: Holder + Expiry */}
