@@ -29,3 +29,4 @@ dist-ssr
 *.sw?
 # Scratch files
 scratch/
+/scripts
