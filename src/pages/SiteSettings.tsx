@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Save, Mail, Phone, Globe, ShoppingBag, MessageCircle } from 'lucide-react'
 import { siteSettingsService, SiteSettings as SiteSettingsType } from '../services/site-settings.service'
 
@@ -38,14 +38,14 @@ export default function SiteSettings() {
             '6': { open: '09:00', close: '13:00' },
             '0': { open: '', close: '' }
           },
-          onlineMessage: 'Acionei o suporte humano. Nosso atendimento estÃ¡ online agora e um atendente deve assumir em breve.',
-          offlineMessage: 'Acionei o suporte humano. Nosso atendimento funciona de segunda a sexta, das 9h Ã s 18h. Como agora estamos fora desse horÃ¡rio, sua mensagem ficou registrada para retorno assim que possÃ­vel.',
+          onlineMessage: 'Acionei o suporte humano. Nosso atendimento está online agora e um atendente deve assumir em breve.',
+          offlineMessage: 'Acionei o suporte humano. Nosso atendimento funciona de segunda a sexta, das 9h às 18h. Como agora estamos fora desse horário, sua mensagem ficou registrada para retorno assim que possível.',
           whatsappNumber: '',
           contactEmail: ''
         }
       })
     } catch (err: any) {
-      setError(err.message || 'Erro ao carregar configuraÃ§Ãµes')
+      setError(err.message || 'Erro ao carregar configurações')
     } finally {
       setLoading(false)
     }
@@ -87,11 +87,11 @@ export default function SiteSettings() {
       setSaving(true)
       setError(null)
       await siteSettingsService.updateSettings(buildSettingsPayload())
-      setSuccess('ConfiguraÃ§Ãµes salvas com sucesso!')
+      setSuccess('Configurações salvas com sucesso!')
 
       setTimeout(() => setSuccess(null), 3000)
     } catch (err: any) {
-      setError(err.message || 'Erro ao salvar configuraÃ§Ãµes')
+      setError(err.message || 'Erro ao salvar configurações')
     } finally {
       setSaving(false)
     }
@@ -104,7 +104,7 @@ export default function SiteSettings() {
       setSuccess(null)
 
       const response = await siteSettingsService.syncAllMerchantProducts()
-      setSuccess(response.message || 'SincronizaÃ§Ã£o com o Google Merchant Center concluÃ­da!')
+      setSuccess(response.message || 'Sincronização com o Google Merchant Center concluída!')
 
       setTimeout(() => setSuccess(null), 5000)
     } catch (err: any) {
@@ -123,7 +123,7 @@ export default function SiteSettings() {
       setSuccess(null)
 
       const response = await siteSettingsService.syncAllGoogleSheetsProducts()
-      setSuccess(response.message || 'SincronizaÃ§Ã£o com o Google Sheets concluÃ­da!')
+      setSuccess(response.message || 'Sincronização com o Google Sheets concluída!')
 
       setTimeout(() => setSuccess(null), 5000)
     } catch (err: any) {
@@ -138,7 +138,7 @@ export default function SiteSettings() {
       <div className="w-full flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-300">Carregando configuraÃ§Ãµes...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Carregando configurações...</p>
         </div>
       </div>
     )
@@ -149,8 +149,8 @@ export default function SiteSettings() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-6 border border-gray-200 dark:border-gray-700">
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">ConfiguraÃ§Ãµes do Site</h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-300">Gerencie as configuraÃ§Ãµes gerais do site</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Configurações do Site</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">Gerencie as configurações gerais do site</p>
           </div>
 
           {error && (
@@ -165,7 +165,7 @@ export default function SiteSettings() {
             </div>
           )}
 
-          {/* SeÃ§Ã£o: Chatbot */}
+          {/* Seção: Chatbot */}
           <div className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
             <div className="flex items-center mb-4">
               <MessageCircle className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
@@ -179,7 +179,7 @@ export default function SiteSettings() {
                     Exibir chatbot no site
                   </label>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Ative ou desative o botÃ£o flutuante da Kaia em todas as pÃ¡ginas pÃºblicas do site. A alteraÃ§Ã£o entra em vigor imediatamente apÃ³s salvar.
+                    Ative ou desative o botão flutuante da Kaia em todas as páginas públicas do site. A alteração entra em vigor imediatamente após salvar.
                   </p>
                 </div>
                 <div className="flex items-center h-5 mt-1">
@@ -204,11 +204,11 @@ export default function SiteSettings() {
             </div>
           </div>
 
-          {/* SeÃ§Ã£o: Contato */}
+          {/* Seção: Contato */}
           <div className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
             <div className="flex items-center mb-4">
               <Phone className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">InformaÃ§Ãµes de Contato</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Informações de Contato</h2>
             </div>
 
             <div className="space-y-4">
@@ -224,7 +224,7 @@ export default function SiteSettings() {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="contato@kapsu.com"
                 />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Exibido no rodapÃ© do site.</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Exibido no rodapé do site.</p>
               </div>
 
               <div>
@@ -239,13 +239,13 @@ export default function SiteSettings() {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="(11) 99999-9999"
                 />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Exibido no rodapÃ© do site.</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Exibido no rodapé do site.</p>
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   <Phone className="w-4 h-4 inline mr-1" />
-                  WhatsApp de Suporte (Apenas DDD e NÃºmero)
+                  WhatsApp de Suporte (Apenas DDD e Número)
                 </label>
                 <input
                   type="tel"
@@ -258,7 +258,7 @@ export default function SiteSettings() {
             </div>
           </div>
 
-          {/* SeÃ§Ã£o: Redes Sociais */}
+          {/* Seção: Redes Sociais */}
           <div className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
             <div className="flex items-center mb-4">
               <Globe className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
@@ -290,12 +290,12 @@ export default function SiteSettings() {
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
                   placeholder="https://instagram.com/kapsu"
                 />
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Links exibidos no rodapÃ© quando preenchidos.</p>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Links exibidos no rodapé quando preenchidos.</p>
               </div>
             </div>
           </div>
 
-          {/* SeÃ§Ã£o: Google Merchant Center */}
+          {/* Seção: Google Merchant Center */}
           <div className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
             <div className="flex items-center mb-4">
               <ShoppingBag className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
@@ -306,10 +306,10 @@ export default function SiteSettings() {
               <div className="flex items-start justify-between">
                 <div className="flex-1 mr-4">
                   <label className="text-base font-semibold text-gray-950 dark:text-white mb-1 block">
-                    SincronizaÃ§Ã£o AutomÃ¡tica
+                    Sincronização Automática
                   </label>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Quando ativado, qualquer alteraÃ§Ã£o nos produtos (preÃ§o, estoque, descriÃ§Ã£o, imagens) ou exclusÃµes fÃ­sicas/lÃ³gicas serÃ¡ enviada e atualizada no Google Merchant Center em tempo real de forma automÃ¡tica.
+                    Quando ativado, qualquer alteração nos produtos (preço, estoque, descrição, imagens) ou exclusões físicas/lógicas será enviada e atualizada no Google Merchant Center em tempo real de forma automática.
                   </p>
                 </div>
                 <div className="flex items-center h-5 mt-1">
@@ -338,7 +338,7 @@ export default function SiteSettings() {
                     Sincronizar Tudo Manualmente
                   </label>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Suba todos os produtos ativos do banco de dados de uma vez e atualize suas fotos, preÃ§os e descriÃ§Ãµes no Merchant Center.
+                    Suba todos os produtos ativos do banco de dados de uma vez e atualize suas fotos, preços e descrições no Merchant Center.
                   </p>
                 </div>
                 <div>
@@ -355,7 +355,7 @@ export default function SiteSettings() {
             </div>
           </div>
 
-          {/* SeÃ§Ã£o: Google Sheets */}
+          {/* Seção: Google Sheets */}
           <div className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
             <div className="flex items-center mb-4">
               <Globe className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
@@ -366,10 +366,10 @@ export default function SiteSettings() {
               <div className="flex items-start justify-between">
                 <div className="flex-1 mr-4">
                   <label className="text-base font-semibold text-gray-950 dark:text-white mb-1 block">
-                    SincronizaÃ§Ã£o AutomÃ¡tica
+                    Sincronização Automática
                   </label>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Sincroniza automaticamente as informaÃ§Ãµes do site com o Google Sheets quando ativado. EdiÃ§Ãµes no painel e na planilha serÃ£o integradas de forma bidirecional.
+                    Sincroniza automaticamente as informações do site com o Google Sheets quando ativado. Edições no painel e na planilha serão integradas de forma bidirecional.
                   </p>
                 </div>
                 <div className="flex items-center h-5 mt-1">
@@ -398,7 +398,7 @@ export default function SiteSettings() {
                     Sincronizar Planilha Manualmente
                   </label>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Gera uma varredura completa. Atualiza o banco com ediÃ§Ãµes da planilha e envia atualizaÃ§Ãµes recentes do painel para a planilha.
+                    Gera uma varredura completa. Atualiza o banco com edições da planilha e envia atualizações recentes do painel para a planilha.
                   </p>
                 </div>
                 <div>
@@ -415,7 +415,7 @@ export default function SiteSettings() {
             </div>
           </div>
 
-          {/* SeÃ§Ã£o: Atendimento Humano / Suporte */}
+          {/* Seção: Atendimento Humano / Suporte */}
           <div className="mb-8 border-b border-gray-200 dark:border-gray-700 pb-6">
             <div className="flex items-center mb-4">
               <MessageCircle className="w-5 h-5 text-gray-600 dark:text-gray-300 mr-2" />
@@ -429,7 +429,7 @@ export default function SiteSettings() {
                     Suporte Humano Ativo
                   </label>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Permite aos clientes solicitarem transferÃªncia para atendimento humano via chat.
+                    Permite aos clientes solicitarem transferência para atendimento humano via chat.
                   </p>
                 </div>
                 <div className="flex items-center h-5 mt-1">
@@ -490,7 +490,7 @@ export default function SiteSettings() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Mensagem dentro do horÃ¡rio
+                  Mensagem dentro do horário
                 </label>
                 <textarea
                   value={settings.human_support_settings?.onlineMessage || ''}
@@ -505,7 +505,7 @@ export default function SiteSettings() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Mensagem fora do horÃ¡rio
+                  Mensagem fora do horário
                 </label>
                 <textarea
                   value={settings.human_support_settings?.offlineMessage || ''}
@@ -521,10 +521,10 @@ export default function SiteSettings() {
               {/* Hours per Day */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  HorÃ¡rio de atendimento (Dia da semana)
+                  Horário de atendimento (Dia da semana)
                 </label>
                 <div className="space-y-2">
-                  {['Domingo', 'Segunda', 'TerÃ§a', 'Quarta', 'Quinta', 'Sexta', 'SÃ¡bado'].map((day, idx) => {
+                  {['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((day, idx) => {
                     const dayKey = String(idx);
                     const hours = settings.human_support_settings?.businessHours?.[dayKey] || { open: '', close: '' };
                     return (
@@ -544,7 +544,7 @@ export default function SiteSettings() {
                           }}
                           className="w-20 px-2 py-1 border border-gray-300 dark:border-gray-400 rounded-lg text-center dark:bg-gray-900 dark:text-white"
                         />
-                        <span className="text-gray-500">Ã s</span>
+                        <span className="text-gray-500">às</span>
                         <input
                           type="text"
                           placeholder="18:00"
@@ -574,7 +574,7 @@ export default function SiteSettings() {
               className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed dark:bg-green-600 dark:hover:bg-green-700"
             >
               <Save className="w-5 h-5 mr-2" />
-              {saving ? 'Salvando...' : 'Salvar ConfiguraÃ§Ãµes'}
+              {saving ? 'Salvando...' : 'Salvar Configurações'}
             </button>
           </div>
         </div>

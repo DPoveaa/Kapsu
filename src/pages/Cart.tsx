@@ -2255,7 +2255,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
                                   </span>
                                   {appliedDiscount && appliedDiscount.discount > 0 && (
                                     <span className="text-[10px] font-black text-green-600 dark:text-green-400">
-                                      � {pc.discount_type === 'percentage'
+                                      • {pc.discount_type === 'percentage'
                                         ? `${pc.discount_value}% OFF`
                                         : `R$ ${appliedDiscount.discount.toFixed(2).replace('.', ',')} OFF`}
                                     </span>
@@ -2333,7 +2333,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
                               </span>
                               {appliedDiscount && appliedDiscount.discount > 0 && (
                                 <span className="text-[10px] font-black text-green-600 dark:text-green-400">
-                                  � {pc.discount_type === 'percentage'
+                                  • {pc.discount_type === 'percentage'
                                     ? `${pc.discount_value}% OFF`
                                     : `R$ ${appliedDiscount.discount.toFixed(2).replace('.', ',')} OFF`}
                                 </span>

@@ -2076,8 +2076,8 @@ const FloatingChat: React.FC = () => {
 
             if (products.length > 0) {
               const primary = products[0]
-              const intro = 'Separei algumas op��es de apoio ao bem-estar e conforto no dia a dia. Se quiser, tamb�m posso filtrar melhor por dor muscular, c�lica ou articula��o.'
-              const closing = `${primary.name} pode ser uma boa op��o para come�ar, por combinar melhor com o que voc� buscou. Posso adicionar ao carrinho ou simular o frete?`
+              const intro = 'Separei algumas opções de apoio ao bem-estar e conforto no dia a dia. Se quiser, também posso filtrar melhor por dor muscular, cólica ou articulação.'
+              const closing = `${primary.name} pode ser uma boa opção para começar, por combinar melhor com o que você buscou. Posso adicionar ao carrinho ou simular o frete?`
               effectiveAiData = {
                 ...aiData,
                 message: `${intro}\n\n${closing}`,
@@ -2268,7 +2268,7 @@ const FloatingChat: React.FC = () => {
       }
 
       if (aiData.shouldEscalateHuman || aiData.supportChannelMenu) {
-        // N�O abre o formul�rio aqui � deixa o cliente escolher o canal via bot�es ou digitando.
+        // NÃO abre o formulário aqui - deixa o cliente escolher o canal via botões ou digitando.
         setPendingContext('awaiting_support_channel')
 
         const escalationActions: ChatAction[] = (aiData.actionButtons || []).map((btn: { label: string; url: string; type?: string }) => ({
@@ -2808,7 +2808,7 @@ const FloatingChat: React.FC = () => {
       setButtonPosition(savedPosition)
       // Atualiza o ref com a posição restaurada
       lastButtonPositionRef.current = savedPosition
-      // N�O remove a chave tempor�ria aqui - ser� removida pelo useEffect
+      // NÃO remove a chave temporária aqui - será removida pelo useEffect
       setChatPosition(getChatPosition(selectedCorner))
     } else {
       // Ao abrir, salva a posição REAL do botão usando o ref (que sempre tem o valor atualizado)
@@ -4108,7 +4108,7 @@ const FloatingChat: React.FC = () => {
                             )
                           }
 
-                          // ===== LAYOUT PADR�O =====
+                          // ===== LAYOUT PADRÃO =====
                           return (
                             <div
                               className={`flex flex-col ${msg.role === 'user'

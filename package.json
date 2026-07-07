@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "start": "vite",
-    "build": "tsc && vite build",
+    "check:encoding": "node scripts/check-encoding-texts.mjs",
+    "build": "npm run check:encoding && tsc && vite build",
     "preview": "vite preview",
     "test:kaia-contract": "node scripts/kaia-v2-contract-check.mjs",
     "test:kaia-flows": "node scripts/kaia-v2-flow-check.mjs",
