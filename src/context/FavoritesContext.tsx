@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
+﻿import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 import { Product } from '../types'
 import { useAuth } from './AuthContext'
 import { favoritesService } from '../services/favorites.service'
@@ -13,7 +13,7 @@ interface FavoritesContextType {
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined)
 
-const FAVORITES_KEY = 'sanare_favorites'
+const FAVORITES_KEY = 'kapsu_favorites'
 
 export function FavoritesProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()

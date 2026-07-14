@@ -1,4 +1,4 @@
-import { env } from '../config/env'
+﻿import { env } from '../config/env'
 import { BANNER_IMAGE_FALLBACK } from '../utils/imageFallback'
 import { getImageUrl, normalizeImagePath } from '../utils/imageUrl'
 
@@ -51,7 +51,7 @@ interface BannerResponse {
 
 class BannersService {
   private getAuthHeaders() {
-    const token = localStorage.getItem('token') || localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('token') || localStorage.getItem('kapsu_token')
     return {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -182,7 +182,7 @@ class BannersService {
     const formData = new FormData()
     formData.append('image', file)
 
-    const token = localStorage.getItem('token') || localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('token') || localStorage.getItem('kapsu_token')
     const controller = new AbortController()
     const timeoutId = window.setTimeout(() => controller.abort(), 45000)
 

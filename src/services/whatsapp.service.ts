@@ -1,4 +1,4 @@
-import { env } from '../config/env'
+﻿import { env } from '../config/env'
 
 const API_URL = env.apiUrl
 
@@ -42,7 +42,7 @@ class WhatsAppService {
    * Helper para chamadas com autenticação Bearer
    */
   private async fetchWithAuth(endpoint: string, options: RequestInit = {}): Promise<Response> {
-    const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
+    const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token')
     const headers = new Headers(options.headers || {})
     if (token) {
       headers.set('Authorization', `Bearer ${token}`)
@@ -649,7 +649,7 @@ class WhatsAppService {
     updatedAt: string
   }>> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       const response = await fetch(`${this.baseUrl}/pharmacist-numbers`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -682,7 +682,7 @@ class WhatsAppService {
     updatedAt: string
   }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       const response = await fetch(`${this.baseUrl}/pharmacist-numbers`, {
         method: 'POST',
         headers: {
@@ -709,7 +709,7 @@ class WhatsAppService {
    */
   async removePharmacistNumber(id: string): Promise<void> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       const response = await fetch(`${this.baseUrl}/pharmacist-numbers/${id}`, {
         method: 'DELETE',
         headers: {
@@ -736,7 +736,7 @@ class WhatsAppService {
     phone: string
   }>> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       const response = await fetch(`${this.baseUrl}/users-with-phone`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -764,7 +764,7 @@ class WhatsAppService {
     notifiedNumbers: Array<{ phone: string; name: string | null }>
   }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       const response = await fetch(`${this.baseUrl}/test-notify-pharmacist`, {
         method: 'POST',
         headers: {
@@ -806,7 +806,7 @@ class WhatsAppService {
     }
   }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       const response = await fetch(`${this.baseUrl}/reset-test-session`, {
         method: 'POST',
         headers: {
@@ -841,7 +841,7 @@ class WhatsAppService {
     updatedAt: string
   }>> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token de autenticação não encontrado. Faça login novamente.')
       }
@@ -882,7 +882,7 @@ class WhatsAppService {
     updatedAt: string
   }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token de autenticação não encontrado. Faça login novamente.')
       }
@@ -918,7 +918,7 @@ class WhatsAppService {
    */
   async removeAllowedAINumber(id: string): Promise<void> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token de autenticação não encontrado. Faça login novamente.')
       }
@@ -957,7 +957,7 @@ class WhatsAppService {
     }
   }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         // Se não tem token, retorna false silenciosamente (não é erro crítico)
         return { isAllowed: false }
@@ -1003,7 +1003,7 @@ class WhatsAppService {
     updatedAt: string
   }>> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       const response = await fetch(`${this.baseUrl}/distributor-numbers`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1036,7 +1036,7 @@ class WhatsAppService {
     updatedAt: string
   }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       const response = await fetch(`${this.baseUrl}/distributor-numbers`, {
         method: 'POST',
         headers: {
@@ -1063,7 +1063,7 @@ class WhatsAppService {
    */
   async removeDistributorNumber(id: string): Promise<void> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       const response = await fetch(`${this.baseUrl}/distributor-numbers/${id}`, {
         method: 'DELETE',
         headers: {
@@ -1285,9 +1285,9 @@ class WhatsAppService {
     },
     clientRequestId?: string
   ): Promise<any> {
-    const sessionId = localStorage.getItem('sanare_site_session') || '';
+    const sessionId = localStorage.getItem('kapsu_site_session') || '';
     try {
-      const token = localStorage.getItem('sanare_token') || localStorage.getItem('token');
+      const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token');
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
@@ -1334,7 +1334,7 @@ class WhatsAppService {
     email?: string,
     reason?: string
   ): Promise<any> {
-    const sessionId = localStorage.getItem('sanare_site_session') || '';
+    const sessionId = localStorage.getItem('kapsu_site_session') || '';
     try {
       const response = await fetch(`${API_URL}/kaia/v2/human-support`, {
         method: 'POST',
@@ -1370,9 +1370,9 @@ class WhatsAppService {
    * Site Chat: Retorna conversa para atendimento por IA (action estruturada)
    */
   async returnToAiSiteChat(): Promise<any> {
-    const sessionId = localStorage.getItem('sanare_site_session') || '';
+    const sessionId = localStorage.getItem('kapsu_site_session') || '';
     try {
-      const token = localStorage.getItem('sanare_token') || localStorage.getItem('token');
+      const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token');
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -1413,9 +1413,9 @@ class WhatsAppService {
    * Site Chat: Executa action da Kaia v2
    */
   async sendSiteAction(action: any): Promise<any> {
-    const sessionId = localStorage.getItem('sanare_site_session') || '';
+    const sessionId = localStorage.getItem('kapsu_site_session') || '';
     try {
-      const token = localStorage.getItem('sanare_token') || localStorage.getItem('token');
+      const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token');
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };

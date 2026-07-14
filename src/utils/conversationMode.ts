@@ -7,6 +7,7 @@ const MODE_EVENTS = new Set([
   'return_to_ai',
   'ai_resumed',
   'admin_assigned',
+  'human_agent_message',
   'ai_paused'
 ]);
 
@@ -42,6 +43,7 @@ export function resolveConversationMode(
         mode = 'awaiting_human';
         break;
       case 'admin_assigned':
+      case 'human_agent_message':
         mode = 'human_active';
         break;
       case 'return_to_ai':
@@ -58,8 +60,8 @@ export function resolveConversationMode(
 
   if (sorted.length === 0 && conversation) {
     if (conversation.ai_enabled === false) return 'ai_paused';
-    if (conversation.status === 'human_assigned') return 'human_active';
-    if (conversation.status === 'human_needed' || conversation.status === 'awaiting_human') {
+    if (['human_assigned', 'human_active'].includes(conversation.status || '')) return 'human_active';
+    if (['human_needed', 'awaiting_human'].includes(conversation.status || '')) {
       return 'awaiting_human';
     }
   }
@@ -72,3 +74,4 @@ export function mapModeToEscalationStatus(mode: ConversationMode): 'none' | 'hum
   if (mode === 'human_active') return 'human_assigned';
   return 'none';
 }
+

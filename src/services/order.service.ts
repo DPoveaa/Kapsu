@@ -1,4 +1,4 @@
-import { env } from '../config/env'
+﻿import { env } from '../config/env'
 import type { ShippingAddress } from './payment.service'
 import type { NormalizedPaymentResult } from '../types/payment'
 import { unwrapNormalizedPaymentResult } from '../types/payment'
@@ -33,7 +33,7 @@ class OrderService {
   private baseUrl = `${API_URL}/orders`
 
   private getAuthHeaders() {
-    const token = localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('kapsu_token')
     return {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),

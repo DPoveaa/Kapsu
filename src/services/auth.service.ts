@@ -1,4 +1,4 @@
-import { env } from '../config/env'
+﻿import { env } from '../config/env'
 
 const API_URL = env.apiUrl
 
@@ -31,6 +31,9 @@ export interface AuthResponse {
     order_status_notifications_enabled?: boolean
     promotions_notifications_enabled?: boolean
     whatsapp_order_confirmation_enabled?: boolean
+    email_promotions_notifications_enabled?: boolean
+    whatsapp_promotions_notifications_enabled?: boolean
+    email_order_status_notifications_enabled?: boolean
   }
   token?: string
   message?: string
@@ -167,9 +170,12 @@ class AuthService {
     order_status_notifications_enabled?: boolean
     promotions_notifications_enabled?: boolean
     whatsapp_order_confirmation_enabled?: boolean
+    email_promotions_notifications_enabled?: boolean
+    whatsapp_promotions_notifications_enabled?: boolean
+    email_order_status_notifications_enabled?: boolean
   }): Promise<AuthResponse> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado. Faça login novamente.')
       }
@@ -208,7 +214,7 @@ class AuthService {
    */
   async updateProfileImage(profileImage: string): Promise<AuthResponse> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado. Faça login novamente.')
       }
@@ -415,7 +421,7 @@ class AuthService {
    */
   async linkSocial(provider: string, token: string): Promise<any> {
     try {
-      const sessionToken = localStorage.getItem('sanare_token')
+      const sessionToken = localStorage.getItem('kapsu_token')
       if (!sessionToken) {
         throw new Error('Usuário não autenticado')
       }
@@ -452,7 +458,7 @@ class AuthService {
    */
   async unlinkSocial(provider: string): Promise<any> {
     try {
-      const sessionToken = localStorage.getItem('sanare_token')
+      const sessionToken = localStorage.getItem('kapsu_token')
       if (!sessionToken) {
         throw new Error('Usuário não autenticado')
       }
@@ -489,7 +495,7 @@ class AuthService {
    */
   async getLinkedProviders(): Promise<any> {
     try {
-      const sessionToken = localStorage.getItem('sanare_token')
+      const sessionToken = localStorage.getItem('kapsu_token')
       if (!sessionToken) {
         throw new Error('Usuário não autenticado')
       }

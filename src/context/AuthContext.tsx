@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
+﻿import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
 import { isAdminEmail } from '../config/env'
 import { authService } from '../services/auth.service'
 import { cartService } from '../services/cart.service'
@@ -17,6 +17,9 @@ interface User {
   order_status_notifications_enabled?: boolean
   promotions_notifications_enabled?: boolean
   whatsapp_order_confirmation_enabled?: boolean
+  email_promotions_notifications_enabled?: boolean
+  whatsapp_promotions_notifications_enabled?: boolean
+  email_order_status_notifications_enabled?: boolean
 }
 
 interface AuthContextType {
@@ -40,8 +43,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Verificar se há usuário salvo no localStorage ao carregar
   useEffect(() => {
     const checkAuth = async () => {
-      const savedUser = localStorage.getItem('sanare_user')
-      const savedToken = localStorage.getItem('sanare_token')
+      const savedUser = localStorage.getItem('kapsu_user')
+      const savedToken = localStorage.getItem('kapsu_token')
 
       if (savedUser && savedToken) {
         try {
@@ -67,15 +70,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 email_notifications_enabled: (isValid.user as any).email_notifications_enabled !== undefined ? Boolean((isValid.user as any).email_notifications_enabled) : true,
                 order_status_notifications_enabled: (isValid.user as any).order_status_notifications_enabled !== undefined ? Boolean((isValid.user as any).order_status_notifications_enabled) : true,
                 promotions_notifications_enabled: (isValid.user as any).promotions_notifications_enabled !== undefined ? Boolean((isValid.user as any).promotions_notifications_enabled) : true,
-                whatsapp_order_confirmation_enabled: Boolean((isValid.user as any).whatsapp_order_confirmation_enabled)
+                whatsapp_order_confirmation_enabled: Boolean((isValid.user as any).whatsapp_order_confirmation_enabled),
+                email_promotions_notifications_enabled: (isValid.user as any).email_promotions_notifications_enabled !== undefined ? Boolean((isValid.user as any).email_promotions_notifications_enabled) : true,
+                whatsapp_promotions_notifications_enabled: (isValid.user as any).whatsapp_promotions_notifications_enabled !== undefined ? Boolean((isValid.user as any).whatsapp_promotions_notifications_enabled) : true,
+                email_order_status_notifications_enabled: (isValid.user as any).email_order_status_notifications_enabled !== undefined ? Boolean((isValid.user as any).email_order_status_notifications_enabled) : true,
               }
               setUser(updatedUser)
-              localStorage.setItem('sanare_user', JSON.stringify(updatedUser))
+              localStorage.setItem('kapsu_user', JSON.stringify(updatedUser))
             } else if (isValid && !isValid.success && !isValid.isNetworkError) {
               // Token inválido confirmado pelo servidor (não é erro de rede), limpar dados
               console.log('Token inválido confirmado pelo servidor')
-              localStorage.removeItem('sanare_user')
-              localStorage.removeItem('sanare_token')
+              localStorage.removeItem('kapsu_user')
+              localStorage.removeItem('kapsu_token')
               setUser(null)
             }
             // Se for erro de rede (isNetworkError === true), mantém o usuário logado
@@ -89,8 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           // Erro ao fazer parse do usuário salvo, limpar dados corrompidos
           console.error('Erro ao carregar usuário:', error)
-          localStorage.removeItem('sanare_user')
-          localStorage.removeItem('sanare_token')
+          localStorage.removeItem('kapsu_user')
+          localStorage.removeItem('kapsu_token')
           setUser(null)
         }
       }
@@ -102,7 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Verificar periodicamente se o token ainda é válido (a cada 15 minutos)
   useEffect(() => {
-    const savedToken = localStorage.getItem('sanare_token')
+    const savedToken = localStorage.getItem('kapsu_token')
     if (!savedToken || !user) return
 
     let consecutiveFailures = 0
@@ -122,14 +128,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             profile_image: (isValid.user as any).profile_image,
             role: 'user',
             isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || false,
-            whatsapp_notifications_enabled: (isValid.user as any).whatsapp_notifications_enabled !== undefined ? Boolean((isValid.user as any).whatsapp_notifications_enabled) : true,
-            email_notifications_enabled: (isValid.user as any).email_notifications_enabled !== undefined ? Boolean((isValid.user as any).email_notifications_enabled) : true,
-            order_status_notifications_enabled: (isValid.user as any).order_status_notifications_enabled !== undefined ? Boolean((isValid.user as any).order_status_notifications_enabled) : true,
-            promotions_notifications_enabled: (isValid.user as any).promotions_notifications_enabled !== undefined ? Boolean((isValid.user as any).promotions_notifications_enabled) : true,
-            whatsapp_order_confirmation_enabled: Boolean((isValid.user as any).whatsapp_order_confirmation_enabled)
+             whatsapp_notifications_enabled: (isValid.user as any).whatsapp_notifications_enabled !== undefined ? Boolean((isValid.user as any).whatsapp_notifications_enabled) : true,
+             email_notifications_enabled: (isValid.user as any).email_notifications_enabled !== undefined ? Boolean((isValid.user as any).email_notifications_enabled) : true,
+             order_status_notifications_enabled: (isValid.user as any).order_status_notifications_enabled !== undefined ? Boolean((isValid.user as any).order_status_notifications_enabled) : true,
+             promotions_notifications_enabled: (isValid.user as any).promotions_notifications_enabled !== undefined ? Boolean((isValid.user as any).promotions_notifications_enabled) : true,
+             whatsapp_order_confirmation_enabled: Boolean((isValid.user as any).whatsapp_order_confirmation_enabled),
+             email_promotions_notifications_enabled: (isValid.user as any).email_promotions_notifications_enabled !== undefined ? Boolean((isValid.user as any).email_promotions_notifications_enabled) : true,
+             whatsapp_promotions_notifications_enabled: (isValid.user as any).whatsapp_promotions_notifications_enabled !== undefined ? Boolean((isValid.user as any).whatsapp_promotions_notifications_enabled) : true,
+             email_order_status_notifications_enabled: (isValid.user as any).email_order_status_notifications_enabled !== undefined ? Boolean((isValid.user as any).email_order_status_notifications_enabled) : true,
           }
           setUser(updatedUser)
-          localStorage.setItem('sanare_user', JSON.stringify(updatedUser))
+          localStorage.setItem('kapsu_user', JSON.stringify(updatedUser))
         } else if (isValid && !isValid.success && !isValid.isNetworkError) {
           // Token inválido confirmado pelo servidor (não é erro de rede)
           consecutiveFailures++
@@ -137,8 +146,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (consecutiveFailures >= maxFailures) {
             console.log('Token inválido após múltiplas confirmações, fazendo logout...')
             setUser(null)
-            localStorage.removeItem('sanare_user')
-            localStorage.removeItem('sanare_token')
+            localStorage.removeItem('kapsu_user')
+            localStorage.removeItem('kapsu_token')
           }
         } else if (isValid && isValid.isNetworkError) {
           // Erro de rede - NÃO incrementa contador de falhas
@@ -177,12 +186,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email_notifications_enabled: response.user.email_notifications_enabled !== undefined ? Boolean(response.user.email_notifications_enabled) : true,
         order_status_notifications_enabled: response.user.order_status_notifications_enabled !== undefined ? Boolean(response.user.order_status_notifications_enabled) : true,
         promotions_notifications_enabled: response.user.promotions_notifications_enabled !== undefined ? Boolean(response.user.promotions_notifications_enabled) : true,
-        whatsapp_order_confirmation_enabled: Boolean(response.user.whatsapp_order_confirmation_enabled)
+        whatsapp_order_confirmation_enabled: Boolean(response.user.whatsapp_order_confirmation_enabled),
+        email_promotions_notifications_enabled: response.user.email_promotions_notifications_enabled !== undefined ? Boolean(response.user.email_promotions_notifications_enabled) : true,
+        whatsapp_promotions_notifications_enabled: response.user.whatsapp_promotions_notifications_enabled !== undefined ? Boolean(response.user.whatsapp_promotions_notifications_enabled) : true,
+        email_order_status_notifications_enabled: response.user.email_order_status_notifications_enabled !== undefined ? Boolean(response.user.email_order_status_notifications_enabled) : true,
       }
       
       setUser(newUser)
-      localStorage.setItem('sanare_user', JSON.stringify(newUser))
-      localStorage.setItem('sanare_token', response.token)
+      localStorage.setItem('kapsu_user', JSON.stringify(newUser))
+      localStorage.setItem('kapsu_token', response.token)
 
       // Tenta vincular o carrinho do WhatsApp pendente (se houver)
       setTimeout(async () => {
@@ -206,22 +218,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setUser(null)
-    localStorage.removeItem('sanare_user')
-    localStorage.removeItem('sanare_token')
+    localStorage.removeItem('kapsu_user')
+    localStorage.removeItem('kapsu_token')
   }
 
   const updateUser = (userData: Partial<User>) => {
     if (user) {
       const updatedUser = { ...user, ...userData }
       setUser(updatedUser)
-      localStorage.setItem('sanare_user', JSON.stringify(updatedUser))
+      localStorage.setItem('kapsu_user', JSON.stringify(updatedUser))
     }
   }
 
   const loginWithToken = (userData: User, token: string) => {
     setUser(userData)
-    localStorage.setItem('sanare_user', JSON.stringify(userData))
-    localStorage.setItem('sanare_token', token)
+    localStorage.setItem('kapsu_user', JSON.stringify(userData))
+    localStorage.setItem('kapsu_token', token)
   }
 
   return (

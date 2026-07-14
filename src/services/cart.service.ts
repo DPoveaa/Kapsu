@@ -1,4 +1,4 @@
-import { env } from '../config/env'
+﻿import { env } from '../config/env'
 import { Product } from '../types'
 
 const API_URL = env.apiUrl
@@ -27,7 +27,7 @@ class CartService {
   private baseUrl = `${API_URL}/cart`
 
   private getAuthHeaders() {
-    const token = localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('kapsu_token')
     return {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -241,21 +241,21 @@ class CartService {
    * Salva o token pendente para vincular após login/cadastro
    */
   savePendingToken(token: string): void {
-    sessionStorage.setItem('sanare_pending_cart_token', token)
+    sessionStorage.setItem('kapsu_pending_cart_token', token)
   }
 
   /**
    * Obtém o token pendente
    */
   getPendingToken(): string | null {
-    return sessionStorage.getItem('sanare_pending_cart_token')
+    return sessionStorage.getItem('kapsu_pending_cart_token')
   }
 
   /**
    * Remove o token pendente
    */
   clearPendingToken(): void {
-    sessionStorage.removeItem('sanare_pending_cart_token')
+    sessionStorage.removeItem('kapsu_pending_cart_token')
   }
 
   /**

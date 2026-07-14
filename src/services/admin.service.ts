@@ -1,4 +1,4 @@
-import { env } from '../config/env'
+﻿import { env } from '../config/env'
 
 const API_URL = env.apiUrl
 
@@ -95,7 +95,7 @@ class AdminService {
     ignored: string = ''
   ): Promise<UsersListResponse> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -140,7 +140,7 @@ class AdminService {
    */
   async getUserDetails(userId: string): Promise<{ success: boolean; user: UserDetails }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -176,7 +176,7 @@ class AdminService {
    */
   async updateUserRole(userId: string, role: 'user' | 'admin' | 'support'): Promise<{ success: boolean; message: string; user: User }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -214,7 +214,7 @@ class AdminService {
    */
   async updateUser(userId: string, data: { name?: string; cpf?: string | null; phone?: string | null; email?: string; ignore_business_metrics?: boolean; ignore_reason?: string | null; apply_to_existing_orders?: boolean }): Promise<{ success: boolean; message: string; user: User }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -252,7 +252,7 @@ class AdminService {
    */
   async getStatistics(): Promise<StatisticsResponse> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -288,7 +288,7 @@ class AdminService {
    */
   async listOrders(): Promise<{ success: boolean; data: any[] }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -327,7 +327,7 @@ class AdminService {
     endDate?: string
   }): Promise<{ success: boolean; data: any }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -367,7 +367,7 @@ class AdminService {
     endDate?: string
   }): Promise<{ success: boolean; data: any }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -407,7 +407,7 @@ class AdminService {
     endDate?: string
   }): Promise<{ success: boolean; data: any }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -447,7 +447,7 @@ class AdminService {
     endDate?: string
   }): Promise<{ success: boolean; data: any }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -487,7 +487,7 @@ class AdminService {
     endDate?: string
   }): Promise<{ success: boolean; data: any }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -527,7 +527,7 @@ class AdminService {
     endDate?: string
   }): Promise<{ success: boolean; data: any }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -578,7 +578,7 @@ class AdminService {
     endDate?: string
   }): Promise<{ success: boolean; data: any }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -618,7 +618,7 @@ class AdminService {
     endDate?: string
   }): Promise<{ success: boolean; data: any }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -658,7 +658,7 @@ class AdminService {
     endDate?: string
   }): Promise<{ success: boolean; data: any }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -712,7 +712,7 @@ class AdminService {
     }>
   }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -770,7 +770,7 @@ class AdminService {
     }
   }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -816,7 +816,7 @@ class AdminService {
     status?: string
   }): Promise<{ success: boolean; message: string; data: any }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -851,7 +851,7 @@ class AdminService {
 
 
   async updateOrderBusinessIgnore(orderId: string, ignore: boolean, reason?: string): Promise<{ success: boolean; order: any }> {
-    const token = localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('kapsu_token')
     if (!token) throw new Error('Token não encontrado')
 
     const response = await fetch(`${this.baseUrl}/orders/${orderId}/business-ignore`, {
@@ -872,7 +872,7 @@ class AdminService {
    */
   async getOrderDetails(orderId: string): Promise<{ success: boolean; data: any }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -908,7 +908,7 @@ class AdminService {
    */
   async updateOrderStatus(orderId: string, status: string, statusExplanation?: string): Promise<{ success: boolean; message: string; data: any }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -946,7 +946,7 @@ class AdminService {
    */
   async deleteOrder(orderId: string): Promise<{ success: boolean; message: string }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -982,7 +982,7 @@ class AdminService {
    */
   async deleteTestOrders(): Promise<{ success: boolean; message: string; deletedCount: number }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -1019,7 +1019,7 @@ class AdminService {
    */
   async createOrderAsPaid(shippingAddress?: string, subscriptionPlan?: 'monthly' | 'quarterly'): Promise<{ orderId: string; subscriptionId?: string; isSubscription: boolean }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -1069,7 +1069,7 @@ class AdminService {
     userAgent?: string
   }): Promise<AuditLogsResponse> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado')
       }
@@ -1120,7 +1120,7 @@ class AdminService {
     offset?: number
   }): Promise<{ success: boolean; data: { conversations: any[]; pagination: any } }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) throw new Error('Token não encontrado')
 
       const queryParams = new URLSearchParams()
@@ -1165,7 +1165,7 @@ class AdminService {
     }
   }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) throw new Error('Token não encontrado')
 
       const response = await fetch(`${this.baseUrl}/conversations/${id}`, {
@@ -1191,7 +1191,7 @@ class AdminService {
    */
   async replyConversation(id: string, message: string): Promise<{ success: boolean; message: string }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) throw new Error('Token não encontrado')
 
       const response = await fetch(`${this.baseUrl}/conversations/${id}/reply`, {
@@ -1219,7 +1219,7 @@ class AdminService {
    */
   async assignConversation(id: string, adminId: string | null): Promise<{ success: boolean; message: string }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) throw new Error('Token não encontrado')
 
       const response = await fetch(`${this.baseUrl}/conversations/${id}/assign`, {
@@ -1247,7 +1247,7 @@ class AdminService {
    */
   async pauseAI(id: string): Promise<{ success: boolean; message: string }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) throw new Error('Token não encontrado')
 
       const response = await fetch(`${this.baseUrl}/conversations/${id}/pause-ai`, {
@@ -1273,7 +1273,7 @@ class AdminService {
    */
   async resumeAI(id: string): Promise<{ success: boolean; message: string }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) throw new Error('Token não encontrado')
 
       const response = await fetch(`${this.baseUrl}/conversations/${id}/resume-ai`, {
@@ -1299,7 +1299,7 @@ class AdminService {
    */
   async resolveConversation(id: string): Promise<{ success: boolean; message: string }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) throw new Error('Token não encontrado')
 
       const response = await fetch(`${this.baseUrl}/conversations/${id}/resolve`, {
@@ -1325,7 +1325,7 @@ class AdminService {
    */
   async addInternalNote(id: string, note: string): Promise<{ success: boolean; message: string }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) throw new Error('Token não encontrado')
 
       const response = await fetch(`${this.baseUrl}/conversations/${id}/internal-note`, {
@@ -1378,7 +1378,7 @@ class AdminService {
     }
   }> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) throw new Error('Token não encontrado')
 
       const response = await fetch(`${this.baseUrl}/ai/status`, {

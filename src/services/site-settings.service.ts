@@ -1,4 +1,4 @@
-import { env } from '../config/env'
+﻿import { env } from '../config/env'
 
 const API_URL = env.apiUrl
 
@@ -49,7 +49,7 @@ export interface UploadLogoResponse {
 
 class SiteSettingsService {
   private getAuthHeaders() {
-    const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
+    const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token')
     return {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -98,7 +98,7 @@ class SiteSettingsService {
    * Atualiza configurações do site (apenas admin)
    */
   async updateSettings(settings: Partial<SiteSettings>): Promise<SiteSettings> {
-    const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
+    const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token')
     if (!token) {
       throw new Error('Sessão expirada. Faça login novamente para salvar as configurações.')
     }

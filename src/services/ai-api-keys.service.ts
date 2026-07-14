@@ -1,4 +1,4 @@
-import { env } from '../config/env';
+﻿import { env } from '../config/env';
 
 const API_URL = env.apiUrl;
 
@@ -98,7 +98,7 @@ export interface AiKeyPoolStatus {
 }
 
 function authHeaders(): HeadersInit {
-  const token = localStorage.getItem('sanare_token');
+  const token = localStorage.getItem('kapsu_token');
   return {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import {
   ArrowLeft, Plus, Edit, Trash2, Loader2, Search, Upload,
   Archive, ArchiveRestore, TrendingUp, TrendingDown, Minus,
   ChevronDown, ChevronRight, X, BarChart2, ShoppingCart, Tag,
-  Sparkles, Check, AlertCircle, Save, Download
+  Sparkles, Check, AlertCircle, Save, Download, FileText
 } from 'lucide-react'
 import { productsService } from '../services/products.service'
 import { siteSettingsService } from '../services/site-settings.service'
@@ -194,6 +194,7 @@ export default function ManageProducts() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isExporting, setIsExporting] = useState(false)
+  const [isExportingPdf, setIsExportingPdf] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [productsSort, setProductsSort] = useState<{ key: ProductsSortKey; direction: SortDirection }>({
     key: 'name',
@@ -202,8 +203,10 @@ export default function ManageProducts() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('active')
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const exportDropdownRef = useRef<HTMLDivElement>(null)
 
   // ── Import modal state ────────────────────────────────────────────────────
   const [isImportOpen, setIsImportOpen] = useState(false)
@@ -269,9 +272,6 @@ export default function ManageProducts() {
     free_shipping: false,
     sku: '',
     quantity: '',
-    meta_title: '',
-    meta_description: '',
-    tags: '',
   }
   const [productFormData, setProductFormData] = useState(initialProductFormState)
   const priceEditSourceRef = useRef<'price' | 'markup' | 'purchase_price'>('price')
@@ -416,9 +416,6 @@ export default function ManageProducts() {
         free_shipping: productRaw.free_shipping ?? false,
         sku: productRaw.sku || '',
         quantity: productRaw.quantity || '',
-        meta_title: productRaw.meta_title || '',
-        meta_description: productRaw.meta_description || '',
-        tags: productRaw.tags || '',
       })
       setLocalAddedCategories([])
       setIsProductModalOpen(true)
@@ -539,9 +536,6 @@ export default function ManageProducts() {
         free_shipping: productFormData.free_shipping,
         sku: productFormData.sku.trim() || undefined,
         quantity: productFormData.quantity.trim() || undefined,
-        meta_title: productFormData.meta_title.trim() || undefined,
-        meta_description: productFormData.meta_description.trim() || undefined,
-        tags: productFormData.tags.trim() || undefined,
       }
 
       if (editingProduct) {
@@ -586,6 +580,14 @@ export default function ManageProducts() {
     if (isDropdownOpen) document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [isDropdownOpen])
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target as Node)) setIsExportDropdownOpen(false)
+    }
+    if (isExportDropdownOpen) document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [isExportDropdownOpen])
 
   // ── Markup state & handlers ──────────────────────────────────────────────
   const [minimumMargin, setMinimumMargin] = useState<number | null>(null)
@@ -772,6 +774,169 @@ export default function ManageProducts() {
       toast.error(e.message || 'Erro ao exportar produtos.')
     } finally {
       setIsExporting(false)
+    }
+  }
+
+  const handleExportPDF = async () => {
+    try {
+      setIsExportingPdf(true)
+      const productsToExport = await productsService.getAllForAdmin()
+      
+      const printWindow = window.open('', '_blank')
+      if (!printWindow) {
+        toast.error('Por favor, ative a permissão de popups para exportar o PDF.')
+        return
+      }
+
+      const rowsHtml = productsToExport.map(p => `
+        <tr>
+          <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-weight: 600; font-size: 14px; color: #1a202c; width: 25%; max-width: 200px; word-wrap: break-word; vertical-align: top;">
+            ${p.name || ''}
+          </td>
+          <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #4a5568; width: 40%; max-width: 320px; word-wrap: break-word; white-space: pre-wrap; vertical-align: top; line-height: 1.5;">
+            ${p.compositions ? p.compositions.trim() : '<span style="color: #a0aec0; font-style: italic;">Não cadastrado</span>'}
+          </td>
+          <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #4a5568; width: 35%; max-width: 280px; word-wrap: break-word; white-space: pre-wrap; vertical-align: top; line-height: 1.5;">
+            ${p.indication ? p.indication.trim() : '<span style="color: #a0aec0; font-style: italic;">Não cadastrado</span>'}
+          </td>
+        </tr>
+      `).join('')
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Exportação de Produtos - Kapsu</title>
+          <meta charset="utf-8">
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+            
+            body {
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+              margin: 40px;
+              color: #2d3748;
+              background: #fff;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-bottom: 2px solid #e2e8f0;
+              padding-bottom: 20px;
+              margin-bottom: 30px;
+            }
+            .title {
+              font-size: 24px;
+              font-weight: 800;
+              color: #1a202c;
+              margin: 0;
+              letter-spacing: -0.5px;
+            }
+            .subtitle {
+              font-size: 13px;
+              color: #718096;
+              margin-top: 6px;
+              font-weight: 500;
+            }
+            .brand {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            }
+            .brand-dot {
+              width: 10px;
+              height: 10px;
+              border-radius: 50%;
+              background-color: #059669;
+            }
+            .logo {
+              font-size: 20px;
+              font-weight: 800;
+              color: #059669;
+              letter-spacing: -0.5px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 10px;
+              table-layout: fixed;
+            }
+            th {
+              background-color: #f8fafc;
+              color: #4a5568;
+              font-weight: 700;
+              font-size: 11px;
+              text-transform: uppercase;
+              letter-spacing: 0.8px;
+              text-align: left;
+              padding: 14px 10px;
+              border-bottom: 2px solid #e2e8f0;
+            }
+            tr:nth-child(even) {
+              background-color: #fcfdfe;
+            }
+            tr {
+              page-break-inside: avoid;
+            }
+            @media print {
+              body {
+                margin: 20px;
+              }
+              @page {
+                size: A4;
+                margin: 1.5cm;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <h1 class="title">Relatório de Produtos</h1>
+              <div class="subtitle">Exportado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} • Total de ${productsToExport.length} itens</div>
+            </div>
+            <div class="brand">
+              <div class="brand-dot"></div>
+              <div class="logo">Kapsu</div>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 25%;">Nome</th>
+                <th style="width: 40%;">Composição</th>
+                <th style="width: 35%;">Indicação</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                setTimeout(function() {
+                  window.close();
+                }, 200);
+              }, 300);
+            }
+          </script>
+        </body>
+        </html>
+      `
+
+      printWindow.document.open()
+      printWindow.document.write(htmlContent)
+      printWindow.document.close()
+      
+      toast.success(`${productsToExport.length} produto(s) preparado(s) para exportação em PDF.`)
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao exportar produtos para PDF.')
+    } finally {
+      setIsExportingPdf(false)
     }
   }
 
@@ -1480,16 +1645,42 @@ export default function ManageProducts() {
             >
               <AlertCircle size={18} />
             </button>
-            <button
-              type="button"
-              onClick={handleExportProducts}
-              disabled={isExporting}
-              className="flex items-center gap-1.5 px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-              title="Exportar produtos para Excel"
-            >
-              {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
-              <span className="hidden lg:inline text-sm font-medium">Exportar</span>
-            </button>
+            {/* Export dropdown */}
+            <div ref={exportDropdownRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setIsExportDropdownOpen(v => !v)}
+                disabled={isExporting || isExportingPdf}
+                className="flex items-center gap-1.5 px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                title="Exportar produtos"
+              >
+                {(isExporting || isExportingPdf) ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
+                <span className="hidden lg:inline text-sm font-medium">Exportar</span>
+                <ChevronDown size={14} className="hidden lg:block" />
+              </button>
+              {isExportDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
+                  <div className="py-1">
+                    <button
+                      onClick={() => { handleExportProducts(); setIsExportDropdownOpen(false) }}
+                      disabled={isExporting}
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                    >
+                      <Upload size={15} className="mr-2.5 text-gray-500" />
+                      Exportar Excel
+                    </button>
+                    <button
+                      onClick={() => { handleExportPDF(); setIsExportDropdownOpen(false) }}
+                      disabled={isExportingPdf}
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                    >
+                      <FileText size={15} className="mr-2.5 text-gray-500" />
+                      Exportar PDF
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             {/* Add dropdown */}
             <div ref={dropdownRef} className="relative flex-1 sm:flex-none">
               <button onClick={() => setIsDropdownOpen(!isDropdownOpen)} className="flex items-center justify-center bg-green-600 text-white px-3 sm:px-4 py-2 text-sm rounded-lg hover:bg-green-700 transition-colors w-full sm:w-auto">
@@ -2584,54 +2775,7 @@ export default function ManageProducts() {
               />
             </div>
 
-            {/* Meta Title & Tags */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="product-meta_title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Meta Title
-                </label>
-                <input
-                  type="text"
-                  id="product-meta_title"
-                  name="meta_title"
-                  value={productFormData.meta_title}
-                  onChange={handleProductFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="Título para o Google"
-                />
-              </div>
 
-              <div>
-                <label htmlFor="product-tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Tags (Separadas por vírgula)
-                </label>
-                <input
-                  type="text"
-                  id="product-tags"
-                  name="tags"
-                  value={productFormData.tags}
-                  onChange={handleProductFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="Ex: saúde, imunidade, vitamina"
-                />
-              </div>
-            </div>
-
-            {/* Meta Description */}
-            <div>
-              <label htmlFor="product-meta_description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Meta Description
-              </label>
-              <textarea
-                id="product-meta_description"
-                name="meta_description"
-                value={productFormData.meta_description}
-                onChange={handleProductFormChange}
-                rows={2}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                placeholder="Descrição para buscadores (Google)..."
-              />
-            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
               {/* Preço de Compra */}

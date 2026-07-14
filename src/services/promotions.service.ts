@@ -1,4 +1,4 @@
-import { env } from '../config/env'
+﻿import { env } from '../config/env'
 
 const API_URL = env.apiUrl
 
@@ -33,7 +33,7 @@ export interface PromotionCheckResult {
 
 class PromotionsService {
   private getAuthHeaders() {
-    const token = localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('kapsu_token')
     return {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -152,7 +152,7 @@ class PromotionsService {
    * Registra uso de uma promoção
    */
   async recordPromotionUsage(promotionId: string, orderId?: string): Promise<void> {
-    const token = localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('kapsu_token')
     const response = await fetch(`${API_URL}/promotions/${promotionId}/use`, {
       method: 'POST',
       headers: {

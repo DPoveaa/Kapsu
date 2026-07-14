@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { resolveConversationMode } from '../utils/conversationMode';
@@ -1471,7 +1471,7 @@ export default function KaiaChats() {
     }
   }, [authLoading, isAuthenticated, isAdmin, navigate]);
 
-  const token = localStorage.getItem('sanare_token') || sessionStorage.getItem('sanare_token');
+  const token = localStorage.getItem('kapsu_token') || sessionStorage.getItem('kapsu_token');
   const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
   // ===== Toast helper =====
@@ -3120,12 +3120,12 @@ export default function KaiaChats() {
       <AdminModal isOpen={showKeyForm} onClose={() => setShowKeyForm(false)} title="Nova Chave de IA">
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-750 dark:text-gray-300 mb-1">Identificador da Chave</label>
+            <label className="block text-xs font-semibold text-gray-750 dark:text-gray-300 mb-1">Identificador da Chave (opcional)</label>
             <input
               type="text"
               value={keyFormData.name}
               onChange={e => setKeyFormData(f => ({ ...f, name: e.target.value }))}
-              placeholder="ex: Gemini Principal - Produção"
+              placeholder="Opcional. Em lote, o sistema gera kaia-1, kaia-2..."
               className="w-full text-xs rounded-lg px-3 py-2 border border-gray-205 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-250 focus:outline-none"
             />
           </div>
@@ -3150,14 +3150,17 @@ export default function KaiaChats() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-750 dark:text-gray-300 mb-1">Chave de API Secreta</label>
-            <input
-              type="password"
+            <label className="block text-xs font-semibold text-gray-750 dark:text-gray-300 mb-1">Chave(s) de API Secreta(s)</label>
+            <textarea
               value={keyFormData.apiKey}
               onChange={e => setKeyFormData(f => ({ ...f, apiKey: e.target.value }))}
-              placeholder="AIzaSy..."
-              className="w-full text-xs rounded-lg px-3 py-2 border border-gray-205 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-250 focus:outline-none"
+              placeholder="Cole uma ou várias chaves. Separe por vírgula, espaço ou quebra de linha."
+              rows={4}
+              className="w-full text-xs rounded-lg px-3 py-2 border border-gray-205 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-250 focus:outline-none resize-y"
             />
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+              Para múltiplas chaves, os nomes serão gerados automaticamente como kaia-1, kaia-2, kaia-3...
+            </p>
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-750 dark:text-gray-300 mb-1">Prioridade na Rotação (0 = Padrão)</label>

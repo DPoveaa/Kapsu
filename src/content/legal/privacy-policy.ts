@@ -1,4 +1,4 @@
-import { KAPSU_COMPANY } from './company-info'
+﻿import { KAPSU_COMPANY } from './company-info'
 import type { LegalDocument } from './types'
 import {
   CURRENT_PRIVACY_POLICY_VERSION,
@@ -64,7 +64,7 @@ export const privacyPolicyDocument: LegalDocument = {
         'Perfil do usuário: atualização de dados pessoais, foto, senha e preferências de notificação na área “Meu Perfil” (/perfil).',
         'Assistente Kaia: interações com o chat flutuante do site, que podem incluir nome, e-mail e telefone quando informados voluntariamente.',
         'WhatsApp: quando você interage com nossos canais de WhatsApp ou vincula um carrinho temporário originado dessa conversa à sua conta.',
-        'Cookies e armazenamento local: token JWT de autenticação (sanare_token), dados do usuário em cache (sanare_user), preferência de tema (theme), configurações do site (site_settings), identificador de sessão analítica (sanare_session_id) e identificador de pedido pendente no checkout (sessionStorage).',
+        'Cookies e armazenamento local: token JWT de autenticação (kapsu_token), dados do usuário em cache (kapsu_user), preferência de tema (theme), configurações do site (site_settings), identificador de sessão analítica (kapsu_session_id) e identificador de pedido pendente no checkout (sessionStorage).',
         'Integrações automáticas: webhooks de pagamento do Asaas, sincronização de catálogo com Google Merchant Center e sincronização operacional com Google Sheets (área administrativa).',
       ],
     },

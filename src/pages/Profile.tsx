@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { authService } from '../services/auth.service'
@@ -11,7 +11,7 @@ import { paymentService, PaymentResult } from '../services/payment.service'
 import { useFavorites } from '../context/FavoritesContext'
 import { reviewsService, Review } from '../services/reviews.service'
 import { Product } from '../types'
-import { User, Camera, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Package, Calendar, CreditCard, ShoppingBag, Download, ArrowLeft, Mail, FileText, Heart, Bell, HelpCircle, LogOut, Copy, QrCode, Barcode, ShieldCheck } from 'lucide-react'
+import { User, Camera, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Package, Calendar, CreditCard, ShoppingBag, Download, ArrowLeft, Mail, FileText, Heart, Bell, HelpCircle, LogOut, Copy, QrCode, Barcode, ShieldCheck, Truck, Tag } from 'lucide-react'
 import { env } from '../config/env'
 import { confirm, toast } from '../utils/toast'
 import { getOrderStatusLabel, getOrderStatusBadgeClass, isInvoiceEligibleStatus } from '../utils/orderStatus'
@@ -63,6 +63,12 @@ interface Order {
   boleto_url?: string;
   payment_url?: string;
 }
+
+const WhatsAppIcon = ({ className }: { className?: string }) => (
+  <svg className={className} fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+    <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232"/>
+  </svg>
+)
 
 export default function Profile() {
   const navigate = useNavigate()
@@ -147,33 +153,100 @@ export default function Profile() {
   const [loadingProviders, setLoadingProviders] = useState(false)
   const [loadingSocialAction, setLoadingSocialAction] = useState(false)
 
-  // Notification states derived from auth context user settings
-  const notifWhatsApp = user?.whatsapp_notifications_enabled ?? true
-  const notifEmail = user?.email_notifications_enabled ?? true
-  const notifOrderStatus = user?.order_status_notifications_enabled ?? true
-  const notifPromotions = user?.promotions_notifications_enabled ?? true
-  const notifWhatsAppOrder = user?.whatsapp_order_confirmation_enabled ?? false
+  // Notification states for preferences, initialized from user context
+  const [preferences, setPreferences] = useState({
+    whatsapp_notifications_enabled: true,
+    email_notifications_enabled: true,
+    order_status_notifications_enabled: true,
+    promotions_notifications_enabled: true,
+    whatsapp_order_confirmation_enabled: false,
+    email_order_status_notifications_enabled: true,
+    whatsapp_promotions_notifications_enabled: true,
+    email_promotions_notifications_enabled: true,
+  })
+
+  const [savingPrefs, setSavingPrefs] = useState<Record<string, boolean>>({})
+  const [saveSuccess, setSaveSuccess] = useState<Record<string, boolean>>({})
+
+  // Update local preferences state when user context changes
+  useEffect(() => {
+    if (user) {
+      setPreferences({
+        whatsapp_notifications_enabled: user.whatsapp_notifications_enabled ?? true,
+        email_notifications_enabled: user.email_notifications_enabled ?? true,
+        order_status_notifications_enabled: user.order_status_notifications_enabled ?? true,
+        promotions_notifications_enabled: user.promotions_notifications_enabled ?? true,
+        whatsapp_order_confirmation_enabled: user.whatsapp_order_confirmation_enabled ?? true,
+        email_order_status_notifications_enabled: user.email_order_status_notifications_enabled ?? true,
+        whatsapp_promotions_notifications_enabled: user.whatsapp_promotions_notifications_enabled ?? false,
+        email_promotions_notifications_enabled: user.email_promotions_notifications_enabled ?? true,
+      })
+    }
+  }, [user])
 
   const updatePreference = async (key: string, value: boolean) => {
+    // Preserve old preferences for rollback on error
+    const previousPrefs = { ...preferences }
+
+    // Calculate updates object (could update multiple fields if they have cascading side-effects)
+    const updates: any = { [key]: value }
+
+    // Synchronize parent channels & topics from the granular chips
+    // For WhatsApp:
+    if (key === 'whatsapp_order_confirmation_enabled' || key === 'whatsapp_promotions_notifications_enabled') {
+      const nextOrder = key === 'whatsapp_order_confirmation_enabled' ? value : preferences.whatsapp_order_confirmation_enabled
+      const nextPromo = key === 'whatsapp_promotions_notifications_enabled' ? value : preferences.whatsapp_promotions_notifications_enabled
+      updates.whatsapp_notifications_enabled = nextOrder || nextPromo
+    }
+
+    // For E-mail:
+    if (key === 'email_order_status_notifications_enabled' || key === 'email_promotions_notifications_enabled') {
+      const nextOrder = key === 'email_order_status_notifications_enabled' ? value : preferences.email_order_status_notifications_enabled
+      const nextPromo = key === 'email_promotions_notifications_enabled' ? value : preferences.email_promotions_notifications_enabled
+      updates.email_notifications_enabled = nextOrder || nextPromo
+    }
+
+    // For Order updates topic:
+    if (key === 'whatsapp_order_confirmation_enabled' || key === 'email_order_status_notifications_enabled') {
+      const nextWpp = key === 'whatsapp_order_confirmation_enabled' ? value : preferences.whatsapp_order_confirmation_enabled
+      const nextEmail = key === 'email_order_status_notifications_enabled' ? value : preferences.email_order_status_notifications_enabled
+      updates.order_status_notifications_enabled = nextWpp || nextEmail
+    }
+
+    // For Promotions & Favorites topic:
+    if (key === 'whatsapp_promotions_notifications_enabled' || key === 'email_promotions_notifications_enabled') {
+      const nextWpp = key === 'whatsapp_promotions_notifications_enabled' ? value : preferences.whatsapp_promotions_notifications_enabled
+      const nextEmail = key === 'email_promotions_notifications_enabled' ? value : preferences.email_promotions_notifications_enabled
+      updates.promotions_notifications_enabled = nextWpp || nextEmail
+    }
+
+    // Optimistically update the UI state immediately
+    setPreferences(prev => ({
+      ...prev,
+      ...updates
+    }))
+
+    setSavingPrefs(prev => ({ ...prev, [key]: true }))
+    setSaveSuccess(prev => ({ ...prev, [key]: false }))
+    setMessage(null)
+
     try {
-      const updates: any = { [key]: value }
-
-      // If turning off WhatsApp globally, disable WhatsApp order confirmation
-      if (key === 'whatsapp_notifications_enabled' && !value) {
-        updates.whatsapp_order_confirmation_enabled = false
-      }
-
-      // Synchronize WhatsApp order updates to match the global order notification setting
-      if (key === 'order_status_notifications_enabled') {
-        updates.whatsapp_order_confirmation_enabled = value
-      }
-
       const result = await authService.updateProfile(updates)
       if (result.success && result.user) {
         updateUser(result.user)
+        setSaveSuccess(prev => ({ ...prev, [key]: true }))
+        setTimeout(() => {
+          setSaveSuccess(prev => ({ ...prev, [key]: false }))
+        }, 2000)
+      } else {
+        throw new Error(result.message || 'Falha ao atualizar preferências.')
       }
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Erro ao atualizar preferências' })
+      // Rollback optimistic updates on error
+      setPreferences(previousPrefs)
+      setMessage({ type: 'error', text: error.message || 'Erro ao salvar preferências' })
+    } finally {
+      setSavingPrefs(prev => ({ ...prev, [key]: false }))
     }
   }
 
@@ -737,12 +810,12 @@ export default function Profile() {
     const email = 'kapsultda@gmail.com'
     const latestOrder = orders && orders.length > 0 ? orders[0] : null
 
-    let subject = `Suporte Sanare - Cliente: ${user.name}`
+    let subject = `Suporte Kapsu - Cliente: ${user.name}`
     if (latestOrder) {
-      subject = `Ajuda com o Pedido #${latestOrder.id.substring(0, 8)} - Sanare`
+      subject = `Ajuda com o Pedido #${latestOrder.id.substring(0, 8)} - Kapsu`
     }
 
-    let body = `Olá Suporte Sanare,\n\nPreciso de ajuda com o meu pedido.\n\n`
+    let body = `Olá Suporte Kapsu,\n\nPreciso de ajuda com o meu pedido.\n\n`
     body += `Dados do Cliente:\n`
     body += `- Nome: ${user.name}\n`
     body += `- E-mail: ${user.email}\n`
@@ -1368,8 +1441,8 @@ export default function Profile() {
                                             onClick={() => void handleChangePaymentMethod(order.id, 'pix')}
                                             disabled={!!updatingPaymentLoading[order.id]}
                                             className={`flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${order.payment_method === 'pix'
-                                                ? 'bg-primary-50 border-primary-200 text-primary-600 dark:bg-primary-900/20 dark:border-primary-800 dark:text-primary-400'
-                                                : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                                              ? 'bg-primary-50 border-primary-200 text-primary-600 dark:bg-primary-900/20 dark:border-primary-800 dark:text-primary-400'
+                                              : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
                                               }`}
                                           >
                                             {updatingPaymentLoading[order.id] ? (
@@ -1384,8 +1457,8 @@ export default function Profile() {
                                             onClick={() => void handleChangePaymentMethod(order.id, 'credit_card')}
                                             disabled={!!updatingPaymentLoading[order.id]}
                                             className={`flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${order.payment_method === 'credit_card'
-                                                ? 'bg-primary-50 border-primary-200 text-primary-600 dark:bg-primary-900/20 dark:border-primary-800 dark:text-primary-400'
-                                                : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                                              ? 'bg-primary-50 border-primary-200 text-primary-600 dark:bg-primary-900/20 dark:border-primary-800 dark:text-primary-400'
+                                              : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
                                               }`}
                                           >
                                             <CreditCard className="w-3.5 h-3.5" />
@@ -1396,8 +1469,8 @@ export default function Profile() {
                                             onClick={() => void handleChangePaymentMethod(order.id, 'boleto')}
                                             disabled={!!updatingPaymentLoading[order.id]}
                                             className={`flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg border transition-all cursor-pointer ${order.payment_method === 'boleto'
-                                                ? 'bg-primary-50 border-primary-200 text-primary-600 dark:bg-primary-900/20 dark:border-primary-800 dark:text-primary-400'
-                                                : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                                              ? 'bg-primary-50 border-primary-200 text-primary-600 dark:bg-primary-900/20 dark:border-primary-800 dark:text-primary-400'
+                                              : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
                                               }`}
                                           >
                                             {updatingPaymentLoading[order.id] ? (
@@ -1685,138 +1758,181 @@ export default function Profile() {
               {/* NOTIFICAÇÕES                                            */}
               {/* ─────────────────────────────────────────────────────── */}
               {activeSection === 'notifications' && (
-                <div id="profile-notifications-section" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-4">
+                <div id="profile-notifications-section" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
                   <div className="w-full max-w-4xl mx-auto">
                     <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
-                      <div className="flex items-center justify-between mb-6">
-                        <div>
-                          <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            <Bell className="text-primary-500" />
-                            Preferências de Notificação
-                          </h2>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Configure como e o que você deseja receber de avisos.</p>
-                        </div>
-                      </div>
+                      <div className="space-y-8">
 
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Canais */}
+
+
+                        {/* Section B: What do you want to be notified about? */}
                         <div>
-                          <h3 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2 mb-4 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
-                            Canais de Recebimento
+                          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-primary-500"></span>
+                            O que você deseja receber? (Conteúdo)
                           </h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Como você prefere receber nossos avisos:</p>
-                          <div className="space-y-3">
-                            {/* WhatsApp toggle */}
-                            <div className="space-y-2">
-                              <div
-                                onClick={() => updatePreference('whatsapp_notifications_enabled', !notifWhatsApp)}
-                                className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl cursor-pointer hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-100 dark:hover:bg-gray-750 transition-all duration-300 select-none group"
-                              >
-                                <div className="flex items-center gap-3.5 pr-2">
-                                  <div className="p-3 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-xl group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
-                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.864.002-2.637-1.023-5.116-2.887-6.98C16.526 1.897 14.05 .87 11.417.87c-5.438 0-9.863 4.42-9.867 9.864-.001 1.761.463 3.479 1.344 5.015L1.822 21.43l5.825-1.526zM16.648 13.62c-.27-.135-1.597-.788-1.846-.877-.25-.09-.432-.135-.613.135-.18.27-.7.877-.857 1.058-.158.18-.316.2-.587.065-2.228-1.112-3.673-2.127-5.14-4.636-.312-.533.312-.495.89-1.646.09-.18.045-.338-.022-.473-.068-.135-.613-1.477-.84-2.018-.22-.532-.442-.46-.613-.468-.158-.008-.339-.01-.52-.01-.18 0-.475.067-.723.338-.25.27-.95.925-.95 2.256s.97 2.617 1.105 2.8c.135.18 1.91 2.916 4.628 4.088.647.278 1.152.445 1.545.57.65.207 1.24.177 1.707.108.52-.078 1.597-.652 1.824-1.25.227-.597.227-1.11.158-1.218-.067-.108-.25-.18-.52-.315z" />
-                                    </svg>
-                                  </div>
-                                  <div className="min-w-0">
-                                    <span className="block text-sm font-bold text-gray-900 dark:text-white">WhatsApp</span>
-                                    <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">Mensagens rápidas e diretas no seu celular.</span>
-                                  </div>
-                                </div>
-                                <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out ${notifWhatsApp ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-300 ease-in-out ${notifWhatsApp ? 'translate-x-5' : 'translate-x-0'}`} />
-                                </div>
-                              </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                            Escolha quais canais receber para cada tipo de assunto.
+                          </p>
 
-                              {notifWhatsApp && (
-                                <div
-                                  onClick={() => updatePreference('whatsapp_order_confirmation_enabled', !notifWhatsAppOrder)}
-                                  className="flex items-center justify-between p-3.5 ml-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl cursor-pointer hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-100 dark:hover:bg-gray-750 transition-all duration-300 select-none group"
-                                >
-                                  <div className="flex items-center gap-3 pr-2">
-                                    <div className="p-1.5 bg-primary-50/50 dark:bg-primary-900/10 text-primary-500 rounded-lg group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
-                                      <Package className="w-4 h-4" />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Order Updates Card */}
+                            <div className="flex flex-col justify-between p-5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl transition-all duration-300 hover:shadow-sm">
+                              <div>
+                                <div className="flex items-start justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2.5 bg-primary-50 dark:bg-primary-900/20 text-primary-500 rounded-xl flex-shrink-0">
+                                      <Truck className="w-5 h-5" />
                                     </div>
                                     <div className="min-w-0">
-                                      <span className="block text-xs font-bold text-gray-900 dark:text-white">Pedidos no WhatsApp</span>
-                                      <span className="block text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">Receber atualizações do andamento dos pedidos por WhatsApp.</span>
+                                      <div className="flex items-center gap-2">
+                                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Atualizações de Pedido</h4>
+                                        {(saveSuccess['whatsapp_order_confirmation_enabled'] || saveSuccess['email_order_status_notifications_enabled']) && (
+                                          <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold animate-fade-in flex items-center gap-0.5">
+                                            <Check className="w-3 h-3" /> Salvo
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                                        Atualizações de pagamento, preparação, envio e entrega.
+                                      </p>
                                     </div>
                                   </div>
-                                  <div className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out ${notifWhatsAppOrder ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition duration-300 ease-in-out ${notifWhatsAppOrder ? 'translate-x-4' : 'translate-x-0'}`} />
+                                </div>
+                              </div>
+
+                              <div className="mt-5 pt-4 border-t border-gray-200/60 dark:border-gray-700/60">
+                                <div className="flex flex-wrap gap-2 items-center">
+                                  {/* WhatsApp Chip */}
+                                  <button
+                                    type="button"
+                                    onClick={() => updatePreference('whatsapp_order_confirmation_enabled', !preferences.whatsapp_order_confirmation_enabled)}
+                                    disabled={savingPrefs['whatsapp_order_confirmation_enabled']}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${
+                                      preferences.whatsapp_order_confirmation_enabled
+                                        ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 hover:bg-green-100/70'
+                                        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                                    }`}
+                                  >
+                                    <WhatsAppIcon className={`w-3.5 h-3.5 ${
+                                      preferences.whatsapp_order_confirmation_enabled
+                                        ? 'text-green-600 dark:text-green-400'
+                                        : 'text-gray-400 dark:text-gray-500'
+                                    }`} />
+                                    WhatsApp
+                                  </button>
+
+                                  {/* Email Chip */}
+                                  <button
+                                    type="button"
+                                    onClick={() => updatePreference('email_order_status_notifications_enabled', !preferences.email_order_status_notifications_enabled)}
+                                    disabled={savingPrefs['email_order_status_notifications_enabled']}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${
+                                      preferences.email_order_status_notifications_enabled
+                                        ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 hover:bg-blue-100/70'
+                                        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                                    }`}
+                                  >
+                                    <Mail className={`w-3.5 h-3.5 ${
+                                      preferences.email_order_status_notifications_enabled
+                                        ? 'text-blue-500 dark:text-blue-400'
+                                        : 'text-gray-400 dark:text-gray-500'
+                                    }`} />
+                                    E-mail
+                                  </button>
+                                </div>
+
+                                {/* Inline Warning Hint */}
+                                {!preferences.whatsapp_order_confirmation_enabled &&
+                                  !preferences.email_order_status_notifications_enabled && (
+                                    <p className="mt-3 text-[11px] text-red-500 dark:text-red-400 font-medium flex items-center gap-1 bg-red-50 dark:bg-red-950/20 p-2 rounded-lg border border-red-100 dark:border-red-900/30">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                      Ative pelo menos um canal para receber esta notificação.
+                                    </p>
+                                  )}
+                              </div>
+                            </div>
+
+                            {/* Promotions and Favorites Card */}
+                            <div className="flex flex-col justify-between p-5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl transition-all duration-300 hover:shadow-sm">
+                              <div>
+                                <div className="flex items-start justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className="p-2.5 bg-rose-50 dark:bg-rose-900/20 text-rose-500 dark:text-rose-400 rounded-xl flex-shrink-0">
+                                      <Tag className="w-5 h-5" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Promoções e Favoritos</h4>
+                                        {(saveSuccess['whatsapp_promotions_notifications_enabled'] || saveSuccess['email_promotions_notifications_enabled']) && (
+                                          <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold animate-fade-in flex items-center gap-0.5">
+                                            <Check className="w-3 h-3" /> Salvo
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                                        Ofertas, produtos favoritos e alertas de estoque.
+                                      </p>
+                                    </div>
                                   </div>
                                 </div>
-                              )}
-                            </div>
-                            {/* Email toggle */}
-                            <div
-                              onClick={() => updatePreference('email_notifications_enabled', !notifEmail)}
-                              className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl cursor-pointer hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-100 dark:hover:bg-gray-750 transition-all duration-300 select-none group"
-                            >
-                              <div className="flex items-center gap-3.5 pr-2">
-                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 rounded-xl group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
-                                  <Mail className="w-5 h-5" />
-                                </div>
-                                <div className="min-w-0">
-                                  <span className="block text-sm font-bold text-gray-900 dark:text-white">E-mail</span>
-                                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">Avisos detalhados enviados para sua caixa de entrada.</span>
-                                </div>
                               </div>
-                              <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out ${notifEmail ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-300 ease-in-out ${notifEmail ? 'translate-x-5' : 'translate-x-0'}`} />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
 
-                        {/* Tipos de Avisos */}
-                        <div>
-                          <h3 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2 mb-4 flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
-                            O que deseja receber?
-                          </h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Selecione os tipos de conteúdo do seu interesse:</p>
-                          <div className="space-y-3">
-                            {/* Pedidos toggle */}
-                            <div
-                              onClick={() => updatePreference('order_status_notifications_enabled', !notifOrderStatus)}
-                              className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl cursor-pointer hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-100 dark:hover:bg-gray-750 transition-all duration-300 select-none group"
-                            >
-                              <div className="flex items-center gap-3.5 pr-2">
-                                <div className="p-3 bg-primary-50 dark:bg-primary-900/20 text-primary-500 rounded-xl group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
-                                  <Package className="w-5 h-5" />
+                              <div className="mt-5 pt-4 border-t border-gray-200/60 dark:border-gray-700/60">
+                                <div className="flex flex-wrap gap-2 items-center">
+                                  {/* WhatsApp Chip */}
+                                  <button
+                                    type="button"
+                                    onClick={() => updatePreference('whatsapp_promotions_notifications_enabled', !preferences.whatsapp_promotions_notifications_enabled)}
+                                    disabled={savingPrefs['whatsapp_promotions_notifications_enabled']}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${
+                                      preferences.whatsapp_promotions_notifications_enabled
+                                        ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 hover:bg-green-100/70'
+                                        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                                    }`}
+                                  >
+                                    <WhatsAppIcon className={`w-3.5 h-3.5 ${
+                                      preferences.whatsapp_promotions_notifications_enabled
+                                        ? 'text-green-600 dark:text-green-400'
+                                        : 'text-gray-400 dark:text-gray-500'
+                                    }`} />
+                                    WhatsApp
+                                  </button>
+
+                                  {/* Email Chip */}
+                                  <button
+                                    type="button"
+                                    onClick={() => updatePreference('email_promotions_notifications_enabled', !preferences.email_promotions_notifications_enabled)}
+                                    disabled={savingPrefs['email_promotions_notifications_enabled']}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${
+                                      preferences.email_promotions_notifications_enabled
+                                        ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 hover:bg-blue-100/70'
+                                        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                                    }`}
+                                  >
+                                    <Mail className={`w-3.5 h-3.5 ${
+                                      preferences.email_promotions_notifications_enabled
+                                        ? 'text-blue-500 dark:text-blue-400'
+                                        : 'text-gray-400 dark:text-gray-500'
+                                    }`} />
+                                    E-mail
+                                  </button>
                                 </div>
-                                <div className="min-w-0">
-                                  <span className="block text-sm font-bold text-gray-900 dark:text-white">Andamento do Pedido</span>
-                                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">Avisos de pagamento, preparação, envio e entrega.</span>
-                                </div>
-                              </div>
-                              <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out ${notifOrderStatus ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-300 ease-in-out ${notifOrderStatus ? 'translate-x-5' : 'translate-x-0'}`} />
-                              </div>
-                            </div>
-                            {/* Promoções toggle */}
-                            <div
-                              onClick={() => updatePreference('promotions_notifications_enabled', !notifPromotions)}
-                              className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl cursor-pointer hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-100 dark:hover:bg-gray-750 transition-all duration-300 select-none group"
-                            >
-                              <div className="flex items-center gap-3.5 pr-2">
-                                <div className="p-3 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-xl group-hover:scale-105 transition-transform duration-300 flex-shrink-0">
-                                  <Heart className="w-5 h-5 fill-rose-100 dark:fill-rose-900/30" />
-                                </div>
-                                <div className="min-w-0">
-                                  <span className="block text-sm font-bold text-gray-900 dark:text-white">Promoções e Favoritos</span>
-                                  <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">Produtos favoritados quando entrarem em promoção ou novidades.</span>
-                                </div>
-                              </div>
-                              <div className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out ${notifPromotions ? 'bg-primary-500' : 'bg-gray-200 dark:bg-gray-700'}`}>
-                                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition duration-300 ease-in-out ${notifPromotions ? 'translate-x-5' : 'translate-x-0'}`} />
+
+                                {/* Inline Warning Hint */}
+                                {!preferences.whatsapp_promotions_notifications_enabled &&
+                                  !preferences.email_promotions_notifications_enabled && (
+                                    <p className="mt-3 text-[11px] text-red-500 dark:text-red-400 font-medium flex items-center gap-1 bg-red-50 dark:bg-red-950/20 p-2 rounded-lg border border-red-100 dark:border-red-900/30">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                      Ative pelo menos um canal para receber esta notificação.
+                                    </p>
+                                  )}
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
+
                     </div>
                   </div>
                 </div>

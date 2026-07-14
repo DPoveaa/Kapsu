@@ -1,4 +1,4 @@
-import { env } from '../config/env'
+﻿import { env } from '../config/env'
 
 const API_URL = env.apiUrl
 
@@ -22,7 +22,7 @@ class UploadService {
    */
   async uploadProductImage(file: File): Promise<UploadResponse> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado. Faça login novamente.')
       }
@@ -65,7 +65,7 @@ class UploadService {
    */
   async deleteProductImage(filename: string): Promise<void> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado. Faça login novamente.')
       }
@@ -100,7 +100,7 @@ class UploadService {
    */
   async uploadProfileImage(file: File): Promise<UploadResponse> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado. Faça login novamente.')
       }
@@ -144,7 +144,7 @@ class UploadService {
    */
   async deleteProfileImage(filename: string): Promise<void> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado. Faça login novamente.')
       }
@@ -179,7 +179,7 @@ class UploadService {
    */
   async uploadReviewImage(file: File): Promise<UploadResponse> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado. Faça login novamente.')
       }
@@ -220,7 +220,7 @@ class UploadService {
    */
   async deleteReviewImage(filename: string): Promise<void> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) {
         throw new Error('Token não encontrado. Faça login novamente.')
       }

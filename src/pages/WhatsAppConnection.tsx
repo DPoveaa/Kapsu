@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, RefreshCw, CheckCircle2, XCircle, Send, Loader2, QrCode, LogOut, AlertTriangle, MessageSquare, Phone, User, Paperclip, X, Lock, Unlock, ZoomIn, Info, ChevronDown, ChevronUp, Trash2, Download, Plus, Settings, Bot, Power, Clock } from 'lucide-react'
 import { whatsappService, WhatsAppStatus } from '../services/whatsapp.service'
@@ -11,7 +11,7 @@ import { confirm } from '../utils/toast'
  * garantindo segurança para exibição de mídias no monitor/playground.
  */
 const getMediaUrlWithToken = (urlOrId: string, isId: boolean = false): string => {
-  const token = localStorage.getItem('sanare_token') || localStorage.getItem('token') || ''
+  const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || ''
   
   let baseUrl = env.apiUrl
   if (baseUrl.endsWith('/api')) {
@@ -228,8 +228,8 @@ export default function WhatsAppConnection() {
   const [addingAllowedAI, setAddingAllowedAI] = useState(false)
 
   // Chave para armazenamento no localStorage
-  const TEST_CHAT_STORAGE_KEY = 'sanare_ai_test_chat_history'
-  const TEST_PHONE_STORAGE_KEY = 'sanare_ai_test_phone'
+  const TEST_CHAT_STORAGE_KEY = 'kapsu_ai_test_chat_history'
+  const TEST_PHONE_STORAGE_KEY = 'kapsu_ai_test_phone'
   const isInitialLoadRef = useRef(true) // Flag para evitar salvar no primeiro carregamento
 
   // Carrega histórico de teste salvo do localStorage ao montar o componente
@@ -821,7 +821,7 @@ export default function WhatsAppConnection() {
     if (!selectedConversation || loadingAllowedCheck) return
 
     // Verifica se o token existe antes de fazer a requisição
-    const token = localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('kapsu_token')
     if (!token) {
       alert('Você precisa estar logado para usar esta funcionalidade. Por favor, faça login novamente.')
       navigate('/login')
@@ -853,7 +853,7 @@ export default function WhatsAppConnection() {
       
       // Se for erro de autenticação (token não encontrado ou sessão expirada)
       if (errorMessage.includes('Sessão expirada') || errorMessage.includes('Token') || errorMessage.includes('login')) {
-        const currentToken = localStorage.getItem('sanare_token')
+        const currentToken = localStorage.getItem('kapsu_token')
         if (!currentToken) {
           alert('Sua sessão expirou. Por favor, faça login novamente.')
           navigate('/login')
@@ -1182,7 +1182,7 @@ export default function WhatsAppConnection() {
                           const response = await fetch(`${baseUrl}/api/whatsapp/media/${normalizedMessageId}/force-redownload`, {
                             method: 'POST',
                             headers: {
-                              'Authorization': `Bearer ${localStorage.getItem('sanare_token')}`,
+                              'Authorization': `Bearer ${localStorage.getItem('kapsu_token')}`,
                             },
                           })
                           
@@ -1440,7 +1440,7 @@ export default function WhatsAppConnection() {
                           const response = await fetch(`${baseUrl}/api/whatsapp/media/${normalizedMessageId}/force-redownload`, {
                             method: 'POST',
                             headers: {
-                              'Authorization': `Bearer ${localStorage.getItem('sanare_token')}`,
+                              'Authorization': `Bearer ${localStorage.getItem('kapsu_token')}`,
                             },
                           })
                           

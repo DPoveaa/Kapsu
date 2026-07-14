@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+﻿import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { MessageSquare, X, Send, Loader2, Phone, Mail, History, Plus, Trash2 } from 'lucide-react'
 import { whatsappService } from '../services/whatsapp.service'
 import { useAuth } from '../context/AuthContext'
@@ -43,6 +43,8 @@ interface ChatMessage {
   timestamp: number
   actions?: ChatAction[]
   metadata?: {
+    processingStatus?: string
+    receivedAt?: string
     recommendedProducts?: Array<{
       id: string
       name: string
@@ -650,10 +652,10 @@ const FloatingChat: React.FC = () => {
   const [loadingSessions, setLoadingSessions] = useState(false)
 
   const [currentSessionId, setCurrentSessionId] = useState<string>(() => {
-    let sessionId = localStorage.getItem('sanare_site_session')
+    let sessionId = localStorage.getItem('kapsu_site_session')
     if (!sessionId) {
       sessionId = 'session_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
-      localStorage.setItem('sanare_site_session', sessionId)
+      localStorage.setItem('kapsu_site_session', sessionId)
     }
     return sessionId
   })
@@ -799,7 +801,7 @@ const FloatingChat: React.FC = () => {
     resetChatFlowState()
     sessionStorage.removeItem('kaia_local_action_messages')
     try {
-      const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
+      const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token')
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (token) headers['Authorization'] = `Bearer ${token}`
 
@@ -809,7 +811,7 @@ const FloatingChat: React.FC = () => {
       const result = await response.json()
       if (!result.success || !result.sessionId) return
 
-      localStorage.setItem('sanare_site_session', result.sessionId)
+      localStorage.setItem('kapsu_site_session', result.sessionId)
       setCurrentSessionId(result.sessionId)
       setMessages([])
       setActiveTab('chat')
@@ -1090,7 +1092,7 @@ const FloatingChat: React.FC = () => {
     }
 
     try {
-      const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
+      const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token')
       const headers: Record<string, string> = {}
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
@@ -1151,15 +1153,20 @@ const FloatingChat: React.FC = () => {
                   // Se é mensagem do usuário, substitui otimista local pelo ID do banco
                   if (newMsg.role === 'user') {
                     const optIndex = merged.findIndex(m =>
-                      m.clientTempId &&
                       m.role === 'user' &&
-                      (m.content === newMsg.content || m.content.trim() === newMsg.content.trim()) &&
-                      Math.abs(m.timestamp - newMsg.timestamp) < 15000
-                    )
+                      (
+                        (m.clientTempId && (m.content === newMsg.content || m.content.trim() === newMsg.content.trim()) && Math.abs(m.timestamp - newMsg.timestamp) < 15000) ||
+                        (m.id && newMsg.id && m.id === newMsg.id)
+                      )
+                    );
 
                     if (optIndex !== -1) {
-                      merged[optIndex] = newMsg
-                      continue
+                      merged[optIndex] = {
+                        ...merged[optIndex],
+                        ...newMsg,
+                        clientTempId: undefined
+                      };
+                      continue;
                     }
                   }
 
@@ -1233,7 +1240,7 @@ const FloatingChat: React.FC = () => {
       const sessionId = getOrCreateSessionId()
 
       try {
-        const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
+        const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token')
         const headers: Record<string, string> = {}
         if (token) {
           headers['Authorization'] = `Bearer ${token}`
@@ -2021,6 +2028,13 @@ const FloatingChat: React.FC = () => {
 
       const aiData = result.data || {}
 
+      if (aiData.aiSuppressed === true) {
+        const esc = (aiData.conversationMode === 'human_active' || aiData.conversationMode === 'human_assigned') ? 'human_assigned' : 'human_needed';
+        setEscalationStatus(esc);
+        setIsLoading(false);
+        return;
+      }
+
       if (aiData.clientAction === 'navigate' && aiData.navigateTo) {
         setMessages(prev => prev.filter(m => m.clientTempId !== clientTempId))
         const navTarget = String(aiData.navigateTo).startsWith('/')
@@ -2039,7 +2053,7 @@ const FloatingChat: React.FC = () => {
       if (aiData.userMessage?.id) {
         setMessages(prev => prev.map(m =>
           m.clientTempId === clientTempId
-            ? { ...m, id: aiData.userMessage.id, clientTempId: undefined }
+            ? { ...m, id: aiData.userMessage.id, clientTempId: undefined, metadata: aiData.userMessage.metadata || m.metadata }
             : m
         ))
       }
@@ -3034,7 +3048,7 @@ const FloatingChat: React.FC = () => {
   const fetchSessions = useCallback(async () => {
     setLoadingSessions(true)
     try {
-      const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
+      const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token')
       const headers: Record<string, string> = {}
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
@@ -3074,7 +3088,7 @@ const FloatingChat: React.FC = () => {
 
   const selectSession = (sessId: string) => {
     resetChatFlowState()
-    localStorage.setItem('sanare_site_session', sessId)
+    localStorage.setItem('kapsu_site_session', sessId)
     setCurrentSessionId(sessId)
     setActiveTab('chat')
     setMessages([])
@@ -3083,7 +3097,7 @@ const FloatingChat: React.FC = () => {
 
   const handleDeleteSession = async (sessId: string) => {
     try {
-      const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
+      const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token')
       const headers: Record<string, string> = {}
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
@@ -3178,6 +3192,16 @@ const FloatingChat: React.FC = () => {
 
     return parts.length > 0 ? parts : cleanText
   }
+
+  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user');
+  const lastAssistantMsg = [...messages].reverse().find(m => m.role === 'assistant' || m.role === 'admin');
+  const isAfterLastResponse = lastUserMsg && (!lastAssistantMsg || lastUserMsg.timestamp > lastAssistantMsg.timestamp);
+  const isRecovering = !!(
+    isAfterLastResponse &&
+    lastUserMsg &&
+    lastUserMsg.metadata &&
+    ['pending', 'failed', 'processing'].includes(lastUserMsg.metadata.processingStatus || '')
+  );
 
   return (
     <>
@@ -4441,12 +4465,24 @@ const FloatingChat: React.FC = () => {
                   )}
                 </div>
               )}
-              {(isLoading || isTypingFollowUp) && (
-                <div className="flex justify-start mt-2">
+              {(isLoading || isTypingFollowUp || isRecovering) && (
+                <div className="flex flex-col items-start mt-2 space-y-1">
                   <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg px-3.5 py-2.5 flex items-center space-x-1">
                     <span className="w-2 h-2 bg-green-600 dark:bg-primary-400 rounded-full typing-dot" />
                     <span className="w-2 h-2 bg-green-600 dark:bg-primary-400 rounded-full typing-dot" />
                     <span className="w-2 h-2 bg-green-600 dark:bg-primary-400 rounded-full typing-dot" />
+                  </div>
+                  {lastUserMsg?.metadata?.processingStatus === 'failed' && (
+                    <span className="text-[10px] text-gray-400 pl-1">
+                      Estamos tentando responder. Isso pode levar alguns instantes.
+                    </span>
+                  )}
+                </div>
+              )}
+              {lastUserMsg?.metadata?.processingStatus === 'needs_admin_attention' && (
+                <div className="flex justify-start mt-2">
+                  <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-lg px-3.5 py-2.5 text-xs text-red-700 dark:text-red-300">
+                    Não consegui responder agora. Nossa equipe foi avisada.
                   </div>
                 </div>
               )}

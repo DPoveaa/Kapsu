@@ -1,4 +1,4 @@
-import { env } from '../config/env'
+﻿import { env } from '../config/env'
 import { Product } from '../types'
 
 const API_URL = env.apiUrl
@@ -8,7 +8,7 @@ class FavoritesService {
 
   async getFavorites(): Promise<Product[]> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) return []
 
       const response = await fetch(this.baseUrl, {
@@ -32,7 +32,7 @@ class FavoritesService {
 
   async addFavorite(productId: string): Promise<boolean> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) return false
 
       const response = await fetch(this.baseUrl, {
@@ -58,7 +58,7 @@ class FavoritesService {
 
   async removeFavorite(productId: string): Promise<boolean> {
     try {
-      const token = localStorage.getItem('sanare_token')
+      const token = localStorage.getItem('kapsu_token')
       if (!token) return false
 
       const response = await fetch(`${this.baseUrl}/${productId}`, {

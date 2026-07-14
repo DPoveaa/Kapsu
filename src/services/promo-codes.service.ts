@@ -1,4 +1,4 @@
-import { env } from '../config/env'
+﻿import { env } from '../config/env'
 
 const API_URL = env.apiUrl
 
@@ -55,7 +55,7 @@ export interface MultiplePromoCodesValidation {
 
 class PromoCodesService {
   private getAuthHeaders() {
-    const token = localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('kapsu_token')
     return {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -205,7 +205,7 @@ class PromoCodesService {
    * Registra uso de um código promocional
    */
   async recordPromoCodeUsage(promoCodeId: string, orderId?: string, discountApplied?: number): Promise<void> {
-    const token = localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('kapsu_token')
     const response = await fetch(`${API_URL}/promo-codes/${promoCodeId}/use`, {
       method: 'POST',
       headers: {

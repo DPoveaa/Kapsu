@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useLocation } from 'react-router-dom'
+﻿import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   ShoppingCart, Loader2, Truck, CheckCircle, AlertCircle,
   Info, Star, ChevronLeft, ChevronRight, X, ShieldCheck,
@@ -84,7 +84,7 @@ export default function ProductDetail() {
   const [loadingReviews, setLoadingReviews] = useState(true)
   const [isEligible, setIsEligible] = useState(false)
   const [eligibilityMessage, setEligibilityMessage] = useState('')
-  const [isLoggedIn, setIsLoggedIn] = useState(() => !!(localStorage.getItem('sanare_token') || localStorage.getItem('token')))
+  const [isLoggedIn, setIsLoggedIn] = useState(() => !!(localStorage.getItem('kapsu_token') || localStorage.getItem('token')))
   const [newRating, setNewRating] = useState(5)
   const [newComment, setNewComment] = useState('')
   const [newImageFile, setNewImageFile] = useState<File | null>(null)
@@ -163,7 +163,7 @@ export default function ProductDetail() {
         const reviewsData = await productsService.getProductReviews(id)
         setReviews(reviewsData)
 
-        const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
+        const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token')
         if (token) {
           setIsLoggedIn(true)
           const eligRes = await productsService.checkReviewEligibility(id)

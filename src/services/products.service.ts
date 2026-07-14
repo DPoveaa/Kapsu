@@ -1,4 +1,4 @@
-import { env } from '../config/env'
+﻿import { env } from '../config/env'
 import { Product, ProductPriceHistory, ProductTargetAudience } from '../types'
 import { PRODUCT_IMAGE_FALLBACK } from '../utils/imageFallback'
 import { getUploadsImageUrl } from '../utils/imageUrl'
@@ -51,7 +51,7 @@ class ProductsService {
   private baseUrl = `${API_URL}/products`
 
   private getAuthHeaders() {
-    const token = localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('kapsu_token')
     return {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),

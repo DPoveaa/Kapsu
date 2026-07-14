@@ -1,4 +1,4 @@
-import { env } from '../config/env'
+﻿import { env } from '../config/env'
 import { Product } from '../types'
 
 const API_URL = env.apiUrl
@@ -67,7 +67,7 @@ interface FeaturedProductsResponse {
 
 class HomeSectionsService {
   private getAuthHeaders() {
-    const token = localStorage.getItem('token') || localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('token') || localStorage.getItem('kapsu_token')
     return {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),

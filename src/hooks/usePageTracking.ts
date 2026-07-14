@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+﻿import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { env } from '../config/env'
 
@@ -22,10 +22,10 @@ function buildApiUrl(path: string): string {
 
 // Gera um ID de sessão único que persiste durante a sessão do navegador
 function getSessionId(): string {
-  let sessionId = sessionStorage.getItem('sanare_session_id')
+  let sessionId = sessionStorage.getItem('kapsu_session_id')
   if (!sessionId) {
     sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    sessionStorage.setItem('sanare_session_id', sessionId)
+    sessionStorage.setItem('kapsu_session_id', sessionId)
   }
   return sessionId
 }
@@ -122,7 +122,7 @@ export function usePageTracking() {
 
 async function trackPageView(sessionId: string, pagePath: string) {
   try {
-    const token = localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('kapsu_token')
     const url = buildApiUrl('/admin/track-access')
     
     const response = await fetch(url, {
@@ -160,7 +160,7 @@ async function trackEvent(
   scrollPercentage?: number
 ) {
   try {
-    const token = localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('kapsu_token')
     
     await fetch(buildApiUrl('/admin/track-event'), {
       method: 'POST',
@@ -190,7 +190,7 @@ async function trackPageExit(
   isPartial = false
 ) {
   try {
-    const token = localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('kapsu_token')
     const url = buildApiUrl('/admin/track-exit')
     
     const response = await fetch(url, {

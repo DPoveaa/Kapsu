@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+﻿import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { env } from '../config/env'
 
@@ -39,7 +39,7 @@ export function useTrackAccess() {
 
 async function trackAccess(path: string) {
   try {
-    const token = localStorage.getItem('sanare_token')
+    const token = localStorage.getItem('kapsu_token')
     const url = buildApiUrl('/admin/track-access')
     
     const response = await fetch(url, {
