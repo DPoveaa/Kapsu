@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import {
   ArrowLeft, Plus, Edit, Trash2, Loader2, Search, Upload,
@@ -788,19 +788,24 @@ export default function ManageProducts() {
         return
       }
 
-      const rowsHtml = productsToExport.map(p => `
-        <tr>
-          <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-weight: 600; font-size: 14px; color: #1a202c; width: 25%; max-width: 200px; word-wrap: break-word; vertical-align: top;">
-            ${p.name || ''}
-          </td>
-          <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #4a5568; width: 40%; max-width: 320px; word-wrap: break-word; white-space: pre-wrap; vertical-align: top; line-height: 1.5;">
-            ${p.compositions ? p.compositions.trim() : '<span style="color: #a0aec0; font-style: italic;">Não cadastrado</span>'}
-          </td>
-          <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #4a5568; width: 35%; max-width: 280px; word-wrap: break-word; white-space: pre-wrap; vertical-align: top; line-height: 1.5;">
-            ${p.indication ? p.indication.trim() : '<span style="color: #a0aec0; font-style: italic;">Não cadastrado</span>'}
-          </td>
-        </tr>
-      `).join('')
+      const rowsHtml = productsToExport.map(p => {
+        const productUrl = `${window.location.origin}${generateProductUrl(p)}`
+        return `
+          <tr>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 14px; width: 25%; max-width: 200px; word-wrap: break-word; vertical-align: top;">
+              <a href="${productUrl}" target="_blank" style="color: #059669; text-decoration: none; font-weight: 600; transition: color 0.15s;" onmouseover="this.style.color='#047857'" onmouseout="this.style.color='#059669'">
+                ${p.name || ''}
+              </a>
+            </td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #4a5568; width: 40%; max-width: 320px; word-wrap: break-word; white-space: pre-wrap; vertical-align: top; line-height: 1.5;">
+              ${p.compositions ? p.compositions.trim() : '<span style="color: #a0aec0; font-style: italic;">Não cadastrado</span>'}
+            </td>
+            <td style="padding: 12px 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #4a5568; width: 35%; max-width: 280px; word-wrap: break-word; white-space: pre-wrap; vertical-align: top; line-height: 1.5;">
+              ${p.indication ? p.indication.trim() : '<span style="color: #a0aec0; font-style: italic;">Não cadastrado</span>'}
+            </td>
+          </tr>
+        `
+      }).join('')
 
       const htmlContent = `
         <!DOCTYPE html>
@@ -813,11 +818,76 @@ export default function ManageProducts() {
             
             body {
               font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-              margin: 40px;
+              margin: 100px 40px 40px 40px;
               color: #2d3748;
               background: #fff;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
+            }
+            .top-bar {
+              position: fixed;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 64px;
+              background: rgba(255, 255, 255, 0.9);
+              backdrop-filter: blur(8px);
+              border-bottom: 1px solid #e2e8f0;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 0 40px;
+              z-index: 1000;
+            }
+            .preview-label {
+              font-size: 14px;
+              font-weight: 600;
+              color: #4a5568;
+              display: flex;
+              align-items: center;
+              gap: 8px;
+            }
+            .preview-badge {
+              background: #edf2f7;
+              color: #4a5568;
+              padding: 2px 8px;
+              border-radius: 4px;
+              font-size: 11px;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+            }
+            .actions-group {
+              display: flex;
+              gap: 12px;
+            }
+            .btn-print {
+              background-color: #059669;
+              color: white;
+              padding: 10px 20px;
+              border-radius: 6px;
+              border: none;
+              font-weight: 600;
+              font-size: 13px;
+              cursor: pointer;
+              transition: background-color 0.15s;
+              box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            }
+            .btn-print:hover {
+              background-color: #047857;
+            }
+            .btn-close {
+              background-color: transparent;
+              color: #4a5568;
+              padding: 10px 20px;
+              border-radius: 6px;
+              border: 1px solid #cbd5e0;
+              font-weight: 500;
+              font-size: 13px;
+              cursor: pointer;
+              transition: background-color 0.15s;
+            }
+            .btn-close:hover {
+              background-color: #f7fafc;
             }
             .header {
               display: flex;
@@ -881,6 +951,9 @@ export default function ManageProducts() {
               page-break-inside: avoid;
             }
             @media print {
+              .no-print {
+                display: none !important;
+              }
               body {
                 margin: 20px;
               }
@@ -892,6 +965,17 @@ export default function ManageProducts() {
           </style>
         </head>
         <body>
+          <div class="top-bar no-print">
+            <div class="preview-label">
+              Visualização do Documento
+              <span class="preview-badge">PDF</span>
+            </div>
+            <div class="actions-group">
+              <button class="btn-close" onclick="window.close()">Fechar</button>
+              <button class="btn-print" onclick="window.print()">Salvar como PDF / Imprimir</button>
+            </div>
+          </div>
+
           <div class="header">
             <div>
               <h1 class="title">Relatório de Produtos</h1>
@@ -914,16 +998,6 @@ export default function ManageProducts() {
               ${rowsHtml}
             </tbody>
           </table>
-          <script>
-            window.onload = function() {
-              setTimeout(function() {
-                window.print();
-                setTimeout(function() {
-                  window.close();
-                }, 200);
-              }, 300);
-            }
-          </script>
         </body>
         </html>
       `
