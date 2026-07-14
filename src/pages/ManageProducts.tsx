@@ -4,7 +4,7 @@ import {
   ArrowLeft, Plus, Edit, Trash2, Loader2, Search, Upload,
   Archive, ArchiveRestore, TrendingUp, TrendingDown, Minus,
   ChevronDown, ChevronRight, X, BarChart2, ShoppingCart, Tag,
-  Sparkles, Check, AlertCircle, Save, Download, FileText
+  Sparkles, Check, AlertCircle, Save, Download, FileText, Eye
 } from 'lucide-react'
 import { productsService } from '../services/products.service'
 import { siteSettingsService } from '../services/site-settings.service'
@@ -777,14 +777,14 @@ export default function ManageProducts() {
     }
   }
 
-  const handleExportPDF = async () => {
+  const handlePreviewPDF = async () => {
     try {
       setIsExportingPdf(true)
       const productsToExport = await productsService.getAllForAdmin()
       
       const printWindow = window.open('', '_blank')
       if (!printWindow) {
-        toast.error('Por favor, ative a permissão de popups para exportar o PDF.')
+        toast.error('Por favor, ative a permissão de popups para visualizar o PDF.')
         return
       }
 
@@ -1006,9 +1006,32 @@ export default function ManageProducts() {
       printWindow.document.write(htmlContent)
       printWindow.document.close()
       
-      toast.success(`${productsToExport.length} produto(s) preparado(s) para exportação em PDF.`)
+      toast.success(`${productsToExport.length} produto(s) preparado(s) para visualização.`)
     } catch (e: any) {
-      toast.error(e.message || 'Erro ao exportar produtos para PDF.')
+      toast.error(e.message || 'Erro ao carregar visualização do PDF.')
+    } finally {
+      setIsExportingPdf(false)
+    }
+  }
+
+  const handleDownloadPDF = async () => {
+    try {
+      setIsExportingPdf(true)
+      const blob = await productsService.getPdfReportBlob()
+      const today = new Date().toISOString().slice(0, 10)
+      const filename = `products-report-${today}.pdf`
+
+      const objectUrl = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = objectUrl
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(objectUrl)
+
+      toast.success('Relatório em PDF baixado com sucesso.')
+    } catch (e: any) {
+      console.error(e)
+      toast.error('Não foi possível gerar o PDF. Tente novamente.')
     } finally {
       setIsExportingPdf(false)
     }
@@ -1744,12 +1767,19 @@ export default function ManageProducts() {
                       Exportar Excel
                     </button>
                     <button
-                      onClick={() => { handleExportPDF(); setIsExportDropdownOpen(false) }}
+                      onClick={() => { handleDownloadPDF(); setIsExportDropdownOpen(false) }}
                       disabled={isExportingPdf}
                       className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
                     >
                       <FileText size={15} className="mr-2.5 text-gray-500" />
-                      Exportar PDF
+                      {isExportingPdf ? 'Gerando PDF...' : 'Exportar PDF'}
+                    </button>
+                    <button
+                      onClick={() => { handlePreviewPDF(); setIsExportDropdownOpen(false) }}
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      <Eye size={15} className="mr-2.5 text-gray-500" />
+                      Visualizar PDF
                     </button>
                   </div>
                 </div>

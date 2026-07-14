@@ -1,4 +1,4 @@
-﻿import { env } from '../config/env'
+import { env } from '../config/env'
 import { Product, ProductPriceHistory, ProductTargetAudience } from '../types'
 import { PRODUCT_IMAGE_FALLBACK } from '../utils/imageFallback'
 import { getUploadsImageUrl } from '../utils/imageUrl'
@@ -355,6 +355,36 @@ class ProductsService {
         throw error
       }
       throw new Error('Erro de conexão. Verifique se o servidor está rodando.')
+    }
+  }
+
+  /**
+   * Obtém o relatório de produtos em formato PDF binário/blob (admin)
+   */
+  async getPdfReportBlob(): Promise<Blob> {
+    try {
+      const response = await fetch(`${this.baseUrl}/admin/pdf-report`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        let errorMsg = 'Erro ao gerar relatório em PDF';
+        try {
+          const errData = await response.json();
+          errorMsg = errData.message || errorMsg;
+        } catch {
+          // ignore
+        }
+        throw new Error(errorMsg);
+      }
+
+      return await response.blob();
+    } catch (error: any) {
+      if (error.message) {
+        throw error;
+      }
+      throw new Error('Erro de conexão. Verifique se o servidor está rodando.');
     }
   }
 
