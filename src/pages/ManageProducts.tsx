@@ -1019,7 +1019,7 @@ export default function ManageProducts() {
       setIsExportingPdf(true)
       const blob = await productsService.getPdfReportBlob()
       const today = new Date().toISOString().slice(0, 10)
-      const filename = `products-report-${today}.pdf`
+      const filename = `catalogo-produtos-kapsu-${today}.pdf`
 
       const objectUrl = URL.createObjectURL(blob)
       const a = document.createElement("a")
