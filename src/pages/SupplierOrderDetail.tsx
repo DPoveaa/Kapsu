@@ -307,7 +307,7 @@ export default function SupplierOrderDetail() {
                         {item.name}
                       </button>
                     </td>
-                    <td className="py-4 text-right font-mono font-bold text-sm text-gray-905 dark:text-white pr-4">
+                    <td className="py-4 text-right font-mono font-bold text-sm text-gray-900 dark:text-white pr-4">
                       {item.quantity}x
                     </td>
                   </tr>

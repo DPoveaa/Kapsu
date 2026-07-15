@@ -1,4 +1,4 @@
-﻿import { env } from '../config/env'
+import { env } from '../config/env'
 
 const API_URL = env.apiUrl
 
@@ -29,6 +29,7 @@ export interface SiteSettings {
   google_sheets_id?: string
   google_sheets_range?: string
   human_support_settings?: any
+  kaia_long_term_memory_enabled?: boolean
 }
 
 export interface SiteSettingsResponse {

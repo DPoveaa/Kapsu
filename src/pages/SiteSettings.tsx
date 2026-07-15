@@ -21,6 +21,7 @@ export default function SiteSettings() {
       setSettings({
         ...data,
         chatbot_enabled: data.chatbot_enabled !== false,
+        kaia_long_term_memory_enabled: data.kaia_long_term_memory_enabled !== false,
         social_media: {
           facebook: data.social_media?.facebook || '',
           instagram: data.social_media?.instagram || '',
@@ -77,6 +78,7 @@ export default function SiteSettings() {
       instagram: settings.social_media?.instagram || '',
     },
     chatbot_enabled: settings.chatbot_enabled !== false,
+    kaia_long_term_memory_enabled: settings.kaia_long_term_memory_enabled !== false,
     google_merchant_sync_enabled: settings.google_merchant_sync_enabled || false,
     google_sheets_sync_enabled: settings.google_sheets_sync_enabled || false,
     human_support_settings: settings.human_support_settings,
@@ -196,6 +198,37 @@ export default function SiteSettings() {
                       aria-hidden="true"
                       className={`${
                         settings.chatbot_enabled !== false ? 'translate-x-5' : 'translate-x-0'
+                      } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-4 border border-gray-100 dark:border-gray-800 mt-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 mr-4">
+                  <label className="text-base font-semibold text-gray-950 dark:text-white mb-1 block">
+                    Habilitar Memória de Longo Prazo da Kaia
+                  </label>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Permite que a Kaia extraia e utilize preferências comerciais aprovadas dos clientes. Em conformidade com a LGPD.
+                  </p>
+                </div>
+                <div className="flex items-center h-5 mt-1">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={settings.kaia_long_term_memory_enabled !== false}
+                    onClick={() => handleInputChange('kaia_long_term_memory_enabled', settings.kaia_long_term_memory_enabled === false)}
+                    className={`${
+                      settings.kaia_long_term_memory_enabled !== false ? 'bg-green-600' : 'bg-gray-200 dark:bg-gray-700'
+                    } relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`${
+                        settings.kaia_long_term_memory_enabled !== false ? 'translate-x-5' : 'translate-x-0'
                       } pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`}
                     />
                   </button>

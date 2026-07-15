@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { resolveConversationMode } from '../utils/conversationMode';
@@ -13,7 +13,7 @@ import {
   Phone, Mail, Hash, Calendar,
   Headphones, Pause, Play, Trash2,
   CircleDot, Layers, EyeOff, KeyRound, RotateCcw, Plus, Copy, MoreVertical,
-  UserX, UserCheck
+  UserX, UserCheck, Brain
 } from 'lucide-react';
 import { generateProductUrl } from '../utils/productUrl';
 
@@ -1016,8 +1016,8 @@ export default function KaiaChats() {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = searchParams.get('tab') || 'chats';
-  const [activeTab, setActiveTab] = useState<'chats' | 'performance' | 'agents' | 'keys'>(
-    ['chats', 'performance', 'agents', 'keys'].includes(initialTab) ? (initialTab as any) : 'chats'
+  const [activeTab, setActiveTab] = useState<'chats' | 'performance' | 'agents' | 'keys' | 'learning'>(
+    ['chats', 'performance', 'agents', 'keys', 'learning'].includes(initialTab) ? (initialTab as any) : 'chats'
   );
 
   useEffect(() => {
@@ -1056,6 +1056,158 @@ export default function KaiaChats() {
 
   // --- Estados de Gaveta de Detalhes dos Agentes ---
   const [selectedAgentDetail, setSelectedAgentDetail] = useState<any | null>(null);
+
+  // --- Estados de Aprendizado e Memória da Kaia ---
+  const [learningImprovements, setLearningImprovements] = useState<any[]>([]);
+  const [learningMemories, setLearningMemories] = useState<any[]>([]);
+  const [learningTests, setLearningTests] = useState<any[]>([]);
+  const [learningTabSubSection, setLearningTabSubSection] = useState<'improvements' | 'memories' | 'tests'>('improvements');
+  const [memoryFilterStatus, setMemoryFilterStatus] = useState<string>('pending_admin_approval');
+  const [improvementFilterStatus, setImprovementFilterStatus] = useState<string>('pending');
+  const [loadingLearning, setLoadingLearning] = useState(false);
+  const [testRunResults, setTestRunResults] = useState<any | null>(null);
+  const [runningTestsState, setRunningTestsState] = useState(false);
+  const [selectedChatContext, setSelectedChatContext] = useState<any | null>(null);
+  const [loadingChatContext, setLoadingChatContext] = useState(false);
+
+  const fetchLearningData = useCallback(async () => {
+    setLoadingLearning(true);
+    try {
+      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+      
+      const [impRes, memRes, testRes] = await Promise.all([
+        fetch(`${API_URL}/admin/kaia/v2/learning/improvements?status=${improvementFilterStatus}`, { headers }),
+        fetch(`${API_URL}/admin/kaia/v2/learning/memories?status=${memoryFilterStatus}`, { headers }),
+        fetch(`${API_URL}/admin/kaia/v2/learning/tests`, { headers })
+      ]);
+
+      if (impRes.ok) {
+        const json = await impRes.json();
+        setLearningImprovements(json.data || []);
+      }
+      if (memRes.ok) {
+        const json = await memRes.json();
+        setLearningMemories(json.data || []);
+      }
+      if (testRes.ok) {
+        const json = await testRes.json();
+        setLearningTests(json.data || []);
+      }
+    } catch (e) {
+      console.error('Erro ao buscar dados do aprendizado:', e);
+    } finally {
+      setLoadingLearning(false);
+    }
+  }, [memoryFilterStatus, improvementFilterStatus]);
+
+  const handleReviewImprovement = async (id: string, status: 'applied' | 'rejected' | 'archived') => {
+    try {
+      const headers = {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      };
+      const res = await fetch(`${API_URL}/admin/kaia/v2/learning/improvements/${id}/review`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        fetchLearningData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleReviewMemory = async (id: string, status: 'approved' | 'rejected' | 'archived') => {
+    try {
+      const headers = {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      };
+      const res = await fetch(`${API_URL}/admin/kaia/v2/learning/memories/${id}/review`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        fetchLearningData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteMemory = async (id: string) => {
+    if (!window.confirm('Tem certeza de que deseja excluir definitivamente esta preferência comercial?')) return;
+    try {
+      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+      const res = await fetch(`${API_URL}/admin/kaia/v2/learning/memories/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+      if (res.ok) {
+        fetchLearningData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleRunRegressionTests = async () => {
+    setRunningTestsState(true);
+    try {
+      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+      const res = await fetch(`${API_URL}/admin/kaia/v2/learning/tests/run`, {
+        method: 'POST',
+        headers
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setTestRunResults(json.results);
+        fetchLearningData();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setRunningTestsState(false);
+    }
+  };
+
+  const fetchConversationContext = useCallback(async (convId: string) => {
+    setLoadingChatContext(true);
+    try {
+      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+      const res = await fetch(`${API_URL}/admin/kaia/v2/learning/context/${convId}`, { headers });
+      if (res.ok) {
+        const json = await res.json();
+        console.log('[KaiaChats] Context loaded for conv', convId, ':', json.data);
+        setSelectedChatContext(json.data || null);
+      } else {
+        console.error('[KaiaChats] Failed to load context. Status:', res.status, 'for conv:', convId);
+        setSelectedChatContext(null);
+      }
+    } catch (e) {
+      console.error('[KaiaChats] Exception loading context:', e);
+      setSelectedChatContext(null);
+    } finally {
+      setLoadingChatContext(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === 'learning') {
+      fetchLearningData();
+    }
+  }, [activeTab, fetchLearningData]);
+
+  useEffect(() => {
+    if (selectedConv?.id) {
+      fetchConversationContext(selectedConv.id);
+    } else {
+      setSelectedChatContext(null);
+    }
+  }, [selectedConv?.id, fetchConversationContext]);
 
   // --- Agrupamento de Conversas por Usuário ---
   const [selectedUserGroupKey, setSelectedUserGroupKey] = useState<string | null>(null);
@@ -1822,6 +1974,18 @@ export default function KaiaChats() {
               <KeyRound size={13} />
               Chaves de API
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('learning')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
+                activeTab === 'learning'
+                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+            >
+              <Brain size={13} />
+              Aprendizado & Memória
+            </button>
           </div>
 
           <div className="flex flex-wrap gap-2 self-start md:self-auto">
@@ -2246,7 +2410,8 @@ export default function KaiaChats() {
 
         {/* ===== Painel Direito: Conversa ===== */}
         {selectedConv ? (
-          <div className="flex-1 flex flex-col min-w-0 bg-gray-50 dark:bg-gray-950">
+          <div className="flex-1 flex min-w-0 bg-gray-50 dark:bg-gray-950">
+            <div className="flex-1 flex flex-col min-w-0 border-r border-gray-200 dark:border-gray-800">
             {/* Header da Conversa */}
             <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
               <div className="flex items-start justify-between gap-3">
@@ -2457,6 +2622,130 @@ export default function KaiaChats() {
               <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1 px-1">
                 Ao responder, a IA é pausada automaticamente e a conversa é atribuída a você.
               </p>
+            </div>
+            </div>
+
+            {/* NEW Right sidebar for Memory Diagnostics */}
+            <div className="w-80 flex-shrink-0 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 flex flex-col p-4 overflow-y-auto space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-xs text-gray-450 dark:text-gray-500 uppercase tracking-wider mb-1">Diagnóstico de Memória</h3>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-450">Estado de contexto ativo da Kaia v2</p>
+                </div>
+                {selectedConv?.id && (
+                  <button
+                    onClick={() => fetchConversationContext(selectedConv.id)}
+                    disabled={loadingChatContext}
+                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
+                    title="Recarregar contexto"
+                  >
+                    <RefreshCw size={13} className={loadingChatContext ? 'animate-spin' : ''} />
+                  </button>
+                )}
+              </div>
+
+              {loadingChatContext ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="animate-spin text-primary-500" size={16} />
+                </div>
+              ) : selectedChatContext ? (
+                <>
+                  {/* Modo de Conversa */}
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 flex justify-between items-center text-xs">
+                    <span className="font-semibold text-gray-700 dark:text-gray-300">Modo Atual</span>
+                    <span className="px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:bg-primary-300 text-[10px] font-bold font-mono uppercase">
+                      {selectedChatContext.mode}
+                    </span>
+                  </div>
+
+                  {/* Ação Pendente */}
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 space-y-2">
+                    <div className="flex justify-between items-center text-xs font-semibold">
+                      <span className="text-gray-700 dark:text-gray-300">Ação Pendente</span>
+                      {selectedChatContext.activePendingAction ? (
+                        <span className="text-amber-600 dark:text-amber-400 text-[10px]">Pendente</span>
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500 text-[10px]">Nenhuma</span>
+                      )}
+                    </div>
+                    {selectedChatContext.activePendingAction && (
+                      <div className="text-[10px] space-y-1 text-gray-500 dark:text-gray-400 font-mono bg-white dark:bg-gray-950 p-2 rounded border border-gray-100 dark:border-gray-850">
+                        <p><strong>Tipo:</strong> {selectedChatContext.activePendingAction.type}</p>
+                        <p><strong>Produto:</strong> {selectedChatContext.activePendingAction.productName}</p>
+                        <p><strong>Quant:</strong> {selectedChatContext.activePendingAction.quantity}</p>
+                        <p><strong>Expira em:</strong> {selectedChatContext.activePendingAction.elapsedSeconds}s / {selectedChatContext.activePendingAction.ttlSeconds}s</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Último Produto & Quantidade */}
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 space-y-2 text-xs">
+                    <span className="font-semibold text-gray-700 dark:text-gray-300">Contexto Recente</span>
+                    
+                    {selectedChatContext.lastMentionedProduct && (
+                      <div className="flex justify-between items-center text-[11px] bg-white dark:bg-gray-950 p-1.5 rounded border border-gray-100 dark:border-gray-850">
+                        <span className="text-gray-500 dark:text-gray-400">Último Produto:</span>
+                        <span className="font-bold text-gray-850 dark:text-gray-250 truncate max-w-[120px]">{selectedChatContext.lastMentionedProduct.name}</span>
+                      </div>
+                    )}
+
+                    {selectedChatContext.lastQuantity && (
+                      <div className="flex justify-between items-center text-[11px] bg-white dark:bg-gray-950 p-1.5 rounded border border-gray-100 dark:border-gray-850">
+                        <span className="text-gray-500 dark:text-gray-400">Última Quantidade:</span>
+                        <span className="font-bold text-gray-850 dark:text-gray-250">{selectedChatContext.lastQuantity.value}</span>
+                      </div>
+                    )}
+
+                    {selectedChatContext.lastRejectedCartAdd && (
+                      <div className="flex justify-between items-center text-[11px] bg-red-50/50 dark:bg-red-950/10 p-1.5 rounded border border-red-100 dark:border-red-900/20">
+                        <span className="text-red-650 dark:text-red-400">Recusado (Excesso):</span>
+                        <span className="font-bold text-red-650 dark:text-red-450 truncate max-w-[120px]">{selectedChatContext.lastRejectedCartAdd.productName} ({selectedChatContext.lastRejectedCartAdd.quantity})</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Resumo da Conversa */}
+                  {selectedChatContext.recentMessagesSummary && (
+                    <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 space-y-1.5 text-xs">
+                      <span className="font-semibold text-gray-700 dark:text-gray-300">Resumo da IA</span>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-950 p-2 rounded border border-gray-100 dark:border-gray-850 leading-relaxed">
+                        {selectedChatContext.recentMessagesSummary}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Memórias do Cliente */}
+                  <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 space-y-2 text-xs">
+                    <span className="font-semibold text-gray-700 dark:text-gray-300">Memórias do Cliente</span>
+                    {selectedChatContext.approvedCustomerMemory && selectedChatContext.approvedCustomerMemory.length > 0 ? (
+                      <div className="space-y-1.5">
+                        {selectedChatContext.approvedCustomerMemory.map((mem: any) => (
+                          <div key={mem.id} className={`flex flex-col p-2 rounded border ${mem.status === 'approved' ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40' : 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40'}`}>
+                            <div className="flex justify-between items-center text-[10px]">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold uppercase tracking-wider text-primary-500 dark:text-primary-400">
+                                  {mem.category === 'preference' ? 'Preferência' : 'Interesse'}
+                                </span>
+                                <span className={`px-1 py-0.5 rounded text-[9px] font-bold ${mem.status === 'approved' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
+                                  {mem.status === 'approved' ? 'Aprovada' : 'Pendente'}
+                                </span>
+                              </div>
+                              <span className="text-gray-400 dark:text-gray-500">{(mem.confidence * 100).toFixed(0)}%</span>
+                            </div>
+                            <span className="text-[11px] font-medium text-gray-800 dark:text-gray-200 mt-0.5">{mem.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-gray-400 dark:text-gray-500 italic bg-white dark:bg-gray-950 p-2 rounded border border-gray-100 dark:border-gray-850">
+                        Nenhuma memória extraída para este perfil.
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-gray-400 py-4 text-center">Nenhum contexto de diagnóstico carregado.</p>
+              )}
             </div>
           </div>
         ) : (
@@ -2742,6 +3031,396 @@ export default function KaiaChats() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      ) : activeTab === 'learning' ? (
+        /* ===== ABA 5: APRENDIZADO E MEMÓRIA DA KAIA ===== */
+        <div className="flex-1 overflow-y-auto space-y-6 pb-8 pr-2 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-100 dark:border-gray-700 pb-4">
+              <div>
+                <h3 className="font-bold text-gray-800 dark:text-white text-base">Aprendizado & Memória</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Supervisão de melhorias automatizadas, preferências de clientes e regressão</p>
+              </div>
+
+              {/* Seletor de sub-seções */}
+              <div className="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-0.5 border border-gray-200 dark:border-gray-800 text-[11px] font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setLearningTabSubSection('improvements')}
+                  className={`px-3 py-1.5 rounded-md transition-all ${
+                    learningTabSubSection === 'improvements'
+                      ? 'bg-white dark:bg-gray-700 text-primary-650 dark:text-primary-400 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                  }`}
+                >
+                  Fila de Melhorias ({learningImprovements.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLearningTabSubSection('memories')}
+                  className={`px-3 py-1.5 rounded-md transition-all ${
+                    learningTabSubSection === 'memories'
+                      ? 'bg-white dark:bg-gray-700 text-primary-650 dark:text-primary-400 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                  }`}
+                >
+                  Memórias dos Clientes ({learningMemories.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLearningTabSubSection('tests')}
+                  className={`px-3 py-1.5 rounded-md transition-all ${
+                    learningTabSubSection === 'tests'
+                      ? 'bg-white dark:bg-gray-700 text-primary-650 dark:text-primary-400 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                  }`}
+                >
+                  Suíte de Testes ({learningTests.length})
+                </button>
+              </div>
+            </div>
+
+            {loadingLearning ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 size={32} className="animate-spin text-primary-500" />
+              </div>
+            ) : learningTabSubSection === 'improvements' ? (
+              /* Fila de Melhorias */
+              <div className="space-y-4">
+                {/* Seletor de Status das Melhorias */}
+                <div className="flex bg-gray-50 dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg p-1 w-fit gap-1 text-[11px] font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setImprovementFilterStatus('pending')}
+                    className={`px-3 py-1 rounded-md transition-all ${
+                      improvementFilterStatus === 'pending'
+                        ? 'bg-white dark:bg-gray-700 text-primary-650 dark:text-primary-400 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    Pendentes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImprovementFilterStatus('applied')}
+                    className={`px-3 py-1 rounded-md transition-all ${
+                      improvementFilterStatus === 'applied'
+                        ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    Aplicadas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImprovementFilterStatus('rejected')}
+                    className={`px-3 py-1 rounded-md transition-all ${
+                      improvementFilterStatus === 'rejected'
+                        ? 'bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    Rejeitadas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImprovementFilterStatus('archived')}
+                    className={`px-3 py-1 rounded-md transition-all ${
+                      improvementFilterStatus === 'archived'
+                        ? 'bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    Arquivadas
+                  </button>
+                </div>
+
+                {learningImprovements.length === 0 ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-8">Nenhum candidato encontrado com este status.</p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {learningImprovements.map((item) => (
+                      <div key={item.id} className="p-4 rounded-xl border border-gray-150 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex flex-col gap-3">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <span className="px-2 py-0.5 text-[9px] font-bold font-mono rounded bg-red-100 text-red-750 dark:bg-red-950/20 dark:text-red-400 uppercase">
+                            {item.detected_issue_type}
+                          </span>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500">Sessão: {item.source_conversation_id?.slice(0, 8)} | {new Date(item.created_at).toLocaleString('pt-BR')}</span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                          <div className="space-y-1">
+                            <span className="font-bold text-gray-700 dark:text-gray-300">Mensagem do Cliente:</span>
+                            <p className="p-2 rounded bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 italic text-gray-800 dark:text-gray-200">
+                              "{item.customer_message}"
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="font-bold text-gray-700 dark:text-gray-300">Resposta da Kaia:</span>
+                            <p className="p-2 rounded bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 italic text-gray-800 dark:text-gray-200">
+                              "{item.assistant_response}"
+                            </p>
+                          </div>
+                        </div>
+
+                        {item.proposed_alias && (
+                          <div className="p-2 rounded-lg bg-primary-50/30 dark:bg-primary-950/10 border border-primary-100/50 dark:border-primary-900/20 text-xs">
+                            <strong className="text-gray-800 dark:text-gray-200">Apelido Proposto:</strong>{' '}
+                            <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-bold border border-gray-200 dark:border-gray-800">{item.proposed_alias}</code>
+                          </div>
+                        )}
+
+                        {item.proposed_rule && (
+                          <div className="p-2 rounded-lg bg-primary-50/30 dark:bg-primary-950/10 border border-primary-100/50 dark:border-primary-900/20 text-xs">
+                            <strong className="text-gray-800 dark:text-gray-200">Ação Corretiva:</strong>{' '}
+                            <span className="font-mono text-[11px] text-gray-700 dark:text-gray-300">{item.proposed_rule}</span>
+                          </div>
+                        )}
+
+                        <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                          {improvementFilterStatus === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => handleReviewImprovement(item.id, 'rejected')}
+                                className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-red-50 hover:text-red-650 dark:hover:bg-red-950/20 dark:hover:text-red-400 transition-colors"
+                              >
+                                Rejeitar
+                              </button>
+                              <button
+                                onClick={() => handleReviewImprovement(item.id, 'applied')}
+                                className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+                              >
+                                Aprovar e Criar Regra
+                              </button>
+                            </>
+                          )}
+                          {(improvementFilterStatus === 'applied' || improvementFilterStatus === 'rejected') && (
+                            <button
+                              onClick={() => handleReviewImprovement(item.id, 'archived')}
+                              className="px-3 py-1.5 text-xs rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/20 dark:text-amber-400 transition-colors"
+                            >
+                              Arquivar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : learningTabSubSection === 'memories' ? (
+              /* Memórias dos Clientes */
+              <div className="space-y-4">
+                {/* Seletor de Status das Memórias */}
+                <div className="flex bg-gray-50 dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg p-1 w-fit gap-1 text-[11px] font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => setMemoryFilterStatus('pending_admin_approval')}
+                    className={`px-3 py-1 rounded-md transition-all ${
+                      memoryFilterStatus === 'pending_admin_approval'
+                        ? 'bg-white dark:bg-gray-700 text-primary-650 dark:text-primary-400 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    Pendentes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMemoryFilterStatus('approved')}
+                    className={`px-3 py-1 rounded-md transition-all ${
+                      memoryFilterStatus === 'approved'
+                        ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    Aprovadas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMemoryFilterStatus('rejected')}
+                    className={`px-3 py-1 rounded-md transition-all ${
+                      memoryFilterStatus === 'rejected'
+                        ? 'bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    Rejeitadas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMemoryFilterStatus('archived')}
+                    className={`px-3 py-1 rounded-md transition-all ${
+                      memoryFilterStatus === 'archived'
+                        ? 'bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-800'
+                    }`}
+                  >
+                    Arquivadas
+                  </button>
+                </div>
+
+                {learningMemories.length === 0 ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-8">Nenhuma memória encontrada com este status.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 uppercase tracking-wider text-[10px]">
+                          <th className="py-2.5 px-3 font-semibold">Cliente / Sessão</th>
+                          <th className="py-2.5 px-3 font-semibold">Categoria</th>
+                          <th className="py-2.5 px-3 font-semibold">Preferência Extraída</th>
+                          <th className="py-2.5 px-3 font-semibold">Confiança</th>
+                          <th className="py-2.5 px-3 text-right font-semibold">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {learningMemories.map((item) => (
+                          <tr key={item.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/40 transition-colors">
+                            <td className="py-3 px-3">
+                              <span className="font-bold text-gray-900 dark:text-white">
+                                {item.user_id ? `ID: ${item.user_id.slice(0, 8)}` : `Sessão: ${item.session_id?.slice(0, 8)}`}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className="px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 font-mono text-[9px]">
+                                {item.category}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-gray-700 dark:text-gray-300 font-semibold">"{item.value}"</td>
+                            <td className="py-3 px-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">{(item.confidence * 100).toFixed(0)}%</td>
+                            <td className="py-3 px-3 text-right">
+                              <div className="flex justify-end gap-1.5">
+                                {(memoryFilterStatus === 'pending_admin_approval' || memoryFilterStatus === 'rejected' || memoryFilterStatus === 'archived') && (
+                                  <button
+                                    onClick={() => handleReviewMemory(item.id, 'approved')}
+                                    className="px-2 py-1 text-[10px] rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-450 transition-colors font-semibold"
+                                    title="Aprovar Memória"
+                                  >
+                                    Aprovar
+                                  </button>
+                                )}
+                                {memoryFilterStatus === 'pending_admin_approval' && (
+                                  <button
+                                    onClick={() => handleReviewMemory(item.id, 'rejected')}
+                                    className="px-2 py-1 text-[10px] rounded bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-450 transition-colors font-semibold"
+                                    title="Rejeitar Memória"
+                                  >
+                                    Rejeitar
+                                  </button>
+                                )}
+                                {memoryFilterStatus === 'approved' && (
+                                  <button
+                                    onClick={() => handleReviewMemory(item.id, 'archived')}
+                                    className="px-2 py-1 text-[10px] rounded bg-amber-50 text-amber-750 hover:bg-amber-100 dark:bg-amber-950/20 dark:text-amber-450 transition-colors font-semibold"
+                                    title="Arquivar Memória"
+                                  >
+                                    Arquivar
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteMemory(item.id)}
+                                  className="p-1 text-gray-400 hover:text-red-650 dark:hover:text-red-400 rounded transition-colors"
+                                  title="Excluir Definitivamente (LGPD)"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Suíte de Testes de Regressão */
+              <div className="space-y-4">
+                <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-150 dark:border-gray-800">
+                  <div>
+                    <h4 className="font-bold text-xs text-gray-800 dark:text-white">Execução de Regressão</h4>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">Verifique a estabilidade da IA simulando intenções passadas</p>
+                  </div>
+                  <button
+                    onClick={handleRunRegressionTests}
+                    disabled={runningTestsState}
+                    className="px-4 py-2 text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 disabled:opacity-50 rounded-xl transition-all flex items-center gap-1.5"
+                  >
+                    {runningTestsState ? (
+                      <>
+                        <Loader2 className="animate-spin" size={13} /> Executando...
+                      </>
+                    ) : (
+                      <>
+                        <Play size={13} /> Rodar Testes
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {testRunResults && (
+                  <div className="p-3.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl grid grid-cols-3 gap-4 text-center text-xs">
+                    <div>
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-semibold">Total Rodados</span>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">{testRunResults.totalCount}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase font-semibold">Passaram</span>
+                      <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-1">{testRunResults.passedCount}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-red-600 dark:text-red-400 uppercase font-semibold">Falharam</span>
+                      <p className="text-lg font-bold text-red-650 dark:text-red-400 mt-1">{testRunResults.failedCount}</p>
+                    </div>
+                  </div>
+                )}
+
+                {learningTests.length === 0 ? (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-8">Nenhum caso de teste gravado ainda.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 uppercase tracking-wider text-[10px]">
+                          <th className="py-2.5 px-3 font-semibold">Nome</th>
+                          <th className="py-2.5 px-3 font-semibold">Input do Usuário</th>
+                          <th className="py-2.5 px-3 font-semibold">Esperado (Intent/Agente)</th>
+                          <th className="py-2.5 px-3 font-semibold">Status</th>
+                          <th className="py-2.5 px-3 font-semibold">Detalhes/Erro</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {learningTests.map((item) => (
+                          <tr key={item.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/40 transition-colors">
+                            <td className="py-3 px-3 font-semibold text-gray-800 dark:text-gray-200">{item.name}</td>
+                            <td className="py-3 px-3 italic text-gray-600 dark:text-gray-400">"{item.input_message}"</td>
+                            <td className="py-3 px-3">
+                              <span className="font-bold text-gray-700 dark:text-gray-300">{item.expected_intent}</span>
+                              <span className="text-gray-400 dark:text-gray-500 text-[10px] block font-mono">{item.expected_agent}</span>
+                            </td>
+                            <td className="py-3 px-3">
+                              <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] uppercase ${
+                                item.status === 'passed'
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400'
+                                  : item.status === 'failed'
+                                  ? 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400'
+                                  : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                              }`}>
+                                {item.status}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-red-500 dark:text-red-400 font-mono text-[10px] max-w-[200px] truncate" title={item.last_error || ''}>
+                              {item.last_error || '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       ) : (

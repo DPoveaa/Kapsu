@@ -6,6 +6,7 @@ const FALLBACK_SETTINGS: SiteSettings = {
   contact_phone: '(11) 5304-2534',
   social_media: {},
   chatbot_enabled: true,
+  kaia_long_term_memory_enabled: true,
 }
 
 function readCachedSettings(): SiteSettings | null {

@@ -28,6 +28,9 @@ export interface Product {
   last_sync?: string | null;
   created_at?: string;
   updated_at?: string;
+  intended_form?: string | null;
+  intended_presentation?: string | null;
+  intended_units_per_dose?: string | null;
 }
 
 export type PriceHistoryType = 'purchase' | 'sale' | 'promo';

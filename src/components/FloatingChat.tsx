@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { MessageSquare, X, Send, Loader2, Phone, Mail, History, Plus, Trash2 } from 'lucide-react'
 import { whatsappService } from '../services/whatsapp.service'
 import { useAuth } from '../context/AuthContext'
@@ -2859,7 +2859,7 @@ const FloatingChat: React.FC = () => {
       return;
     }
 
-    const persistentTypes = ['cart_add', 'cart_clear', 'cart_remove', 'shipping_quote', 'free_shipping_check', 'coupon_copy', 'coupon_apply', 'human_support', 'human_support_request', 'return_to_ai'];
+    const persistentTypes = ['cart_add', 'cart_clear', 'cart_remove', 'cart_add_cancel', 'shipping_quote', 'free_shipping_check', 'coupon_copy', 'coupon_apply', 'human_support', 'human_support_request', 'return_to_ai'];
     
     if (persistentTypes.includes(type)) {
       setActionStates(prev => ({ ...prev, [stateKey]: 'loading' }));
@@ -3546,75 +3546,100 @@ const FloatingChat: React.FC = () => {
                               )
                             }
 
-                          const renderProductRecommendationCards = (products: any[]) => (
-                            <div className="w-full max-w-[85%] sm:max-w-[80%] space-y-2">
-                              {products.map((prod: any) => (
-                                <div
-                                  key={prod.id}
-                                  className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow transition-shadow flex flex-col space-y-2 text-left"
-                                >
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-[10px] bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 font-semibold px-1.5 py-0.5 rounded">
-                                      {prod.category || 'Geral'}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <h4 className="font-semibold text-xs text-gray-800 dark:text-gray-100 line-clamp-1">
-                                      {prod.name}
-                                    </h4>
-                                    {prod.description && (
-                                      <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5 leading-snug">
-                                        {prod.description}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div className="flex items-baseline space-x-1.5">
-                                    <span className="text-xs font-bold text-green-600 dark:text-green-400">
-                                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.price)}
-                                    </span>
-                                    {prod.originalPrice && prod.originalPrice > prod.price && (
-                                      <span className="text-[10px] text-gray-400 dark:text-gray-500 line-through">
-                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.originalPrice)}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-1.5 pt-1">
-                                    <button
-                                      onClick={() => {
-                                        navigate(prod.url || generateProductUrl(prod))
-                                        setIsOpen(false)
-                                      }}
-                                      className="py-1 text-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-[10px] font-semibold transition-colors cursor-pointer"
+                          const renderProductRecommendationCards = (products: any[], part?: any) => {
+                            const isDisambig = !!part?.disambiguationMode;
+                            const quantity = part?.quantity || 1;
+
+                            return (
+                              <div className="w-full max-w-[85%] sm:max-w-[80%] space-y-2">
+                                {products.map((prod: any) => {
+                                  const stateKey = isDisambig ? `action-disambig-${prod.id}-${quantity}` : `add-direct-${prod.id}`;
+                                  const state = isDisambig ? actionStates[stateKey] : localAddingProds[prod.id];
+                                  const buttonLabel = isDisambig
+                                    ? (quantity > 10 ? 'Escolher este' : 'Adicionar')
+                                    : 'Adicionar';
+
+                                  return (
+                                    <div
+                                      key={prod.id}
+                                      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 shadow-sm hover:shadow transition-shadow flex flex-col space-y-2 text-left"
                                     >
-                                      Ver Produto
-                                    </button>
-                                    <button
-                                      onClick={(e) => handleAddProductDirectly(prod, { fromElement: e.currentTarget })}
-                                      disabled={localAddingProds[prod.id] === 'loading'}
-                                      className={`py-1 text-center rounded text-[10px] font-semibold transition-colors flex items-center justify-center space-x-1 cursor-pointer
-                                          ${localAddingProds[prod.id] === 'success'
-                                          ? 'bg-green-700 text-white border border-green-500 scale-95'
-                                          : localAddingProds[prod.id] === 'loading'
-                                            ? 'bg-green-600 opacity-70 text-white cursor-not-allowed'
-                                            : 'bg-green-600 hover:bg-green-700 text-white'
-                                        }`}
-                                    >
-                                      {localAddingProds[prod.id] === 'loading' ? (
-                                        <>
-                                          <Loader2 className="w-3 h-3 animate-spin" />
-                                          <span>Adicionando...</span>
-                                        </>
-                                      ) : localAddingProds[prod.id] === 'success' ? (
-                                        <span>Adicionado! ✓</span>
-                                      ) : (
-                                        <span>Adicionar</span>
-                                      )}
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )
+                                      <div className="flex justify-between items-center">
+                                        <span className="text-[10px] bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 font-semibold px-1.5 py-0.5 rounded">
+                                          {prod.category || 'Geral'}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <h4 className="font-semibold text-xs text-gray-800 dark:text-gray-100 line-clamp-1">
+                                          {prod.name}
+                                        </h4>
+                                        {prod.description && (
+                                          <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5 leading-snug">
+                                            {prod.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="flex items-baseline space-x-1.5">
+                                        <span className="text-xs font-bold text-green-600 dark:text-green-400">
+                                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.price)}
+                                        </span>
+                                        {prod.originalPrice && prod.originalPrice > prod.price && (
+                                          <span className="text-[10px] text-gray-400 dark:text-gray-500 line-through">
+                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(prod.originalPrice)}
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-1.5 pt-1">
+                                        <button
+                                          onClick={() => {
+                                            navigate(prod.url || generateProductUrl(prod))
+                                            setIsOpen(false)
+                                          }}
+                                          className="py-1 text-center bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded text-[10px] font-semibold transition-colors cursor-pointer"
+                                        >
+                                          Ver Produto
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            if (isDisambig) {
+                                              const action = {
+                                                type: 'cart_add',
+                                                style: 'primary',
+                                                payload: { productId: prod.id, quantity }
+                                              };
+                                              const mockProd = { id: prod.id, name: prod.name, price: prod.price };
+                                              handleKaiaAction(action, { stateKey, fromElement: e.currentTarget, product: mockProd });
+                                            } else {
+                                              handleAddProductDirectly(prod, { fromElement: e.currentTarget });
+                                            }
+                                          }}
+                                          disabled={state === 'loading'}
+                                          className={`py-1 text-center rounded text-[10px] font-semibold transition-colors flex items-center justify-center space-x-1 cursor-pointer
+                                              ${state === 'success'
+                                              ? 'bg-green-700 text-white border border-green-500 scale-95'
+                                              : state === 'loading'
+                                                ? 'bg-green-600 opacity-70 text-white cursor-not-allowed'
+                                                : 'bg-green-600 hover:bg-green-700 text-white'
+                                            }`}
+                                        >
+                                          {state === 'loading' ? (
+                                            <>
+                                              <Loader2 className="w-3 h-3 animate-spin" />
+                                              <span>{isDisambig ? 'Aguarde...' : 'Adicionando...'}</span>
+                                            </>
+                                          ) : state === 'success' ? (
+                                            <span>{isDisambig ? 'Concluído! ✓' : 'Adicionado! ✓'}</span>
+                                          ) : (
+                                            <span>{buttonLabel}</span>
+                                          )}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          };
 
                           return (
                             <div className="flex flex-col items-start justify-start w-full space-y-2">
@@ -3657,7 +3682,7 @@ const FloatingChat: React.FC = () => {
                                   const products = part.products || part.items || msg.metadata?.recommendedProducts || []
                                   return (
                                     <div key={`part-products-${index}-${partIdx}`} className="w-full">
-                                      {renderProductRecommendationCards(products)}
+                                       {renderProductRecommendationCards(products, part)}
                                     </div>
                                   )
                                 }

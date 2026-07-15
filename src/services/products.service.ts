@@ -33,6 +33,9 @@ export interface BackendProduct {
   last_sync: string | null
   created_at: string | Date
   updated_at: string | Date
+  intended_form: string | null
+  intended_presentation: string | null
+  intended_units_per_dose: string | null
 }
 
 interface ProductsResponse {
@@ -116,6 +119,9 @@ class ProductsService {
       last_sync: product.last_sync ? String(product.last_sync) : null,
       created_at: product.created_at ? String(product.created_at) : undefined,
       updated_at: product.updated_at ? String(product.updated_at) : undefined,
+      intended_form: product.intended_form || null,
+      intended_presentation: product.intended_presentation || null,
+      intended_units_per_dose: product.intended_units_per_dose || null,
     }
   }
 
@@ -270,6 +276,9 @@ class ProductsService {
     meta_title?: string | null
     meta_description?: string | null
     tags?: string | null
+    intended_form?: string | null
+    intended_presentation?: string | null
+    intended_units_per_dose?: string | null
   }): Promise<Product> {
     try {
       const response = await fetch(`${this.baseUrl}`, {
@@ -472,6 +481,9 @@ class ProductsService {
     meta_title?: string | null
     meta_description?: string | null
     tags?: string | null
+    intended_form?: string | null
+    intended_presentation?: string | null
+    intended_units_per_dose?: string | null
   }): Promise<Product> {
     try {
       const response = await fetch(`${this.baseUrl}/${id}`, {
