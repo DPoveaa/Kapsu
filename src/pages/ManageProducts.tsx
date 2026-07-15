@@ -42,6 +42,9 @@ const IMPORT_FIELDS = [
   { key: 'contraindication', label: 'Contraindicação', required: false },
   { key: 'compositions', label: 'Formulação / Composição', required: false },
   { key: 'benefits', label: 'Benefícios', required: false },
+  { key: 'intended_form', label: 'Forma Pretendida', required: false },
+  { key: 'intended_presentation', label: 'Apresentação Pretendida', required: false },
+  { key: 'intended_units_per_dose', label: 'Unidades por Dose Pretendida', required: false },
 ] as const
 
 type FieldKey = typeof IMPORT_FIELDS[number]['key']
@@ -50,6 +53,7 @@ function autoDetect(headers: string[]): Record<FieldKey, string> {
   const m: Record<FieldKey, string> = {
     name: '', price: '', purchase_price: '', promo_price: '', description: '', category: '',
     indication: '', contraindication: '', compositions: '', benefits: '',
+    intended_form: '', intended_presentation: '', intended_units_per_dose: '',
   }
   for (const h of headers) {
     const low = h.toLowerCase()
@@ -63,6 +67,9 @@ function autoDetect(headers: string[]): Record<FieldKey, string> {
     else if (!m.contraindication && (low.includes('contra') || low.includes('contraindicação') || low.includes('contraindicacao'))) m.contraindication = h
     else if (!m.compositions && (low.includes('comp') || low.includes('form') || low.includes('composição') || low.includes('composicao') || low.includes('formula') || low.includes('fórmula'))) m.compositions = h
     else if (!m.benefits && (low.includes('benef') || low.includes('vantagem') || low === 'beneficios')) m.benefits = h
+    else if (!m.intended_form && (low.includes('forma pretendida') || low.includes('forma_pretendida') || low === 'forma')) m.intended_form = h
+    else if (!m.intended_presentation && (low.includes('apresentação pretendida') || low.includes('apresentacao pretendida') || low.includes('apresentacao_pretendida') || low.includes('apresentação') || low.includes('apresentacao'))) m.intended_presentation = h
+    else if (!m.intended_units_per_dose && (low.includes('unidade') || low.includes('dose') || low.includes('unid') || low.includes('dose pretendida'))) m.intended_units_per_dose = h
   }
   return m
 }
@@ -215,10 +222,12 @@ export default function ManageProducts() {
   const [columnMapping, setColumnMapping] = useState<Record<FieldKey, string>>({
     name: '', price: '', purchase_price: '', promo_price: '', description: '', category: '',
     indication: '', contraindication: '', compositions: '', benefits: '',
+    intended_form: '', intended_presentation: '', intended_units_per_dose: '',
   })
   const [autoDetected, setAutoDetected] = useState<Record<FieldKey, boolean>>({
     name: false, price: false, purchase_price: false, promo_price: false, description: false, category: false,
     indication: false, contraindication: false, compositions: false, benefits: false,
+    intended_form: false, intended_presentation: false, intended_units_per_dose: false,
   })
   const [isImporting, setIsImporting] = useState(false)
   const [importProgress, setImportProgress] = useState(0)
@@ -272,8 +281,12 @@ export default function ManageProducts() {
     free_shipping: false,
     sku: '',
     quantity: '',
+    intended_form: '',
+    intended_presentation: '',
+    intended_units_per_dose: '',
   }
   const [productFormData, setProductFormData] = useState(initialProductFormState)
+  const [activeModalTab, setActiveModalTab] = useState<'basic' | 'pricing' | 'details' | 'technical'>('basic')
   const priceEditSourceRef = useRef<'price' | 'markup' | 'purchase_price'>('price')
   const [newCatInput, setNewCatInput] = useState('')
   const [localAddedCategories, setLocalAddedCategories] = useState<string[]>([])
@@ -416,6 +429,9 @@ export default function ManageProducts() {
         free_shipping: productRaw.free_shipping ?? false,
         sku: productRaw.sku || '',
         quantity: productRaw.quantity || '',
+        intended_form: productRaw.intended_form || '',
+        intended_presentation: productRaw.intended_presentation || '',
+        intended_units_per_dose: productRaw.intended_units_per_dose || '',
       })
       setLocalAddedCategories([])
       setIsProductModalOpen(true)
@@ -536,6 +552,9 @@ export default function ManageProducts() {
         free_shipping: productFormData.free_shipping,
         sku: productFormData.sku.trim() || undefined,
         quantity: productFormData.quantity.trim() || undefined,
+        intended_form: productFormData.intended_form.trim() || undefined,
+        intended_presentation: productFormData.intended_presentation.trim() || undefined,
+        intended_units_per_dose: productFormData.intended_units_per_dose.trim() || undefined,
       }
 
       if (editingProduct) {
@@ -744,6 +763,9 @@ export default function ManageProducts() {
           'Indicação': product.indication || '',
           'Contraindicação': product.contraindication || '',
           'Benefícios': product.benefits || '',
+          'Forma Pretendida': product.intended_form || '',
+          'Apresentação Pretendida': product.intended_presentation || '',
+          'Unidades por Dose Pretendida': product.intended_units_per_dose || '',
           'Criado em': formatExportDate(product.created_at),
           'Atualizado em': formatExportDate(product.updated_at),
         }
@@ -754,7 +776,7 @@ export default function ManageProducts() {
         { wch: 38 }, { wch: 36 }, { wch: 48 }, { wch: 15 }, { wch: 18 },
         { wch: 16 }, { wch: 12 }, { wch: 24 }, { wch: 10 }, { wch: 12 },
         { wch: 13 }, { wch: 64 }, { wch: 48 }, { wch: 42 }, { wch: 42 },
-        { wch: 48 }, { wch: 20 }, { wch: 20 },
+        { wch: 48 }, { wch: 24 }, { wch: 24 }, { wch: 28 }, { wch: 20 }, { wch: 20 },
       ]
 
       productsToExport.forEach((product, index) => {
@@ -882,6 +904,9 @@ export default function ManageProducts() {
     setTextField('contraindication')
     setTextField('compositions')
     setTextField('benefits')
+    setTextField('intended_form')
+    setTextField('intended_presentation')
+    setTextField('intended_units_per_dose')
 
     if (hasField('purchase_price')) {
       const purchasePrice = cleanPrice(getImportCellValue(row, 'purchase_price'))
@@ -1223,10 +1248,12 @@ export default function ManageProducts() {
     setColumnMapping({
       name: '', price: '', purchase_price: '', promo_price: '', description: '', category: '',
       indication: '', contraindication: '', compositions: '', benefits: '',
+      intended_form: '', intended_presentation: '', intended_units_per_dose: '',
     })
     setAutoDetected({
       name: false, price: false, purchase_price: false, promo_price: false, description: false, category: false,
       indication: false, contraindication: false, compositions: false, benefits: false,
+      intended_form: false, intended_presentation: false, intended_units_per_dose: false,
     })
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
@@ -2198,7 +2225,7 @@ export default function ManageProducts() {
               </div>
             </div>
 
-            <div className="p-4 sm:p-5 border-t border-gray-100 dark:border-gray-800 flex flex-col-reverse sm:flex-row gap-3 bg-gray-50/50 dark:bg-gray-850">
+            <div className="p-4 sm:p-5 border-t border-gray-100 dark:border-gray-800 flex flex-col-reverse sm:flex-row gap-3 bg-gray-50/50 dark:bg-gray-800">
               <button
                 onClick={() => setIsMinimumMarginModalOpen(false)}
                 disabled={isApplyingMinimumMargin}
@@ -2293,21 +2320,21 @@ export default function ManageProducts() {
                           <button
                             type="button"
                             onClick={() => handleMatchResolutionChange(idx, 'update')}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${match.resolution === 'update' ? 'bg-green-600 border-green-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-255 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-55 dark:hover:bg-gray-750'}`}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${match.resolution === 'update' ? 'bg-green-600 border-green-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-205 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-55 dark:hover:bg-gray-700'}`}
                           >
                             Atualizar Existente
                           </button>
                           <button
                             type="button"
                             onClick={() => handleMatchResolutionChange(idx, 'create')}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${match.resolution === 'create' ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-255 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-55 dark:hover:bg-gray-750'}`}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${match.resolution === 'create' ? 'bg-blue-600 border-blue-600 text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-205 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-55 dark:hover:bg-gray-700'}`}
                           >
                             Criar Novo
                           </button>
                           <button
                             type="button"
                             onClick={() => handleMatchResolutionChange(idx, 'skip')}
-                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${match.resolution === 'skip' ? 'bg-gray-500 border-gray-500 text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-255 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-55 dark:hover:bg-gray-750'}`}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-all ${match.resolution === 'skip' ? 'bg-gray-500 border-gray-500 text-white shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-205 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-55 dark:hover:bg-gray-700'}`}
                           >
                             Ignorar
                           </button>
@@ -2506,7 +2533,7 @@ export default function ManageProducts() {
               <button
                 type="button"
                 onClick={() => setIsDbDuplicatesOpen(false)}
-                className="px-6 py-2.5 bg-gray-255 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-xl text-sm font-medium transition-colors"
+                className="px-6 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-xl text-sm font-medium transition-colors"
               >
                 Fechar
               </button>
@@ -2519,389 +2546,560 @@ export default function ManageProducts() {
       <AdminModal
         isOpen={isProductModalOpen}
         onClose={closeProductModal}
-        title={editingProduct ? 'Editar Produto' : 'Criar Novo Produto'}
+        title={editingProduct ? 'Editar Produto' : 'Adicionar Produto'}
         widthClass="max-w-4xl"
         footer={
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={closeProductModal}
-              className="px-5 py-2 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-sm"
-              disabled={productFormLoading}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="product-form"
-              disabled={productFormLoading}
-              className="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
-            >
-              {productFormLoading ? (
-                <>
-                  <Loader2 className="animate-spin mr-2" size={16} />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save size={16} className="mr-2" />
-                  {editingProduct ? 'Salvar Alterações' : 'Criar Produto'}
-                </>
-              )}
-            </button>
+          <div className="flex items-center justify-between w-full">
+            {/* Tab navigation indicators inside footer */}
+            <div className="hidden sm:flex gap-1 text-[11px] text-gray-400 font-medium">
+              Passo {activeModalTab === 'basic' ? '1' : activeModalTab === 'pricing' ? '2' : activeModalTab === 'details' ? '3' : '4'} de 4
+            </div>
+            <div className="flex gap-2 ml-auto">
+              <button
+                type="button"
+                onClick={closeProductModal}
+                className="px-4 py-2 border border-gray-205 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-xs font-semibold"
+                disabled={productFormLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                form="product-form"
+                disabled={productFormLoading}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-xs font-semibold shadow-sm shadow-green-600/10"
+              >
+                {productFormLoading ? (
+                  <>
+                    <Loader2 className="animate-spin mr-1.5" size={14} />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save size={14} className="mr-1.5" />
+                    {editingProduct ? 'Salvar Produto' : 'Cadastrar Produto'}
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         }
       >
         {loadingProductDetails ? (
-          <div className="flex justify-center py-12">
-            <Loader2 className="animate-spin text-primary-600 w-12 h-12" />
+          <div className="flex flex-col items-center justify-center py-16">
+            <Loader2 className="animate-spin text-green-500 w-10 h-10 mb-2" />
+            <p className="text-xs text-gray-400">Carregando dados do produto...</p>
           </div>
         ) : (
-          <form id="product-form" onSubmit={handleProductFormSubmit} className="space-y-6">
+          <div className="space-y-6">
+            {/* Visual Header */}
+            <div className="flex items-center gap-3 p-3 bg-gray-50/50 dark:bg-gray-900/40 rounded-xl border border-gray-200 dark:border-gray-800">
+              <div className="p-2 rounded-lg bg-green-50 dark:bg-green-950 text-green-600 dark:text-green-400">
+                <Sparkles size={18} />
+              </div>
+              <div>
+                <h3 className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                  {editingProduct ? 'Informações Técnicas & Preços' : 'Novo Cadastro de Produto'}
+                </h3>
+                <p className="text-[9px] text-gray-400 dark:text-gray-500">
+                  {editingProduct ? 'Modifique as especificações técnicas, composição, estoque e preços para atualizar no sistema e planilhas.' : 'Preencha as especificações técnicas e regras de preço para registrar no catálogo de produtos.'}
+                </p>
+              </div>
+            </div>
+            {/* Step Tab Buttons */}
+            <div className="flex flex-wrap border-b border-gray-100 dark:border-gray-800 pb-3 gap-2">
+              {[
+                { id: 'basic', label: '1. Informações Gerais', icon: <Sparkles size={14} /> },
+                { id: 'pricing', label: '2. Preços & Regras', icon: <Tag size={14} /> },
+                { id: 'details', label: '3. Apresentação Visual', icon: <FileText size={14} /> },
+                { id: 'technical', label: '4. Ficha Técnica (PDF)', icon: <AlertCircle size={14} /> },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveModalTab(tab.id as any)}
+                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
+                    activeModalTab === tab.id
+                      ? 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 border border-green-200/30 dark:border-green-800/30 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
             {productFormError && (
-              <div className="p-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-600 dark:text-red-300">{productFormError}</p>
+              <div className="p-3.5 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/40 rounded-xl flex items-start gap-2.5">
+                <AlertCircle className="text-red-500 flex-shrink-0 mt-0.5" size={16} />
+                <p className="text-xs text-red-700 dark:text-red-300 font-medium">{productFormError}</p>
               </div>
             )}
 
             {productImageError && (
-              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                <p className="text-sm text-yellow-600 dark:text-yellow-300">{productImageError}</p>
+              <div className="p-3.5 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-900/40 rounded-xl flex items-start gap-2.5">
+                <AlertCircle className="text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" size={16} />
+                <p className="text-xs text-yellow-700 dark:text-yellow-300 font-medium">{productImageError}</p>
               </div>
             )}
 
-            {/* Nome */}
-            <div>
-              <label htmlFor="product-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Nome do Produto <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                id="product-name"
-                name="name"
-                value={productFormData.name}
-                onChange={handleProductFormChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                placeholder="Ex: Vitamina D3 2000UI"
-              />
-            </div>
-
-            {/* SKU & Quantidade */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div>
-                <label htmlFor="product-sku" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  SKU (Único)
-                </label>
-                <input
-                  type="text"
-                  id="product-sku"
-                  name="sku"
-                  value={productFormData.sku}
-                  onChange={handleProductFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="Ex: VIT-D3-2000"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="product-quantity" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Quantidade (Planilha)
-                </label>
-                <input
-                  type="text"
-                  id="product-quantity"
-                  name="quantity"
-                  value={productFormData.quantity}
-                  onChange={handleProductFormChange}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="Ex: 60 cápsulas, 100ml"
-                />
-              </div>
-            </div>
-
-            {/* Descrição */}
-            <div>
-              <label htmlFor="product-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                'Descrição
-              </label>
-              <textarea
-                id="product-description"
-                name="description"
-                value={productFormData.description}
-                onChange={handleProductFormChange}
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                placeholder="Descreva o produto..."
-              />
-            </div>
-
-
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
-              {/* Preço de Compra */}
-              <div>
-                <label htmlFor="product-purchase_price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Preço de Compra (Custo) (R$)
-                </label>
-                <input
-                  type="number"
-                  id="product-purchase_price"
-                  name="purchase_price"
-                  value={productFormData.purchase_price}
-                  onChange={(e) => handleProductPriceFieldChange('purchase_price', e.target.value)}
-                  min="0"
-                  step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="0.00"
-                />
-                <p className="text-[10px] text-gray-500 mt-1">Custo pago pelo produto.</p>
-              </div>
-
-              {/* Markup (%) */}
-              <div>
-                <label htmlFor="product-markup" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Markup (%)
-                </label>
-                <input
-                  type="number"
-                  id="product-markup"
-                  name="markup"
-                  value={productFormData.markup}
-                  onChange={(e) => handleProductPriceFieldChange('markup', e.target.value)}
-                  min="0"
-                  step="0.0001"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                  placeholder="Ex: 50"
-                  disabled={!productFormData.purchase_price || Number(productFormData.purchase_price) <= 0}
-                  title={(!productFormData.purchase_price || Number(productFormData.purchase_price) <= 0) ? "Preencha o Preço de Compra para utilizar o markup" : ""}
-                />
-                <p className="text-[10px] text-gray-500 mt-1">Margem sobre o custo.</p>
-              </div>
-
-              {/* Preço de Venda */}
-              <div>
-                <label htmlFor="product-price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Preço de Venda (R$) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  id="product-price"
-                  name="price"
-                  value={productFormData.price}
-                  onChange={(e) => handleProductPriceFieldChange('price', e.target.value)}
-                  required
-                  min="0"
-                  step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="0.00"
-                />
-                {productMarginInfo && (
-                  <p className={`text-[10px] font-semibold mt-1 ${productMarginInfo.isPositive ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
-                    Margem: {productMarginInfo.margin}% (R$ {productMarginInfo.profit})
-                  </p>
-                )}
-              </div>
-
-              {/* Preço Promocional */}
-              <div>
-                <label htmlFor="product-promo_price" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Preço Promocional (R$)
-                </label>
-                <input
-                  type="number"
-                  id="product-promo_price"
-                  name="promo_price"
-                  value={productFormData.promo_price}
-                  onChange={handleProductFormChange}
-                  min="0"
-                  step="0.01"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                  placeholder="0.00"
-                />
-                <p className="text-[10px] text-gray-500 mt-1">Deixe vazio se sem promoção.</p>
-              </div>
-            </div>
-
-            {/* Categoria */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Categorias do Produto
-              </label>
-              <div className="flex flex-wrap gap-4 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-                {categoriesToDisplay.map(cat => {
-                  const isChecked = productFormData.category.split(',').map(s => s.trim().toLowerCase()).includes(cat.toLowerCase())
-                  return (
-                    <label key={cat} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+            <form id="product-form" onSubmit={handleProductFormSubmit} className="space-y-6">
+              
+              {/* TAB 1: BASIC INFORMATION */}
+              {activeModalTab === 'basic' && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  
+                  {/* Left Column: Input text fields */}
+                  <div className="md:col-span-2 space-y-5">
+                    <div>
+                      <label htmlFor="product-name" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
+                        Nome do Produto <span className="text-red-500">*</span>
+                      </label>
                       <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={e => {
-                          const currentCats = productFormData.category.split(',').map(s => s.trim()).filter(Boolean)
-                          let newCats: string[]
-                          if (e.target.checked) {
-                            if (currentCats.length === 1 && currentCats[0].toLowerCase() === 'outros' && cat.toLowerCase() !== 'outros') {
-                              newCats = [cat]
-                            } else {
-                              newCats = [...currentCats, cat]
-                            }
-                          } else {
-                            newCats = currentCats.filter(c => c.toLowerCase() !== cat.toLowerCase())
-                          }
-                          if (newCats.length === 0) newCats = ['Outros']
-                          setProductFormData(prev => ({ ...prev, category: newCats.join(', ') }))
-                        }}
-                        className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                        type="text"
+                        id="product-name"
+                        name="name"
+                        value={productFormData.name}
+                        onChange={handleProductFormChange}
+                        required
+                        className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all shadow-sm"
+                        placeholder="Ex: Coenzima Q10 100mg"
                       />
-                      {cat}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="product-sku" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                          SKU (Identificador Único)
+                        </label>
+                        <input
+                          type="text"
+                          id="product-sku"
+                          name="sku"
+                          value={productFormData.sku}
+                          onChange={handleProductFormChange}
+                          className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all shadow-sm"
+                          placeholder="Ex: CQ10-100MG"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="product-quantity" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                          Estoque / Quantidade (Planilha)
+                        </label>
+                        <input
+                          type="text"
+                          id="product-quantity"
+                          name="quantity"
+                          value={productFormData.quantity}
+                          onChange={handleProductFormChange}
+                          className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all shadow-sm"
+                          placeholder="Ex: 60 cápsulas, 100 ml"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Category select block */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Categorias vinculadas
+                      </label>
+                      <div className="p-3 bg-gray-50/50 dark:bg-gray-900/50 rounded-xl border border-gray-200/80 dark:border-gray-800 grid grid-cols-2 gap-2">
+                        {categoriesToDisplay.map(cat => {
+                          const isChecked = productFormData.category.split(',').map(s => s.trim().toLowerCase()).includes(cat.toLowerCase())
+                          return (
+                            <label key={cat} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition-all ${
+                              isChecked
+                                ? 'bg-green-50/40 dark:bg-green-950/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 font-medium'
+                                : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                            }`}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={e => {
+                                  const currentCats = productFormData.category.split(',').map(s => s.trim()).filter(Boolean)
+                                  let newCats: string[]
+                                  if (e.target.checked) {
+                                    if (currentCats.length === 1 && currentCats[0].toLowerCase() === 'outros' && cat.toLowerCase() !== 'outros') {
+                                      newCats = [cat]
+                                    } else {
+                                      newCats = [...currentCats, cat]
+                                    }
+                                  } else {
+                                    newCats = currentCats.filter(c => c.toLowerCase() !== cat.toLowerCase())
+                                  }
+                                  if (newCats.length === 0) newCats = ['Outros']
+                                  setProductFormData(prev => ({ ...prev, category: newCats.join(', ') }))
+                                }}
+                                className="h-3.5 w-3.5 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                              />
+                              {cat}
+                            </label>
+                          )
+                        })}
+                      </div>
+
+                      {/* Custom Category */}
+                      <div className="mt-2.5 flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Criar nova categoria..."
+                          value={newCatInput}
+                          onChange={e => setNewCatInput(e.target.value)}
+                          className="px-3 py-1.5 text-xs border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent flex-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddNewCat}
+                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold transition-all border border-gray-200/50 dark:border-gray-700/50"
+                        >
+                          + Adicionar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Image display and Status options */}
+                  <div className="space-y-5">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                        Imagem do Produto
+                      </label>
+                      <div className="p-3 bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200/80 dark:border-gray-800 rounded-xl">
+                        <ImageUpload
+                          value={productFormData.image}
+                          onChange={(url) => setProductFormData(prev => ({ ...prev, image: url }))}
+                          onError={(err) => setProductImageError(err || null)}
+                          disabled={productFormLoading}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200/80 dark:border-gray-800 rounded-xl space-y-3.5">
+                      <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status & Visibilidade</h4>
+                      
+                      {/* Active Toggle Switch */}
+                      <label className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-gray-800/40 border border-gray-150/50 dark:border-gray-700 cursor-pointer select-none">
+                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Produto Ativo</span>
+                        <input
+                          type="checkbox"
+                          name="active"
+                          checked={productFormData.active}
+                          onChange={handleProductFormChange}
+                          className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: PRICING & REGULATION */}
+              {activeModalTab === 'pricing' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    
+                    {/* Purchase Price */}
+                    <div className="p-3 bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200/60 dark:border-gray-800 rounded-xl">
+                      <label htmlFor="product-purchase_price" className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                        Custo de Compra (R$)
+                      </label>
+                      <input
+                        type="number"
+                        id="product-purchase_price"
+                        name="purchase_price"
+                        value={productFormData.purchase_price}
+                        onChange={(e) => handleProductPriceFieldChange('purchase_price', e.target.value)}
+                        min="0"
+                        step="0.01"
+                        className="w-full px-2.5 py-1.5 text-xs font-semibold border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                        placeholder="0,00"
+                      />
+                      <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-1">Preço de custo unitário</p>
+                    </div>
+
+                    {/* Markup */}
+                    <div className="p-3 bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200/60 dark:border-gray-800 rounded-xl">
+                      <label htmlFor="product-markup" className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1 flex items-center gap-1">
+                        Markup (%)
+                      </label>
+                      <input
+                        type="number"
+                        id="product-markup"
+                        name="markup"
+                        value={productFormData.markup}
+                        onChange={(e) => handleProductPriceFieldChange('markup', e.target.value)}
+                        min="0"
+                        step="0.0001"
+                        className="w-full px-2.5 py-1.5 text-xs font-semibold border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        placeholder="Ex: 50"
+                        disabled={!productFormData.purchase_price || Number(productFormData.purchase_price) <= 0}
+                        title={(!productFormData.purchase_price || Number(productFormData.purchase_price) <= 0) ? "Preencha o Preço de Custo para usar markup" : ""}
+                      />
+                      <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-1">Margem percentual multiplicada</p>
+                    </div>
+
+                    {/* Selling Price */}
+                    <div className="p-3 bg-green-50/20 dark:bg-green-950/10 border border-green-100/50 dark:border-green-900/20 rounded-xl">
+                      <label htmlFor="product-price" className="block text-xs font-semibold text-green-700 dark:text-green-400 mb-1">
+                        Preço de Venda (R$) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        id="product-price"
+                        name="price"
+                        value={productFormData.price}
+                        onChange={(e) => handleProductPriceFieldChange('price', e.target.value)}
+                        required
+                        min="0"
+                        step="0.01"
+                        className="w-full px-2.5 py-1.5 text-xs font-bold border border-green-200 dark:border-green-800 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                        placeholder="0,00"
+                      />
+                      <p className="text-[9px] text-green-600 dark:text-green-500 mt-1">Valor final exibido ao público</p>
+                    </div>
+
+                    {/* Promotional Price */}
+                    <div className="p-3 bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200/60 dark:border-gray-800 rounded-xl">
+                      <label htmlFor="product-promo_price" className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                        Preço Promo (R$)
+                      </label>
+                      <input
+                        type="number"
+                        id="product-promo_price"
+                        name="promo_price"
+                        value={productFormData.promo_price}
+                        onChange={handleProductFormChange}
+                        min="0"
+                        step="0.01"
+                        className="w-full px-2.5 py-1.5 text-xs font-semibold border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
+                        placeholder="Ex: 19,90"
+                      />
+                      <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-1">Vazio para desabilitar promo</p>
+                    </div>
+                  </div>
+
+                  {/* Profit Margin Widget Card */}
+                  {productMarginInfo && (
+                    <div className={`p-4 rounded-xl border flex items-center justify-between ${
+                      productMarginInfo.isPositive
+                        ? 'bg-green-50/30 dark:bg-green-950/10 border-green-150 dark:border-green-900/30 text-green-800 dark:text-green-400'
+                        : 'bg-red-50/30 dark:bg-red-950/10 border-red-150 dark:border-red-900/30 text-red-800 dark:text-red-400'
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${productMarginInfo.isPositive ? 'bg-green-100 dark:bg-green-900/40 text-green-600' : 'bg-red-100 dark:bg-red-900/40 text-red-600'}`}>
+                          {productMarginInfo.isPositive ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold">Margem de Lucro Detectada</p>
+                          <p className="text-[10px] opacity-80 mt-0.5">
+                            Cálculo bruto baseado no custo de compra informado e no valor final de venda.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-base font-extrabold block">{productMarginInfo.margin}%</span>
+                        <span className="text-[10px] font-semibold opacity-70">Lucro de R$ {productMarginInfo.profit} / un</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                    {/* Target Audience */}
+                    <div>
+                      <label htmlFor="product-target_audience" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                        Público-alvo recomendado
+                      </label>
+                      <select
+                        id="product-target_audience"
+                        name="target_audience"
+                        value={productFormData.target_audience}
+                        onChange={handleProductFormChange}
+                        className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all shadow-sm"
+                      >
+                        <option value="unknown">Não informado / Geral</option>
+                        <option value="unisex">Unissex</option>
+                        <option value="female">Feminino</option>
+                        <option value="male">Masculino</option>
+                      </select>
+                    </div>
+
+                    {/* Free Shipping Option Box */}
+                    <div className="flex items-end">
+                      <label className="flex items-center gap-2.5 p-3 rounded-xl border border-gray-200 dark:border-gray-700 dark:bg-gray-800/20 hover:bg-gray-50/50 dark:hover:bg-gray-800/40 cursor-pointer select-none transition-all w-full">
+                        <input
+                          type="checkbox"
+                          id="product-free_shipping"
+                          name="free_shipping"
+                          checked={productFormData.free_shipping}
+                          onChange={handleProductFormChange}
+                          className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                        />
+                        <div>
+                          <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block">Oferecer Frete Grátis</span>
+                          <span className="text-[9px] text-gray-400 dark:text-gray-500">Este produto não terá cobrança de frete no envio</span>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: DESCRIPTION & BENEFITS */}
+              {activeModalTab === 'details' && (
+                <div className="space-y-5">
+                  <div>
+                    <label htmlFor="product-description" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                      Descrição do Produto
                     </label>
-                  )
-                })}
-              </div>
+                    <textarea
+                      id="product-description"
+                      name="description"
+                      value={productFormData.description}
+                      onChange={handleProductFormChange}
+                      rows={5}
+                      className="w-full px-3 py-2.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all shadow-sm"
+                      placeholder="Descreva o produto, benefícios genéricos e uso geral..."
+                    />
+                  </div>
 
-              {/* Add Custom Category Input */}
-              <div className="mt-3 flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Nova categoria..."
-                  value={newCatInput}
-                  onChange={e => setNewCatInput(e.target.value)}
-                  className="px-3 py-1.5 text-xs border border-gray-300 dark:border-gray-750 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent flex-1"
-                />
-                <button
-                  type="button"
-                  onClick={handleAddNewCat}
-                  className="px-4 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors"
-                >
-                  + Adicionar Categoria
-                </button>
-              </div>
-            </div>
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                      <label htmlFor="product-benefits" className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
+                        Benefícios Principais (Destaques)
+                      </label>
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">Escreva um benefício por linha</span>
+                    </div>
+                    <textarea
+                      id="product-benefits"
+                      name="benefits"
+                      value={productFormData.benefits}
+                      onChange={handleProductFormChange}
+                      rows={6}
+                      className="w-full px-3 py-2.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all shadow-sm font-sans"
+                      placeholder="Ex: &#10;Melhora a produção de energia celular&#10;Poderoso antioxidante protetor&#10;Auxilia na saúde cardiovascular"
+                    />
+                  </div>
+                </div>
+              )}
 
-            {/* Imagem */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Imagem do Produto
-              </label>
-              <ImageUpload
-                value={productFormData.image}
-                onChange={(url) => setProductFormData(prev => ({ ...prev, image: url }))}
-                onError={(err) => setProductImageError(err || null)}
-                disabled={productFormLoading}
-              />
-            </div>
+              {/* TAB 4: TECHNICAL / CATALOG INFO */}
+              {activeModalTab === 'technical' && (
+                <div className="space-y-5">
+                  <div className="p-3.5 bg-green-50/20 dark:bg-green-950/10 border border-green-100/50 dark:border-green-900/20 rounded-xl">
+                    <p className="text-[10px] text-green-700 dark:text-green-400 font-medium flex items-center gap-1.5">
+                      <AlertCircle size={12} />
+                      As informações abaixo são exibidas no PDF de exportação técnica e sincronizadas com a planilha.
+                    </p>
+                  </div>
 
-            {/* Composições */}
-            <div>
-              <label htmlFor="product-compositions" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Formulação / Composição
-              </label>
-              <textarea
-                id="product-compositions"
-                name="compositions"
-                value={productFormData.compositions}
-                onChange={handleProductFormChange}
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                placeholder="Informe as composições do produto..."
-              />
-            </div>
+                  {/* 3 Intended columns row */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label htmlFor="product-intended_form" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
+                        Forma Pretendida
+                      </label>
+                      <input
+                        type="text"
+                        id="product-intended_form"
+                        name="intended_form"
+                        value={productFormData.intended_form}
+                        onChange={handleProductFormChange}
+                        className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all shadow-sm"
+                        placeholder="Ex: Creme de uso tópico"
+                      />
+                      <span className="text-[9px] text-gray-400 mt-1 block font-normal">Insira 'Não se aplica' para ignorar no PDF</span>
+                    </div>
 
-            {/* Indicação */}
-            <div>
-              <label htmlFor="product-indication" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                'Indicação
-              </label>
-              <textarea
-                id="product-indication"
-                name="indication"
-                value={productFormData.indication}
-                onChange={handleProductFormChange}
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 dark':border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                placeholder="Informe as indicações do produto..."
-              />
-            </div>
+                    <div>
+                      <label htmlFor="product-intended_presentation" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
+                        Apresentação Pretendida
+                      </label>
+                      <input
+                        type="text"
+                        id="product-intended_presentation"
+                        name="intended_presentation"
+                        value={productFormData.intended_presentation}
+                        onChange={handleProductFormChange}
+                        className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all shadow-sm"
+                        placeholder="Ex: Bisnaga com 10 g"
+                      />
+                      <span className="text-[9px] text-gray-400 mt-1 block font-normal">Ex: Frasco com 30 ml, Pote 100g</span>
+                    </div>
 
-            {/* Contraindicação */}
-            <div>
-              <label htmlFor="product-contraindication" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                'Contraindicação
-              </label>
-              <textarea
-                id="product-contraindication"
-                name="contraindication"
-                value={productFormData.contraindication}
-                onChange={handleProductFormChange}
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 dark':border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                placeholder="Informe as contraindicações do produto..."
-              />
-            </div>
+                    <div>
+                      <label htmlFor="product-intended_units_per_dose" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center gap-1">
+                        Unidades por dose pretendida
+                      </label>
+                      <input
+                        type="text"
+                        id="product-intended_units_per_dose"
+                        name="intended_units_per_dose"
+                        value={productFormData.intended_units_per_dose}
+                        onChange={handleProductFormChange}
+                        className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all shadow-sm"
+                        placeholder="Ex: Não se aplica"
+                      />
+                      <span className="text-[9px] text-gray-400 mt-1 block font-normal">Ex: 1 cápsula por dose, 5g ao dia</span>
+                    </div>
+                  </div>
 
-            {/* Benefícios */}
-            <div>
-              <label htmlFor="product-benefits" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                'Benefícios do Produto
-              </label>
-              <textarea
-                id="product-benefits"
-                name="benefits"
-                value={productFormData.benefits}
-                onChange={handleProductFormChange}
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 dark':border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-                placeholder="Descreva os benefícios do produto (um por linha)..."
-              />
-            </div>
+                  <hr className="border-gray-150 dark:border-gray-800 my-4" />
 
-            {/* Publico-alvo */}
-            <div>
-              <label htmlFor="product-target_audience" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Publico-alvo
-              </label>
-              <select
-                id="product-target_audience"
-                name="target_audience"
-                value={productFormData.target_audience}
-                onChange={handleProductFormChange}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
-              >
-                <option value="unknown">Nao informado</option>
-                <option value="unisex">Unissex</option>
-                <option value="female">Feminino</option>
-                <option value="male">Masculino</option>
-              </select>
-            </div>
-            {/* Frete Grátis */}
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="product-free_shipping"
-                name="free_shipping"
-                checked={productFormData.free_shipping}
-                onChange={handleProductFormChange}
-                className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 dark:border-gray-750 dark:border-gray-700"
-              />
-              <label htmlFor="product-free_shipping" className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-                Oferecer frete grátis para este produto
-              </label>
-            </div>
+                  {/* Formulation */}
+                  <div>
+                    <label htmlFor="product-compositions" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                      Formulação / Composição (Fórmula completa)
+                    </label>
+                    <textarea
+                      id="product-compositions"
+                      name="compositions"
+                      value={productFormData.compositions}
+                      onChange={handleProductFormChange}
+                      rows={3}
+                      className="w-full px-3 py-2.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all shadow-sm"
+                      placeholder="Ex: Vitamina D3 2000 UI, Zinco Quelato 15mg..."
+                    />
+                  </div>
 
-            {/* Ativo */}
-            <div>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="active"
-                  checked={productFormData.active}
-                  onChange={handleProductFormChange}
-                  className="mr-2 dark:border-gray-750 dark:border-gray-700"
-                />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Produto ativo</span>
-              </label>
-            </div>
-          </form>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Indication */}
+                    <div>
+                      <label htmlFor="product-indication" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                        Indicação de Uso
+                      </label>
+                      <textarea
+                        id="product-indication"
+                        name="indication"
+                        value={productFormData.indication}
+                        onChange={handleProductFormChange}
+                        rows={3}
+                        className="w-full px-3 py-2.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all shadow-sm"
+                        placeholder="Informe as indicações recomendadas..."
+                      />
+                    </div>
+
+                    {/* Contraindication */}
+                    <div>
+                      <label htmlFor="product-contraindication" className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+                        Contraindication
+                      </label>
+                      <textarea
+                        id="product-contraindication"
+                        name="contraindication"
+                        value={productFormData.contraindication}
+                        onChange={handleProductFormChange}
+                        rows={3}
+                        className="w-full px-3 py-2.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent dark:bg-gray-800 dark:text-white transition-all shadow-sm"
+                        placeholder="Informe as contraindicações relevantes..."
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </form>
+          </div>
         )}
       </AdminModal>
     </div>
