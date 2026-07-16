@@ -573,8 +573,8 @@ class WhatsAppService {
     conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string; timestamp?: number }>,
     cartInfo?: { itemCount: number; total: number; items?: Array<{ name: string; quantity: number; price: number }> } | null,
     userId?: string,
-    isAuthenticated?: boolean,
-    userInfo?: { id: string; name: string; email: string; phone?: string } | undefined
+    _isAuthenticated?: boolean,
+    _userInfo?: { id: string; name: string; email: string; phone?: string } | undefined
   ): Promise<{
     success: boolean
     data: {
@@ -614,8 +614,8 @@ class WhatsAppService {
           conversationHistory: conversationHistory || [],
           cartInfo: cartInfo || null,
           userId: userId || undefined,
-          isAuthenticated: isAuthenticated || false,
-          userInfo: userInfo || undefined
+          isAuthenticated: _isAuthenticated || false,
+          userInfo: _userInfo || undefined
         }),
       })
       const text = await response.text()
@@ -1271,12 +1271,12 @@ class WhatsAppService {
    */
   async sendSiteMessage(
     message: string,
-    userId?: string,
+    _userId?: string,
     cartInfo?: any,
-    conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string; timestamp?: number }>,
-    isAuthenticated?: boolean,
-    userInfo?: { id: string; name: string; email: string; phone?: string },
-    notificationChoice?: {
+    _conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string; timestamp?: number }>,
+    _isAuthenticated?: boolean,
+    _userInfo?: { id: string; name: string; email: string; phone?: string },
+    _notificationChoice?: {
       type: 'notification_preference_choice';
       channel?: 'email' | 'whatsapp';
       notificationType: string;

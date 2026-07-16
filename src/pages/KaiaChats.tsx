@@ -1084,6 +1084,103 @@ export default function KaiaChats() {
     rejecting: boolean;
   }>>({});
 
+  const initAliasState = (item: any) => {
+    setAliasReviewState(prev => {
+      if (prev[item.id]) return prev;
+      return {
+        ...prev,
+        [item.id]: {
+          editedAlias: item.detected_alias || item.proposed_alias || '',
+          selectedProductId: item.suggested_product_id || '',
+          selectedProductName: item.suggested_product_name || '',
+          rejectReason: '',
+          showRejectReason: false,
+          productSearchQuery: '',
+          productSearchResults: [],
+          productSearchLoading: false,
+          approving: false,
+          rejecting: false
+        }
+      };
+    });
+  };
+
+  const updateAliasState = (id: string, patch: Partial<Record<string, any>>) => {
+    setAliasReviewState(prev => ({
+      ...prev,
+      [id]: {
+        ...(prev[id] || {
+          editedAlias: '',
+          selectedProductId: '',
+          selectedProductName: '',
+          rejectReason: '',
+          showRejectReason: false,
+          productSearchQuery: '',
+          productSearchResults: [],
+          productSearchLoading: false,
+          approving: false,
+          rejecting: false
+        }),
+        ...patch
+      } as any
+    }));
+  };
+
+  const searchAliasProducts = async (id: string, query: string) => {
+    updateAliasState(id, { productSearchQuery: query, productSearchLoading: true });
+    try {
+      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+      const res = await fetch(`${API_URL}/admin/kaia/v2/products/search?q=${encodeURIComponent(query)}`, { headers });
+      const json = await res.json();
+      updateAliasState(id, {
+        productSearchResults: Array.isArray(json.data) ? json.data : [],
+        productSearchLoading: false
+      });
+    } catch (error) {
+      updateAliasState(id, { productSearchResults: [], productSearchLoading: false });
+    }
+  };
+
+  const handleRejectWithReason = async (id: string) => {
+    const state = aliasReviewState[id];
+    updateAliasState(id, { rejecting: true });
+    try {
+      const headers = {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      };
+      const res = await fetch(`${API_URL}/admin/kaia/v2/learning/improvements/${id}/reject`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ reason: state?.rejectReason || null })
+      });
+      if (!res.ok) throw new Error('Falha ao rejeitar apelido');
+      await fetchLearningData();
+    } finally {
+      updateAliasState(id, { rejecting: false });
+    }
+  };
+
+  const handleApproveAlias = async (id: string) => {
+    const state = aliasReviewState[id];
+    if (!state?.editedAlias?.trim() || !state?.selectedProductId) return;
+    updateAliasState(id, { approving: true });
+    try {
+      const headers = {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Content-Type': 'application/json'
+      };
+      const res = await fetch(`${API_URL}/admin/kaia/v2/learning/improvements/${id}/approve-alias`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ alias: state.editedAlias, targetProductId: state.selectedProductId })
+      });
+      if (!res.ok) throw new Error('Falha ao aprovar apelido');
+      await fetchLearningData();
+    } finally {
+      updateAliasState(id, { approving: false });
+    }
+  };
   const fetchLearningData = useCallback(async () => {
     setLoadingLearning(true);
     try {

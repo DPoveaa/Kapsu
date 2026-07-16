@@ -8,7 +8,6 @@ import { productsService } from '../services/products.service'
 import { useNavigate } from 'react-router-dom'
 import { env } from '../config/env'
 import { normalizeActionsForLayout, getActionStateKey } from '../utils/kaiaActions'
-import { searchProducts } from '../utils/productSearch'
 import { PromotionChatCards } from './chat/PromotionChatCards'
 import { animateAddToCart } from '../utils/cartFlyAnimation'
 import { getOrderStatusLabel } from '../utils/orderStatus'
@@ -177,6 +176,9 @@ const splitProductRecommendationText = (content: string, explicitFollowUp?: stri
       introText: cleanContent.slice(0, match.index).trim(),
       followUpText: match[1].trim(),
       usedFallback: true
+    }
+  }
+
   return {
     introText: content,
     followUpText: '',
@@ -184,101 +186,16 @@ const splitProductRecommendationText = (content: string, explicitFollowUp?: stri
   }
 }
 
-const normalizeCommercialSymptomText = (value: string) => value
-  .toLowerCase()
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
-
-const isHighRiskHealthMessage = (message: string) => {
-  const normalized = normalizeCommercialSymptomText(message)
-  return /\b(peito|falta de ar|desmaio|convulsao|sangramento|emergencia|urgente|dor forte|muito forte)\b/.test(normalized)
+const emitKaiaSanitationTelemetry = (source: string, diagnostics: Record<string, unknown>) => {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent('kaia:sanitation', {
+    detail: {
+      source,
+      diagnostics,
+      timestamp: new Date().toISOString(),
+    }
+  }))
 }
-
-const shouldAttemptSymptomCommercialFallback = (message: string, aiData: any) => {
-  // DESATIVADO: Apenas o backend decide intenção de sintomas e recomendações de produto.
-  return false
-}
-
-const buildSymptomCommercialQuery = (message: string) => {
-  const normalized = normalizeCommercialSymptomText(message)
-  const terms = ['bem estar', 'conforto', 'recuperacao', 'relaxamento']
-  if (/\b(dor|dolorido|corpo|muscular|pernas|aliviar)\b/.test(normalized)) {
-    terms.push('dor muscular', 'conforto muscular', 'recuperacao', 'articulacao')
-  }
-  if (/\bcolica|menstruacao|tpm\b/.test(normalized)) {
-    terms.push('colica', 'saude feminina', 'bem estar')
-  }
-  if (/\barticulacao|junta|joelho\b/.test(normalized)) {
-    terms.push('articulacao', 'circulacao', 'bem estar')
-  }
-  return Array.from(new Set(terms)).join(' ')
-}
-
-type AudienceGender = 'male' | 'female' | 'unknown'
-type AudienceContext = {
-  gender: AudienceGender
-  source: 'explicit_user_correction' | 'profile' | 'product_context' | 'unknown'
-  confidence: number
-  updatedAt: string
-}
-
-type LastCommercialContext = {
-  intent: 'product_recommendation'
-  detectedGoal: string
-  userNeed: string
-  audienceContext: AudienceContext
-}
-
-const createUnknownAudienceContext = (): AudienceContext => ({
-  gender: 'unknown',
-  source: 'unknown',
-  confidence: 0,
-  updatedAt: new Date().toISOString(),
-})
-
-const detectAudienceCorrection = (message: string): AudienceContext | null => {
-  // DESATIVADO: Roteamento de audiência e gênero é responsabilidade exclusiva do backend.
-  return null
-}
-
-const isLibidoNeed = (message: string) => {
-  // DESATIVADO: Recomendações e interpretações de libido são feitas exclusivamente no backend.
-  return false
-}
-
-const isShortRecommendationFollowUp = (message: string) => {
-  // DESATIVADO: Tratar no backend.
-  return false
-}
-
-const inferProductTargetAudience = (product: any): AudienceGender | 'unisex' => {
-  const explicit = product.targetAudience || product.target_audience || product.audience || product.gender
-  if (['male', 'female', 'unisex', 'unknown'].includes(String(explicit || ''))) return explicit
-
-  const text = normalizeCommercialSymptomText([
-    product.name,
-    product.category,
-    product.description,
-    product.benefits,
-    product.indication,
-  ].filter(Boolean).join(' '))
-
-  if (/\b(libido mulher|mulher|feminina|feminino|saude feminina|menopausa|tpm|menstrual)\b/.test(text)) return 'female'
-  if (/\b(tadala|homem|masculina|masculino|broxa|prostata)\b/.test(text)) return 'male'
-  if (/\b(libi up|libi \+|feno grego|libido|desejo sexual|vitalidade sexual)\b/.test(text)) return 'unisex'
-  return 'unknown'
-}
-
-const scoreAudienceFit = (targetAudience: AudienceGender | 'unisex', audienceGender: AudienceGender) => {
-  if (audienceGender === 'unknown') {
-    if (targetAudience === 'unisex' || targetAudience === 'unknown') return 0.25
-    return -0.35
-  }
-  if (targetAudience === audienceGender) return 0.65
-  if (targetAudience === 'unisex' || targetAudience === 'unknown') return 0.25
-  return -1
-}
-
 const getCartAfterSnapshot = (payload: any) => {
   const metadata = payload?.metadata || {}
   const diagnostics = payload?.diagnostics || metadata?.diagnostics || metadata?.clientDiagnostics || {}
@@ -498,7 +415,7 @@ const buildClientChatMessage = (historyMessage: any): ChatMessage => {
   }
 
   if (sanitized.hadInternalMarkers || clientMetadata?.clientDiagnostics?.rebuiltCards || clientMetadata?.clientDiagnostics?.rebuiltButtons) {
-    console.debug('[Kaia widget] mensagem de historico sanitizada para o cliente', clientMetadata?.clientDiagnostics)
+    emitKaiaSanitationTelemetry('history', clientMetadata?.clientDiagnostics || {})
   }
 
   return applyValidatedCopyToParts({
@@ -642,126 +559,6 @@ const FloatingChat: React.FC = () => {
   const [removedCartItems, setRemovedCartItems] = useState<Record<string, { name: string; qty: number; productObj: { id: string; name: string; price: number; image: string | null } }>>({})
   /** Código do cupão que foi copiado recentemente (para feedback visual temporário) */
   const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null)
-  const audienceContextRef = useRef<AudienceContext>(createUnknownAudienceContext())
-  const lastCommercialContextRef = useRef<LastCommercialContext | null>(null)
-
-  const respondWithAudienceAwareLibidoRecommendation = useCallback(async (
-    triggerMessage: string,
-    audienceContext: AudienceContext,
-    reason: 'initial' | 'correction' | 'follow_up'
-  ) => {
-    try {
-      const allProducts = await productsService.getAll()
-      const activeProducts = allProducts.filter((product: any) => product.active !== false && product.archived !== true)
-      const rankedProducts = searchProducts(activeProducts, 'libido desejo sexual vitalidade sexual desempenho energia feno grego tadala libi', 12)
-        .map((result: any) => {
-          const targetAudience = inferProductTargetAudience(result.product)
-          const audienceFit = scoreAudienceFit(targetAudience, audienceContext.gender)
-          const normalizedName = normalizeCommercialSymptomText(result.product.name || '')
-          const goalBoost = /\b(libi|libido|tadala|feno grego|desempenho|vitalidade)\b/.test(normalizedName) ? 0.35 : 0
-          return { ...result, targetAudience, audienceFit, finalScore: Number(result.score || 0) + audienceFit + goalBoost }
-        })
-        .filter((result: any) => {
-          if (audienceContext.gender === 'male') return result.targetAudience !== 'female'
-          if (audienceContext.gender === 'female') return result.targetAudience !== 'male'
-          return result.targetAudience === 'unisex' || result.targetAudience === 'unknown'
-        })
-        .sort((a: any, b: any) => b.finalScore - a.finalScore)
-
-      const products = rankedProducts.slice(0, 3).map(({ product, targetAudience, audienceFit }: any) => ({
-        id: product.id,
-        name: product.name,
-        price: Number(product.price || 0),
-        promoPrice: product.promo_price ?? null,
-        category: product.category,
-        description: product.description,
-        benefits: product.benefits,
-        image: product.image,
-        targetAudience,
-        audienceMatch: audienceFit,
-        goalMatch: 'libido_support',
-        url: generateProductUrl(product)
-      }))
-
-      if (products.length === 0) return false
-
-      const primary = products[0]
-      const introByReason: Record<typeof reason, string> = {
-        initial: audienceContext.gender === 'unknown'
-          ? 'Entendi. Separei opcoes voltadas para apoiar libido, energia e bem-estar, sem assumir genero. Se quiser, tambem posso filtrar por opcoes masculinas ou femininas.'
-          : 'Entendi. Separei opcoes alinhadas ao seu contexto para apoiar libido, energia e bem-estar.',
-        correction: audienceContext.gender === 'male'
-          ? 'Entendi, obrigado por corrigir. Ajustei as sugestoes para opcoes mais alinhadas ao publico masculino.'
-          : 'Entendi, obrigado por corrigir. Ajustei as sugestoes para opcoes mais alinhadas ao publico feminino.',
-        follow_up: audienceContext.gender === 'male'
-          ? 'Sim. Mantive o contexto de libido e filtrei as opcoes para o publico masculino.'
-          : audienceContext.gender === 'female'
-            ? 'Sim. Mantive o contexto de libido e filtrei as opcoes para o publico feminino.'
-            : 'Sim. Mantive o contexto de libido e selecionei opcoes sem assumir genero.'
-      }
-      const intro = introByReason[reason]
-      const closing = primary.name + ' e a opcao mais alinhada ao que voce pediu agora. Posso adicionar ao carrinho ou simular o frete?'
-      const parts = [
-        { type: 'text', role: 'assistant', text: intro },
-        { type: 'product_cards', products },
-        { type: 'text', role: 'assistant', text: closing },
-        {
-          type: 'actions',
-          actions: [
-            { id: 'add-libido-product', label: 'Adicionar ' + primary.name, type: 'cart_add', style: 'primary', payload: { productId: primary.id, quantity: 1, price: primary.promoPrice || primary.price, productName: primary.name } },
-            { id: 'simulate-libido-shipping', label: 'Simular frete', type: 'shipping_quote', style: 'secondary', payload: { productId: primary.id } },
-            { id: 'view-products', label: 'Ver produtos', type: 'navigate', style: 'secondary', payload: { path: '/produtos' } }
-          ]
-        }
-      ]
-      const timestamp = Date.now()
-      const assistantMsg: ChatMessage = {
-        id: 'local_libido_' + timestamp,
-        role: 'assistant',
-        content: intro + '\n\n' + closing,
-        timestamp,
-        metadata: {
-          parts,
-          responseLayout: 'product_recommendation',
-          audienceContext,
-          diagnostics: {
-            agent: 'ProductRecommendationAgent',
-            intent: 'product_recommendation',
-            detectedGoal: 'libido_support',
-            userNeed: triggerMessage,
-            audienceContext,
-            frontendAudienceContextResolver: true,
-            productsDisplayed: products.length
-          },
-          clientDiagnostics: {
-            hadStructuredFormat: true,
-            loadedFromHistory: false,
-            sanitizedForClient: true,
-            removedInternalMarkers: false,
-            rebuiltCards: true,
-            rebuiltButtons: true,
-            rebuiltFromParts: true,
-            legacyFallbackUsed: false,
-            splitConverted: false
-          }
-        } as any
-      }
-
-      lastCommercialContextRef.current = {
-        intent: 'product_recommendation',
-        detectedGoal: 'libido_support',
-        userNeed: triggerMessage,
-        audienceContext
-      }
-      audienceContextRef.current = audienceContext
-      persistLocalActionMessage(assistantMsg)
-      setMessages(prev => [...prev, assistantMsg])
-      return true
-    } catch (error) {
-      console.error('Erro ao montar recomendacao de libido com contexto de audiencia:', error)
-      return false
-    }
-  }, [])
 
   const resetChatFlowState = useCallback(() => {
     setEscalationStatus('none')
@@ -769,8 +566,6 @@ const FloatingChat: React.FC = () => {
     setShowEscalationForm(false)
     setPendingContext('none')
     setShowDeEscalateConfirm(false)
-    audienceContextRef.current = createUnknownAudienceContext()
-    lastCommercialContextRef.current = null
   }, [])
 
   const startFreshChatSession = useCallback(async () => {
@@ -1932,39 +1727,6 @@ const FloatingChat: React.FC = () => {
       setTimeout(() => scrollToBottom(true), 50)
     }
 
-    const audienceCorrection = detectAudienceCorrection(userMessage)
-    const lastCommercialContext = lastCommercialContextRef.current
-    if (audienceCorrection) {
-      audienceContextRef.current = audienceCorrection
-    }
-
-    if (audienceCorrection && lastCommercialContext?.detectedGoal === 'libido_support') {
-      const handled = await respondWithAudienceAwareLibidoRecommendation(userMessage, audienceCorrection, 'correction')
-      if (handled) {
-        setIsLoading(false)
-        return
-      }
-    }
-
-    if (isShortRecommendationFollowUp(userMessage) && lastCommercialContext?.detectedGoal === 'libido_support') {
-      const handled = await respondWithAudienceAwareLibidoRecommendation(
-        lastCommercialContext.userNeed,
-        lastCommercialContext.audienceContext || audienceContextRef.current,
-        'follow_up'
-      )
-      if (handled) {
-        setIsLoading(false)
-        return
-      }
-    }
-
-    if (isLibidoNeed(userMessage)) {
-      const handled = await respondWithAudienceAwareLibidoRecommendation(userMessage, audienceCorrection || audienceContextRef.current, 'initial')
-      if (handled) {
-        setIsLoading(false)
-        return
-      }
-    }
     try {
       // Prepara histórico para a API
       const conversationHistory = messages
@@ -2047,63 +1809,6 @@ const FloatingChat: React.FC = () => {
       // ══════════════════════════════════════════════════════════════
       if (aiData.clientSafe === true && Array.isArray(aiData.parts)) {
         let effectiveAiData = aiData
-
-        if (shouldAttemptSymptomCommercialFallback(userMessage, aiData)) {
-          try {
-            const allProducts = await productsService.getAll()
-            const searchQuery = buildSymptomCommercialQuery(userMessage)
-            const rankedProducts = searchProducts(allProducts.filter((product: any) => product.active !== false && product.archived !== true), searchQuery, 3)
-            const products = rankedProducts.map(({ product }: any) => ({
-              id: product.id,
-              name: product.name,
-              price: Number(product.price || 0),
-              promoPrice: product.promo_price ?? null,
-              category: product.category,
-              description: product.description,
-              benefits: product.benefits,
-              image: product.image,
-              url: generateProductUrl(product)
-            }))
-
-            if (products.length > 0) {
-              const primary = products[0]
-              const intro = 'Separei algumas opções de apoio ao bem-estar e conforto no dia a dia. Se quiser, também posso filtrar melhor por dor muscular, cólica ou articulação.'
-              const closing = `${primary.name} pode ser uma boa opção para começar, por combinar melhor com o que você buscou. Posso adicionar ao carrinho ou simular o frete?`
-              effectiveAiData = {
-                ...aiData,
-                message: `${intro}\n\n${closing}`,
-                layout: 'product_recommendation',
-                diagnostics: {
-                  ...(aiData.diagnostics || {}),
-                  agent: 'ProductRecommendationAgent',
-                  intent: 'product_recommendation',
-                  detectedGoal: 'discomfort_support',
-                  symptomCommercialMapping: true,
-                  safetyMode: 'commercial_support',
-                  productsFound: true,
-                  productsDisplayed: products.length,
-                  frontendSymptomCommercialFallback: true
-                },
-                parts: [
-                  { type: 'text', role: 'assistant', text: intro },
-                  { type: 'product_cards', products },
-                  { type: 'text', role: 'assistant', text: closing },
-                  {
-                    type: 'actions',
-                    actions: [
-                      { id: 'add-main-product', label: `Adicionar ${primary.name}`, type: 'cart_add', style: 'primary', payload: { productId: primary.id, quantity: 1, price: primary.promoPrice || primary.price, productName: primary.name } },
-                      { id: 'simulate-shipping-main-product', label: 'Simular frete', type: 'shipping_quote', style: 'secondary', payload: { productId: primary.id } },
-                      { id: 'view-products', label: 'Ver produtos', type: 'navigate', style: 'secondary', payload: { path: '/produtos' } }
-                    ]
-                  }
-                ]
-              }
-            }
-          } catch (fallbackError) {
-            console.error('Erro ao montar fallback comercial de sintoma:', fallbackError)
-          }
-        }
-
         const v2Message = effectiveAiData.message || ''
         const v2Parts = sanitizeCartClearResponseParts(effectiveAiData.parts as Array<any>, effectiveAiData)
         const v2Timestamp = Date.now()
@@ -2134,7 +1839,11 @@ const FloatingChat: React.FC = () => {
         // de parts lê de metadata.parts[].text — animar content não teria efeito visual.
         // O texto fica disponível tanto em content (renderizador legado) quanto em parts[type=text]
         const textPart = v2Parts.find((p: any) => p.type === 'text')
-        const displayText = sanitizeClientMessageText(textPart?.text || v2Message).content
+        const displaySanitized = sanitizeClientMessageText(textPart?.text || v2Message)
+        const displayText = displaySanitized.content
+        if (displaySanitized.hadInternalMarkers) {
+          emitKaiaSanitationTelemetry('live_v2', { removedInternalMarkers: true, layout: effectiveAiData.layout || effectiveAiData.responseLayout || null })
+        }
 
         setMessages(prev => {
           // Evita duplicata se o polling já trouxe a mesma mensagem do banco
@@ -2340,6 +2049,10 @@ const FloatingChat: React.FC = () => {
       // Remove marcadores internos antes de renderizar no widget do cliente.
       const clientContent = sanitizeClientMessageText(consolidatedContent);
       const cleanContent = clientContent.content;
+
+      if (clientContent.hadInternalMarkers) {
+        emitKaiaSanitationTelemetry('legacy', { removedInternalMarkers: true, responseType: aiData.responseType || null })
+      }
 
       if (cleanContent || clientContent.followUpText) {
         const hasSplit = Boolean(clientContent.followUpText);
