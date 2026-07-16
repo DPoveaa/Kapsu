@@ -1070,6 +1070,20 @@ export default function KaiaChats() {
   const [selectedChatContext, setSelectedChatContext] = useState<any | null>(null);
   const [loadingChatContext, setLoadingChatContext] = useState(false);
 
+  // --- Alias Review State (per-candidate) ---
+  const [aliasReviewState, setAliasReviewState] = useState<Record<string, {
+    editedAlias: string;
+    selectedProductId: string;
+    selectedProductName: string;
+    rejectReason: string;
+    showRejectReason: boolean;
+    productSearchQuery: string;
+    productSearchResults: any[];
+    productSearchLoading: boolean;
+    approving: boolean;
+    rejecting: boolean;
+  }>>({});
+
   const fetchLearningData = useCallback(async () => {
     setLoadingLearning(true);
     try {
@@ -3140,72 +3154,291 @@ export default function KaiaChats() {
                   <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-8">Nenhum candidato encontrado com este status.</p>
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
-                    {learningImprovements.map((item) => (
-                      <div key={item.id} className="p-4 rounded-xl border border-gray-150 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex flex-col gap-3">
-                        <div className="flex items-center justify-between flex-wrap gap-2">
-                          <span className="px-2 py-0.5 text-[9px] font-bold font-mono rounded bg-red-100 text-red-750 dark:bg-red-950/20 dark:text-red-400 uppercase">
-                            {item.detected_issue_type}
-                          </span>
-                          <span className="text-[10px] text-gray-400 dark:text-gray-500">Sessão: {item.source_conversation_id?.slice(0, 8)} | {new Date(item.created_at).toLocaleString('pt-BR')}</span>
-                        </div>
+                    {learningImprovements.map((item) => {
+                      const isAlias = item.proposed_fix_type === 'add_product_alias';
+                      // Initialize per-item alias state on first render
+                      if (isAlias && improvementFilterStatus === 'pending' && !aliasReviewState[item.id]) {
+                        setTimeout(() => initAliasState(item), 0);
+                      }
+                      const ars = aliasReviewState[item.id];
+                      const altProducts: any[] = (() => {
+                        try {
+                          return Array.isArray(item.alternative_products)
+                            ? item.alternative_products
+                            : (typeof item.alternative_products === 'string' ? JSON.parse(item.alternative_products) : []);
+                        } catch { return []; }
+                      })();
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                          <div className="space-y-1">
-                            <span className="font-bold text-gray-700 dark:text-gray-300">Mensagem do Cliente:</span>
-                            <p className="p-2 rounded bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 italic text-gray-800 dark:text-gray-200">
-                              "{item.customer_message}"
-                            </p>
+                      return (
+                        <div key={item.id} className="p-4 rounded-xl border border-gray-150 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex flex-col gap-3">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <span className="px-2 py-0.5 text-[9px] font-bold font-mono rounded bg-red-100 text-red-750 dark:bg-red-950/20 dark:text-red-400 uppercase">
+                              {item.detected_issue_type}
+                            </span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500">Sessão: {item.source_conversation_id?.slice(0, 8)} | {new Date(item.created_at).toLocaleString('pt-BR')}</span>
                           </div>
-                          <div className="space-y-1">
-                            <span className="font-bold text-gray-700 dark:text-gray-300">Resposta da Kaia:</span>
-                            <p className="p-2 rounded bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 italic text-gray-800 dark:text-gray-200">
-                              "{item.assistant_response}"
-                            </p>
-                          </div>
-                        </div>
 
-                        {item.proposed_alias && (
-                          <div className="p-2 rounded-lg bg-primary-50/30 dark:bg-primary-950/10 border border-primary-100/50 dark:border-primary-900/20 text-xs">
-                            <strong className="text-gray-800 dark:text-gray-200">Apelido Proposto:</strong>{' '}
-                            <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-bold border border-gray-200 dark:border-gray-800">{item.proposed_alias}</code>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                            <div className="space-y-1">
+                              <span className="font-bold text-gray-700 dark:text-gray-300">Mensagem do Cliente:</span>
+                              <p className="p-2 rounded bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 italic text-gray-800 dark:text-gray-200">
+                                "{item.customer_message}"
+                              </p>
+                            </div>
+                            <div className="space-y-1">
+                              <span className="font-bold text-gray-700 dark:text-gray-300">Resposta da Kaia:</span>
+                              <p className="p-2 rounded bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 italic text-gray-800 dark:text-gray-200">
+                                "{item.assistant_response}"
+                              </p>
+                            </div>
                           </div>
-                        )}
 
-                        {item.proposed_rule && (
-                          <div className="p-2 rounded-lg bg-primary-50/30 dark:bg-primary-950/10 border border-primary-100/50 dark:border-primary-900/20 text-xs">
-                            <strong className="text-gray-800 dark:text-gray-200">Ação Corretiva:</strong>{' '}
-                            <span className="font-mono text-[11px] text-gray-700 dark:text-gray-300">{item.proposed_rule}</span>
-                          </div>
-                        )}
+                          {/* ═══ ALIAS REVIEW PANEL ═══ */}
+                          {isAlias && improvementFilterStatus === 'pending' && ars ? (
+                            <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/40 dark:bg-amber-950/10 p-4 space-y-4">
+                              <div className="flex items-center gap-2">
+                                <Brain size={14} className="text-amber-600" />
+                                <span className="text-xs font-bold text-amber-700 dark:text-amber-400">Revisão de Apelido de Produto</span>
+                              </div>
 
-                        <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-                          {improvementFilterStatus === 'pending' && (
+                              {/* Alias detectado + confiança */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                <div className="space-y-1">
+                                  <label className="font-semibold text-gray-700 dark:text-gray-300">Apelido Detectado</label>
+                                  <div className="flex items-center gap-2">
+                                    <code className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-bold border border-gray-200 dark:border-gray-800 text-sm">
+                                      {item.detected_alias || item.proposed_alias || '—'}
+                                    </code>
+                                    {item.suggestion_confidence !== null && item.suggestion_confidence !== undefined && (
+                                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                        item.suggestion_confidence >= 0.7 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                        : item.suggestion_confidence >= 0.4 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                      }`}>
+                                        {Math.round(Number(item.suggestion_confidence) * 100)}%
+                                      </span>
+                                    )}
+                                    {item.suggestion_source && (
+                                      <span className="text-[10px] text-gray-400 italic">{item.suggestion_source}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="font-semibold text-gray-700 dark:text-gray-300">Produto Sugerido</label>
+                                  <p className="text-gray-800 dark:text-gray-200">
+                                    {item.suggested_product_name || <span className="text-gray-400 italic">Nenhum / Ambíguo</span>}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Alternativas */}
+                              {altProducts.length > 0 && (
+                                <div className="space-y-1">
+                                  <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Produtos Alternativos</span>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {altProducts.map((alt: any, i: number) => (
+                                      <button
+                                        key={i}
+                                        type="button"
+                                        onClick={() => updateAliasState(item.id, { selectedProductId: alt.productId, selectedProductName: alt.productName })}
+                                        className={`text-[11px] px-2.5 py-1 rounded-full border transition-all ${
+                                          ars.selectedProductId === alt.productId
+                                            ? 'border-primary-500 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-semibold'
+                                            : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-primary-300'
+                                        }`}
+                                      >
+                                        {alt.productName}
+                                        {alt.confidence !== undefined && (
+                                          <span className="ml-1 opacity-60">{Math.round(alt.confidence * 100)}%</span>
+                                        )}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Pesquisa completa do catálogo */}
+                              <div className="space-y-1">
+                                <label className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Buscar produto no catálogo</label>
+                                <div className="relative">
+                                  <input
+                                    id={`alias-product-search-${item.id}`}
+                                    type="text"
+                                    value={ars.productSearchQuery}
+                                    onChange={(e) => {
+                                      searchAliasProducts(item.id, e.target.value);
+                                    }}
+                                    placeholder="Nome do produto..."
+                                    className="w-full text-xs px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary-400 focus:outline-none"
+                                  />
+                                  {ars.productSearchLoading && (
+                                    <Loader2 size={12} className="absolute right-2 top-2.5 text-gray-400 animate-spin" />
+                                  )}
+                                </div>
+                                {ars.productSearchResults.length > 0 && (
+                                  <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden max-h-36 overflow-y-auto">
+                                    {ars.productSearchResults.map((p: any) => (
+                                      <button
+                                        key={p.id}
+                                        type="button"
+                                        onClick={() => updateAliasState(item.id, {
+                                          selectedProductId: p.id,
+                                          selectedProductName: p.name,
+                                          productSearchQuery: '',
+                                          productSearchResults: []
+                                        })}
+                                        className="w-full text-left px-3 py-2 text-xs text-gray-800 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-primary-900/20 border-b border-gray-100 dark:border-gray-800 last:border-b-0"
+                                      >
+                                        {p.name} <span className="text-gray-400 ml-1">({p.category || '—'})</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Produto selecionado */}
+                              {ars.selectedProductId && (
+                                <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-200 dark:border-emerald-900/40 text-xs">
+                                  <CheckCircle size={12} className="text-emerald-600 flex-shrink-0" />
+                                  <span className="text-gray-700 dark:text-gray-300">Produto selecionado: <strong>{ars.selectedProductName}</strong></span>
+                                  <button type="button" onClick={() => updateAliasState(item.id, { selectedProductId: '', selectedProductName: '' })} className="ml-auto text-gray-400 hover:text-red-500">
+                                    <X size={12} />
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* Alias editável */}
+                              <div className="space-y-1">
+                                <label htmlFor={`alias-edit-${item.id}`} className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Apelido a registrar (editável)</label>
+                                <input
+                                  id={`alias-edit-${item.id}`}
+                                  type="text"
+                                  value={ars.editedAlias}
+                                  onChange={(e) => updateAliasState(item.id, { editedAlias: e.target.value })}
+                                  className="w-full text-xs font-mono px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary-400 focus:outline-none"
+                                  placeholder="apelido exato"
+                                />
+                                <p className="text-[10px] text-gray-400">Será normalizado (minúsculas, sem acentos, sem caracteres especiais).</p>
+                              </div>
+
+                              {/* Motivo de rejeição */}
+                              {ars.showRejectReason && (
+                                <div className="space-y-1">
+                                  <label htmlFor={`reject-reason-${item.id}`} className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Motivo da Rejeição (opcional)</label>
+                                  <input
+                                    id={`reject-reason-${item.id}`}
+                                    type="text"
+                                    value={ars.rejectReason}
+                                    onChange={(e) => updateAliasState(item.id, { rejectReason: e.target.value })}
+                                    className="w-full text-xs px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-red-400 focus:outline-none"
+                                    placeholder="Ex: apelido muito ambíguo, produto não identificável..."
+                                  />
+                                </div>
+                              )}
+
+                              {/* Action buttons */}
+                              <div className="flex justify-end gap-2 pt-2 border-t border-amber-100 dark:border-amber-900/30">
+                                {ars.showRejectReason ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => updateAliasState(item.id, { showRejectReason: false, rejectReason: '' })}
+                                      className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 transition-colors"
+                                    >
+                                      Cancelar
+                                    </button>
+                                    <button
+                                      id={`confirm-reject-${item.id}`}
+                                      type="button"
+                                      disabled={ars.rejecting}
+                                      onClick={() => handleRejectWithReason(item.id)}
+                                      className="px-3 py-1.5 text-xs rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-60 flex items-center gap-1"
+                                    >
+                                      {ars.rejecting ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
+                                      Confirmar Rejeição
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      id={`reject-alias-${item.id}`}
+                                      type="button"
+                                      onClick={() => updateAliasState(item.id, { showRejectReason: true })}
+                                      className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-red-50 hover:text-red-650 dark:hover:bg-red-950/20 dark:hover:text-red-400 transition-colors"
+                                    >
+                                      Rejeitar
+                                    </button>
+                                    <button
+                                      id={`approve-alias-${item.id}`}
+                                      type="button"
+                                      disabled={ars.approving || !ars.selectedProductId || !ars.editedAlias.trim()}
+                                      onClick={() => handleApproveAlias(item.id)}
+                                      className="px-4 py-1.5 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors flex items-center gap-1.5"
+                                    >
+                                      {ars.approving ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
+                                      Aprovar e Aplicar
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            // Non-alias improvement or read-only view
                             <>
-                              <button
-                                onClick={() => handleReviewImprovement(item.id, 'rejected')}
-                                className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-red-50 hover:text-red-650 dark:hover:bg-red-950/20 dark:hover:text-red-400 transition-colors"
-                              >
-                                Rejeitar
-                              </button>
-                              <button
-                                onClick={() => handleReviewImprovement(item.id, 'applied')}
-                                className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
-                              >
-                                Aprovar e Criar Regra
-                              </button>
+                              {(item.proposed_alias || item.detected_alias) && (
+                                <div className="p-2 rounded-lg bg-primary-50/30 dark:bg-primary-950/10 border border-primary-100/50 dark:border-primary-900/20 text-xs">
+                                  <strong className="text-gray-800 dark:text-gray-200">Apelido Detectado:</strong>{' '}
+                                  <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-bold border border-gray-200 dark:border-gray-800">{item.detected_alias || item.proposed_alias}</code>
+                                  {item.approved_alias && item.approved_alias !== (item.detected_alias || item.proposed_alias) && (
+                                    <> → aprovado como <code className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">{item.approved_alias}</code></>
+                                  )}
+                                  {item.suggested_product_name && (
+                                    <span className="ml-2 text-gray-500">→ {item.suggested_product_name}</span>
+                                  )}
+                                  {item.rejection_reason && (
+                                    <div className="mt-1 text-gray-500 italic">Motivo: {item.rejection_reason}</div>
+                                  )}
+                                </div>
+                              )}
+
+                              {item.proposed_rule && (
+                                <div className="p-2 rounded-lg bg-primary-50/30 dark:bg-primary-950/10 border border-primary-100/50 dark:border-primary-900/20 text-xs">
+                                  <strong className="text-gray-800 dark:text-gray-200">Ação Corretiva:</strong>{' '}
+                                  <span className="font-mono text-[11px] text-gray-700 dark:text-gray-300">{item.proposed_rule}</span>
+                                </div>
+                              )}
+
+                              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                                {improvementFilterStatus === 'pending' && (
+                                  <>
+                                    <button
+                                      onClick={() => handleReviewImprovement(item.id, 'rejected')}
+                                      className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-red-50 hover:text-red-650 dark:hover:bg-red-950/20 dark:hover:text-red-400 transition-colors"
+                                    >
+                                      Rejeitar
+                                    </button>
+                                    <button
+                                      onClick={() => handleReviewImprovement(item.id, 'applied')}
+                                      className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+                                    >
+                                      Aprovar e Criar Regra
+                                    </button>
+                                  </>
+                                )}
+                                {(improvementFilterStatus === 'applied' || improvementFilterStatus === 'rejected') && (
+                                  <button
+                                    onClick={() => handleReviewImprovement(item.id, 'archived')}
+                                    className="px-3 py-1.5 text-xs rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/20 dark:text-amber-400 transition-colors"
+                                  >
+                                    Arquivar
+                                  </button>
+                                )}
+                              </div>
                             </>
                           )}
-                          {(improvementFilterStatus === 'applied' || improvementFilterStatus === 'rejected') && (
-                            <button
-                              onClick={() => handleReviewImprovement(item.id, 'archived')}
-                              className="px-3 py-1.5 text-xs rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/20 dark:text-amber-400 transition-colors"
-                            >
-                              Arquivar
-                            </button>
-                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
