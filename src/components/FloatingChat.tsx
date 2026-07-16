@@ -177,11 +177,8 @@ const splitProductRecommendationText = (content: string, explicitFollowUp?: stri
       introText: cleanContent.slice(0, match.index).trim(),
       followUpText: match[1].trim(),
       usedFallback: true
-    }
-  }
-
   return {
-    introText: cleanContent,
+    introText: content,
     followUpText: '',
     usedFallback: false
   }
@@ -198,20 +195,8 @@ const isHighRiskHealthMessage = (message: string) => {
 }
 
 const shouldAttemptSymptomCommercialFallback = (message: string, aiData: any) => {
-  if (isHighRiskHealthMessage(message)) return false
-  const parts = Array.isArray(aiData?.parts) ? aiData.parts : []
-  const hasProducts = parts.some((part: any) => Array.isArray(part.products) && part.products.length > 0)
-  if (hasProducts) return false
-
-  const normalized = normalizeCommercialSymptomText(message)
-  const hasCommercialSymptom = /\b(dor|dolorido|desconforto|colica|corpo|muscular|articulacao|pernas|bem estar|mal estar|aliviar|conforto)\b/.test(normalized)
-  const asksClarification = parts.some((part: any) =>
-    part?.type === 'actions' &&
-    Array.isArray(part.actions) &&
-    part.actions.some((action: any) => ['send_message', 'human_support'].includes(action?.type))
-  )
-
-  return hasCommercialSymptom && asksClarification
+  // DESATIVADO: Apenas o backend decide intenção de sintomas e recomendações de produto.
+  return false
 }
 
 const buildSymptomCommercialQuery = (message: string) => {
@@ -252,26 +237,18 @@ const createUnknownAudienceContext = (): AudienceContext => ({
 })
 
 const detectAudienceCorrection = (message: string): AudienceContext | null => {
-  const normalized = normalizeCommercialSymptomText(message)
-  const male = /\b(sou homem|sou masculino|para homem|pra homem|e homem|eh homem|nao sou mulher|nao e mulher|masculino)\b/.test(normalized)
-  const female = /\b(sou mulher|sou feminina|para mulher|pra mulher|e mulher|eh mulher|nao sou homem|nao e homem|feminino|feminina)\b/.test(normalized)
-  if (!male && !female) return null
-  return {
-    gender: male ? 'male' : 'female',
-    source: 'explicit_user_correction',
-    confidence: 1,
-    updatedAt: new Date().toISOString(),
-  }
+  // DESATIVADO: Roteamento de audiência e gênero é responsabilidade exclusiva do backend.
+  return null
 }
 
 const isLibidoNeed = (message: string) => {
-  const normalized = normalizeCommercialSymptomText(message)
-  return /\b(libido|tesao|desejo sexual|sem desejo|broxa|desempenho sexual|relacao|prazer|vitalidade sexual)\b/.test(normalized)
+  // DESATIVADO: Recomendações e interpretações de libido são feitas exclusivamente no backend.
+  return false
 }
 
 const isShortRecommendationFollowUp = (message: string) => {
-  const normalized = normalizeCommercialSymptomText(message).replace(/[^a-z0-9]+/g, ' ').trim()
-  return /^(sim|sim me recomenda ai|pode ser|manda|me recomenda|me recomenda ai|recomenda ai|quero|ok|isso)$/i.test(normalized)
+  // DESATIVADO: Tratar no backend.
+  return false
 }
 
 const inferProductTargetAudience = (product: any): AudienceGender | 'unisex' => {
