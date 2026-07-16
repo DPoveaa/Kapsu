@@ -8,6 +8,7 @@
     "start": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
+    "update": "git pull && npm install && npm run build",
     "test:kaia-contract": "node scripts/kaia-v2-contract-check.mjs",
     "test:kaia-flows": "node scripts/kaia-v2-flow-check.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
