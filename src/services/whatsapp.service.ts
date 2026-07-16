@@ -1,4 +1,4 @@
-﻿import { env } from '../config/env'
+import { env } from '../config/env'
 
 const API_URL = env.apiUrl
 
@@ -1300,12 +1300,7 @@ class WhatsAppService {
         body: JSON.stringify({
           message,
           sessionId,
-          userId,
-          isAuthenticated,
           cartInfo,
-          conversationHistory,
-          userInfo,
-          notificationChoice,
           clientRequestId,
         }),
       });
