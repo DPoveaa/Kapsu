@@ -97,9 +97,7 @@ const callKaia = async (prompt) => {
     body: JSON.stringify({
       message: prompt,
       sessionId: `contract_check_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-      isAuthenticated: false,
       cartInfo: { itemCount: 0, total: 0, items: [] },
-      conversationHistory: [],
     }),
   })
 

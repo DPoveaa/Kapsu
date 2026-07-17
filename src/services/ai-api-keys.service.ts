@@ -95,6 +95,32 @@ export interface AiKeyPoolStatus {
     lastErrorAt: string | null;
     consecutiveFailures: number;
   }>;
+  models?: {
+    chat: {
+      configuredModel: string;
+      available: boolean | null;
+      latencyMs: number | null;
+      lastSuccessfulTest: string | null;
+      lastErrorCategory: string | null;
+      provider: 'gemini';
+    };
+    extraction: {
+      configuredModel: string;
+      available: boolean | null;
+      latencyMs: number | null;
+      lastSuccessfulTest: string | null;
+      lastErrorCategory: string | null;
+      provider: 'gemini';
+    };
+  };
+  lastQuotaOrRateLimitError?: {
+    category: string;
+    at?: string;
+  } | null;
+  sdk?: {
+    package: string;
+    version: string;
+  };
 }
 
 function authHeaders(): HeadersInit {
@@ -119,6 +145,32 @@ class AiApiKeysService {
     const res = await fetch(`${this.baseUrl}/status`, { headers: authHeaders() });
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.message || 'Erro ao obter status');
+    return data.data;
+  }
+
+  async probeModels(): Promise<{
+    chat: {
+      configuredModel: string;
+      available: boolean;
+      latencyMs: number;
+      provider: 'gemini';
+      errorCategory?: string;
+    };
+    extraction: {
+      configuredModel: string;
+      available: boolean;
+      latencyMs: number;
+      provider: 'gemini';
+      errorCategory?: string;
+    };
+    sdkVersion: string;
+  }> {
+    const res = await fetch(`${this.baseUrl}/models/health`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.message || 'Erro ao testar modelos');
     return data.data;
   }
 

@@ -29,4 +29,7 @@ dist-ssr
 *.sw?
 # Scratch files
 scratch/
-/scripts
+# Keep Kaia verification scripts tracked; ignore only ad-hoc local experiments
+/scripts/tmp/
+/scripts/*.local.*
+

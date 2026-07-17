@@ -96,9 +96,7 @@ const validateReturnToAi = async () => {
   const after = await postJson('/kaia/v2/message', {
     sessionId,
     message: 'oi kaia',
-    isAuthenticated: false,
     cartInfo: { itemCount: 0, total: 0, items: [] },
-    conversationHistory: [],
   })
 
   const afterText = normalizeText(textOf(after) || after.data?.message)
@@ -119,9 +117,7 @@ const hasFalseClearDenial = (payload) => /nao consigo esvaziar|não consigo esva
 const sendCartClearMessage = async (sessionId, message, cartInfo) => postJson('/kaia/v2/message', {
   sessionId,
   message,
-  isAuthenticated: false,
   cartInfo,
-  conversationHistory: [],
 })
 
 const assertCartClearClientContract = (payload, label) => {
@@ -290,9 +286,7 @@ const validateFreeShipping = async () => {
     const payload = await postJson('/kaia/v2/message', {
       sessionId: caseSession,
       message: testCase.message,
-      isAuthenticated: false,
       cartInfo,
-      conversationHistory: [],
     })
     assertFreeShippingClientContract(payload, testCase.label)
     naturalResults[testCase.label] = {
@@ -306,9 +300,7 @@ const validateFreeShipping = async () => {
   const promoPayload = await postJson('/kaia/v2/message', {
     sessionId: promoSession,
     message: 'tem promoções?',
-    isAuthenticated: false,
     cartInfo: { itemCount: 0, total: 0, items: [] },
-    conversationHistory: [],
   })
   assert(promoPayload.data?.layout === 'promotions' || hasPart(promoPayload, 'promotion_cards'), 'product promotions question must use promotions flow', promoPayload)
   assert(promoPayload.data?.layout !== 'free_shipping_info', 'tem promoções must not use free_shipping_info layout', promoPayload)
@@ -316,9 +308,7 @@ const validateFreeShipping = async () => {
   const first = await postJson('/kaia/v2/message', {
     sessionId,
     message: 'Como ganhar frete gratis?',
-    isAuthenticated: false,
     cartInfo,
-    conversationHistory: [],
   })
 
   assertFreeShippingClientContract(first, 'primary free shipping flow')
@@ -362,9 +352,7 @@ const validateFreeShipping = async () => {
   const cep = await postJson('/kaia/v2/message', {
     sessionId,
     message: '02021030',
-    isAuthenticated: false,
     cartInfo: { itemCount: 2, total: cartTotal, items: [{ name: 'Produto teste', quantity: 2, price: 57.375 }] },
-    conversationHistory: [],
   })
 
   assert(cep.data?.layout === 'free_shipping_info', 'CEP after free_shipping_check must resolve as free_shipping_info', cep)
