@@ -1005,6 +1005,11 @@ const CONFIGURED_AGENTS = [
 ];
 
 // ==================== COMPONENTE PRINCIPAL ====================
+
+const parseApiKeysInput = (value: string) => value
+  .split(/[\s,;]+/)
+  .map((key) => key.trim())
+  .filter(Boolean);
 export default function KaiaChats() {
   const navigate = useNavigate();
   const { isAdmin, isAuthenticated, loading: authLoading } = useAuth();
@@ -1038,7 +1043,7 @@ export default function KaiaChats() {
   });
   const [duplicatePrompt, setDuplicatePrompt] = useState<{
     message: string;
-    existingKey: { id: string; name: string; enabled: boolean };
+    existingKey: { id: string; name?: string; enabled: boolean };
     canReactivate: boolean;
   } | null>(null);
   const [auditKey, setAuditKey] = useState<AiApiKey | null>(null);
@@ -1069,6 +1074,7 @@ export default function KaiaChats() {
   const [runningTestsState, setRunningTestsState] = useState(false);
   const [selectedChatContext, setSelectedChatContext] = useState<any | null>(null);
   const [loadingChatContext, setLoadingChatContext] = useState(false);
+  const [learningQueueDiagnostics, setLearningQueueDiagnostics] = useState<any | null>(null);
 
   // --- Alias Review State (per-candidate) ---
   const [aliasReviewState, setAliasReviewState] = useState<Record<string, {
@@ -1186,10 +1192,11 @@ export default function KaiaChats() {
     try {
       const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
       
-      const [impRes, memRes, testRes] = await Promise.all([
+      const [impRes, memRes, testRes, diagRes] = await Promise.all([
         fetch(`${API_URL}/admin/kaia/v2/learning/improvements?status=${improvementFilterStatus}`, { headers }),
         fetch(`${API_URL}/admin/kaia/v2/learning/memories?status=${memoryFilterStatus}`, { headers }),
-        fetch(`${API_URL}/admin/kaia/v2/learning/tests`, { headers })
+        fetch(`${API_URL}/admin/kaia/v2/learning/tests`, { headers }),
+        fetch(`${API_URL}/admin/kaia/v2/learning/queue/diagnostics`, { headers })
       ]);
 
       if (impRes.ok) {
@@ -1203,6 +1210,10 @@ export default function KaiaChats() {
       if (testRes.ok) {
         const json = await testRes.json();
         setLearningTests(json.data || []);
+      }
+      if (diagRes.ok) {
+        const json = await diagRes.json();
+        setLearningQueueDiagnostics(json.data || null);
       }
     } catch (e) {
       console.error('Erro ao buscar dados do aprendizado:', e);
@@ -1623,32 +1634,43 @@ export default function KaiaChats() {
   };
 
   const handleCreateKey = async () => {
-    if (!keyFormData.name.trim() || !keyFormData.apiKey.trim()) {
-      showToast('Nome e chave de API são obrigatórios', 'error');
+    const parsedKeys = parseApiKeysInput(keyFormData.apiKey);
+    if (parsedKeys.length === 0) {
+      showToast('Informe pelo menos uma chave de API', 'error');
       return;
     }
+
     try {
       setActionLoadingKey('create');
       const result = await aiApiKeysService.createKey({
         name: keyFormData.name.trim(),
         provider: keyFormData.provider,
         model: keyFormData.model || undefined,
-        apiKey: keyFormData.apiKey.trim(),
+        apiKey: keyFormData.apiKey,
         priority: keyFormData.priority,
         testOnCreate: keyFormData.testOnCreate,
       });
-      if (result.testResult) {
-        if (result.testResult.success) {
-          showToast(`Chave "${keyFormData.name}" criada e testada com sucesso`);
+
+      if (result.bulk) {
+        const created = result.createdCount || 0;
+        const duplicates = result.duplicateCount || 0;
+        const failed = result.failedCount || 0;
+        if (created > 0) {
+          showToast(`${created} chave(s) cadastrada(s). ${duplicates} duplicada(s) ignorada(s)${failed ? `, ${failed} falharam` : ''}.`);
+        } else if (duplicates > 0 && failed === 0) {
+          showToast('Todas as chaves informadas já estavam cadastradas.', 'error');
         } else {
-          showToast(`Chave criada, mas o teste falhou: ${result.testResult.message}`, 'error');
+          showToast(result.message || 'Nenhuma chave nova foi cadastrada', 'error');
         }
+      } else if (result.testResult && !result.testResult.success) {
+        showToast(`Chave criada, mas o teste falhou: ${result.testResult.message}`, 'error');
       } else {
-        showToast(`Chave "${keyFormData.name}" criada com sucesso`);
+        showToast(`Chave "${result.key?.name || keyFormData.name || 'Chave Gemini'}" criada com sucesso`);
       }
+
       setShowKeyForm(false);
       setKeyFormData({ name: '', provider: 'gemini', model: '', apiKey: '', priority: 0, testOnCreate: true });
-      await loadKeysData(true);
+      await loadKeysData(false);
     } catch (err: any) {
       if (err instanceof DuplicateApiKeyError) {
         setDuplicatePrompt({
@@ -1665,20 +1687,19 @@ export default function KaiaChats() {
     }
   };
 
-  const handleReactivateKey = async (keyId: string) => {
+  const handleReactivateKey = async (id: string) => {
     try {
       setActionLoadingKey('reactivate');
-      await aiApiKeysService.enableKey(keyId);
+      await aiApiKeysService.enableKey(id);
       showToast('Chave reativada com sucesso');
       setDuplicatePrompt(null);
-      await loadKeysData(true);
+      await loadKeysData(false);
     } catch (err: any) {
       showToast(err.message || 'Erro ao reativar chave', 'error');
     } finally {
       setActionLoadingKey(null);
     }
   };
-
   const openAuditLogs = async (key: AiApiKey) => {
     setOpenMenuId(null);
     setAuditKey(key);
@@ -3147,6 +3168,62 @@ export default function KaiaChats() {
       ) : activeTab === 'learning' ? (
         /* ===== ABA 5: APRENDIZADO E MEMÓRIA DA KAIA ===== */
         <div className="flex-1 overflow-y-auto space-y-6 pb-8 pr-2 animate-in fade-in duration-200">
+          {/* Painel de Diagnósticos KPI */}
+          {learningQueueDiagnostics && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Recurso de Memória</span>
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${learningQueueDiagnostics.memoryFeatureEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                  <span className="text-sm font-bold text-gray-850 dark:text-gray-200">{learningQueueDiagnostics.memoryFeatureEnabled ? 'Ativado (Long-term)' : 'Desativado'}</span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Fila de Aprendizado</span>
+                <div className="text-xs space-y-0.5 text-gray-600 dark:text-gray-400 font-mono">
+                  <p>Pendentes: <span className="font-bold text-amber-600">{learningQueueDiagnostics.counts?.pending || 0}</span></p>
+                  <p>Processando: <span className="font-bold text-blue-600">{learningQueueDiagnostics.counts?.processing || 0}</span></p>
+                  <p>Falhas: <span className="font-bold text-red-650">{learningQueueDiagnostics.counts?.failed || 0}</span></p>
+                </div>
+              </div>
+              <div className="space-y-1 col-span-1 md:col-span-2">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Histórico de Execução</span>
+                <div className="text-[11px] space-y-1 text-gray-600 dark:text-gray-400">
+                  {learningQueueDiagnostics.lastCompletedJob && (
+                    <p>Último sucesso: <span className="font-semibold text-emerald-600">{learningQueueDiagnostics.lastCompletedJob.id}</span> ({new Date(learningQueueDiagnostics.lastCompletedJob.finishedAt).toLocaleString('pt-BR')})</p>
+                  )}
+                  {learningQueueDiagnostics.lastFailedJob ? (
+                    <p className="text-red-500">Última falha: <span className="font-semibold">{learningQueueDiagnostics.lastFailedJob.id}</span>. <strong>Erro:</strong> {learningQueueDiagnostics.lastFailedJob.error}</p>
+                  ) : (
+                    <p className="text-gray-400 italic">Nenhuma falha recente registrada.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* KPI de Melhorias e Memórias */}
+          {learningQueueDiagnostics && (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-1 text-center">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Melhorias Pendentes</span>
+                <p className="text-2xl font-black text-amber-600">{learningQueueDiagnostics.pendingImprovementCount ?? 0}</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-1 text-center">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Memórias Pendentes</span>
+                <p className="text-2xl font-black text-blue-600">{learningQueueDiagnostics.pendingMemoryCount ?? 0}</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-1 text-center">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Melhorias Aplicadas</span>
+                <p className="text-2xl font-black text-emerald-600">{(learningQueueDiagnostics.improvementCounts?.applied || 0) + (learningQueueDiagnostics.improvementCounts?.approved || 0)}</p>
+              </div>
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-1 text-center">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Memórias Aprovadas</span>
+                <p className="text-2xl font-black text-emerald-600">{learningQueueDiagnostics.memoryCounts?.approved ?? 0}</p>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-100 dark:border-gray-700 pb-4">
               <div>
@@ -3248,7 +3325,15 @@ export default function KaiaChats() {
                 </div>
 
                 {learningImprovements.length === 0 ? (
-                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-8">Nenhum candidato encontrado com este status.</p>
+                  <div className="flex flex-col items-center justify-center p-8 bg-gray-50/50 dark:bg-gray-900/30 rounded-xl border border-dashed border-gray-200 dark:border-gray-800 text-center space-y-2">
+                    <Brain className="text-gray-400" size={32} />
+                    <h4 className="font-semibold text-xs text-gray-750 dark:text-gray-300">Fila de Melhorias Vazia</h4>
+                    <p className="text-[11px] text-gray-500 max-w-sm">
+                      {learningQueueDiagnostics?.counts?.failed > 0
+                        ? 'Os jobs de aprendizado estão falhando. Visualize a última falha registrada no painel de diagnósticos acima.'
+                        : 'Nenhum candidato a melhoria pendente foi encontrado. O último job de aprendizado terminou com sucesso e não detectou falhas estruturais ou de intenção na conversa.'}
+                    </p>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
                     {learningImprovements.map((item) => {
@@ -4168,7 +4253,7 @@ export default function KaiaChats() {
               className="w-full text-xs rounded-lg px-3 py-2 border border-gray-205 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-250 focus:outline-none resize-y"
             />
             <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-              Para múltiplas chaves, os nomes serão gerados automaticamente como kaia-1, kaia-2, kaia-3...
+              {parseApiKeysInput(keyFormData.apiKey).length || 0} chave(s) detectada(s). Sem identificador, os nomes serão gerados como Chave Gemini 1, Chave Gemini 2...
             </p>
           </div>
           <div>

@@ -45,6 +45,19 @@ function formatDate(value: string | null) {
 function keyLabel(key: AiApiKey) {
   return `${key.name} (${key.key_preview})`;
 }
+function providerLabel(provider: string) {
+  const normalized = provider.trim().toLowerCase();
+  if (normalized === 'gemini') return 'Gemini';
+  if (!normalized) return 'IA';
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+function parseApiKeys(value: string) {
+  return value
+    .split(/[\s,;]+/)
+    .map((key) => key.trim())
+    .filter(Boolean);
+}
 
 export default function ManageAIKeys() {
   const [keys, setKeys] = useState<AiApiKey[]>([]);
@@ -256,28 +269,46 @@ export default function ManageAIKeys() {
   };
 
   const handleCreate = async () => {
-    if (!formData.name.trim() || !formData.apiKey.trim()) {
-      toast.warning('Nome e chave de API são obrigatórios');
+    const parsedKeys = parseApiKeys(formData.apiKey);
+    if (parsedKeys.length === 0) {
+      toast.warning('Informe pelo menos uma chave de API');
       return;
     }
+    const baseName = formData.name.trim() || `Chave ${providerLabel(formData.provider)}`;
     try {
       setActionLoading('create');
-      const result = await aiApiKeysService.createKey({
-        name: formData.name.trim(),
-        provider: formData.provider,
-        model: formData.model || undefined,
-        apiKey: formData.apiKey.trim(),
-        priority: formData.priority,
-        testOnCreate: formData.testOnCreate,
-      });
-      if (result.testResult) {
-        if (result.testResult.success) {
-          toast.success(`Chave "${formData.name}" criada e testada com sucesso`);
+      const results = [];
+
+      for (const [index, apiKey] of parsedKeys.entries()) {
+        const name = parsedKeys.length === 1 ? baseName : `${baseName} ${index + 1}`;
+        const result = await aiApiKeysService.createKey({
+          name,
+          provider: formData.provider,
+          model: formData.model || undefined,
+          apiKey,
+          priority: formData.priority,
+          testOnCreate: formData.testOnCreate,
+        });
+        results.push({ name, result });
+      }
+
+      const failedTests = results.filter(({ result }) => result.testResult && !result.testResult.success);
+      if (parsedKeys.length > 1) {
+        if (failedTests.length > 0) {
+          toast.warning(`${results.length} chave(s) cadastrada(s), mas ${failedTests.length} falharam no teste`, 5000);
+        } else if (formData.testOnCreate) {
+          toast.success(`${results.length} chave(s) cadastrada(s) e testada(s) com sucesso`);
         } else {
-          toast.warning(`Chave criada, mas o teste falhou: ${result.testResult.message}`, 5000);
+          toast.success(`${results.length} chave(s) cadastrada(s) com sucesso`);
+        }
+      } else if (results[0].result.testResult) {
+        if (results[0].result.testResult.success) {
+          toast.success(`Chave "${results[0].name}" criada e testada com sucesso`);
+        } else {
+          toast.warning(`Chave criada, mas o teste falhou: ${results[0].result.testResult.message}`, 5000);
         }
       } else {
-        toast.success(`Chave "${formData.name}" criada com sucesso`);
+        toast.success(`Chave "${results[0].name}" criada com sucesso`);
       }
       setShowForm(false);
       setFormData({ name: '', provider: 'gemini', model: '', apiKey: '', priority: 0, testOnCreate: true });
@@ -486,20 +517,22 @@ export default function ManageAIKeys() {
       {/* Create modal */}
       <AdminModal isOpen={showForm} onClose={() => setShowForm(false)} title="Nova chave de IA">
         <div className="space-y-4">
-          <Field label="Nome/apelido" value={formData.name} onChange={(v) => setFormData({ ...formData, name: v })} />
+          <Field label="Nome/apelido (opcional)" value={formData.name} onChange={(v) => setFormData({ ...formData, name: v })} placeholder={`Chave ${providerLabel(formData.provider)}`} />
           <Field label="Provider" value={formData.provider} onChange={(v) => setFormData({ ...formData, provider: v })} />
           <Field label="Modelo (opcional)" value={formData.model} onChange={(v) => setFormData({ ...formData, model: v })} />
           <Field label="Prioridade" type="number" value={String(formData.priority)} onChange={(v) => setFormData({ ...formData, priority: Number(v) || 0 })} />
           <div>
-            <label className="block text-sm font-medium mb-1">Chave de API</label>
-            <input
-              type="password"
+            <label className="block text-sm font-medium mb-1">Chave(s) de API</label>
+            <textarea
               autoComplete="off"
               value={formData.apiKey}
               onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
-              placeholder="Cole a chave aqui — não será exibida depois de salvar"
+              className="w-full min-h-28 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm font-mono"
+              placeholder="Cole uma ou várias chaves, separadas por quebra de linha, vírgula, ponto e vírgula ou espaço"
             />
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {parseApiKeys(formData.apiKey).length || 0} chave(s) detectada(s). Os nomes vazios usam "{`Chave ${providerLabel(formData.provider)}`}" e numeração automática.
+            </p>
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -514,7 +547,7 @@ export default function ManageAIKeys() {
             disabled={actionLoading === 'create'}
             className="w-full py-2.5 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
-            {actionLoading === 'create' ? <><Loader2 size={16} className="animate-spin" /> Salvando...</> : 'Cadastrar chave'}
+            {actionLoading === 'create' ? <><Loader2 size={16} className="animate-spin" /> Salvando...</> : 'Cadastrar chave(s)'}
           </button>
         </div>
       </AdminModal>
@@ -933,11 +966,13 @@ function Field({
   value,
   onChange,
   type = 'text',
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
+  placeholder?: string;
 }) {
   return (
     <div>
@@ -947,6 +982,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
+        placeholder={placeholder}
       />
     </div>
   );

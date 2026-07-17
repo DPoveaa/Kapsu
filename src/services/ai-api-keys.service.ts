@@ -1,4 +1,4 @@
-﻿import { env } from '../config/env';
+import { env } from '../config/env';
 
 const API_URL = env.apiUrl;
 
@@ -45,7 +45,7 @@ export interface DuplicateKeyErrorPayload {
   canReactivate: boolean;
   existingKey: {
     id: string;
-    name: string;
+    name?: string;
     key_preview: string;
     enabled: boolean;
     provider: string;
@@ -82,7 +82,7 @@ export interface AiKeyPoolStatus {
   keys: Array<{
     index: number;
     id: string | null;
-    name: string;
+    name?: string;
     preview: string;
     source: string;
     provider: string;
@@ -125,7 +125,7 @@ class AiApiKeysService {
   async createKey(payload: {
     provider?: string;
     model?: string;
-    name: string;
+    name?: string;
     apiKey: string;
     priority?: number;
     testOnCreate?: boolean;
