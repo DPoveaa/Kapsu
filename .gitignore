@@ -27,9 +27,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
 # Scratch files
 scratch/
+.codex-tmp/
+*.patch
+patch-kaia*.cjs
+
 # Keep Kaia verification scripts tracked; ignore only ad-hoc local experiments
 /scripts/tmp/
 /scripts/*.local.*
-
