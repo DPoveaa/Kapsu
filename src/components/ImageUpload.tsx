@@ -27,6 +27,11 @@ export default function ImageUpload({
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(getPreviewUrl(value || null))
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const objectUrlRef = useRef<string | null>(null)
+
+  useEffect(() => () => {
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+  }, [])
 
   // Atualiza preview quando value muda (para produtos existentes)
   useEffect(() => {
@@ -52,11 +57,9 @@ export default function ImageUpload({
     }
 
     // Cria preview local
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setPreview(reader.result as string)
-    }
-    reader.readAsDataURL(file)
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+    objectUrlRef.current = URL.createObjectURL(file)
+    setPreview(objectUrlRef.current)
 
     // Faz upload
     try {
@@ -66,6 +69,8 @@ export default function ImageUpload({
       onChange(normalizeImagePath(response.data.path))
       // Atualiza preview com a URL completa para exibição
       setPreview(getPreviewUrl(response.data.path))
+      URL.revokeObjectURL(objectUrlRef.current)
+      objectUrlRef.current = null
       onError?.(null) // Limpa erro anterior
     } catch (error: any) {
       console.error('Erro ao fazer upload:', error)

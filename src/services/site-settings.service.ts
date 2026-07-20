@@ -49,6 +49,8 @@ export interface UploadLogoResponse {
 }
 
 class SiteSettingsService {
+  private settingsPromise: Promise<SiteSettings> | null = null
+  private settingsCache: { value: SiteSettings; expiresAt: number } | null = null
   private getAuthHeaders() {
     const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token')
     return {
@@ -61,17 +63,22 @@ class SiteSettingsService {
    * Obtém todas as configurações do site
    */
   async getSettings(): Promise<SiteSettings> {
-    const response = await fetch(`${API_URL}/site-settings`, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    })
-
-    if (!response.ok) {
-      throw new Error('Erro ao obter configurações')
-    }
-
-    const data: SiteSettingsResponse = await response.json()
-    return data.settings
+    const token = localStorage.getItem('sanare_token') || localStorage.getItem('token')
+    if (!token && this.settingsCache && this.settingsCache.expiresAt > Date.now()) return this.settingsCache.value
+    if (!token && this.settingsPromise) return this.settingsPromise
+    const request = (async () => {
+      const response = await fetch(`${API_URL}/site-settings`, {
+        method: 'GET',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      if (!response.ok) throw new Error('Erro ao obter configurações')
+      const data: SiteSettingsResponse = await response.json()
+      if (!token) this.settingsCache = { value: data.settings, expiresAt: Date.now() + 60_000 }
+      return data.settings
+    })()
+    if (token) return request
+    this.settingsPromise = request
+    try { return await request } finally { this.settingsPromise = null }
   }
 
   /**

@@ -2,16 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { Plus, Pencil, Trash2, MoveUp, MoveDown } from 'lucide-react'
 import { headerCategoriesService, HeaderCategory } from '../services/header-categories.service'
 import { siteSettingsService } from '../services/site-settings.service'
-import * as LucideIcons from 'lucide-react'
+import { CATEGORY_ICON_NAMES, getCategoryIcon } from '../components/categoryIconMap'
 import { confirm } from '../utils/toast'
 import AdminModal from '../components/AdminModal'
 
 // Array de nomes de ícones comuns para o seletor
-const COMMON_ICONS = [
-  'Tag', 'Star', 'Percent', 'Gift', 'ShoppingBag', 'Package', 'Truck', 'Zap',
-  'Heart', 'Smile', 'Coffee', 'Info', 'HelpCircle', 'Home', 'Activity', 'Award',
-  'Bookmark', 'Camera', 'Compass', 'CreditCard', 'Feather', 'Flag', 'Globe', 'Key'
-];
+const COMMON_ICONS = CATEGORY_ICON_NAMES
 
 function ColorPickerField({ label, color, onChange }: { label: string, color: string, onChange: (color: string) => void }) {
   const [localColor, setLocalColor] = useState(color);
@@ -331,7 +327,7 @@ export default function ManageHeaderCategories() {
                 <span className="text-sm opacity-60 text-gray-500 py-1">Nenhuma categoria ativa</span>
               ) : (
                 categories.filter(c => c.active).map(cat => {
-                  const CatIcon = (LucideIcons as any)[cat.icon || 'Tag'] || LucideIcons.Tag
+                  const CatIcon = getCategoryIcon(cat.icon)
                   return (
                     <div key={cat.id} className="flex items-center gap-1.5 px-2.5 py-0.5 cursor-pointer hover:bg-black/5 rounded-full transition-colors whitespace-nowrap">
                       {cat.show_icon && <CatIcon size={14} style={{ color: cat.icon_color }} />}
@@ -356,7 +352,7 @@ export default function ManageHeaderCategories() {
                 <span className="text-sm opacity-60 text-gray-400 py-1">Nenhuma categoria ativa</span>
               ) : (
                 categories.filter(c => c.active).map(cat => {
-                  const CatIcon = (LucideIcons as any)[cat.icon || 'Tag'] || LucideIcons.Tag
+                  const CatIcon = getCategoryIcon(cat.icon)
                   return (
                     <div key={cat.id} className="flex items-center gap-1.5 px-2.5 py-0.5 cursor-pointer hover:bg-white/10 rounded-full transition-colors whitespace-nowrap">
                       {cat.show_icon && <CatIcon size={14} style={{ color: cat.icon_color_dark || '#FFFFFF' }} />}
@@ -384,7 +380,7 @@ export default function ManageHeaderCategories() {
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {categories.map((category, index) => {
-              const CatIcon = (LucideIcons as any)[category.icon || 'Tag'] || LucideIcons.Tag;
+              const CatIcon = getCategoryIcon(category.icon);
 
               return (
                 <tr key={category.id} className="group hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
@@ -549,7 +545,7 @@ export default function ManageHeaderCategories() {
               <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Selecione um Ícone</label>
               <div className="grid grid-cols-6 sm:grid-cols-8 gap-3 max-h-48 overflow-y-auto p-4 border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900">
                 {COMMON_ICONS.map(iconName => {
-                  const IconCmp = (LucideIcons as any)[iconName]
+                  const IconCmp = getCategoryIcon(iconName)
                   if (!IconCmp) return null
                   return (
                     <button

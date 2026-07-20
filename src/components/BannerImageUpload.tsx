@@ -30,6 +30,11 @@ export default function BannerImageUpload({
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<string | null>(getPreviewUrl(value || null))
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const objectUrlRef = useRef<string | null>(null)
+
+  useEffect(() => () => {
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+  }, [])
 
   // Atualiza preview quando value muda
   useEffect(() => {
@@ -55,11 +60,9 @@ export default function BannerImageUpload({
     }
 
     // Cria preview local
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setPreview(reader.result as string)
-    }
-    reader.readAsDataURL(file)
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+    objectUrlRef.current = URL.createObjectURL(file)
+    setPreview(objectUrlRef.current)
 
     // Faz upload usando o serviço de banners
     try {

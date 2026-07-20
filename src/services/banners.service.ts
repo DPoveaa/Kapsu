@@ -80,10 +80,8 @@ class BannersService {
       ? `${API_URL}/banners?include_inactive=true`
       : `${API_URL}/banners`
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    })
+    const token = localStorage.getItem('token') || localStorage.getItem('sanare_token')
+    const response = await fetch(url, { method: 'GET', headers: token ? { Authorization: `Bearer ${token}` } : undefined })
 
     if (!response.ok) {
       throw new Error('Erro ao obter banners')

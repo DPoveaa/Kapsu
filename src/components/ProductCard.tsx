@@ -4,10 +4,10 @@ import { Link } from 'react-router-dom'
 import { Plus, Check } from 'lucide-react'
 import { Product } from '../types'
 import { useCart } from '../context/CartContext'
-import { productsService } from '../services/products.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import { animateAddToCart } from '../utils/cartFlyAnimation'
 import { generateProductUrl } from '../utils/productUrl'
+import DeferredProductImage from './DeferredProductImage'
 
 // ─── Color palettes ────────────────────────────────────────────────────────
 const BURST_COLORS = [
@@ -164,8 +164,6 @@ export default function ProductCard({ product }: ProductCardProps) {
     addedTimer.current = setTimeout(() => setIsAdded(false), 1500)
   }
 
-  const imageUrl = productsService.getImageUrl(product.image)
-
   // ── Render ────────────────────────────────────────────────────────────
   return (
     <>
@@ -174,8 +172,8 @@ export default function ProductCard({ product }: ProductCardProps) {
 
           {/* ── Image ── */}
           <div className="relative w-full aspect-square bg-white flex-shrink-0 overflow-hidden">
-            <img
-              src={imageUrl}
+            <DeferredProductImage
+              imagePath={product.image}
               alt={product.name}
               className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
               onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}

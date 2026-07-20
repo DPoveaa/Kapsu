@@ -1,48 +1,58 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useSearchParams } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminLayout from './components/AdminLayout'
 import Home from './pages/Home'
-import Products from './pages/Products'
-import ProductDetail from './pages/ProductDetail'
-import Cart from './pages/Cart'
-import Login from './pages/Login'
-import AdminPanel from './pages/AdminPanel'
-import WhatsAppConnection from './pages/WhatsAppConnection'
-import WhatsAppSupport from './pages/WhatsAppSupport'
-import UserManagement from './pages/UserManagement'
-import ManageProducts from './pages/ManageProducts'
-import ManageOrders from './pages/ManageOrders'
-import Reports from './pages/Reports'
-import SiteSettings from './pages/SiteSettings'
-import GoogleSheetsSettings from './pages/GoogleSheetsSettings'
-import ShippingSettings from './pages/ShippingSettings'
-import FreeShippingRules from './pages/FreeShippingRules'
-import ManagePromotions from './pages/ManagePromotions'
-import ManagePromoCodes from './pages/ManagePromoCodes'
-import AuditLogs from './pages/AuditLogs'
-import KaiaChats from './pages/KaiaChats'
-import ManageInstallmentRules from './pages/ManageInstallmentRules'
 
-import ManageBanners from './pages/ManageBanners'
-import ManageReviews from './pages/ManageReviews'
-import ManageHomeSections from './pages/ManageHomeSections'
-import ManageHeaderCategories from './pages/ManageHeaderCategories'
-import OrderDetail from './pages/OrderDetail'
-import SupplierOrderDetail from './pages/SupplierOrderDetail'
-import PaymentFailure from './pages/PaymentFailure'
-import Profile from './pages/Profile'
-import RecoverPassword from './pages/RecoverPassword'
-import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
-import TermsOfServicePage from './pages/TermsOfServicePage'
+// Lazy loaded pages
+const Products = lazy(() => import('./pages/Products'))
+const ProductDetail = lazy(() => import('./pages/ProductDetail'))
+const Cart = lazy(() => import('./pages/Cart'))
+const Login = lazy(() => import('./pages/Login'))
+const AdminPanel = lazy(() => import('./pages/AdminPanel'))
+const WhatsAppConnection = lazy(() => import('./pages/WhatsAppConnection'))
+const WhatsAppSupport = lazy(() => import('./pages/WhatsAppSupport'))
+const UserManagement = lazy(() => import('./pages/UserManagement'))
+const ManageProducts = lazy(() => import('./pages/ManageProducts'))
+const ManageOrders = lazy(() => import('./pages/ManageOrders'))
+const Reports = lazy(() => import('./pages/Reports'))
+const SiteSettings = lazy(() => import('./pages/SiteSettings'))
+const GoogleSheetsSettings = lazy(() => import('./pages/GoogleSheetsSettings'))
+const ShippingSettings = lazy(() => import('./pages/ShippingSettings'))
+const FreeShippingRules = lazy(() => import('./pages/FreeShippingRules'))
+const ManagePromotions = lazy(() => import('./pages/ManagePromotions'))
+const ManagePromoCodes = lazy(() => import('./pages/ManagePromoCodes'))
+const AuditLogs = lazy(() => import('./pages/AuditLogs'))
+const KaiaChats = lazy(() => import('./pages/KaiaChats'))
+const ManageInstallmentRules = lazy(() => import('./pages/ManageInstallmentRules'))
+const ManageBanners = lazy(() => import('./pages/ManageBanners'))
+const ManageReviews = lazy(() => import('./pages/ManageReviews'))
+const ManageHomeSections = lazy(() => import('./pages/ManageHomeSections'))
+const ManageHeaderCategories = lazy(() => import('./pages/ManageHeaderCategories'))
+const OrderDetail = lazy(() => import('./pages/OrderDetail'))
+const SupplierOrderDetail = lazy(() => import('./pages/SupplierOrderDetail'))
+const PaymentFailure = lazy(() => import('./pages/PaymentFailure'))
+const Profile = lazy(() => import('./pages/Profile'))
+const RecoverPassword = lazy(() => import('./pages/RecoverPassword'))
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
+const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'))
+
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { FavoritesProvider } from './context/FavoritesContext'
-import FloatingChat from './components/FloatingChat'
 import ToastContainer from './components/ToastContainer'
 import { siteSettingsService, SiteSettings as SiteSettingsType } from './services/site-settings.service'
+
+const FloatingChat = lazy(() => import('./components/FloatingChat'))
+
+const PageLoader = () => (
+  <div className="min-h-[50vh] flex items-center justify-center bg-palette-light dark:bg-gray-950 transition-colors">
+    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+  </div>
+)
+
 
 function PaymentSuccessRedirect() {
   const [searchParams] = useSearchParams()
@@ -56,7 +66,33 @@ function PaymentSuccessRedirect() {
 function AppContent() {
   const location = useLocation()
   const [chatbotEnabled, setChatbotEnabled] = useState(true)
+  const [loadChatbot, setLoadChatbot] = useState(false)
   const hideChat = ['/login', '/cadastro', '/recuperar-senha'].includes(location.pathname)
+
+  useEffect(() => {
+    if (hideChat || !chatbotEnabled) return
+
+    const triggerLoad = () => {
+      setLoadChatbot(true)
+      cleanup()
+    }
+
+    const cleanup = () => {
+      window.removeEventListener('mousemove', triggerLoad)
+      window.removeEventListener('scroll', triggerLoad)
+      window.removeEventListener('keydown', triggerLoad)
+      window.removeEventListener('touchstart', triggerLoad)
+      clearTimeout(timer)
+    }
+
+    const timer = setTimeout(triggerLoad, 3500)
+    window.addEventListener('mousemove', triggerLoad, { passive: true })
+    window.addEventListener('scroll', triggerLoad, { passive: true })
+    window.addEventListener('keydown', triggerLoad, { passive: true })
+    window.addEventListener('touchstart', triggerLoad, { passive: true })
+
+    return cleanup
+  }, [hideChat, chatbotEnabled])
 
   useEffect(() => {
     let isMounted = true
@@ -94,269 +130,275 @@ function AppContent() {
   return (
     <Layout>
       <ToastContainer />
-      {!hideChat && chatbotEnabled && <FloatingChat />}
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/produtos" element={<Products />} />
-        <Route path="/produtos/:idSlug" element={<ProductDetail />} />
-        <Route path="/carrinho" element={<Cart />} />
-        <Route path="/carrinho/payment/card" element={<Navigate to="/carrinho?step=payment" replace />} />
-        <Route path="/checkout" element={<Navigate to="/carrinho?step=delivery" replace />} />
-        <Route path="/checkout/payment/card" element={<Navigate to="/carrinho/payment/card" replace />} />
-        <Route path="/checkout/success" element={<PaymentSuccessRedirect />} />
-        <Route path="/checkout/failure" element={<PaymentFailure />} />
-        <Route path="/payment-success" element={<PaymentSuccessRedirect />} />
-        <Route path="/payment-failure" element={<PaymentFailure />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/cadastro" element={<Login />} />
-        <Route path="/recuperar-senha" element={<RecoverPassword />} />
-        <Route path="/politica-de-privacidade" element={<PrivacyPolicyPage />} />
-        <Route path="/termos-de-servico" element={<TermsOfServicePage />} />
-        <Route path="/fornecedor/pedidos/:id" element={<SupplierOrderDetail />} />
-        <Route
-          path="/perfil"
-          element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <AdminPanel />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/whatsapp"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <WhatsAppConnection />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/whatsapp/support"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <WhatsAppSupport />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/users"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <UserManagement />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/products"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <ManageProducts />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/products/create"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <ManageProducts />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/products/edit/:id"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <ManageProducts />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
+      {!hideChat && chatbotEnabled && loadChatbot && (
+        <Suspense fallback={null}>
+          <FloatingChat />
+        </Suspense>
+      )}
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/produtos" element={<Products />} />
+          <Route path="/produtos/:idSlug" element={<ProductDetail />} />
+          <Route path="/carrinho" element={<Cart />} />
+          <Route path="/carrinho/payment/card" element={<Navigate to="/carrinho?step=payment" replace />} />
+          <Route path="/checkout" element={<Navigate to="/carrinho?step=delivery" replace />} />
+          <Route path="/checkout/payment/card" element={<Navigate to="/carrinho/payment/card" replace />} />
+          <Route path="/checkout/success" element={<PaymentSuccessRedirect />} />
+          <Route path="/checkout/failure" element={<PaymentFailure />} />
+          <Route path="/payment-success" element={<PaymentSuccessRedirect />} />
+          <Route path="/payment-failure" element={<PaymentFailure />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/cadastro" element={<Login />} />
+          <Route path="/recuperar-senha" element={<RecoverPassword />} />
+          <Route path="/politica-de-privacidade" element={<PrivacyPolicyPage />} />
+          <Route path="/termos-de-servico" element={<TermsOfServicePage />} />
+          <Route path="/fornecedor/pedidos/:id" element={<SupplierOrderDetail />} />
+          <Route
+            path="/perfil"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <AdminPanel />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/whatsapp"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <WhatsAppConnection />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/whatsapp/support"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <WhatsAppSupport />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <UserManagement />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/products"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ManageProducts />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/products/create"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ManageProducts />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/products/edit/:id"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ManageProducts />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
 
-        <Route
-          path="/admin/orders"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <ManageOrders />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/reports"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <Reports />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/settings"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <SiteSettings />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/google-sheets"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <GoogleSheetsSettings />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/audit"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <AuditLogs />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/shipping"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <ShippingSettings />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/shipping/free-rules"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <FreeShippingRules />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/promotions"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <ManagePromotions />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/promo-codes"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <ManagePromoCodes />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/installment-rules"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <ManageInstallmentRules />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/banners"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <ManageBanners />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/reviews"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <ManageReviews />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/home-sections"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <ManageHomeSections />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/header-categories"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <ManageHeaderCategories />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/orders/:id"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <OrderDetail />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/ai-keys"
-          element={<Navigate to="/admin/central-ia?tab=keys" replace />}
-        />
-        <Route
-          path="/admin/central-ia"
-          element={
-            <ProtectedRoute requireAdmin>
-              <AdminLayout>
-                <KaiaChats />
-              </AdminLayout>
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
+          <Route
+            path="/admin/orders"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ManageOrders />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/reports"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <Reports />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/settings"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <SiteSettings />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/google-sheets"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <GoogleSheetsSettings />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/audit"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <AuditLogs />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/shipping"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ShippingSettings />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/shipping/free-rules"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <FreeShippingRules />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/promotions"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ManagePromotions />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/promo-codes"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ManagePromoCodes />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/installment-rules"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ManageInstallmentRules />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/banners"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ManageBanners />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/reviews"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ManageReviews />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/home-sections"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ManageHomeSections />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/header-categories"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <ManageHeaderCategories />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/orders/:id"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <OrderDetail />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/ai-keys"
+            element={<Navigate to="/admin/central-ia?tab=keys" replace />}
+          />
+          <Route
+            path="/admin/central-ia"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminLayout>
+                  <KaiaChats />
+                </AdminLayout>
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </Suspense>
     </Layout>
   )
 }

@@ -13,6 +13,7 @@ import { reviewsService, Review } from '../services/reviews.service'
 import { Product } from '../types'
 import { User, Camera, Phone, Save, X, Check, MapPin, Plus, Edit, Trash2, Star, Loader2, ChevronRight, Package, Calendar, CreditCard, ShoppingBag, Download, ArrowLeft, Mail, FileText, Heart, Bell, HelpCircle, LogOut, Copy, QrCode, Barcode, ShieldCheck, Truck, Tag } from 'lucide-react'
 import { env } from '../config/env'
+import { ensureGoogleIdentityScript } from '../utils/googleIdentity'
 import { confirm, toast } from '../utils/toast'
 import { getOrderStatusLabel, getOrderStatusBadgeClass, isInvoiceEligibleStatus } from '../utils/orderStatus'
 
@@ -92,6 +93,7 @@ export default function Profile() {
 
   // Atualiza activeSection quando searchParams ou location.state mudar
   useEffect(() => {
+    ensureGoogleIdentityScript()
     const section = resolveProfileSection(
       searchParams,
       (location.state?.section as ProfileSection) || null

@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
-import orelhaLogo from '../images/orelha_logo.png'
-import olhoLogo from '../images/olho_logo.png'
-import pupilaNormalEsquerdo from '../images/pupila_esquerda_base.png'
-import pupilaNormalDireito from '../images/pupila_direita_base.png'
-import pupilaDormindoEsquerdo from '../images/pupila_dormindo_esquerda.png'
-import pupilaDormindoDireito from '../images/pupila_dormindo_direita.png'
-import nariz from '../images/nariz.png'
-import comprimidoEsquerdo from '../images/comprimido_esquerdo.png'
-import comprimidoDireito from '../images/comprimido_direito.png'
+import orelhaLogo from '../images/orelha_logo_128.webp'
+import olhoLogo from '../images/olho_logo_128.webp'
+import pupilaNormalEsquerdo from '../images/pupila_esquerda_base_128.webp'
+import pupilaNormalDireito from '../images/pupila_direita_base_128.webp'
+import pupilaDormindoEsquerdo from '../images/pupila_dormindo_esquerda_128.webp'
+import pupilaDormindoDireito from '../images/pupila_dormindo_direita_128.webp'
+import nariz from '../images/nariz_128.webp'
+import comprimidoEsquerdo from '../images/comprimido_esquerdo_128.webp'
+import comprimidoDireito from '../images/comprimido_direito_128.webp'
 
 interface AnimatedLogoProps {
   className?: string
