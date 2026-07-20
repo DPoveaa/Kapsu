@@ -7,7 +7,8 @@ import { bannersService, Banner } from '../services/banners.service'
 import { reviewsService, Review } from '../services/reviews.service'
 import { homeSectionsService, HomeSection } from '../services/home-sections.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
-import { getImageUrl } from '../utils/imageUrl'
+import { getImageUrl, getResponsiveImageSrcSet } from '../utils/imageUrl'
+import DeferredProductImage from '../components/DeferredProductImage'
 import { HorizontalScrollContainer } from '../components/HorizontalScrollContainer'
 import { generateProductUrl } from '../utils/productUrl'
 
@@ -27,6 +28,7 @@ export default function Home() {
   const [startX, setStartX] = useState(0)
   const [currentX, setCurrentX] = useState(0)
   const [autoRotatePaused, setAutoRotatePaused] = useState(false)
+  const [bannerInteracted, setBannerInteracted] = useState(false)
   const bannerRef = useRef<HTMLDivElement>(null)
 
   // Carrega banners da API ou usa fallback
@@ -158,7 +160,7 @@ export default function Home() {
 
   // Auto-rotaciona banners com loop infinito (pausa quando hover/touch)
   useEffect(() => {
-    if (autoRotatePaused || !isInfinite) return
+    if (autoRotatePaused || !isInfinite || !bannerInteracted || document.visibilityState !== 'visible') return
 
     const interval = setInterval(() => {
       setBannerIndex((prev) => {
@@ -176,7 +178,7 @@ export default function Home() {
       })
     }, 6000)
     return () => clearInterval(interval)
-  }, [infiniteBannerImages.length, autoRotatePaused, isInfinite])
+  }, [infiniteBannerImages.length, autoRotatePaused, isInfinite, bannerInteracted])
 
   // Reseta para o final quando volta para o clone inicial
   useEffect(() => {
@@ -207,6 +209,7 @@ export default function Home() {
       setCurrentX(e.clientX)
       if (Math.abs(startX - e.clientX) > 10) {
         setDragged(true)
+        setBannerInteracted(true)
       }
     }
 
@@ -312,6 +315,9 @@ export default function Home() {
   const handleBannerMouseMove = (e: React.MouseEvent) => {
     if (!isDragging) return
     setCurrentX(e.clientX)
+    if (Math.abs(startX - e.clientX) > 10) {
+      setBannerInteracted(true)
+    }
   }
 
   const handleBannerMouseUp = () => {
@@ -385,6 +391,7 @@ export default function Home() {
     setCurrentX(e.touches[0].clientX)
     if (Math.abs(startX - e.touches[0].clientX) > 10) {
       setDragged(true)
+      setBannerInteracted(true)
     }
   }
 
@@ -475,20 +482,47 @@ export default function Home() {
             onTouchEnd={isInfinite ? handleBannerTouchEnd : undefined}
           >
             {infiniteBannerImages.map((banner, index) => {
+              const isFirstVisible = index === (isInfinite ? 1 : 0);
               const bannerContent = (
                 <div className="min-w-full h-full relative bg-gray-100 dark:bg-gray-800 select-none">
-                  <img
-                    src={getImageUrl((isMobile && banner.mobile_image_url) ? banner.mobile_image_url : banner.image_url)}
-                    alt={banner.title || `Banner ${index + 1}`}
-                    className="w-full h-full object-cover object-center select-none pointer-events-none"
-                    draggable={false}
-                    onDragStart={(e) => e.preventDefault()}
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement
-                      target.onerror = null
-                      target.style.display = 'none'
-                    }}
-                  />
+                  {index === bannerIndex && <picture className="w-full h-full block select-none pointer-events-none" draggable={false}>
+                    {banner.mobile_image_url && (
+                      <source
+                        media="(max-width: 639px)"
+                        srcSet={getResponsiveImageSrcSet(banner.mobile_image_url, [480, 768], 'banners') || getImageUrl(banner.mobile_image_url)}
+                        sizes="100vw"
+                      />
+                    )}
+                    <source
+                      media="(min-width: 640px)"
+                      srcSet={getResponsiveImageSrcSet(banner.image_url, [1024, 1440, 1920], 'banners') || getImageUrl(banner.image_url)}
+                      sizes="100vw"
+                    />
+                    <img
+                      src={getImageUrl(banner.image_url)}
+                      alt={banner.title || `Banner ${index + 1}`}
+                      className="w-full h-full object-cover object-center select-none pointer-events-none"
+                      draggable={false}
+                      onDragStart={(e) => e.preventDefault()}
+                      fetchPriority={isFirstVisible ? 'high' : 'low'}
+                      loading={isFirstVisible ? 'eager' : 'lazy'}
+                      decoding={isFirstVisible ? 'sync' : 'async'}
+                      width={1440}
+                      height={600}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement
+                        const picture = target.closest('picture')
+                        const sources = picture?.querySelectorAll('source') || []
+                        if (sources.length > 0) {
+                          sources.forEach(source => source.remove())
+                          target.src = getImageUrl(banner.image_url)
+                          return
+                        }
+                        target.onerror = null
+                        target.style.display = 'none'
+                      }}
+                    />
+                  </picture>}
                   <div
                     className="absolute inset-0 z-10 pointer-events-none dark:hidden"
                     style={{
@@ -541,6 +575,7 @@ export default function Home() {
                   <button
                     key={index}
                     onClick={() => {
+                      setBannerInteracted(true)
                       setIsTransitioning(true)
                       setBannerIndex(index + 1)
                     }}
@@ -631,8 +666,8 @@ export default function Home() {
                       >
                         {/* 1:1 image fills top of card */}
                         <div className="w-full aspect-square bg-white overflow-hidden flex-shrink-0 relative">
-                          <img
-                            src={productsService.getImageUrl(product.image)}
+                          <DeferredProductImage
+                            imagePath={product.image}
                             alt={product.name}
                             className="w-full h-full object-contain select-none pointer-events-none group-hover:scale-105 transition-transform duration-300"
                             draggable={false}
@@ -748,8 +783,8 @@ export default function Home() {
                       >
                         {/* 1:1 image fills top of card */}
                         <div className="w-full aspect-square bg-white overflow-hidden flex-shrink-0 relative">
-                          <img
-                            src={productsService.getImageUrl(product.image)}
+                          <DeferredProductImage
+                            imagePath={product.image}
                             alt={product.name}
                             className="w-full h-full object-contain select-none pointer-events-none group-hover:scale-105 transition-transform duration-300"
                             draggable={false}
@@ -850,6 +885,8 @@ export default function Home() {
                                 <img
                                   src={review.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name || 'Cliente')}&size=64&background=00A86B&color=fff&bold=true`}
                                   alt={review.name || 'Cliente'}
+                                  width={48}
+                                  height={48}
                                   className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement

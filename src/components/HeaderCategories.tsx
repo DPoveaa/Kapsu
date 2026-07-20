@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { headerCategoriesService, HeaderCategory } from '../services/header-categories.service'
 import { siteSettingsService } from '../services/site-settings.service'
-import * as LucideIcons from 'lucide-react'
+import { getCategoryIcon } from './categoryIconMap'
 import { useTheme } from '../context/ThemeContext'
 
 export default function HeaderCategories() {
@@ -48,7 +48,7 @@ export default function HeaderCategories() {
       style={{ backgroundColor: currentBgColor }}
     >
       {categories.map(cat => {
-        const CatIcon = (LucideIcons as any)[cat.icon || 'Tag'] || LucideIcons.Tag
+        const CatIcon = getCategoryIcon(cat.icon)
         
         // Verifica se é link interno ou externo
         const isExternal = cat.url.startsWith('http')

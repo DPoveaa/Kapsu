@@ -6,9 +6,10 @@ import { authService } from '../services/auth.service'
 import { cartService } from '../services/cart.service'
 import { validateCPF, formatCPF, validatePhone, formatPhone, validateEmail, validatePassword } from '../utils/validators'
 import AnimatedLogo from '../components/AnimatedLogo'
-import loginBannerPortrait from '../images/3x4.png'
-import loginBannerLandscape from '../images/4x3.png'
+import loginBannerPortrait from '../images/3x4.webp'
+import loginBannerLandscape from '../images/4x3.webp'
 import { env } from '../config/env'
+import { ensureGoogleIdentityScript } from '../utils/googleIdentity'
 import LegalAcceptanceCheckbox from '../components/legal/LegalAcceptanceCheckbox'
 import { getLegalAcceptancePayload } from '../content/legal'
 
@@ -68,6 +69,7 @@ export default function Login() {
 
   // Sincroniza o modo visual caso o usuário navegue usando o histórico do navegador (botão voltar/avançar)
   useEffect(() => {
+    ensureGoogleIdentityScript()
     const isRegisterRoute = location.pathname === '/cadastro'
     setIsLogin(!isRegisterRoute)
     setGeneralError('')

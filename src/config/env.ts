@@ -17,6 +17,9 @@ export const env = {
   // URL da API
   apiUrl: import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:3000/api'),
 
+  // Ative somente depois que a API com GET /upload/variant estiver publicada.
+  imageVariantsEnabled: import.meta.env.VITE_IMAGE_VARIANTS_ENABLED === 'true',
+
   // Link publico de atendimento no WhatsApp
   get supportWhatsAppUrl() {
     try {

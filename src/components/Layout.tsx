@@ -2,7 +2,6 @@ import { ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import Header from './Header'
 import Footer from './Footer'
-import { useTrackAccess } from '../hooks/useTrackAccess'
 import { usePageTracking } from '../hooks/usePageTracking'
 
 interface LayoutProps {
@@ -19,7 +18,6 @@ export default function Layout({ children }: LayoutProps) {
   const showFooter = !hideHeaderFooter && !isAdminRoute
 
   // Rastreia acessos automaticamente
-  useTrackAccess()
   // Rastreia comportamento detalhado (tempo, scroll, cliques)
   usePageTracking()
 
