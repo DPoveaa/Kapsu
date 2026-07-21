@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { MessageSquare, X, Send, Loader2, Phone, Mail, History, Plus, Trash2 } from 'lucide-react'
 import { whatsappService } from '../services/whatsapp.service'
 import { useAuth } from '../context/AuthContext'
@@ -41,6 +41,7 @@ interface ChatMessage {
   content: string
   timestamp: number
   actions?: ChatAction[]
+  isWelcome?: boolean
   metadata?: {
     processingStatus?: string
     receivedAt?: string
@@ -560,6 +561,20 @@ const FloatingChat: React.FC = () => {
   /** Código do cupão que foi copiado recentemente (para feedback visual temporário) */
   const [copiedCoupon, setCopiedCoupon] = useState<string | null>(null)
 
+  const hasUserSentMessage = useMemo(() => messages.some(m => m.role === 'user'), [messages])
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false)
+
+  useEffect(() => {
+    if (hasUserSentMessage && !welcomeDismissed) {
+      const timer = setTimeout(() => {
+        setWelcomeDismissed(true)
+      }, 500)
+      return () => clearTimeout(timer)
+    } else if (!hasUserSentMessage && welcomeDismissed) {
+      setWelcomeDismissed(false)
+    }
+  }, [hasUserSentMessage, welcomeDismissed])
+
   const resetChatFlowState = useCallback(() => {
     setEscalationStatus('none')
     setEscalationChannel(null)
@@ -590,7 +605,7 @@ const FloatingChat: React.FC = () => {
       isInitialHistoryLoad.current = true
 
       const welcomeText = `Olá, ${user?.name || 'Cliente'}! \nEu sou a Kaia, sua assistente virtual da Kapsu. \nComo posso te ajudar hoje? 😊`
-      setMessages([{ role: 'assistant', content: welcomeText, timestamp: Date.now() }])
+      setMessages([{ role: 'assistant', content: welcomeText, timestamp: Date.now(), isWelcome: true }])
     } catch (err) {
       console.error('Erro ao iniciar conversa limpa:', err)
     } finally {
@@ -854,7 +869,8 @@ const FloatingChat: React.FC = () => {
               {
                 role: 'assistant' as const,
                 content: '',
-                timestamp: welcomeId
+                timestamp: welcomeId,
+                isWelcome: true
               }
             ]
           }
@@ -3115,9 +3131,21 @@ const FloatingChat: React.FC = () => {
                   {messages.map((msg, index) => {
                     const previousMessage = messages[index - 1]
                     const showSenderLabel = msg.role !== 'user' && previousMessage?.role !== msg.role
+                    const isWelcomeMsg = msg.isWelcome || (msg.role === 'assistant' && typeof msg.content === 'string' && (msg.content.includes('sua assistente virtual da Kapsu') || (msg.content.includes('Eu sou a Kaia') && msg.content.includes('Como posso te ajudar hoje'))))
+
+                    if (isWelcomeMsg && welcomeDismissed) {
+                      return null
+                    }
 
                     return (
-                      <div key={index}>
+                      <div
+                        key={msg.id || msg.clientTempId || index}
+                        className={isWelcomeMsg ? `transition-all duration-500 ease-in-out transform origin-top-left overflow-hidden ${
+                          hasUserSentMessage
+                            ? 'max-h-0 opacity-0 scale-95 -translate-y-2 my-0 py-0 border-0 pointer-events-none'
+                            : 'max-h-[300px] opacity-100 scale-100 translate-y-0'
+                        }` : undefined}
+                      >
                         {/* Mensagem normal */}
                         {(msg.content || msg.metadata?.parts?.length || msg.metadata?.recommendedProducts?.length || msg.metadata?.cartProducts?.length || msg.metadata?.followUpText || msg.actions?.length) && (() => {
                           // ===== LAYOUT COMPOSTO COM PARTS (Carrinho estruturado) =====

@@ -1,6 +1,22 @@
-﻿import { env } from '../config/env'
+import { env } from '../config/env'
 
 const API_URL = env.apiUrl
+
+export interface ShippingOption {
+  method: 'custom' | 'sedex'
+  name: string
+  shippingFee: number
+  isFreeShipping: boolean
+  freeShippingThreshold: number | null
+  deliveryTime: number | null
+  deliveryTimeType: 'business' | 'calendar'
+  estimatedDate?: string | null
+  municipality?: string | null
+  carrier?: string | null
+  service?: string | null
+  externalShipping?: boolean
+  message?: string | null
+}
 
 export interface ShippingCalculation {
   shippingFee: number | null
@@ -20,6 +36,7 @@ export interface ShippingCalculation {
   externalShipping?: boolean
   carrier?: string | null
   service?: string | null
+  options?: ShippingOption[]
 }
 
 export interface ShippingRegion {
@@ -36,7 +53,14 @@ export interface ShippingRegion {
 }
 
 export interface ShippingSettings {
-  free_shipping_threshold: number
+  custom_shipping_enabled?: boolean
+  sedex_shipping_enabled?: boolean
+  sedex_origin_cep?: string
+  custom_free_shipping_enabled?: boolean
+  custom_free_shipping_threshold?: number
+  sedex_free_shipping_enabled?: boolean
+  sedex_free_shipping_threshold?: number
+  free_shipping_threshold?: number
   general_delivery_time?: number
   general_delivery_time_type?: 'business' | 'calendar'
 }
@@ -202,6 +226,25 @@ class ShippingService {
       const error = await response.json()
       throw new Error(error.message || 'Erro ao atualizar configurações de frete')
     }
+  }
+
+  /**
+   * Testar cotação de frete diretamente do painel de admin
+   */
+  async testShippingQuote(cep: string, cartTotal = 0): Promise<ShippingCalculation> {
+    const response = await fetch(`${API_URL}/shipping/test-quote`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ cep, cartTotal }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.message || 'Erro ao testar cotação de frete')
+    }
+
+    const data = await response.json()
+    return data.data
   }
 }
 

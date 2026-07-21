@@ -4,16 +4,17 @@ import { useAuth } from '../context/AuthContext';
 import { resolveConversationMode } from '../utils/conversationMode';
 import { aiApiKeysService, AiApiKey, DuplicateApiKeyError } from '../services/ai-api-keys.service';
 import AdminModal from '../components/AdminModal';
+import { siteSettingsService } from '../services/site-settings.service';
 import {
   Bot, Search, Filter, RefreshCw, MessageSquare, AlertTriangle,
-  CheckCircle, Clock, ChevronDown, ChevronLeft, ChevronRight, Download,
+  CheckCircle, Clock, ChevronDown, ChevronLeft, ChevronRight, Download, Upload, Archive,
   ShoppingCart, Tag, Truck, Package, Send, X,
   Activity, Zap, Shield, Code2, TrendingUp, ChevronUp,
   Check, AlertCircle, Loader2,
   Phone, Mail, Hash, Calendar,
   Headphones, Pause, Play, Trash2,
   CircleDot, Layers, EyeOff, KeyRound, RotateCcw, Plus, Copy, MoreVertical,
-  UserX, UserCheck, Brain
+  UserX, UserCheck, Brain, Sparkles, HelpCircle
 } from 'lucide-react';
 import { generateProductUrl } from '../utils/productUrl';
 
@@ -179,23 +180,23 @@ const timeAgo = (dateStr: string) => {
 const formatLastInteraction = (dateStr: string) => {
   const date = new Date(dateStr);
   const now = new Date();
-  
+
   const isSameDay = date.getDate() === now.getDate() &&
-                    date.getMonth() === now.getMonth() &&
-                    date.getFullYear() === now.getFullYear();
-                    
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear();
+
   if (isSameDay) {
     return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   }
-  
+
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
   const isYesterday = date.getDate() === yesterday.getDate() &&
-                      date.getMonth() === yesterday.getMonth() &&
-                      date.getFullYear() === yesterday.getFullYear();
-                      
+    date.getMonth() === yesterday.getMonth() &&
+    date.getFullYear() === yesterday.getFullYear();
+
   if (isYesterday) return 'Ontem';
-  
+
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 };
 
@@ -331,12 +332,12 @@ const normalizeMessage = (message: unknown): Message => {
     content: safeString(msg.content || msg.message || msg.text),
     metadata: rootParts.length > 0
       ? {
-          ...(metadata || {}),
-          responseLayout: safeString(msg.layout || metadata?.responseLayout, 'text'),
-          parts: rootParts,
-          parts_count: rootParts.length,
-          parts_order: rootParts.map(part => part.type),
-        }
+        ...(metadata || {}),
+        responseLayout: safeString(msg.layout || metadata?.responseLayout, 'text'),
+        parts: rootParts,
+        parts_count: rootParts.length,
+        parts_order: rootParts.map(part => part.type),
+      }
       : metadata,
     diagnostics,
     timestamp: safeNumber(msg.timestamp || msg.created_at || msg.createdAt, Date.now()),
@@ -552,14 +553,13 @@ const TechnicalPanel = ({ metadata, diagnostics }: { metadata: MessageMetadata |
                 <ShoppingCart size={11} className="text-emerald-500" /> Ações Comerciais
               </p>
               <div className="flex flex-wrap gap-1.5">
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                  recommendedProducts.length > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
-                }`}>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${recommendedProducts.length > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'
+                  }`}>
                   Recomendou: {recommendedProducts.length} prod
                 </span>
                 {sales.couponSuggested && (
                   <span className="px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 font-medium text-[10px]">
-                    Sugeriu Cupom 🏷️ 
+                    Sugeriu Cupom 🏷️
                   </span>
                 )}
                 {sales.freeShippingSuggestion && (
@@ -588,9 +588,8 @@ const TechnicalPanel = ({ metadata, diagnostics }: { metadata: MessageMetadata |
                 </span>
               )}
               {legacyFallbackUsed !== undefined && (
-                <span className={`px-2 py-0.5 rounded-full font-semibold ${
-                  legacyFallbackUsed ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
-                }`}>
+                <span className={`px-2 py-0.5 rounded-full font-semibold ${legacyFallbackUsed ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                  }`}>
                   Fallback Legada: {legacyFallbackUsed ? 'Sim' : 'Não'}
                 </span>
               )}
@@ -605,11 +604,10 @@ const TechnicalPanel = ({ metadata, diagnostics }: { metadata: MessageMetadata |
                 </span>
               )}
               {riskLevel && (
-                <span className={`px-2 py-0.5 rounded-full font-semibold ${
-                  riskLevel === 'high' || riskLevel === 'HIGH' ? 'bg-red-100 text-red-700' :
-                  riskLevel === 'medium' || riskLevel === 'MEDIUM' ? 'bg-amber-100 text-amber-700' :
-                  'bg-green-100 text-green-700'
-                }`}>
+                <span className={`px-2 py-0.5 rounded-full font-semibold ${riskLevel === 'high' || riskLevel === 'HIGH' ? 'bg-red-100 text-red-700' :
+                    riskLevel === 'medium' || riskLevel === 'MEDIUM' ? 'bg-amber-100 text-amber-700' :
+                      'bg-green-100 text-green-700'
+                  }`}>
                   Risco: {riskLevel}
                 </span>
               )}
@@ -665,7 +663,7 @@ const ChatMessage = ({ message }: { message: Message }) => {
   const metadata = normalizeMessageMetadata(message.metadata);
   const recommendedProducts = normalizeProducts(metadata?.recommendedProducts);
   const couponCards = safeArray<any>(metadata?.couponCards);
-  const actionButtons = normalizeActions(metadata?.actionButtons);  const rawParts = normalizeParts(metadata?.parts);
+  const actionButtons = normalizeActions(metadata?.actionButtons); const rawParts = normalizeParts(metadata?.parts);
   const copyGeneration = message.diagnostics?.copyGeneration || (metadata as any)?.copyGeneration;
   const copyDiagnostics = copyGeneration?.diagnostics || copyGeneration;
   const textPartIndexes = rawParts.reduce((acc: number[], part: any, idx: number) => {
@@ -674,21 +672,21 @@ const ChatMessage = ({ message }: { message: Message }) => {
   }, []);
   const parts = copyGeneration?.intro && copyGeneration?.closing && copyDiagnostics?.copyGeneratedBy === 'llm' && copyDiagnostics?.copyValidation === 'passed'
     ? rawParts.map((part: any, idx: number) => {
-        if (part.type !== 'text') return part;
-        if (idx === textPartIndexes[0]) return { ...part, text: copyGeneration.intro };
-        if (idx === textPartIndexes[1]) return { ...part, text: copyGeneration.closing };
-        return part;
-      })
+      if (part.type !== 'text') return part;
+      if (idx === textPartIndexes[0]) return { ...part, text: copyGeneration.intro };
+      if (idx === textPartIndexes[1]) return { ...part, text: copyGeneration.closing };
+      return part;
+    })
     : rawParts;
   const hasStructuredParts = !isUser && parts.length > 0;
   const formatCurrency = (value: unknown) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(safeNumber(value, 0));
-const bubbleClass = isUser
+  const bubbleClass = isUser
     ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-tl-sm'
     : isAdmin
-    ? 'bg-blue-600 text-white rounded-tr-sm'
-    : isSystem
-    ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-700 rounded-sm text-xs'
-    : 'bg-primary-600 text-white rounded-tr-sm';
+      ? 'bg-blue-600 text-white rounded-tr-sm'
+      : isSystem
+        ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-700 rounded-sm text-xs'
+        : 'bg-primary-600 text-white rounded-tr-sm';
 
   const align = isUser ? 'justify-start' : 'justify-end';
 
@@ -696,12 +694,11 @@ const bubbleClass = isUser
     <div className={`flex ${align} mb-3 group`}>
       <div className={`max-w-[80%] ${isUser ? 'items-start' : 'items-end'} flex flex-col`}>
         <div className="flex items-center gap-2 mb-1 px-1">
-          <span className={`text-[11px] font-semibold ${
-            isUser ? 'text-gray-500 dark:text-gray-400' :
-            isAdmin ? 'text-blue-500 dark:text-blue-400' :
-            isSystem ? 'text-amber-600 dark:text-amber-400' :
-            'text-primary-500 dark:text-primary-400'
-          }`}>
+          <span className={`text-[11px] font-semibold ${isUser ? 'text-gray-500 dark:text-gray-400' :
+              isAdmin ? 'text-blue-500 dark:text-blue-400' :
+                isSystem ? 'text-amber-600 dark:text-amber-400' :
+                  'text-primary-500 dark:text-primary-400'
+            }`}>
             {isUser ? 'Cliente' : isAdmin ? 'Admin' : isSystem ? 'Sistema' : 'Kaia'}
           </span>
           <span className="text-[10px] text-gray-400 dark:text-gray-600">
@@ -827,11 +824,10 @@ const bubbleClass = isUser
             return (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {btns.map((btn: any, i: number) => (
-                  <span key={i} className={`text-xs px-2.5 py-1 rounded-full border font-medium ${
-                    btn.type === 'primary'
+                  <span key={i} className={`text-xs px-2.5 py-1 rounded-full border font-medium ${btn.type === 'primary'
                       ? 'border-white/50 bg-white/20 text-white'
                       : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300'
-                  }`}>
+                    }`}>
                     {btn.label}
                   </span>
                 ))}
@@ -855,9 +851,8 @@ const bubbleClass = isUser
 const Toast = ({ toasts }: { toasts: { id: number; msg: string; type: 'success' | 'error' }[] }) => (
   <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
     {toasts.map(t => (
-      <div key={t.id} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium animate-in slide-in-from-bottom-4 duration-300 ${
-        t.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
-      }`}>
+      <div key={t.id} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium animate-in slide-in-from-bottom-4 duration-300 ${t.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'
+        }`}>
         {t.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
         {t.msg}
       </div>
@@ -1075,6 +1070,312 @@ export default function KaiaChats() {
   const [selectedChatContext, setSelectedChatContext] = useState<any | null>(null);
   const [loadingChatContext, setLoadingChatContext] = useState(false);
   const [learningQueueDiagnostics, setLearningQueueDiagnostics] = useState<any | null>(null);
+  const [isLongTermMemoryEnabled, setIsLongTermMemoryEnabled] = useState<boolean>(true);
+  const [showLearningGuideModal, setShowLearningGuideModal] = useState<boolean>(false);
+
+  // Helper: Formata tipo de desvio/status técnico em português elegante
+  const formatIssueType = (type: string) => {
+    if (!type) return 'Melhoria Identificada';
+    const normalized = String(type).toLowerCase().trim();
+    const mapping: Record<string, string> = {
+      product_not_resolved: 'Produto Não Identificado',
+      fallback_used_despite_actionable_intent: 'Fallback Acionado sem Necessidade',
+      duplicate_response: 'Resposta Duplicada',
+      selected_agent_correctness: 'Seleção de Agente Incorreta',
+      required_tool_correctness: 'Execução de Ferramenta Pendente',
+      mutation_confirmation: 'Confirmação de Ação Incompleta',
+      response_grounding: 'Fidelidade de Conteúdo & Regras',
+      product_relevance: 'Relevância de Produtos',
+      conversation_context_usage: 'Uso de Contexto da Conversa',
+      intent_misalignment: 'Desvio de Intenção do Cliente',
+      wrong_intent: 'Intenção Incorreta',
+      unclear_response: 'Resposta Ambígua ou Incompleta',
+      unsupported_claim: 'Alegação não Suportada',
+      add_product_alias: 'Apelido de Produto (Alias)',
+      technical_fallback: 'Fallback Técnico de IA',
+      tone_mismatch: 'Ajuste de Tom / Marca',
+      checkout_response_too_long: 'Resposta Longa no Checkout',
+      low_confidence: 'Baixa Confiança da IA',
+      cart_add_failure: 'Falha ao Adicionar ao Carrinho',
+      unknown_product: 'Produto Desconhecido',
+    };
+    if (mapping[normalized]) {
+      return mapping[normalized];
+    }
+    return normalized
+      .replace(/_/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  // Helper: Tooltip explicativo para cada tipo de problema detectado
+  const getIssueTypeTooltip = (type: string): string => {
+    if (!type) return '';
+    const normalized = String(type).toLowerCase().trim();
+    const tooltips: Record<string, string> = {
+      product_not_resolved:
+        'A Kaia não conseguiu identificar o produto mencionado pelo cliente no catálogo.',
+      fallback_used_despite_actionable_intent:
+        'A Kaia usou uma resposta genérica mesmo quando havia uma intenção clara que ela podia atender.',
+      duplicate_response:
+        'A Kaia enviou a mesma mensagem ou conteúdo repetido dentro de uma conversa.',
+      selected_agent_correctness:
+        'O agente escolhido para responder não era o mais adequado para a intenção do cliente.',
+      required_tool_correctness:
+        'Uma ferramenta necessária (ex: busca de produto, consulta de pedido) não foi executada.',
+      mutation_confirmation:
+        'Uma ação que altera dados (ex: adicionar ao carrinho) foi feita sem confirmar com o cliente.',
+      response_grounding:
+        'A resposta continha informações incorretas ou que contradizem as regras e contexto da loja.',
+      product_relevance:
+        'Os produtos sugeridos não eram relevantes para o que o cliente estava buscando.',
+      conversation_context_usage:
+        'A Kaia ignorou informações já mencionadas pelo cliente na conversa (ex: preferências, produtos citados).',
+      intent_misalignment:
+        'A intenção interpretada pela Kaia diverge do que o cliente realmente queria.',
+      wrong_intent:
+        'A Kaia classificou a intenção do cliente de forma incorreta.',
+      unclear_response:
+        'A resposta enviada era vaga, incompleta ou difícil de entender.',
+      unsupported_claim:
+        'A Kaia afirmou algo sem base no catálogo, regras ou contexto disponível.',
+      add_product_alias:
+        'Um apelido ou nome alternativo para um produto deve ser cadastrado para melhorar o reconhecimento.',
+      technical_fallback:
+        'Ocorreu um erro técnico interno e a Kaia usou uma resposta padrão de segurança.',
+      tone_mismatch:
+        'O tom ou linguagem usado não estava alinhado com a identidade e voz da marca.',
+      checkout_response_too_long:
+        'A resposta foi longa demais para o contexto de finalização de compra.',
+      low_confidence:
+        'A Kaia estava com baixa confiança na resposta e pode ter gerado uma resposta inadequada.',
+      cart_add_failure:
+        'Houve uma falha ao tentar adicionar um item ao carrinho do cliente.',
+      unknown_product:
+        'O produto mencionado não existe ou não foi encontrado no catálogo da loja.',
+    };
+    return tooltips[normalized] ?? 'Tipo de problema detectado pelo sistema de aprendizado da Kaia.';
+  };
+
+  // Helper: Formata apelido detectado amigável
+  const formatDetectedAlias = (alias: string) => {
+    if (!alias) return '—';
+    const systemAliasMapping: Record<string, string> = {
+      verificacao_nome_marca_e_gramatica: 'Verificação da Marca & Gramática',
+      direcionamento_comercial_suplementos: 'Direcionamento Comercial de Suplementos',
+      rejeicao_compra_cnpj_revenda: 'Compra para Revenda / CNPJ',
+      condicao_pagamento_preferencial: 'Condição de Pagamento Preferencial',
+    };
+    if (systemAliasMapping[alias]) {
+      return systemAliasMapping[alias];
+    }
+    if (alias.includes('_')) {
+      return alias.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+    return alias;
+  };
+  const [confirmModalConfig, setConfirmModalConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    variant?: 'danger' | 'warning' | 'primary';
+    onConfirm: () => Promise<void> | void;
+    loading?: boolean;
+  } | null>(null);
+
+  // Carregar configuração inicial de memória de longo prazo
+  useEffect(() => {
+    siteSettingsService.getSettings().then(settings => {
+      if (settings) {
+        setIsLongTermMemoryEnabled(settings.kaia_long_term_memory_enabled !== false);
+      }
+    }).catch(console.error);
+  }, []);
+
+  const handleToggleLongTermMemory = () => {
+    const nextState = !isLongTermMemoryEnabled;
+    setConfirmModalConfig({
+      isOpen: true,
+      title: nextState ? 'Ativar Memória Long-Term' : 'Desativar Memória Long-Term',
+      message: nextState
+        ? 'Deseja ativar o recurso de Memória de Longo Prazo da Kaia? Quando ativado, a Kaia extrairá preferências comerciais dos clientes e utilizará as memórias aprovadas para personalizar futuros atendimentos.'
+        : 'Deseja desativar a Memória de Longo Prazo da Kaia? Quando desativada, a Kaia não extrairá nem utilizará memórias de preferências em novos atendimentos.',
+      confirmLabel: nextState ? 'Ativar Memória' : 'Desativar Memória',
+      cancelLabel: 'Cancelar',
+      variant: nextState ? 'primary' : 'warning',
+      onConfirm: async () => {
+        try {
+          await siteSettingsService.updateSettings({
+            kaia_long_term_memory_enabled: nextState
+          });
+          setIsLongTermMemoryEnabled(nextState);
+          await fetchLearningData(false);
+        } catch (e) {
+          console.error('Erro ao atualizar configuração de memória:', e);
+        }
+      }
+    });
+  };
+
+  // --- Bulk Selection & Import/Export State ---
+  const [selectedImprovementIds, setSelectedImprovementIds] = useState<string[]>([]);
+  const [selectedMemoryIds, setSelectedMemoryIds] = useState<string[]>([]);
+  const [isExportingRules, setIsExportingRules] = useState(false);
+  const [isImportingRules, setIsImportingRules] = useState(false);
+
+  const handleExportPackage = async () => {
+    setIsExportingRules(true);
+    try {
+      const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || '';
+      const res = await fetch(`${API_URL}/admin/kaia/v2/learning/export`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Falha ao exportar regras');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `kaia-regras-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showToast('Pacote de regras exportado com sucesso!', 'success');
+    } catch (e: any) {
+      console.error(e);
+      showToast('Erro ao exportar pacote de regras', 'error');
+    } finally {
+      setIsExportingRules(false);
+    }
+  };
+
+  const handleImportPackage = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsImportingRules(true);
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || '';
+      const res = await fetch(`${API_URL}/admin/kaia/v2/learning/import`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(json)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(data.message || 'Regras importadas com sucesso!', 'success');
+        fetchLearningData(false);
+      } else {
+        showToast(data.message || 'Erro ao importar arquivo de regras', 'error');
+      }
+    } catch (e: any) {
+      console.error(e);
+      showToast('Arquivo JSON inválido ou corrompido', 'error');
+    } finally {
+      setIsImportingRules(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleBulkDeleteImprovements = () => {
+    if (selectedImprovementIds.length === 0) return;
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Excluir Melhorias Selecionadas',
+      message: `Tem certeza de que deseja excluir definitivamente ${selectedImprovementIds.length} melhorias da fila? Esta ação não pode ser desfeita.`,
+      confirmLabel: `Excluir ${selectedImprovementIds.length} itens`,
+      cancelLabel: 'Cancelar',
+      variant: 'danger',
+      onConfirm: async () => {
+        const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || '';
+        try {
+          const res = await fetch(`${API_URL}/admin/kaia/v2/learning/improvements/bulk-delete`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ids: selectedImprovementIds })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            showToast(`${data.deletedCount} melhorias excluídas!`, 'success');
+            setSelectedImprovementIds([]);
+            fetchLearningData(false);
+          } else {
+            showToast(data.message || 'Erro na exclusão em massa', 'error');
+          }
+        } catch (e: any) {
+          showToast('Erro ao excluir melhorias selecionadas', 'error');
+        }
+      }
+    });
+  };
+
+  const handleBulkArchiveImprovements = async () => {
+    if (selectedImprovementIds.length === 0) return;
+    const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || '';
+    try {
+      const res = await fetch(`${API_URL}/admin/kaia/v2/learning/improvements/bulk-update`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ids: selectedImprovementIds, status: 'archived' })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(`${data.updatedCount} melhorias arquivadas!`, 'success');
+        setSelectedImprovementIds([]);
+        fetchLearningData(false);
+      } else {
+        showToast(data.message || 'Erro ao arquivar itens', 'error');
+      }
+    } catch (e: any) {
+      showToast('Erro ao arquivar itens selecionados', 'error');
+    }
+  };
+
+  const handleBulkDeleteMemories = () => {
+    if (selectedMemoryIds.length === 0) return;
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Excluir Memórias Selecionadas',
+      message: `Tem certeza de que deseja excluir definitivamente ${selectedMemoryIds.length} memórias de clientes? Esta ação removerá os registros do banco.`,
+      confirmLabel: `Excluir ${selectedMemoryIds.length} memórias`,
+      cancelLabel: 'Cancelar',
+      variant: 'danger',
+      onConfirm: async () => {
+        const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || '';
+        try {
+          const res = await fetch(`${API_URL}/admin/kaia/v2/learning/memories/bulk-delete`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ids: selectedMemoryIds })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            showToast(`${data.deletedCount} memórias excluídas!`, 'success');
+            setSelectedMemoryIds([]);
+            fetchLearningData(false);
+          } else {
+            showToast(data.message || 'Erro na exclusão em massa de memórias', 'error');
+          }
+        } catch (e: any) {
+          showToast('Erro ao excluir memórias selecionadas', 'error');
+        }
+      }
+    });
+  };
 
   // --- Alias Review State (per-candidate) ---
   const [aliasReviewState, setAliasReviewState] = useState<Record<string, {
@@ -1150,9 +1451,10 @@ export default function KaiaChats() {
   const handleRejectWithReason = async (id: string) => {
     const state = aliasReviewState[id];
     updateAliasState(id, { rejecting: true });
+    const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || '';
     try {
       const headers = {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
       const res = await fetch(`${API_URL}/admin/kaia/v2/learning/improvements/${id}/reject`, {
@@ -1161,7 +1463,7 @@ export default function KaiaChats() {
         body: JSON.stringify({ reason: state?.rejectReason || null })
       });
       if (!res.ok) throw new Error('Falha ao rejeitar apelido');
-      await fetchLearningData();
+      await fetchLearningData(false);
     } finally {
       updateAliasState(id, { rejecting: false });
     }
@@ -1171,9 +1473,10 @@ export default function KaiaChats() {
     const state = aliasReviewState[id];
     if (!state?.editedAlias?.trim() || !state?.selectedProductId) return;
     updateAliasState(id, { approving: true });
+    const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || '';
     try {
       const headers = {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
       const res = await fetch(`${API_URL}/admin/kaia/v2/learning/improvements/${id}/approve-alias`, {
@@ -1182,16 +1485,18 @@ export default function KaiaChats() {
         body: JSON.stringify({ alias: state.editedAlias, targetProductId: state.selectedProductId })
       });
       if (!res.ok) throw new Error('Falha ao aprovar apelido');
-      await fetchLearningData();
+      await fetchLearningData(false);
     } finally {
       updateAliasState(id, { approving: false });
     }
   };
-  const fetchLearningData = useCallback(async () => {
-    setLoadingLearning(true);
+
+  const fetchLearningData = useCallback(async (isInitial = false) => {
+    if (isInitial) setLoadingLearning(true);
     try {
-      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
-      
+      const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || '';
+      const headers = { 'Authorization': `Bearer ${token}` };
+
       const [impRes, memRes, testRes, diagRes] = await Promise.all([
         fetch(`${API_URL}/admin/kaia/v2/learning/improvements?status=${improvementFilterStatus}`, { headers }),
         fetch(`${API_URL}/admin/kaia/v2/learning/memories?status=${memoryFilterStatus}`, { headers }),
@@ -1214,18 +1519,22 @@ export default function KaiaChats() {
       if (diagRes.ok) {
         const json = await diagRes.json();
         setLearningQueueDiagnostics(json.data || null);
+        if (json.data?.memoryFeatureEnabled !== undefined) {
+          setIsLongTermMemoryEnabled(json.data.memoryFeatureEnabled);
+        }
       }
     } catch (e) {
       console.error('Erro ao buscar dados do aprendizado:', e);
     } finally {
-      setLoadingLearning(false);
+      if (isInitial) setLoadingLearning(false);
     }
   }, [memoryFilterStatus, improvementFilterStatus]);
 
   const handleReviewImprovement = async (id: string, status: 'applied' | 'rejected' | 'archived') => {
+    const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || '';
     try {
       const headers = {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
       const res = await fetch(`${API_URL}/admin/kaia/v2/learning/improvements/${id}/review`, {
@@ -1233,18 +1542,24 @@ export default function KaiaChats() {
         headers,
         body: JSON.stringify({ status })
       });
-      if (res.ok) {
-        fetchLearningData();
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(`Melhoria ${status === 'applied' ? 'aprovada' : status === 'rejected' ? 'rejeitada' : 'arquivada'} com sucesso!`, 'success');
+        fetchLearningData(false);
+      } else {
+        showToast(data.message || data.error || 'Erro ao processar melhoria', 'error');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      showToast(e.message || 'Erro ao processar melhoria', 'error');
     }
   };
 
   const handleReviewMemory = async (id: string, status: 'approved' | 'rejected' | 'archived') => {
+    const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || '';
     try {
       const headers = {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       };
       const res = await fetch(`${API_URL}/admin/kaia/v2/learning/memories/${id}/review`, {
@@ -1252,34 +1567,45 @@ export default function KaiaChats() {
         headers,
         body: JSON.stringify({ status })
       });
-      if (res.ok) {
-        fetchLearningData();
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showToast(`Memória ${status === 'approved' ? 'aprovada' : status === 'rejected' ? 'rejeitada' : 'arquivada'} com sucesso!`, 'success');
+        fetchLearningData(false);
+      } else {
+        showToast(data.message || data.error || 'Erro ao processar memória', 'error');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      showToast(e.message || 'Erro ao processar memória', 'error');
     }
   };
 
-  const handleDeleteMemory = async (id: string) => {
-    if (!window.confirm('Tem certeza de que deseja excluir definitivamente esta preferência comercial?')) return;
-    try {
-      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
-      const res = await fetch(`${API_URL}/admin/kaia/v2/learning/memories/${id}`, {
-        method: 'DELETE',
-        headers
-      });
-      if (res.ok) {
-        fetchLearningData();
+  const handleDeleteMemory = (id: string, memoryValue?: string) => {
+    setConfirmModalConfig({
+      isOpen: true,
+      title: 'Excluir Memória do Cliente',
+      message: `Tem certeza de que deseja excluir definitivamente a preferência "${memoryValue || 'selecionada'}"? Esta ação removerá a memória do banco de dados e a Kaia não a utilizará mais em atendimentos.`,
+      confirmLabel: 'Confirmar Exclusão',
+      cancelLabel: 'Cancelar',
+      variant: 'danger',
+      onConfirm: async () => {
+        const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || '';
+        const res = await fetch(`${API_URL}/admin/kaia/v2/learning/memories/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          await fetchLearningData(false);
+        }
       }
-    } catch (e) {
-      console.error(e);
-    }
+    });
   };
 
   const handleRunRegressionTests = async () => {
     setRunningTestsState(true);
+    const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || '';
     try {
-      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+      const headers = { 'Authorization': `Bearer ${token}` };
       const res = await fetch(`${API_URL}/admin/kaia/v2/learning/tests/run`, {
         method: 'POST',
         headers
@@ -1287,7 +1613,7 @@ export default function KaiaChats() {
       if (res.ok) {
         const json = await res.json();
         setTestRunResults(json.results);
-        fetchLearningData();
+        fetchLearningData(false);
       }
     } catch (e) {
       console.error(e);
@@ -1298,8 +1624,9 @@ export default function KaiaChats() {
 
   const fetchConversationContext = useCallback(async (convId: string) => {
     setLoadingChatContext(true);
+    const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || '';
     try {
-      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+      const headers = { 'Authorization': `Bearer ${token}` };
       const res = await fetch(`${API_URL}/admin/kaia/v2/learning/context/${convId}`, { headers });
       if (res.ok) {
         const json = await res.json();
@@ -1319,7 +1646,11 @@ export default function KaiaChats() {
 
   useEffect(() => {
     if (activeTab === 'learning') {
-      fetchLearningData();
+      fetchLearningData(true);
+      const interval = setInterval(() => {
+        fetchLearningData(false);
+      }, 15000);
+      return () => clearInterval(interval);
     }
   }, [activeTab, fetchLearningData]);
 
@@ -1342,7 +1673,7 @@ export default function KaiaChats() {
       const res = await fetch(`${API_URL}/admin/kaia/v2/ignored-profiles`, { headers });
       const data = await res.json();
       if (data.success) setIgnoredProfiles(data.data || []);
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => { fetchIgnoredProfiles(); }, []);
@@ -1485,8 +1816,8 @@ export default function KaiaChats() {
       const q = keyFilters.search.trim().toLowerCase();
       result = result.filter(
         k => k.name.toLowerCase().includes(q) ||
-             k.key_preview.toLowerCase().includes(q) ||
-             k.provider.toLowerCase().includes(q)
+          k.key_preview.toLowerCase().includes(q) ||
+          k.provider.toLowerCase().includes(q)
       );
     }
     if (keyFilters.provider !== 'all') {
@@ -1538,7 +1869,6 @@ export default function KaiaChats() {
   // --- Loader de Chaves ---
   const [keyStatus, setKeyStatus] = useState<any>(null);
   const [loadingKeyStatus, setLoadingKeyStatus] = useState(false);
-  const [probingModels, setProbingModels] = useState(false);
 
   const loadKeysData = useCallback(async (silent = false) => {
     try {
@@ -1557,19 +1887,6 @@ export default function KaiaChats() {
       setLoadingKeyStatus(false);
     }
   }, []);
-
-  const handleProbeModels = async () => {
-    try {
-      setProbingModels(true);
-      await aiApiKeysService.probeModels();
-      showToast('Teste de modelos concluído', 'success');
-      await loadKeysData(true);
-    } catch (err: any) {
-      showToast(err.message || 'Erro ao testar modelos', 'error');
-    } finally {
-      setProbingModels(false);
-    }
-  };
 
   const runKeyAction = async (
     key: AiApiKey,
@@ -1753,7 +2070,7 @@ export default function KaiaChats() {
   const [showFilters, setShowFilters] = useState(false);
   const [actionLoading, setActionLoading] = useState('');
   const [toasts, setToasts] = useState<{ id: number; msg: string; type: 'success' | 'error' }[]>([]);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [confirmModal, setConfirmModal] = useState<{ action: string; title: string; message: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -2059,7 +2376,7 @@ export default function KaiaChats() {
       <Toast toasts={toasts} />
       {/* ===== Header ===== */}
       <div className="flex-shrink-0 mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg">
               <Bot size={20} className="text-white" />
@@ -2070,100 +2387,67 @@ export default function KaiaChats() {
             </div>
           </div>
 
-          {/* Tab selector */}
-          <div className="flex bg-gray-105 dark:bg-gray-800 rounded-lg p-0.5 border border-gray-200 dark:border-gray-700 self-start md:self-auto shadow-sm">
+          {/* Tab selector em linha única */}
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1 border border-gray-200 dark:border-gray-700 text-xs font-bold gap-1 overflow-x-auto whitespace-nowrap scrollbar-none self-start lg:self-auto">
             <button
               type="button"
               onClick={() => setActiveTab('chats')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                activeTab === 'chats'
-                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-              }`}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all shrink-0 ${activeTab === 'chats'
+                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm border border-gray-200/50 dark:border-gray-600'
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
             >
-              <MessageSquare size={13} />
-              Atendimentos e Chats
+              <MessageSquare size={14} />
+              <span>Atendimentos e Chats</span>
+              {pendingCount > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-extrabold animate-pulse">
+                  {pendingCount}
+                </span>
+              )}
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('performance')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                activeTab === 'performance'
-                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-              }`}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all shrink-0 ${activeTab === 'performance'
+                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm border border-gray-200/50 dark:border-gray-600'
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
             >
-              <Activity size={13} />
-              Performance e Métricas
+              <Activity size={14} />
+              <span>Performance e Métricas</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('agents')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                activeTab === 'agents'
-                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-              }`}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all shrink-0 ${activeTab === 'agents'
+                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm border border-gray-200/50 dark:border-gray-600'
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
             >
-              <Bot size={13} />
-              Agentes de IA
+              <Bot size={14} />
+              <span>Agentes de IA</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('keys')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                activeTab === 'keys'
-                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-              }`}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all shrink-0 ${activeTab === 'keys'
+                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm border border-gray-200/50 dark:border-gray-600'
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
             >
-              <KeyRound size={13} />
-              Chaves de API
+              <KeyRound size={14} />
+              <span>Chaves de API</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('learning')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
-                activeTab === 'learning'
-                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-              }`}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg transition-all shrink-0 ${activeTab === 'learning'
+                  ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm border border-gray-200/50 dark:border-gray-600'
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
+                }`}
             >
-              <Brain size={13} />
-              Aprendizado & Memória
-            </button>
-          </div>
-
-          <div className="flex flex-wrap gap-2 self-start md:self-auto">
-            {/* Badge pending */}
-            {pendingCount > 0 && (
-              <button
-                type="button"
-                onClick={() => { setActiveTab('chats'); setFilters(f => ({ ...f, status: 'awaiting_human', is_archived: '', is_ignored: '' })); setPage(1); setShowFilters(true); }}
-                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 text-amber-700 dark:text-amber-400 font-semibold animate-pulse hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors shadow-sm"
-              >
-                <AlertCircle size={14} />
-                {pendingCount} pendente(s)
-              </button>
-            )}
-            {/* Auto-refresh toggle */}
-            <button
-              onClick={() => setAutoRefresh(a => !a)}
-              className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors shadow-sm ${
-                autoRefresh
-                  ? 'border-emerald-200 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'
-                  : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'
-              }`}
-            >
-              <Activity size={14} />
-              {autoRefresh ? 'Auto ativo' : 'Auto off'}
-            </button>
-            <button
-              onClick={() => { fetchConversations(page); fetchMetrics(); if (activeTab === 'keys') loadKeysData(true); }}
-              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300 shadow-sm"
-            >
-              <RefreshCw size={14} className={loading || loadingKeys || loadingKeyStatus ? 'animate-spin' : ''} />
-              Atualizar
+              <Brain size={14} />
+              <span>Aprendizado & Memória</span>
             </button>
           </div>
         </div>
@@ -2172,773 +2456,767 @@ export default function KaiaChats() {
       {activeTab === 'chats' ? (
         <>
 
-      {/* ===== Layout Principal: Lista | Chat ===== */}
-      <div className="flex flex-1 min-h-0 gap-0 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
-        {/* ===== Painel Esquerdo: Lista de Conversas ===== */}
-        <div className="w-80 flex-shrink-0 flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
-          {/* Busca e Filtros */}
-          <div className="p-3 border-b border-gray-100 dark:border-gray-800">
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {[
-                { id: '', label: 'Todas' },
-                { id: 'ai_active', label: 'IA ativa' },
-                { id: 'awaiting_human', label: 'Aguardando' },
-                { id: 'archived', label: 'Arquivadas' },
-                { id: 'deleted', label: 'Excluídas' },
-              ].map((chip) => (
-                <button
-                  key={chip.id || 'all'}
-                  type="button"
-                  onClick={() => {
-                    setFilters((f) => ({
-                      ...f,
-                      status: chip.id,
-                      is_archived: chip.id === 'archived' ? 'true' : '',
-                      is_deleted: chip.id === 'deleted' ? 'true' : '',
-                      is_ignored: '',
-                    }));
-                    setPage(1);
-                  }}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${
-                    filters.status === chip.id
-                      ? 'bg-primary-600 border-primary-600 text-white'
-                      : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                  }`}
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
-            <form onSubmit={handleSearch} className="flex gap-1.5 mb-2">
-              <div className="relative flex-1">
-                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  value={filters.search}
-                  onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
-                  placeholder="Buscar cliente, e-mail, sessão..."
-                  className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowFilters(!showFilters)}
-                className={`p-1.5 rounded-lg border transition-colors ${showFilters ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/30 text-primary-600' : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
-              >
-                <Filter size={14} />
-              </button>
-            </form>
-
-            {showFilters && (
-              <div className="space-y-1.5">
-                <select
-                  value={filters.status}
-                  onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}
-                  className="w-full text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                >
-                  <option value="">Todos os status</option>
-                  <option value="ai_active">IA ativa</option>
-                  <option value="awaiting_human">Aguardando humano</option>
-                  <option value="human_active">Humano ativo</option>
-                  <option value="ai_paused">IA pausada</option>
-                  <option value="archived">Arquivadas</option>
-                  <option value="ignored">Ignoradas</option>
-                  <option value="deleted">Excluídas</option>
-                  <option value="resolved">Resolvido</option>
-                  <option value="closed">Encerrado</option>
-                </select>
-                <div className="flex gap-1.5">
-                  <select
-                    value={filters.is_archived}
-                    onChange={e => setFilters(f => ({ ...f, is_archived: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  >
-                    <option value="">Todos (Arq)</option>
-                    <option value="false">Não arquivados</option>
-                    <option value="true">Arquivados</option>
-                  </select>
-                  <select
-                    value={filters.is_ignored}
-                    onChange={e => setFilters(f => ({ ...f, is_ignored: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  >
-                    <option value="">Todos (Ign)</option>
-                    <option value="false">Não ignorados</option>
-                    <option value="true">Ignorados</option>
-                  </select>
-                </div>
-                <div className="flex gap-1.5">
-                  <select
-                    value={filters.channel}
-                    onChange={e => setFilters(f => ({ ...f, channel: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  >
-                    <option value="">Todos canais</option>
-                    <option value="site">Site</option>
-                    <option value="whatsapp">WhatsApp</option>
-                    <option value="email">E-mail</option>
-                  </select>
-                  <select
-                    value={filters.is_deleted}
-                    onChange={e => setFilters(f => ({ ...f, is_deleted: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  >
-                    <option value="">Todos exclusao</option>
-                    <option value="false">Nao excluidos</option>
-                    <option value="true">Excluidos</option>
-                  </select>
-                </div>
-                <input
-                  type="text"
-                  value={filters.intent}
-                  onChange={e => setFilters(f => ({ ...f, intent: e.target.value }))}
-                  placeholder="Filtrar por intencao"
-                  className="w-full text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                />
-                <div className="flex gap-1.5">
-                  <select
-                    value={filters.has_error}
-                    onChange={e => setFilters(f => ({ ...f, has_error: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  >
-                    <option value="">Todos os erros</option>
-                    <option value="true">Com Erro</option>
-                  </select>
-                  <select
-                    value={filters.has_human_support}
-                    onChange={e => setFilters(f => ({ ...f, has_human_support: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  >
-                    <option value="">Todos suporte</option>
-                    <option value="true">Com Humano</option>
-                  </select>
-                </div>
-                <div className="flex gap-1.5">
-                  <select
-                    value={filters.has_fallback}
-                    onChange={e => setFilters(f => ({ ...f, has_fallback: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  >
-                    <option value="">Todos fallback</option>
-                    <option value="true">Com fallback</option>
-                    <option value="false">Sem fallback</option>
-                  </select>
-                  <select
-                    value={filters.escalated}
-                    onChange={e => setFilters(f => ({ ...f, escalated: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  >
-                    <option value="">Todos escalonamento</option>
-                    <option value="true">Escalonados</option>
-                    <option value="false">Nao escalonados</option>
-                  </select>
-                </div>
-                <div className="flex gap-1.5">
-                  <input
-                    type="date"
-                    value={filters.startDate}
-                    onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  />
-                  <input
-                    type="date"
-                    value={filters.endDate}
-                    onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
-                    className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  />
-                </div>
-                <button
-                  onClick={() => { setFilters({ search: '', status: '', has_error: '', has_human_support: '', customer_only: '', visitor_only: '', startDate: '', endDate: '', is_archived: '', is_ignored: '', is_deleted: '', channel: '', intent: '', has_fallback: '', escalated: '' }); setPage(1); }}
-                  className="w-full text-xs text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors py-0.5"
-                >
-                  Limpar filtros
-                </button>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-xs text-gray-400 dark:text-gray-500">{totalConvs} contatos</span>
-              {loading && <Loader2 size={12} className="animate-spin text-primary-500" />}
-            </div>
-          </div>
-
-          {/* Lista agrupada por usuário */}
-          <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
-            {groupedUsers.length === 0 && !loading && (
-              <div className="flex flex-col items-center justify-center h-40 text-gray-400 dark:text-gray-600">
-                <MessageSquare size={32} className="mb-2 opacity-50" />
-                <p className="text-sm">Nenhuma conversa encontrada</p>
-              </div>
-            )}
-            {groupedUsers.map((user: GroupedUser) => {
-              const isSelected = selectedUserGroupKey === user.groupKey;
-              const mostRecentConv = user.conversations[0];
-              const isIgnored = user.conversations.some(c => c.is_ignored);
-              const isUserMenuOpen = userMenuOpenKey === user.groupKey;
-              const isProfileIgnored = ignoredProfiles.some(p =>
-                (user.customerId && p.customer_id === user.customerId) ||
-                (p.session_id === user.sessionId) ||
-                (user.email && p.email === user.email)
-              );
-              const isActionLoading = userActionLoading?.endsWith(user.groupKey);
-              return (
-                <div key={user.groupKey} className="flex flex-col">
-                  {/* Card do Usuário — botão direito abre o menu de contexto */}
-                  <div
-                    className={`relative flex gap-0 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-default ${
-                      isSelected ? 'bg-primary-50/50 dark:bg-primary-950/10' : ''
-                    }`}
-                    onContextMenu={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setUserMenuOpenKey(isUserMenuOpen ? null : user.groupKey);
-                    }}
-                  >
+          {/* ===== Layout Principal: Lista | Chat ===== */}
+          <div className="flex flex-1 min-h-0 gap-0 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
+            {/* ===== Painel Esquerdo: Lista de Conversas ===== */}
+            <div className="w-80 flex-shrink-0 flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
+              {/* Busca e Filtros */}
+              <div className="p-3 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {[
+                    { id: '', label: 'Todas' },
+                    { id: 'ai_active', label: 'IA ativa' },
+                    { id: 'awaiting_human', label: 'Aguardando' },
+                    { id: 'archived', label: 'Arquivadas' },
+                    { id: 'deleted', label: 'Excluídas' },
+                  ].map((chip) => (
                     <button
+                      key={chip.id || 'all'}
+                      type="button"
                       onClick={() => {
-                        setSelectedUserGroupKey(isSelected ? null : user.groupKey);
-                        if (mostRecentConv) setSelectedConv(mostRecentConv);
-                        setUserMenuOpenKey(null);
+                        setFilters((f) => ({
+                          ...f,
+                          status: chip.id,
+                          is_archived: chip.id === 'archived' ? 'true' : '',
+                          is_deleted: chip.id === 'deleted' ? 'true' : '',
+                          is_ignored: '',
+                        }));
+                        setPage(1);
                       }}
-                      className="flex-1 text-left p-3 flex gap-3 min-w-0"
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-colors ${filters.status === chip.id
+                          ? 'bg-primary-600 border-primary-600 text-white'
+                          : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        }`}
                     >
-                      <div className="relative flex-shrink-0">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                          isProfileIgnored
-                            ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                            : 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                        }`}>
-                          {isActionLoading
-                            ? <Loader2 size={14} className="animate-spin" />
-                            : user.name.charAt(0).toUpperCase()
-                          }
-                        </div>
-                        {(isIgnored || isProfileIgnored) && (
-                          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center border border-white dark:border-gray-900">
-                            <EyeOff size={10} />
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+                <form onSubmit={handleSearch} className="flex gap-1.5 mb-2">
+                  <div className="relative flex-1">
+                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={filters.search}
+                      onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
+                      placeholder="Buscar cliente, e-mail, sessão..."
+                      className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={`p-1.5 rounded-lg border transition-colors ${showFilters ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/30 text-primary-600' : 'border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                  >
+                    <Filter size={14} />
+                  </button>
+                </form>
+
+                {showFilters && (
+                  <div className="space-y-1.5">
+                    <select
+                      value={filters.status}
+                      onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}
+                      className="w-full text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    >
+                      <option value="">Todos os status</option>
+                      <option value="ai_active">IA ativa</option>
+                      <option value="awaiting_human">Aguardando humano</option>
+                      <option value="human_active">Humano ativo</option>
+                      <option value="ai_paused">IA pausada</option>
+                      <option value="archived">Arquivadas</option>
+                      <option value="ignored">Ignoradas</option>
+                      <option value="deleted">Excluídas</option>
+                      <option value="resolved">Resolvido</option>
+                      <option value="closed">Encerrado</option>
+                    </select>
+                    <div className="flex gap-1.5">
+                      <select
+                        value={filters.is_archived}
+                        onChange={e => setFilters(f => ({ ...f, is_archived: e.target.value }))}
+                        className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      >
+                        <option value="">Todos (Arq)</option>
+                        <option value="false">Não arquivados</option>
+                        <option value="true">Arquivados</option>
+                      </select>
+                      <select
+                        value={filters.is_ignored}
+                        onChange={e => setFilters(f => ({ ...f, is_ignored: e.target.value }))}
+                        className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      >
+                        <option value="">Todos (Ign)</option>
+                        <option value="false">Não ignorados</option>
+                        <option value="true">Ignorados</option>
+                      </select>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <select
+                        value={filters.channel}
+                        onChange={e => setFilters(f => ({ ...f, channel: e.target.value }))}
+                        className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      >
+                        <option value="">Todos canais</option>
+                        <option value="site">Site</option>
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="email">E-mail</option>
+                      </select>
+                      <select
+                        value={filters.is_deleted}
+                        onChange={e => setFilters(f => ({ ...f, is_deleted: e.target.value }))}
+                        className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      >
+                        <option value="">Todos exclusao</option>
+                        <option value="false">Nao excluidos</option>
+                        <option value="true">Excluidos</option>
+                      </select>
+                    </div>
+                    <input
+                      type="text"
+                      value={filters.intent}
+                      onChange={e => setFilters(f => ({ ...f, intent: e.target.value }))}
+                      placeholder="Filtrar por intencao"
+                      className="w-full text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    />
+                    <div className="flex gap-1.5">
+                      <select
+                        value={filters.has_error}
+                        onChange={e => setFilters(f => ({ ...f, has_error: e.target.value }))}
+                        className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      >
+                        <option value="">Todos os erros</option>
+                        <option value="true">Com Erro</option>
+                      </select>
+                      <select
+                        value={filters.has_human_support}
+                        onChange={e => setFilters(f => ({ ...f, has_human_support: e.target.value }))}
+                        className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      >
+                        <option value="">Todos suporte</option>
+                        <option value="true">Com Humano</option>
+                      </select>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <select
+                        value={filters.has_fallback}
+                        onChange={e => setFilters(f => ({ ...f, has_fallback: e.target.value }))}
+                        className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      >
+                        <option value="">Todos fallback</option>
+                        <option value="true">Com fallback</option>
+                        <option value="false">Sem fallback</option>
+                      </select>
+                      <select
+                        value={filters.escalated}
+                        onChange={e => setFilters(f => ({ ...f, escalated: e.target.value }))}
+                        className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      >
+                        <option value="">Todos escalonamento</option>
+                        <option value="true">Escalonados</option>
+                        <option value="false">Nao escalonados</option>
+                      </select>
+                    </div>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="date"
+                        value={filters.startDate}
+                        onChange={e => setFilters(f => ({ ...f, startDate: e.target.value }))}
+                        className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      />
+                      <input
+                        type="date"
+                        value={filters.endDate}
+                        onChange={e => setFilters(f => ({ ...f, endDate: e.target.value }))}
+                        className="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                      />
+                    </div>
+                    <button
+                      onClick={() => { setFilters({ search: '', status: '', has_error: '', has_human_support: '', customer_only: '', visitor_only: '', startDate: '', endDate: '', is_archived: '', is_ignored: '', is_deleted: '', channel: '', intent: '', has_fallback: '', escalated: '' }); setPage(1); }}
+                      className="w-full text-xs text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors py-0.5"
+                    >
+                      Limpar filtros
+                    </button>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between mt-1">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{totalConvs} contatos</span>
+                  {loading && <Loader2 size={12} className="animate-spin text-primary-500" />}
+                </div>
+              </div>
+
+              {/* Lista agrupada por usuário */}
+              <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+                {groupedUsers.length === 0 && !loading && (
+                  <div className="flex flex-col items-center justify-center h-40 text-gray-400 dark:text-gray-600">
+                    <MessageSquare size={32} className="mb-2 opacity-50" />
+                    <p className="text-sm">Nenhuma conversa encontrada</p>
+                  </div>
+                )}
+                {groupedUsers.map((user: GroupedUser) => {
+                  const isSelected = selectedUserGroupKey === user.groupKey;
+                  const mostRecentConv = user.conversations[0];
+                  const isIgnored = user.conversations.some(c => c.is_ignored);
+                  const isUserMenuOpen = userMenuOpenKey === user.groupKey;
+                  const isProfileIgnored = ignoredProfiles.some(p =>
+                    (user.customerId && p.customer_id === user.customerId) ||
+                    (p.session_id === user.sessionId) ||
+                    (user.email && p.email === user.email)
+                  );
+                  const isActionLoading = userActionLoading?.endsWith(user.groupKey);
+                  return (
+                    <div key={user.groupKey} className="flex flex-col">
+                      {/* Card do Usuário — botão direito abre o menu de contexto */}
+                      <div
+                        className={`relative flex gap-0 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-default ${isSelected ? 'bg-primary-50/50 dark:bg-primary-950/10' : ''
+                          }`}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setUserMenuOpenKey(isUserMenuOpen ? null : user.groupKey);
+                        }}
+                      >
+                        <button
+                          onClick={() => {
+                            setSelectedUserGroupKey(isSelected ? null : user.groupKey);
+                            if (mostRecentConv) setSelectedConv(mostRecentConv);
+                            setUserMenuOpenKey(null);
+                          }}
+                          className="flex-1 text-left p-3 flex gap-3 min-w-0"
+                        >
+                          <div className="relative flex-shrink-0">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${isProfileIgnored
+                                ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                                : 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                              }`}>
+                              {isActionLoading
+                                ? <Loader2 size={14} className="animate-spin" />
+                                : user.name.charAt(0).toUpperCase()
+                              }
+                            </div>
+                            {(isIgnored || isProfileIgnored) && (
+                              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center border border-white dark:border-gray-900">
+                                <EyeOff size={10} />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className="font-bold text-xs text-gray-900 dark:text-white truncate">
+                                {user.name}
+                              </span>
+                              <span className="text-[9px] text-gray-400 font-mono whitespace-nowrap">
+                                {formatLastInteraction(user.lastInteractionAt)}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                              {user.email || user.phone || 'Sem contato'}
+                            </p>
+                            <div className="flex items-center justify-between mt-1 text-[10px] text-gray-400 dark:text-gray-500">
+                              <span>{user.conversations.length} {user.conversations.length === 1 ? 'chat' : 'chats'}</span>
+                              {mostRecentConv && (
+                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${getStatusInfo(mostRecentConv.status).bg
+                                  } ${getStatusInfo(mostRecentConv.status).color}`}>
+                                  {getStatusInfo(mostRecentConv.status).label}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+
+                        {/* Dropdown de Contexto (clique direito) */}
+                        {isUserMenuOpen && (
+                          <div
+                            className="absolute right-2 top-2 z-50 w-52 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+                            onClick={(e) => e.stopPropagation()}
+                            onContextMenu={(e) => e.preventDefault()}
+                          >
+                            <div className="px-3 py-2.5 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+                              <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Ações do Perfil</p>
+                              <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate mt-0.5">{user.name}</p>
+                            </div>
+
+                            {isProfileIgnored ? (
+                              <button
+                                onClick={() => handleUnignoreProfile(user)}
+                                className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                              >
+                                <UserCheck size={13} />
+                                Remover dos Ignorados
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleIgnoreProfile(user)}
+                                className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                              >
+                                <UserX size={13} />
+                                Ignorar Perfil Inteiro
+                              </button>
+                            )}
+
+                            <div className="border-t border-gray-100 dark:border-gray-800">
+                              <button
+                                onClick={() => handleBulkDeleteUser(user)}
+                                className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 text-xs text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                              >
+                                <Trash2 size={13} />
+                                Excluir todo o histórico
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="font-bold text-xs text-gray-900 dark:text-white truncate">
-                            {user.name}
-                          </span>
-                          <span className="text-[9px] text-gray-400 font-mono whitespace-nowrap">
-                            {formatLastInteraction(user.lastInteractionAt)}
-                          </span>
+                      {/* Lista Expandida de Chats do Usuário */}
+                      {isSelected && user.conversations.length > 0 && (
+                        <div className="bg-gray-50/50 dark:bg-gray-950/20 pl-4 py-1.5 border-l-2 border-primary-500 space-y-1">
+                          <div className="px-2 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">
+                            Histórico de Sessões:
+                          </div>
+                          {user.conversations.map((conv) => (
+                            <button
+                              key={conv.id}
+                              onClick={() => setSelectedConv(conv)}
+                              className={`w-full text-left p-2 rounded-l-lg flex flex-col gap-1 transition-all border border-r-0 border-transparent hover:bg-white dark:hover:bg-gray-900 hover:shadow-xs ${selectedConv?.id === conv.id
+                                  ? 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-xs'
+                                  : ''
+                                }`}
+                            >
+                              <div className="flex items-center justify-between gap-1 w-full">
+                                <span className="text-[10px] font-mono text-gray-500 font-bold">
+                                  ID: {conv.id.slice(0, 8)}
+                                </span>
+                                <span className="text-[9px] text-gray-400">
+                                  {timeAgo(conv.last_message_at)}
+                                </span>
+                              </div>
+                              {conv.last_message && (
+                                <p className="text-[10px] text-gray-600 dark:text-gray-400 truncate w-full italic">
+                                  "{conv.last_message.content}"
+                                </p>
+                              )}
+                              <div className="flex items-center justify-between text-[9px] mt-0.5 w-full">
+                                <span className="text-gray-400 font-mono">Canal: {conv.channel}</span>
+                                <span className={`px-1 py-0.1 rounded font-semibold ${getStatusInfo(conv.status).bg} ${getStatusInfo(conv.status).color}`}>
+                                  {getStatusInfo(conv.status).label}
+                                </span>
+                              </div>
+                            </button>
+                          ))}
                         </div>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                          {user.email || user.phone || 'Sem contato'}
-                        </p>
-                        <div className="flex items-center justify-between mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-                          <span>{user.conversations.length} {user.conversations.length === 1 ? 'chat' : 'chats'}</span>
-                          {mostRecentConv && (
-                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${
-                              getStatusInfo(mostRecentConv.status).bg
-                            } ${getStatusInfo(mostRecentConv.status).color}`}>
-                              {getStatusInfo(mostRecentConv.status).label}
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Paginação */}
+              {totalPages > 1 && (
+                <div className="flex-shrink-0 flex items-center justify-between p-2 border-t border-gray-100 dark:border-gray-800">
+                  <button
+                    disabled={page <= 1}
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors text-gray-600 dark:text-gray-300 flex items-center gap-1"
+                  >
+                    <ChevronLeft size={14} /> Anterior
+                  </button>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{page}/{totalPages}</span>
+                  <button
+                    disabled={page >= totalPages}
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors text-gray-600 dark:text-gray-300 flex items-center gap-1"
+                  >
+                    Próxima <ChevronRight size={14} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* ===== Painel Direito: Conversa ===== */}
+            {selectedConv ? (
+              <div className="flex-1 flex min-w-0 bg-gray-50 dark:bg-gray-950">
+                <div className="flex-1 flex flex-col min-w-0 border-r border-gray-200 dark:border-gray-800">
+                  {/* Header da Conversa */}
+                  <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold ${selectedConv.customer_id ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                          }`}>
+                          {(selectedConv.customer_name || selectedConv.name || 'V').charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h2 className="font-bold text-gray-900 dark:text-white text-sm">
+                              {selectedConv.customer_name || selectedConv.name || `Visitante ${selectedConv.session_id?.slice(0, 12)}`}
+                            </h2>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${getStatusInfo(selectedConv.status).bg} ${getStatusInfo(selectedConv.status).color}`}>
+                              {getStatusInfo(selectedConv.status).label}
                             </span>
-                          )}
+                            {(selectedConv as any).is_archived && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 font-medium">
+                                Arquivado
+                              </span>
+                            )}
+                            {(selectedConv as any).is_ignored && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-medium">
+                                Ignorado
+                              </span>
+                            )}
+                            {!selectedConv.ai_enabled && (
+                              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 font-medium">
+                                IA Pausada
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 flex-wrap mt-0.5">
+                            {selectedConv.customer_email && (
+                              <span className="flex items-center gap-0.5"><Mail size={10} /> {maskEmail(selectedConv.customer_email)}</span>
+                            )}
+                            {selectedConv.customer_phone && (
+                              <span className="flex items-center gap-0.5"><Phone size={10} /> {maskPhone(selectedConv.customer_phone)}</span>
+                            )}
+                            <span className="flex items-center gap-0.5"><Hash size={10} /> {selectedConv.session_id?.slice(0, 12)}</span>
+                            <span className="flex items-center gap-0.5"><Calendar size={10} /> {new Date(selectedConv.created_at).toLocaleDateString('pt-BR')}</span>
+                          </div>
                         </div>
                       </div>
-                    </button>
 
-                    {/* Dropdown de Contexto (clique direito) */}
-                    {isUserMenuOpen && (
-                      <div
-                        className="absolute right-2 top-2 z-50 w-52 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
-                        onClick={(e) => e.stopPropagation()}
-                        onContextMenu={(e) => e.preventDefault()}
-                      >
-                        <div className="px-3 py-2.5 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                          <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Ações do Perfil</p>
-                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate mt-0.5">{user.name}</p>
-                        </div>
-
-                        {isProfileIgnored ? (
+                      {/* Ações */}
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {selectedConv.status !== 'resolved' && selectedConv.status !== 'closed' && (
                           <button
-                            onClick={() => handleUnignoreProfile(user)}
-                            className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 text-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+                            onClick={() => handleAction('resolve')}
+                            disabled={!!actionLoading}
+                            className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white transition-colors disabled:opacity-50"
                           >
-                            <UserCheck size={13} />
-                            Remover dos Ignorados
+                            {actionLoading === 'resolve' ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle size={11} />}
+                            Encerrar
+                          </button>
+                        )}
+                        {(selectedConv as any).is_archived ? (
+                          <button
+                            onClick={() => handleAction('unarchive')}
+                            disabled={!!actionLoading}
+                            className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-50"
+                          >
+                            Desarquivar
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleIgnoreProfile(user)}
-                            className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 text-xs text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+                            onClick={() => requestAction('archive')}
+                            disabled={!!actionLoading}
+                            className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-50"
                           >
-                            <UserX size={13} />
-                            Ignorar Perfil Inteiro
+                            Arquivar
                           </button>
                         )}
-
-                        <div className="border-t border-gray-100 dark:border-gray-800">
+                        {(selectedConv as any).is_ignored ? (
                           <button
-                            onClick={() => handleBulkDeleteUser(user)}
-                            className="w-full text-left flex items-center gap-2.5 px-3 py-2.5 text-xs text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                            onClick={() => handleAction('unignore')}
+                            disabled={!!actionLoading}
+                            className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-50"
                           >
-                            <Trash2 size={13} />
-                            Excluir todo o histórico
+                            Designorar
                           </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Lista Expandida de Chats do Usuário */}
-                  {isSelected && user.conversations.length > 0 && (
-                    <div className="bg-gray-50/50 dark:bg-gray-950/20 pl-4 py-1.5 border-l-2 border-primary-500 space-y-1">
-                      <div className="px-2 pb-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">
-                        Histórico de Sessões:
-                      </div>
-                      {user.conversations.map((conv) => (
+                        ) : (
+                          <button
+                            onClick={() => handleAction('ignore')}
+                            disabled={!!actionLoading}
+                            className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-50"
+                          >
+                            Ignorar
+                          </button>
+                        )}
+                        {selectedConv.ai_enabled ? (
+                          <button
+                            onClick={() => requestAction('pause-ai')}
+                            disabled={!!actionLoading}
+                            className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-50"
+                          >
+                            {actionLoading === 'pause-ai' ? <Loader2 size={11} className="animate-spin" /> : <Pause size={11} />}
+                            Pausar IA
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => requestAction('resume-ai')}
+                            disabled={!!actionLoading}
+                            className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white transition-colors disabled:opacity-50"
+                          >
+                            {actionLoading === 'resume-ai' ? <Loader2 size={11} className="animate-spin" /> : <Play size={11} />}
+                            Retomar IA
+                          </button>
+                        )}
                         <button
-                          key={conv.id}
-                          onClick={() => setSelectedConv(conv)}
-                          className={`w-full text-left p-2 rounded-l-lg flex flex-col gap-1 transition-all border border-r-0 border-transparent hover:bg-white dark:hover:bg-gray-900 hover:shadow-xs ${
-                            selectedConv?.id === conv.id
-                              ? 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 shadow-xs'
-                              : ''
-                          }`}
+                          onClick={() => requestAction('delete')}
+                          disabled={!!actionLoading}
+                          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50"
                         >
-                          <div className="flex items-center justify-between gap-1 w-full">
-                            <span className="text-[10px] font-mono text-gray-500 font-bold">
-                              ID: {conv.id.slice(0, 8)}
-                            </span>
-                            <span className="text-[9px] text-gray-400">
-                              {timeAgo(conv.last_message_at)}
-                            </span>
-                          </div>
-                          {conv.last_message && (
-                            <p className="text-[10px] text-gray-600 dark:text-gray-400 truncate w-full italic">
-                              "{conv.last_message.content}"
-                            </p>
-                          )}
-                          <div className="flex items-center justify-between text-[9px] mt-0.5 w-full">
-                            <span className="text-gray-400 font-mono">Canal: {conv.channel}</span>
-                            <span className={`px-1 py-0.1 rounded font-semibold ${getStatusInfo(conv.status).bg} ${getStatusInfo(conv.status).color}`}>
-                              {getStatusInfo(conv.status).label}
-                            </span>
-                          </div>
+                          {actionLoading === 'delete' ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                          Excluir
                         </button>
-                      ))}
+                        {/* Exportar conversa */}
+                        <button
+                          onClick={handleExport}
+                          disabled={messages.length === 0}
+                          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          aria-label="Exportar conversa como texto"
+                        >
+                          <Download size={11} />
+                          Exportar
+                        </button>
+                      </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
 
-          {/* Paginação */}
-          {totalPages > 1 && (
-            <div className="flex-shrink-0 flex items-center justify-between p-2 border-t border-gray-100 dark:border-gray-800">
-              <button
-                disabled={page <= 1}
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors text-gray-600 dark:text-gray-300 flex items-center gap-1"
-              >
-                <ChevronLeft size={14} /> Anterior
-              </button>
-              <span className="text-xs text-gray-400 dark:text-gray-500">{page}/{totalPages}</span>
-              <button
-                disabled={page >= totalPages}
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                className="text-xs px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors text-gray-600 dark:text-gray-300 flex items-center gap-1"
-              >
-                Próxima <ChevronRight size={14} />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* ===== Painel Direito: Conversa ===== */}
-        {selectedConv ? (
-          <div className="flex-1 flex min-w-0 bg-gray-50 dark:bg-gray-950">
-            <div className="flex-1 flex flex-col min-w-0 border-r border-gray-200 dark:border-gray-800">
-            {/* Header da Conversa */}
-            <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className={`w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center font-bold ${
-                    selectedConv.customer_id ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
-                  }`}>
-                    {(selectedConv.customer_name || selectedConv.name || 'V').charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="font-bold text-gray-900 dark:text-white text-sm">
-                        {selectedConv.customer_name || selectedConv.name || `Visitante ${selectedConv.session_id?.slice(0, 12)}`}
-                      </h2>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${getStatusInfo(selectedConv.status).bg} ${getStatusInfo(selectedConv.status).color}`}>
-                        {getStatusInfo(selectedConv.status).label}
-                      </span>
-                      {(selectedConv as any).is_archived && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 font-medium">
-                          Arquivado
+                    {/* Badges de flags técnicas */}
+                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                      {selectedConv.has_error && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-medium flex items-center gap-1">
+                          <AlertTriangle size={9} /> Com erro
                         </span>
                       )}
-                      {(selectedConv as any).is_ignored && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-medium">
-                          Ignorado
+                      {selectedConv.has_human_support && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-medium flex items-center gap-1">
+                          <Headphones size={9} /> Atendimento humano
                         </span>
                       )}
-                      {!selectedConv.ai_enabled && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 font-medium">
-                          IA Pausada
+                      {selectedConv.has_action && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 font-medium flex items-center gap-1">
+                          <ShoppingCart size={9} /> Ação executada
+                        </span>
+                      )}
+                      {selectedConv.has_recommendation && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300 font-medium flex items-center gap-1">
+                          <Package size={9} /> Recomendação
+                        </span>
+                      )}
+                      {selectedConv.has_promo && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 font-medium flex items-center gap-1">
+                          <Tag size={9} /> Cupom/Promo
+                        </span>
+                      )}
+                      {selectedConv.has_order_query && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 font-medium flex items-center gap-1">
+                          <Truck size={9} /> Consultou pedido
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 flex-wrap mt-0.5">
-                      {selectedConv.customer_email && (
-                        <span className="flex items-center gap-0.5"><Mail size={10} /> {maskEmail(selectedConv.customer_email)}</span>
-                      )}
-                      {selectedConv.customer_phone && (
-                        <span className="flex items-center gap-0.5"><Phone size={10} /> {maskPhone(selectedConv.customer_phone)}</span>
-                      )}
-                      <span className="flex items-center gap-0.5"><Hash size={10} /> {selectedConv.session_id?.slice(0, 12)}</span>
-                      <span className="flex items-center gap-0.5"><Calendar size={10} /> {new Date(selectedConv.created_at).toLocaleDateString('pt-BR')}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Ações */}
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {selectedConv.status !== 'resolved' && selectedConv.status !== 'closed' && (
-                    <button
-                      onClick={() => handleAction('resolve')}
-                      disabled={!!actionLoading}
-                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white transition-colors disabled:opacity-50"
-                    >
-                      {actionLoading === 'resolve' ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle size={11} />}
-                      Encerrar
-                    </button>
-                  )}
-                  {(selectedConv as any).is_archived ? (
-                    <button
-                      onClick={() => handleAction('unarchive')}
-                      disabled={!!actionLoading}
-                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-50"
-                    >
-                      Desarquivar
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => requestAction('archive')}
-                      disabled={!!actionLoading}
-                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-50"
-                    >
-                      Arquivar
-                    </button>
-                  )}
-                  {(selectedConv as any).is_ignored ? (
-                    <button
-                      onClick={() => handleAction('unignore')}
-                      disabled={!!actionLoading}
-                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-50"
-                    >
-                      Designorar
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleAction('ignore')}
-                      disabled={!!actionLoading}
-                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-50"
-                    >
-                      Ignorar
-                    </button>
-                  )}
-                  {selectedConv.ai_enabled ? (
-                    <button
-                      onClick={() => requestAction('pause-ai')}
-                      disabled={!!actionLoading}
-                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white transition-colors disabled:opacity-50"
-                    >
-                      {actionLoading === 'pause-ai' ? <Loader2 size={11} className="animate-spin" /> : <Pause size={11} />}
-                      Pausar IA
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => requestAction('resume-ai')}
-                      disabled={!!actionLoading}
-                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-primary-500 hover:bg-primary-600 text-white transition-colors disabled:opacity-50"
-                    >
-                      {actionLoading === 'resume-ai' ? <Loader2 size={11} className="animate-spin" /> : <Play size={11} />}
-                      Retomar IA
-                    </button>
-                  )}
-                  <button
-                    onClick={() => requestAction('delete')}
-                    disabled={!!actionLoading}
-                    className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-50"
-                  >
-                    {actionLoading === 'delete' ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
-                    Excluir
-                  </button>
-                  {/* Exportar conversa */}
-                  <button
-                    onClick={handleExport}
-                    disabled={messages.length === 0}
-                    className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    aria-label="Exportar conversa como texto"
-                  >
-                    <Download size={11} />
-                    Exportar
-                  </button>
-                </div>
-              </div>
-
-              {/* Badges de flags técnicas */}
-              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                {selectedConv.has_error && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 font-medium flex items-center gap-1">
-                    <AlertTriangle size={9} /> Com erro
-                  </span>
-                )}
-                {selectedConv.has_human_support && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 font-medium flex items-center gap-1">
-                    <Headphones size={9} /> Atendimento humano
-                  </span>
-                )}
-                {selectedConv.has_action && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 font-medium flex items-center gap-1">
-                    <ShoppingCart size={9} /> Ação executada
-                  </span>
-                )}
-                {selectedConv.has_recommendation && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900/40 dark:text-primary-300 font-medium flex items-center gap-1">
-                    <Package size={9} /> Recomendação
-                  </span>
-                )}
-                {selectedConv.has_promo && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 font-medium flex items-center gap-1">
-                    <Tag size={9} /> Cupom/Promo
-                  </span>
-                )}
-                {selectedConv.has_order_query && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 font-medium flex items-center gap-1">
-                    <Truck size={9} /> Consultou pedido
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Mensagens */}
-            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4">
-              {loadingMessages ? (
-                <div className="flex items-center justify-center h-40">
-                  <Loader2 size={24} className="animate-spin text-primary-500" />
-                </div>
-              ) : messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-40 text-gray-400 dark:text-gray-600">
-                  <MessageSquare size={32} className="mb-2 opacity-50" />
-                  <p className="text-sm">Nenhuma mensagem</p>
-                </div>
-              ) : (
-                <>
-                  {messages.map(msg => (
-                    <ChatMessage key={msg.id} message={msg} />
-                  ))}
-                  <div ref={messagesEndRef} />
-                </>
-              )}
-            </div>
-
-            {/* Campo de Resposta */}
-            <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-3">
-              <div className="flex gap-2">
-                <textarea
-                  value={replyText}
-                  onChange={e => setReplyText(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(); } }}
-                  placeholder="Responder como administrador... (Enter para enviar)"
-                  rows={2}
-                  className="flex-1 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 placeholder-gray-400 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
-                />
-                <button
-                  onClick={handleReply}
-                  disabled={!replyText.trim() || sendingReply}
-                  className="px-3 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-                >
-                  {sendingReply ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                </button>
-              </div>
-              <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1 px-1">
-                Ao responder, a IA é pausada automaticamente e a conversa é atribuída a você.
-              </p>
-            </div>
-            </div>
-
-            {/* NEW Right sidebar for Memory Diagnostics */}
-            <div className="w-80 flex-shrink-0 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 flex flex-col p-4 overflow-y-auto space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-xs text-gray-450 dark:text-gray-500 uppercase tracking-wider mb-1">Diagnóstico de Memória</h3>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-450">Estado de contexto ativo da Kaia v2</p>
-                </div>
-                {selectedConv?.id && (
-                  <button
-                    onClick={() => fetchConversationContext(selectedConv.id)}
-                    disabled={loadingChatContext}
-                    className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
-                    title="Recarregar contexto"
-                  >
-                    <RefreshCw size={13} className={loadingChatContext ? 'animate-spin' : ''} />
-                  </button>
-                )}
-              </div>
-
-              {loadingChatContext ? (
-                <div className="flex justify-center py-8">
-                  <Loader2 className="animate-spin text-primary-500" size={16} />
-                </div>
-              ) : selectedChatContext ? (
-                <>
-                  {/* Modo de Conversa */}
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 flex justify-between items-center text-xs">
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">Modo Atual</span>
-                    <span className="px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:bg-primary-300 text-[10px] font-bold font-mono uppercase">
-                      {selectedChatContext.mode}
-                    </span>
                   </div>
 
-                  {/* Ação Pendente */}
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 space-y-2">
-                    <div className="flex justify-between items-center text-xs font-semibold">
-                      <span className="text-gray-700 dark:text-gray-300">Ação Pendente</span>
-                      {selectedChatContext.activePendingAction ? (
-                        <span className="text-amber-600 dark:text-amber-400 text-[10px]">Pendente</span>
-                      ) : (
-                        <span className="text-gray-400 dark:text-gray-500 text-[10px]">Nenhuma</span>
-                      )}
-                    </div>
-                    {selectedChatContext.activePendingAction && (
-                      <div className="text-[10px] space-y-1 text-gray-500 dark:text-gray-400 font-mono bg-white dark:bg-gray-950 p-2 rounded border border-gray-100 dark:border-gray-850">
-                        <p><strong>Tipo:</strong> {selectedChatContext.activePendingAction.type}</p>
-                        <p><strong>Produto:</strong> {selectedChatContext.activePendingAction.productName}</p>
-                        <p><strong>Quant:</strong> {selectedChatContext.activePendingAction.quantity}</p>
-                        <p><strong>Expira em:</strong> {selectedChatContext.activePendingAction.elapsedSeconds}s / {selectedChatContext.activePendingAction.ttlSeconds}s</p>
+                  {/* Mensagens */}
+                  <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4">
+                    {loadingMessages ? (
+                      <div className="flex items-center justify-center h-40">
+                        <Loader2 size={24} className="animate-spin text-primary-500" />
                       </div>
-                    )}
-                  </div>
-
-                  {/* Último Produto & Quantidade */}
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 space-y-2 text-xs">
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">Contexto Recente</span>
-                    
-                    {selectedChatContext.lastMentionedProduct && (
-                      <div className="flex justify-between items-center text-[11px] bg-white dark:bg-gray-950 p-1.5 rounded border border-gray-100 dark:border-gray-850">
-                        <span className="text-gray-500 dark:text-gray-400">Último Produto:</span>
-                        <span className="font-bold text-gray-850 dark:text-gray-250 truncate max-w-[120px]">{selectedChatContext.lastMentionedProduct.name}</span>
-                      </div>
-                    )}
-
-                    {selectedChatContext.lastQuantity && (
-                      <div className="flex justify-between items-center text-[11px] bg-white dark:bg-gray-950 p-1.5 rounded border border-gray-100 dark:border-gray-850">
-                        <span className="text-gray-500 dark:text-gray-400">Última Quantidade:</span>
-                        <span className="font-bold text-gray-850 dark:text-gray-250">{selectedChatContext.lastQuantity.value}</span>
-                      </div>
-                    )}
-
-                    {selectedChatContext.lastRejectedCartAdd && (
-                      <div className="flex justify-between items-center text-[11px] bg-red-50/50 dark:bg-red-950/10 p-1.5 rounded border border-red-100 dark:border-red-900/20">
-                        <span className="text-red-650 dark:text-red-400">Recusado (Excesso):</span>
-                        <span className="font-bold text-red-650 dark:text-red-450 truncate max-w-[120px]">{selectedChatContext.lastRejectedCartAdd.productName} ({selectedChatContext.lastRejectedCartAdd.quantity})</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Resumo da Conversa */}
-                  {selectedChatContext.recentMessagesSummary && (
-                    <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 space-y-1.5 text-xs">
-                      <span className="font-semibold text-gray-700 dark:text-gray-300">Resumo da IA</span>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-950 p-2 rounded border border-gray-100 dark:border-gray-850 leading-relaxed">
-                        {selectedChatContext.recentMessagesSummary}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Memórias do Cliente */}
-                  <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 space-y-2 text-xs">
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">Memórias do Cliente</span>
-                    {selectedChatContext.approvedCustomerMemory && selectedChatContext.approvedCustomerMemory.length > 0 ? (
-                      <div className="space-y-1.5">
-                        {selectedChatContext.approvedCustomerMemory.map((mem: any) => (
-                          <div key={mem.id} className={`flex flex-col p-2 rounded border ${mem.status === 'approved' ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40' : 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40'}`}>
-                            <div className="flex justify-between items-center text-[10px]">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-semibold uppercase tracking-wider text-primary-500 dark:text-primary-400">
-                                  {mem.category === 'preference' ? 'Preferência' : 'Interesse'}
-                                </span>
-                                <span className={`px-1 py-0.5 rounded text-[9px] font-bold ${mem.status === 'approved' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
-                                  {mem.status === 'approved' ? 'Aprovada' : 'Pendente'}
-                                </span>
-                              </div>
-                              <span className="text-gray-400 dark:text-gray-500">{(mem.confidence * 100).toFixed(0)}%</span>
-                            </div>
-                            <span className="text-[11px] font-medium text-gray-800 dark:text-gray-200 mt-0.5">{mem.value}</span>
-                          </div>
-                        ))}
+                    ) : messages.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-40 text-gray-400 dark:text-gray-600">
+                        <MessageSquare size={32} className="mb-2 opacity-50" />
+                        <p className="text-sm">Nenhuma mensagem</p>
                       </div>
                     ) : (
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 italic bg-white dark:bg-gray-950 p-2 rounded border border-gray-100 dark:border-gray-850">
-                        Nenhuma memória extraída para este perfil.
-                      </p>
+                      <>
+                        {messages.map(msg => (
+                          <ChatMessage key={msg.id} message={msg} />
+                        ))}
+                        <div ref={messagesEndRef} />
+                      </>
                     )}
                   </div>
-                </>
-              ) : (
-                <p className="text-xs text-gray-400 py-4 text-center">Nenhum contexto de diagnóstico carregado.</p>
-              )}
-            </div>
-          </div>
-        ) : (
-          /* Estado Vazio */
-          <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-950 text-gray-400 dark:text-gray-600">
-            <div className="w-20 h-20 bg-primary-100 dark:bg-primary-900/20 rounded-2xl flex items-center justify-center mb-4">
-              <Bot size={36} className="text-primary-400 dark:text-primary-500" />
-            </div>
-            <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-1">Selecione uma conversa</h3>
-            <p className="text-sm text-center max-w-xs">
-              Escolha uma conversa na lista à esquerda para visualizar as mensagens e o diagnóstico técnico da IA.
-            </p>
 
-            {/* Top Intenções inline */}
-            {metrics && metrics.topIntents.length > 0 && (
-              <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 w-80">
-                <h4 className="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-3 flex items-center gap-1.5">
-                  <TrendingUp size={14} className="text-primary-500" />
-                  Intenções Mais Comuns
-                </h4>
-                <div className="space-y-1.5">
-                  {metrics.topIntents.slice(0, 5).map((item, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <span className="text-xs font-mono text-gray-400 w-4 text-right">{i + 1}</span>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${getIntentBadge(item.intent)}`}>
-                            {item.intent}
-                          </span>
-                          <span className="text-xs text-gray-400 font-mono">{item.count}x</span>
-                        </div>
-                        <div className="h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-primary-400 to-primary-600 rounded-full"
-                            style={{ width: `${(item.count / (metrics.topIntents[0]?.count || 1)) * 100}%` }}
-                          />
-                        </div>
-                      </div>
+                  {/* Campo de Resposta */}
+                  <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 p-3">
+                    <div className="flex gap-2">
+                      <textarea
+                        value={replyText}
+                        onChange={e => setReplyText(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReply(); } }}
+                        placeholder="Responder como administrador... (Enter para enviar)"
+                        rows={2}
+                        className="flex-1 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-200 placeholder-gray-400 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
+                      />
+                      <button
+                        onClick={handleReply}
+                        disabled={!replyText.trim() || sendingReply}
+                        className="px-3 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                      >
+                        {sendingReply ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                      </button>
                     </div>
-                  ))}
+                    <p className="text-[10px] text-gray-400 dark:text-gray-600 mt-1 px-1">
+                      Ao responder, a IA é pausada automaticamente e a conversa é atribuída a você.
+                    </p>
+                  </div>
                 </div>
+
+                {/* NEW Right sidebar for Memory Diagnostics */}
+                <div className="w-80 flex-shrink-0 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 flex flex-col p-4 overflow-y-auto space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-bold text-xs text-gray-450 dark:text-gray-500 uppercase tracking-wider mb-1">Diagnóstico de Memória</h3>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-450">Estado de contexto ativo da Kaia v2</p>
+                    </div>
+                    {selectedConv?.id && (
+                      <button
+                        onClick={() => fetchConversationContext(selectedConv.id)}
+                        disabled={loadingChatContext}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
+                        title="Recarregar contexto"
+                      >
+                        <RefreshCw size={13} className={loadingChatContext ? 'animate-spin' : ''} />
+                      </button>
+                    )}
+                  </div>
+
+                  {loadingChatContext ? (
+                    <div className="flex justify-center py-8">
+                      <Loader2 className="animate-spin text-primary-500" size={16} />
+                    </div>
+                  ) : selectedChatContext ? (
+                    <>
+                      {/* Modo de Conversa */}
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 flex justify-between items-center text-xs">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300">Modo Atual</span>
+                        <span className="px-2 py-0.5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:bg-primary-300 text-[10px] font-bold font-mono uppercase">
+                          {selectedChatContext.mode}
+                        </span>
+                      </div>
+
+                      {/* Ação Pendente */}
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 space-y-2">
+                        <div className="flex justify-between items-center text-xs font-semibold">
+                          <span className="text-gray-700 dark:text-gray-300">Ação Pendente</span>
+                          {selectedChatContext.activePendingAction ? (
+                            <span className="text-amber-600 dark:text-amber-400 text-[10px]">Pendente</span>
+                          ) : (
+                            <span className="text-gray-400 dark:text-gray-500 text-[10px]">Nenhuma</span>
+                          )}
+                        </div>
+                        {selectedChatContext.activePendingAction && (
+                          <div className="text-[10px] space-y-1 text-gray-500 dark:text-gray-400 font-mono bg-white dark:bg-gray-950 p-2 rounded border border-gray-100 dark:border-gray-850">
+                            <p><strong>Tipo:</strong> {selectedChatContext.activePendingAction.type}</p>
+                            <p><strong>Produto:</strong> {selectedChatContext.activePendingAction.productName}</p>
+                            <p><strong>Quant:</strong> {selectedChatContext.activePendingAction.quantity}</p>
+                            <p><strong>Expira em:</strong> {selectedChatContext.activePendingAction.elapsedSeconds}s / {selectedChatContext.activePendingAction.ttlSeconds}s</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Último Produto & Quantidade */}
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 space-y-2 text-xs">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300">Contexto Recente</span>
+
+                        {selectedChatContext.lastMentionedProduct && (
+                          <div className="flex justify-between items-center text-[11px] bg-white dark:bg-gray-950 p-1.5 rounded border border-gray-100 dark:border-gray-850">
+                            <span className="text-gray-500 dark:text-gray-400">Último Produto:</span>
+                            <span className="font-bold text-gray-850 dark:text-gray-250 truncate max-w-[120px]">{selectedChatContext.lastMentionedProduct.name}</span>
+                          </div>
+                        )}
+
+                        {selectedChatContext.lastQuantity && (
+                          <div className="flex justify-between items-center text-[11px] bg-white dark:bg-gray-950 p-1.5 rounded border border-gray-100 dark:border-gray-850">
+                            <span className="text-gray-500 dark:text-gray-400">Última Quantidade:</span>
+                            <span className="font-bold text-gray-850 dark:text-gray-250">{selectedChatContext.lastQuantity.value}</span>
+                          </div>
+                        )}
+
+                        {selectedChatContext.lastRejectedCartAdd && (
+                          <div className="flex justify-between items-center text-[11px] bg-red-50/50 dark:bg-red-950/10 p-1.5 rounded border border-red-100 dark:border-red-900/20">
+                            <span className="text-red-650 dark:text-red-400">Recusado (Excesso):</span>
+                            <span className="font-bold text-red-650 dark:text-red-450 truncate max-w-[120px]">{selectedChatContext.lastRejectedCartAdd.productName} ({selectedChatContext.lastRejectedCartAdd.quantity})</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Resumo da Conversa */}
+                      {selectedChatContext.recentMessagesSummary && (
+                        <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 space-y-1.5 text-xs">
+                          <span className="font-semibold text-gray-700 dark:text-gray-300">Resumo da IA</span>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-950 p-2 rounded border border-gray-100 dark:border-gray-850 leading-relaxed">
+                            {selectedChatContext.recentMessagesSummary}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Memórias do Cliente */}
+                      <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-100 dark:border-gray-700 space-y-2 text-xs">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300">Memórias do Cliente</span>
+                        {selectedChatContext.approvedCustomerMemory && selectedChatContext.approvedCustomerMemory.length > 0 ? (
+                          <div className="space-y-1.5">
+                            {selectedChatContext.approvedCustomerMemory.map((mem: any) => (
+                              <div key={mem.id} className={`flex flex-col p-2 rounded border ${mem.status === 'approved' ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40' : 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40'}`}>
+                                <div className="flex justify-between items-center text-[10px]">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="font-semibold uppercase tracking-wider text-primary-500 dark:text-primary-400">
+                                      {mem.category === 'preference' ? 'Preferência' : 'Interesse'}
+                                    </span>
+                                    <span className={`px-1 py-0.5 rounded text-[9px] font-bold ${mem.status === 'approved' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
+                                      {mem.status === 'approved' ? 'Aprovada' : 'Pendente'}
+                                    </span>
+                                  </div>
+                                  <span className="text-gray-400 dark:text-gray-500">{(mem.confidence * 100).toFixed(0)}%</span>
+                                </div>
+                                <span className="text-[11px] font-medium text-gray-800 dark:text-gray-200 mt-0.5">{mem.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-gray-400 dark:text-gray-500 italic bg-white dark:bg-gray-950 p-2 rounded border border-gray-100 dark:border-gray-850">
+                            Nenhuma memória extraída para este perfil.
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-xs text-gray-400 py-4 text-center">Nenhum contexto de diagnóstico carregado.</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Estado Vazio */
+              <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-950 text-gray-400 dark:text-gray-600">
+                <div className="w-20 h-20 bg-primary-100 dark:bg-primary-900/20 rounded-2xl flex items-center justify-center mb-4">
+                  <Bot size={36} className="text-primary-400 dark:text-primary-500" />
+                </div>
+                <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-1">Selecione uma conversa</h3>
+                <p className="text-sm text-center max-w-xs">
+                  Escolha uma conversa na lista à esquerda para visualizar as mensagens e o diagnóstico técnico da IA.
+                </p>
+
+                {/* Top Intenções inline */}
+                {metrics && metrics.topIntents.length > 0 && (
+                  <div className="mt-6 bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 w-80">
+                    <h4 className="font-semibold text-gray-700 dark:text-gray-300 text-sm mb-3 flex items-center gap-1.5">
+                      <TrendingUp size={14} className="text-primary-500" />
+                      Intenções Mais Comuns
+                    </h4>
+                    <div className="space-y-1.5">
+                      {metrics.topIntents.slice(0, 5).map((item, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-xs font-mono text-gray-400 w-4 text-right">{i + 1}</span>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-0.5">
+                              <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${getIntentBadge(item.intent)}`}>
+                                {item.intent}
+                              </span>
+                              <span className="text-xs text-gray-400 font-mono">{item.count}x</span>
+                            </div>
+                            <div className="h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-primary-400 to-primary-600 rounded-full"
+                                style={{ width: `${(item.count / (metrics.topIntents[0]?.count || 1)) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-      </div>
-      </>
+        </>
       ) : activeTab === 'performance' ? (
         /* ===== ABA 2: PERFORMANCE E MÉTRICAS ===== */
         <div className="flex-1 overflow-y-auto space-y-6 pb-8 pr-2 animate-in fade-in duration-200">
@@ -3181,107 +3459,181 @@ export default function KaiaChats() {
         </div>
       ) : activeTab === 'learning' ? (
         /* ===== ABA 5: APRENDIZADO E MEMÓRIA DA KAIA ===== */
-        <div className="flex-1 overflow-y-auto space-y-6 pb-8 pr-2 animate-in fade-in duration-200">
-          {/* Painel de Diagnósticos KPI */}
-          {learningQueueDiagnostics && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm">
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Recurso de Memória</span>
-                <div className="flex items-center gap-2">
-                  <span className={`w-2.5 h-2.5 rounded-full ${learningQueueDiagnostics.memoryFeatureEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></span>
-                  <span className="text-sm font-bold text-gray-850 dark:text-gray-200">{learningQueueDiagnostics.memoryFeatureEnabled ? 'Ativado (Long-term)' : 'Desativado'}</span>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Fila de Aprendizado</span>
-                <div className="text-xs space-y-0.5 text-gray-600 dark:text-gray-400 font-mono">
-                  <p>Pendentes: <span className="font-bold text-amber-600">{learningQueueDiagnostics.counts?.pending || 0}</span></p>
-                  <p>Processando: <span className="font-bold text-blue-600">{learningQueueDiagnostics.counts?.processing || 0}</span></p>
-                  <p>Falhas: <span className="font-bold text-red-650">{learningQueueDiagnostics.counts?.failed || 0}</span></p>
-                </div>
-              </div>
-              <div className="space-y-1 col-span-1 md:col-span-2">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400 dark:text-gray-500">Histórico de Execução</span>
-                <div className="text-[11px] space-y-1 text-gray-600 dark:text-gray-400">
-                  {learningQueueDiagnostics.lastCompletedJob && (
-                    <p>Último sucesso: <span className="font-semibold text-emerald-600">{learningQueueDiagnostics.lastCompletedJob.id}</span> ({new Date(learningQueueDiagnostics.lastCompletedJob.finishedAt).toLocaleString('pt-BR')})</p>
-                  )}
-                  {learningQueueDiagnostics.lastFailedJob ? (
-                    <p className="text-red-500">Última falha: <span className="font-semibold">{learningQueueDiagnostics.lastFailedJob.id}</span>. <strong>Erro:</strong> {learningQueueDiagnostics.lastFailedJob.error}</p>
-                  ) : (
-                    <p className="text-gray-400 italic">Nenhuma falha recente registrada.</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+        <div className="flex-1 overflow-y-auto space-y-5 pb-8 pr-1 animate-in fade-in duration-200">
 
-          {/* KPI de Melhorias e Memórias */}
-          {learningQueueDiagnostics && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-1 text-center">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Melhorias Pendentes</span>
-                <p className="text-2xl font-black text-amber-600">{learningQueueDiagnostics.pendingImprovementCount ?? 0}</p>
-              </div>
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-1 text-center">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Memórias Pendentes</span>
-                <p className="text-2xl font-black text-blue-600">{learningQueueDiagnostics.pendingMemoryCount ?? 0}</p>
-              </div>
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-1 text-center">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Melhorias Aplicadas</span>
-                <p className="text-2xl font-black text-emerald-600">{(learningQueueDiagnostics.improvementCounts?.applied || 0) + (learningQueueDiagnostics.improvementCounts?.approved || 0)}</p>
-              </div>
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-1 text-center">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-gray-400">Memórias Aprovadas</span>
-                <p className="text-2xl font-black text-emerald-600">{learningQueueDiagnostics.memoryCounts?.approved ?? 0}</p>
-              </div>
-            </div>
-          )}
-
+          {/* Cabeçalho Unificado, Controles e Navegação */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-gray-100 dark:border-gray-700 pb-4">
-              <div>
-                <h3 className="font-bold text-gray-800 dark:text-white text-base">Aprendizado & Memória</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Supervisão de melhorias automatizadas, preferências de clientes e regressão</p>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-700 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-purple-100 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400">
+                  <Brain size={22} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-extrabold text-gray-900 dark:text-white text-lg">Aprendizado & Memória</h3>
+                    {/* Botão de Ajuda '?' que abre o Modal Explicativo */}
+                    <button
+                      type="button"
+                      onClick={() => setShowLearningGuideModal(true)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-xs font-bold transition-all border border-purple-200/60 dark:border-purple-800/60 shadow-sm"
+                      title="Clique para entender como funcionam os Apelidos, Melhorias e Memórias"
+                    >
+                      <HelpCircle size={14} />
+                      <span>Como Funciona?</span>
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Supervisão inteligente de apelidos de produtos, regras de atendimento e preferências de clientes</p>
+                </div>
               </div>
 
-              {/* Seletor de sub-seções */}
-              <div className="flex bg-gray-100 dark:bg-gray-900 rounded-lg p-0.5 border border-gray-200 dark:border-gray-800 text-[11px] font-semibold">
+              <div className="flex items-center gap-3 self-start md:self-auto flex-wrap">
+                {/* Toggle Memória Long-Term */}
+                <div className="flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750">
+                  <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Memória Long-Term</span>
+                  <button
+                    type="button"
+                    onClick={handleToggleLongTermMemory}
+                    className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isLongTermMemoryEnabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-700'
+                      }`}
+                    title="Clique para ativar ou desativar o salvamento de memórias de clientes"
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition duration-200 ease-in-out ${isLongTermMemoryEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                  </button>
+                  <span className={`text-[11px] font-extrabold ${isLongTermMemoryEnabled ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}`}>
+                    {isLongTermMemoryEnabled ? 'ON' : 'OFF'}
+                  </span>
+                </div>
+
+                {/* Botão Atualizar */}
+                <button
+                  type="button"
+                  onClick={() => fetchLearningData(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-xl transition-colors shadow-sm"
+                  title="Atualizar dados de aprendizado"
+                >
+                  <RefreshCw size={13} className={loadingLearning ? 'animate-spin text-primary-500' : ''} />
+                  <span>Atualizar</span>
+                </button>
+              </div>
+            </div>
+
+            {/* KPI Interativos para Filtrar Melhorias e Memórias */}
+            {learningQueueDiagnostics && (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => { setLearningTabSubSection('improvements'); setImprovementFilterStatus('pending'); }}
+                  className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${learningTabSubSection === 'improvements' && improvementFilterStatus === 'pending'
+                      ? 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-400 dark:border-amber-500 shadow-sm font-bold'
+                      : 'bg-gray-50/50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-700 hover:border-amber-300'
+                    }`}
+                >
+                  <span className="text-[10px] uppercase font-extrabold tracking-wider text-amber-700 dark:text-amber-400 flex items-center justify-between">
+                    Melhorias Pendentes
+                    <Tag size={12} />
+                  </span>
+                  <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{learningQueueDiagnostics.pendingImprovementCount ?? 0}</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setLearningTabSubSection('memories'); setMemoryFilterStatus('pending_admin_approval'); }}
+                  className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${learningTabSubSection === 'memories' && memoryFilterStatus === 'pending_admin_approval'
+                      ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-400 dark:border-blue-500 shadow-sm font-bold'
+                      : 'bg-gray-50/50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-700 hover:border-blue-300'
+                    }`}
+                >
+                  <span className="text-[10px] uppercase font-extrabold tracking-wider text-blue-700 dark:text-blue-400 flex items-center justify-between">
+                    Memórias Pendentes
+                    <Brain size={12} />
+                  </span>
+                  <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">{learningQueueDiagnostics.pendingMemoryCount ?? 0}</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setLearningTabSubSection('improvements'); setImprovementFilterStatus('applied'); }}
+                  className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${learningTabSubSection === 'improvements' && improvementFilterStatus === 'applied'
+                      ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-500 shadow-sm font-bold'
+                      : 'bg-gray-50/50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-700 hover:border-emerald-300'
+                    }`}
+                >
+                  <span className="text-[10px] uppercase font-extrabold tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center justify-between">
+                    Melhorias Aplicadas
+                    <CheckCircle size={12} />
+                  </span>
+                  <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{(learningQueueDiagnostics.improvementCounts?.applied || 0) + (learningQueueDiagnostics.improvementCounts?.approved || 0)}</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setLearningTabSubSection('memories'); setMemoryFilterStatus('approved'); }}
+                  className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer flex flex-col justify-between ${learningTabSubSection === 'memories' && memoryFilterStatus === 'approved'
+                      ? 'bg-emerald-50/80 dark:bg-emerald-950/40 border-emerald-400 dark:border-emerald-500 shadow-sm font-bold'
+                      : 'bg-gray-50/50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-700 hover:border-emerald-300'
+                    }`}
+                >
+                  <span className="text-[10px] uppercase font-extrabold tracking-wider text-emerald-700 dark:text-emerald-400 flex items-center justify-between">
+                    Memórias Aprovadas
+                    <Sparkles size={12} />
+                  </span>
+                  <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{learningQueueDiagnostics.memoryCounts?.approved ?? 0}</p>
+                </button>
+              </div>
+            )}
+
+            {/* Seletor de Sub-seções (Navegação em Linha Única sem Quebra) */}
+            <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+              <div className="flex bg-gray-100 dark:bg-gray-900 rounded-xl p-1 border border-gray-200 dark:border-gray-700 text-xs font-bold gap-1 overflow-x-auto whitespace-nowrap scrollbar-none">
                 <button
                   type="button"
                   onClick={() => setLearningTabSubSection('improvements')}
-                  className={`px-3 py-1.5 rounded-md transition-all ${
-                    learningTabSubSection === 'improvements'
-                      ? 'bg-white dark:bg-gray-700 text-primary-650 dark:text-primary-400 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors shrink-0 ${learningTabSubSection === 'improvements'
+                      ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm border border-gray-200 dark:border-gray-600 font-bold'
+                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200 font-medium'
+                    }`}
                 >
-                  Fila de Melhorias ({learningImprovements.length})
+                  <Tag size={14} />
+                  <span>Fila de Melhorias</span>
+                  <span className="ml-1 px-2 py-0.5 text-[10px] rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-mono">
+                    {learningImprovements.length}
+                  </span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setLearningTabSubSection('memories')}
-                  className={`px-3 py-1.5 rounded-md transition-all ${
-                    learningTabSubSection === 'memories'
-                      ? 'bg-white dark:bg-gray-700 text-primary-650 dark:text-primary-400 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors shrink-0 ${learningTabSubSection === 'memories'
+                      ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm border border-gray-200 dark:border-gray-600 font-bold'
+                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200 font-medium'
+                    }`}
                 >
-                  Memórias dos Clientes ({learningMemories.length})
+                  <Brain size={14} />
+                  <span>Memórias dos Clientes</span>
+                  <span className="ml-1 px-2 py-0.5 text-[10px] rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 font-mono">
+                    {learningMemories.length}
+                  </span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setLearningTabSubSection('tests')}
-                  className={`px-3 py-1.5 rounded-md transition-all ${
-                    learningTabSubSection === 'tests'
-                      ? 'bg-white dark:bg-gray-700 text-primary-650 dark:text-primary-400 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-                  }`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors shrink-0 ${learningTabSubSection === 'tests'
+                      ? 'bg-white dark:bg-gray-700 text-primary-600 dark:text-primary-400 shadow-sm border border-gray-200 dark:border-gray-600 font-bold'
+                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200 font-medium'
+                    }`}
                 >
-                  Suíte de Testes ({learningTests.length})
+                  <Code2 size={14} />
+                  <span className="ml-1 px-2 py-0.5 text-[10px] rounded-full bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 font-mono">
+                    {learningTests.length}
+                  </span>
                 </button>
               </div>
             </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm space-y-4 min-h-[450px]">
 
             {loadingLearning ? (
               <div className="flex items-center justify-center py-12">
@@ -3290,52 +3642,123 @@ export default function KaiaChats() {
             ) : learningTabSubSection === 'improvements' ? (
               /* Fila de Melhorias */
               <div className="space-y-4">
-                {/* Seletor de Status das Melhorias */}
-                <div className="flex bg-gray-50 dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg p-1 w-fit gap-1 text-[11px] font-semibold">
-                  <button
-                    type="button"
-                    onClick={() => setImprovementFilterStatus('pending')}
-                    className={`px-3 py-1 rounded-md transition-all ${
-                      improvementFilterStatus === 'pending'
-                        ? 'bg-white dark:bg-gray-700 text-primary-650 dark:text-primary-400 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-800'
-                    }`}
-                  >
-                    Pendentes
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setImprovementFilterStatus('applied')}
-                    className={`px-3 py-1 rounded-md transition-all ${
-                      improvementFilterStatus === 'applied'
-                        ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-800'
-                    }`}
-                  >
-                    Aplicadas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setImprovementFilterStatus('rejected')}
-                    className={`px-3 py-1 rounded-md transition-all ${
-                      improvementFilterStatus === 'rejected'
-                        ? 'bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-800'
-                    }`}
-                  >
-                    Rejeitadas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setImprovementFilterStatus('archived')}
-                    className={`px-3 py-1 rounded-md transition-all ${
-                      improvementFilterStatus === 'archived'
-                        ? 'bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-800'
-                    }`}
-                  >
-                    Arquivadas
-                  </button>
+                {/* Header da Fila de Melhorias: Filtros + Ações em Massa */}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-1 w-fit gap-1 text-xs font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => { setImprovementFilterStatus('pending'); setSelectedImprovementIds([]); }}
+                      className={`px-3.5 py-1.5 rounded-lg transition-all ${improvementFilterStatus === 'pending'
+                          ? 'bg-white dark:bg-gray-800 text-amber-700 dark:text-amber-400 shadow-sm font-bold border border-gray-200/50 dark:border-gray-700'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                        }`}
+                    >
+                      Pendentes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setImprovementFilterStatus('applied'); setSelectedImprovementIds([]); }}
+                      className={`px-3.5 py-1.5 rounded-lg transition-all ${improvementFilterStatus === 'applied'
+                          ? 'bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-400 shadow-sm font-bold border border-gray-200/50 dark:border-gray-700'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                        }`}
+                    >
+                      Aprovadas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setImprovementFilterStatus('rejected'); setSelectedImprovementIds([]); }}
+                      className={`px-3.5 py-1.5 rounded-lg transition-all ${improvementFilterStatus === 'rejected'
+                          ? 'bg-white dark:bg-gray-800 text-red-700 dark:text-red-400 shadow-sm font-bold border border-gray-200/50 dark:border-gray-700'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                        }`}
+                    >
+                      Rejeitadas
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setImprovementFilterStatus('archived'); setSelectedImprovementIds([]); }}
+                      className={`px-3.5 py-1.5 rounded-lg transition-all ${improvementFilterStatus === 'archived'
+                          ? 'bg-white dark:bg-gray-800 text-amber-700 dark:text-amber-400 shadow-sm font-bold border border-gray-200/50 dark:border-gray-700'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                        }`}
+                    >
+                      Arquivadas
+                    </button>
+                  </div>
+
+                  {/* Seleção em Massa + Export/Import */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {learningImprovements.length > 0 && (
+                      <label className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={selectedImprovementIds.length > 0 && selectedImprovementIds.length === learningImprovements.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedImprovementIds(learningImprovements.map(item => item.id));
+                            } else {
+                              setSelectedImprovementIds([]);
+                            }
+                          }}
+                          className="w-4 h-4 text-primary-600 rounded border-gray-300 dark:border-gray-600 focus:ring-primary-500"
+                        />
+                        <span>Selecionar Todos</span>
+                      </label>
+                    )}
+
+                    {selectedImprovementIds.length > 0 && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={handleBulkDeleteImprovements}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs shadow-sm transition-all"
+                        >
+                          <Trash2 size={13} />
+                          Excluir ({selectedImprovementIds.length})
+                        </button>
+                        {improvementFilterStatus !== 'archived' && (
+                          <button
+                            type="button"
+                            onClick={handleBulkArchiveImprovements}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs shadow-sm transition-all"
+                          >
+                            <Archive size={13} />
+                            Arquivar ({selectedImprovementIds.length})
+                          </button>
+                        )}
+                      </>
+                    )}
+
+                    {/* Divisor */}
+                    <div className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
+
+                    <button
+                      type="button"
+                      onClick={handleExportPackage}
+                      disabled={isExportingRules}
+                      title="Exportar todas as regras aprovadas, apelidos e memórias em formato JSON"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold shadow-sm transition-all disabled:opacity-50"
+                    >
+                      <Download size={13} className="text-primary-500" />
+                      {isExportingRules ? 'Exportando...' : 'Exportar'}
+                    </button>
+
+                    <label
+                      title="Importar pacote JSON de regras gerado pela exportação"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold shadow-sm cursor-pointer transition-all"
+                    >
+                      <Upload size={13} className="text-emerald-500" />
+                      {isImportingRules ? 'Importando...' : 'Importar'}
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleImportPackage}
+                        disabled={isImportingRules}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 {learningImprovements.length === 0 ? (
@@ -3366,24 +3789,72 @@ export default function KaiaChats() {
                       })();
 
                       return (
-                        <div key={item.id} className="p-4 rounded-xl border border-gray-150 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/30 flex flex-col gap-3">
+                        <div key={item.id} className="p-5 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/90 shadow-sm flex flex-col gap-4">
                           <div className="flex items-center justify-between flex-wrap gap-2">
-                            <span className="px-2 py-0.5 text-[9px] font-bold font-mono rounded bg-red-100 text-red-750 dark:bg-red-950/20 dark:text-red-400 uppercase">
-                              {item.detected_issue_type}
-                            </span>
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500">Sessão: {item.source_conversation_id?.slice(0, 8)} | {new Date(item.created_at).toLocaleString('pt-BR')}</span>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedImprovementIds.includes(item.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedImprovementIds(prev => [...prev, item.id]);
+                                  } else {
+                                    setSelectedImprovementIds(prev => prev.filter(id => id !== item.id));
+                                  }
+                                }}
+                                className="w-4 h-4 text-primary-600 rounded border-gray-300 dark:border-gray-600 focus:ring-primary-500 cursor-pointer"
+                              />
+                              <span
+                                title={getIssueTypeTooltip(item.detected_issue_type)}
+                                className="px-3 py-1 text-[10px] font-extrabold rounded-lg bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 border border-red-200 dark:border-red-900/50 uppercase tracking-wider cursor-help"
+                              >
+                                {formatIssueType(item.detected_issue_type)}
+                              </span>
+                              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Sessão: {item.source_conversation_id?.slice(0, 8)} | {new Date(item.created_at).toLocaleString('pt-BR')}</span>
+                            </div>
+
+                            {/* Botão para copiar relatório completo da melhoria */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const report = `=== RELATÓRIO DE MELHORIA DA KAIA ===
+ID: ${item.id}
+Tipo: ${formatIssueType(item.detected_issue_type)}
+Status: ${item.status || 'Pendente'}
+Sessão: ${item.source_conversation_id || 'N/A'}
+Data/Hora: ${new Date(item.created_at).toLocaleString('pt-BR')}
+
+Mensagem do Cliente:
+"${item.customer_message}"
+
+Resposta da Kaia:
+"${item.assistant_response}"
+
+${item.detected_alias ? `Apelido Detectado: ${formatDetectedAlias(item.detected_alias)}` : ''}
+${item.suggested_product_name ? `Produto Sugerido: ${item.suggested_product_name}` : ''}
+${item.proposed_rule ? `Ação Corretiva: ${item.proposed_rule}` : ''}
+`;
+                                navigator.clipboard.writeText(report);
+                                showToast('Dados da melhoria copiados para a área de transferência!', 'success');
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-all shadow-xs"
+                              title="Copiar todos os dados desta melhoria"
+                            >
+                              <Copy size={13} />
+                              <span>Copiar Dados</span>
+                            </button>
                           </div>
 
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                            <div className="space-y-1">
-                              <span className="font-bold text-gray-700 dark:text-gray-300">Mensagem do Cliente:</span>
-                              <p className="p-2 rounded bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 italic text-gray-800 dark:text-gray-200">
+                            <div className="space-y-1.5">
+                              <span className="font-extrabold text-gray-900 dark:text-white text-xs">Mensagem do Cliente:</span>
+                              <p className="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700 italic text-gray-800 dark:text-gray-200 leading-relaxed font-medium">
                                 "{item.customer_message}"
                               </p>
                             </div>
-                            <div className="space-y-1">
-                              <span className="font-bold text-gray-700 dark:text-gray-300">Resposta da Kaia:</span>
-                              <p className="p-2 rounded bg-gray-50 dark:bg-gray-950 border border-gray-200 dark:border-gray-800 italic text-gray-800 dark:text-gray-200">
+                            <div className="space-y-1.5">
+                              <span className="font-extrabold text-gray-900 dark:text-white text-xs">Resposta da Kaia:</span>
+                              <p className="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-900/80 border border-gray-200 dark:border-gray-700 italic text-gray-800 dark:text-gray-200 leading-relaxed font-medium">
                                 "{item.assistant_response}"
                               </p>
                             </div>
@@ -3391,10 +3862,10 @@ export default function KaiaChats() {
 
                           {/* ═══ ALIAS REVIEW PANEL ═══ */}
                           {isAlias && improvementFilterStatus === 'pending' && ars ? (
-                            <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/40 dark:bg-amber-950/10 p-4 space-y-4">
+                            <div className="rounded-2xl border border-amber-300/70 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/30 p-4 space-y-4">
                               <div className="flex items-center gap-2">
-                                <Brain size={14} className="text-amber-600" />
-                                <span className="text-xs font-bold text-amber-700 dark:text-amber-400">Revisão de Apelido de Produto</span>
+                                <Brain size={16} className="text-amber-600 dark:text-amber-400" />
+                                <span className="text-xs font-extrabold text-amber-900 dark:text-amber-300">Revisão de Apelido de Produto</span>
                               </div>
 
                               {/* Alias detectado + confiança */}
@@ -3402,27 +3873,26 @@ export default function KaiaChats() {
                                 <div className="space-y-1">
                                   <label className="font-semibold text-gray-700 dark:text-gray-300">Apelido Detectado</label>
                                   <div className="flex items-center gap-2">
-                                    <code className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-bold border border-gray-200 dark:border-gray-800 text-sm">
-                                      {item.detected_alias || item.proposed_alias || '—'}
+                                    <code className="px-2.5 py-1 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-bold border border-gray-300 dark:border-gray-700 text-sm">
+                                      {formatDetectedAlias(item.detected_alias || item.proposed_alias)}
                                     </code>
                                     {item.suggestion_confidence !== null && item.suggestion_confidence !== undefined && (
-                                      <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
-                                        item.suggestion_confidence >= 0.7 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                        : item.suggestion_confidence >= 0.4 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                      }`}>
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${item.suggestion_confidence >= 0.7 ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                          : item.suggestion_confidence >= 0.4 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                                            : 'bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300'
+                                        }`}>
                                         {Math.round(Number(item.suggestion_confidence) * 100)}%
                                       </span>
                                     )}
                                     {item.suggestion_source && (
-                                      <span className="text-[10px] text-gray-400 italic">{item.suggestion_source}</span>
+                                      <span className="text-[10px] text-gray-500 dark:text-gray-400 italic">{item.suggestion_source}</span>
                                     )}
                                   </div>
                                 </div>
                                 <div className="space-y-1">
                                   <label className="font-semibold text-gray-700 dark:text-gray-300">Produto Sugerido</label>
-                                  <p className="text-gray-800 dark:text-gray-200">
-                                    {item.suggested_product_name || <span className="text-gray-400 italic">Nenhum / Ambíguo</span>}
+                                  <p className="text-gray-900 dark:text-gray-100 font-bold">
+                                    {item.suggested_product_name || <span className="text-gray-400 italic font-normal">Nenhum / Ambíguo</span>}
                                   </p>
                                 </div>
                               </div>
@@ -3430,32 +3900,42 @@ export default function KaiaChats() {
                               {/* Alternativas */}
                               {altProducts.length > 0 && (
                                 <div className="space-y-1">
-                                  <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Produtos Alternativos</span>
+                                  <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Produtos Alternativos</span>
                                   <div className="flex flex-wrap gap-1.5">
-                                    {altProducts.map((alt: any, i: number) => (
-                                      <button
-                                        key={i}
-                                        type="button"
-                                        onClick={() => updateAliasState(item.id, { selectedProductId: alt.productId, selectedProductName: alt.productName })}
-                                        className={`text-[11px] px-2.5 py-1 rounded-full border transition-all ${
-                                          ars.selectedProductId === alt.productId
-                                            ? 'border-primary-500 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-semibold'
-                                            : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-primary-300'
-                                        }`}
-                                      >
-                                        {alt.productName}
-                                        {alt.confidence !== undefined && (
-                                          <span className="ml-1 opacity-60">{Math.round(alt.confidence * 100)}%</span>
-                                        )}
-                                      </button>
-                                    ))}
+                                    {altProducts.map((alt: any, i: number) => {
+                                      const pid = alt.productId || alt.id || '';
+                                      const pname = alt.productName || alt.name || alt.title || 'Produto sem nome';
+                                      const conf = alt.confidence ?? alt.score ?? null;
+                                      const isSelected = ars.selectedProductId === pid;
+                                      return (
+                                        <button
+                                          key={i}
+                                          type="button"
+                                          onClick={() => updateAliasState(item.id, { selectedProductId: pid, selectedProductName: pname })}
+                                          className={`text-xs px-3 py-1.5 rounded-xl border transition-all flex items-center gap-1.5 ${isSelected
+                                              ? 'border-emerald-500 bg-emerald-600 text-white font-extrabold shadow-sm'
+                                              : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                            }`}
+                                        >
+                                          <span>{pname}</span>
+                                          {conf !== null && (
+                                            <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${isSelected
+                                                ? 'bg-emerald-700 text-white'
+                                                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                                              }`}>
+                                              {Math.round(Number(conf) * (conf <= 1 ? 100 : 1))}%
+                                            </span>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               )}
 
                               {/* Pesquisa completa do catálogo */}
                               <div className="space-y-1">
-                                <label className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Buscar produto no catálogo</label>
+                                <label className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Buscar produto no catálogo</label>
                                 <div className="relative">
                                   <input
                                     id={`alias-product-search-${item.id}`}
@@ -3465,14 +3945,14 @@ export default function KaiaChats() {
                                       searchAliasProducts(item.id, e.target.value);
                                     }}
                                     placeholder="Nome do produto..."
-                                    className="w-full text-xs px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary-400 focus:outline-none"
+                                    className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-400 focus:outline-none"
                                   />
                                   {ars.productSearchLoading && (
-                                    <Loader2 size={12} className="absolute right-2 top-2.5 text-gray-400 animate-spin" />
+                                    <Loader2 size={14} className="absolute right-3 top-2.5 text-gray-400 animate-spin" />
                                   )}
                                 </div>
                                 {ars.productSearchResults.length > 0 && (
-                                  <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden max-h-36 overflow-y-auto">
+                                  <div className="border border-gray-300 dark:border-gray-700 rounded-xl overflow-hidden max-h-36 overflow-y-auto bg-white dark:bg-gray-900 shadow-md">
                                     {ars.productSearchResults.map((p: any) => (
                                       <button
                                         key={p.id}
@@ -3483,7 +3963,7 @@ export default function KaiaChats() {
                                           productSearchQuery: '',
                                           productSearchResults: []
                                         })}
-                                        className="w-full text-left px-3 py-2 text-xs text-gray-800 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-primary-900/20 border-b border-gray-100 dark:border-gray-800 last:border-b-0"
+                                        className="w-full text-left px-3 py-2 text-xs text-gray-800 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-primary-900/30 border-b border-gray-100 dark:border-gray-800 last:border-b-0"
                                       >
                                         {p.name} <span className="text-gray-400 ml-1">({p.category || '—'})</span>
                                       </button>
@@ -3494,52 +3974,52 @@ export default function KaiaChats() {
 
                               {/* Produto selecionado */}
                               {ars.selectedProductId && (
-                                <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-200 dark:border-emerald-900/40 text-xs">
-                                  <CheckCircle size={12} className="text-emerald-600 flex-shrink-0" />
-                                  <span className="text-gray-700 dark:text-gray-300">Produto selecionado: <strong>{ars.selectedProductName}</strong></span>
+                                <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-xs">
+                                  <CheckCircle size={14} className="text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                                  <span className="text-gray-800 dark:text-gray-200">Produto selecionado: <strong>{ars.selectedProductName}</strong></span>
                                   <button type="button" onClick={() => updateAliasState(item.id, { selectedProductId: '', selectedProductName: '' })} className="ml-auto text-gray-400 hover:text-red-500">
-                                    <X size={12} />
+                                    <X size={14} />
                                   </button>
                                 </div>
                               )}
 
                               {/* Alias editável */}
                               <div className="space-y-1">
-                                <label htmlFor={`alias-edit-${item.id}`} className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Apelido a registrar (editável)</label>
+                                <label htmlFor={`alias-edit-${item.id}`} className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Apelido a registrar (editável)</label>
                                 <input
                                   id={`alias-edit-${item.id}`}
                                   type="text"
                                   value={ars.editedAlias}
                                   onChange={(e) => updateAliasState(item.id, { editedAlias: e.target.value })}
-                                  className="w-full text-xs font-mono px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-primary-400 focus:outline-none"
+                                  className="w-full text-xs font-mono px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-400 focus:outline-none"
                                   placeholder="apelido exato"
                                 />
-                                <p className="text-[10px] text-gray-400">Será normalizado (minúsculas, sem acentos, sem caracteres especiais).</p>
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400">Será normalizado (minúsculas, sem acentos, sem caracteres especiais).</p>
                               </div>
 
                               {/* Motivo de rejeição */}
                               {ars.showRejectReason && (
                                 <div className="space-y-1">
-                                  <label htmlFor={`reject-reason-${item.id}`} className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Motivo da Rejeição (opcional)</label>
+                                  <label htmlFor={`reject-reason-${item.id}`} className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">Motivo da Rejeição (opcional)</label>
                                   <input
                                     id={`reject-reason-${item.id}`}
                                     type="text"
                                     value={ars.rejectReason}
                                     onChange={(e) => updateAliasState(item.id, { rejectReason: e.target.value })}
-                                    className="w-full text-xs px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-red-400 focus:outline-none"
+                                    className="w-full text-xs px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-red-400 focus:outline-none"
                                     placeholder="Ex: apelido muito ambíguo, produto não identificável..."
                                   />
                                 </div>
                               )}
 
                               {/* Action buttons */}
-                              <div className="flex justify-end gap-2 pt-2 border-t border-amber-100 dark:border-amber-900/30">
+                              <div className="flex justify-end gap-2 pt-2 border-t border-amber-200 dark:border-amber-900/40">
                                 {ars.showRejectReason ? (
                                   <>
                                     <button
                                       type="button"
                                       onClick={() => updateAliasState(item.id, { showRejectReason: false, rejectReason: '' })}
-                                      className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 hover:bg-gray-50 transition-colors"
+                                      className="px-3.5 py-2 text-xs font-bold rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                                     >
                                       Cancelar
                                     </button>
@@ -3548,9 +4028,9 @@ export default function KaiaChats() {
                                       type="button"
                                       disabled={ars.rejecting}
                                       onClick={() => handleRejectWithReason(item.id)}
-                                      className="px-3 py-1.5 text-xs rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-60 flex items-center gap-1"
+                                      className="px-3.5 py-2 text-xs font-bold rounded-xl bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-60 flex items-center gap-1.5 shadow-sm"
                                     >
-                                      {ars.rejecting ? <Loader2 size={11} className="animate-spin" /> : <X size={11} />}
+                                      {ars.rejecting ? <Loader2 size={13} className="animate-spin" /> : <X size={13} />}
                                       Confirmar Rejeição
                                     </button>
                                   </>
@@ -3560,7 +4040,7 @@ export default function KaiaChats() {
                                       id={`reject-alias-${item.id}`}
                                       type="button"
                                       onClick={() => updateAliasState(item.id, { showRejectReason: true })}
-                                      className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-red-50 hover:text-red-650 dark:hover:bg-red-950/20 dark:hover:text-red-400 transition-colors"
+                                      className="px-3.5 py-2 text-xs font-bold rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors"
                                     >
                                       Rejeitar
                                     </button>
@@ -3569,10 +4049,10 @@ export default function KaiaChats() {
                                       type="button"
                                       disabled={ars.approving || !ars.selectedProductId || !ars.editedAlias.trim()}
                                       onClick={() => handleApproveAlias(item.id)}
-                                      className="px-4 py-1.5 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors flex items-center gap-1.5"
+                                      className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white transition-colors flex items-center gap-1.5 shadow-sm"
                                     >
-                                      {ars.approving ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />}
-                                      Aprovar e Aplicar
+                                      {ars.approving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                                      Aprovar e Criar Regra
                                     </button>
                                   </>
                                 )}
@@ -3582,14 +4062,14 @@ export default function KaiaChats() {
                             // Non-alias improvement or read-only view
                             <>
                               {(item.proposed_alias || item.detected_alias) && (
-                                <div className="p-2 rounded-lg bg-primary-50/30 dark:bg-primary-950/10 border border-primary-100/50 dark:border-primary-900/20 text-xs">
-                                  <strong className="text-gray-800 dark:text-gray-200">Apelido Detectado:</strong>{' '}
-                                  <code className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 font-bold border border-gray-200 dark:border-gray-800">{item.detected_alias || item.proposed_alias}</code>
+                                <div className="p-3 rounded-xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40 text-xs space-y-1">
+                                  <strong className="text-purple-900 dark:text-purple-300">Apelido Detectado:</strong>{' '}
+                                  <code className="px-2 py-0.5 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-bold border border-purple-200 dark:border-purple-800">{formatDetectedAlias(item.detected_alias || item.proposed_alias)}</code>
                                   {item.approved_alias && item.approved_alias !== (item.detected_alias || item.proposed_alias) && (
-                                    <> → aprovado como <code className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">{item.approved_alias}</code></>
+                                    <> → aprovado como <code className="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-800">{formatDetectedAlias(item.approved_alias)}</code></>
                                   )}
                                   {item.suggested_product_name && (
-                                    <span className="ml-2 text-gray-500">→ {item.suggested_product_name}</span>
+                                    <span className="ml-2 text-gray-600 dark:text-gray-400">→ {item.suggested_product_name}</span>
                                   )}
                                   {item.rejection_reason && (
                                     <div className="mt-1 text-gray-500 italic">Motivo: {item.rejection_reason}</div>
@@ -3598,24 +4078,26 @@ export default function KaiaChats() {
                               )}
 
                               {item.proposed_rule && (
-                                <div className="p-2 rounded-lg bg-primary-50/30 dark:bg-primary-950/10 border border-primary-100/50 dark:border-primary-900/20 text-xs">
-                                  <strong className="text-gray-800 dark:text-gray-200">Ação Corretiva:</strong>{' '}
-                                  <span className="font-mono text-[11px] text-gray-700 dark:text-gray-300">{item.proposed_rule}</span>
+                                <div className="p-3 rounded-xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/40 text-xs">
+                                  <strong className="text-purple-900 dark:text-purple-300">Ação Corretiva:</strong>{' '}
+                                  <span className="font-mono text-xs text-gray-800 dark:text-gray-200">{item.proposed_rule}</span>
                                 </div>
                               )}
 
-                              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+                              <div className="flex justify-end gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                                 {improvementFilterStatus === 'pending' && (
                                   <>
                                     <button
+                                      type="button"
                                       onClick={() => handleReviewImprovement(item.id, 'rejected')}
-                                      className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:bg-red-50 hover:text-red-650 dark:hover:bg-red-950/20 dark:hover:text-red-400 transition-colors"
+                                      className="px-3.5 py-2 text-xs font-bold rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors"
                                     >
                                       Rejeitar
                                     </button>
                                     <button
+                                      type="button"
                                       onClick={() => handleReviewImprovement(item.id, 'applied')}
-                                      className="px-3 py-1.5 text-xs rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition-colors"
+                                      className="px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-sm"
                                     >
                                       Aprovar e Criar Regra
                                     </button>
@@ -3623,8 +4105,9 @@ export default function KaiaChats() {
                                 )}
                                 {(improvementFilterStatus === 'applied' || improvementFilterStatus === 'rejected') && (
                                   <button
+                                    type="button"
                                     onClick={() => handleReviewImprovement(item.id, 'archived')}
-                                    className="px-3 py-1.5 text-xs rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/20 dark:text-amber-400 transition-colors"
+                                    className="px-3.5 py-2 text-xs font-bold rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 transition-colors border border-amber-200 dark:border-amber-800"
                                   >
                                     Arquivar
                                   </button>
@@ -3642,52 +4125,76 @@ export default function KaiaChats() {
               /* Memórias dos Clientes */
               <div className="space-y-4">
                 {/* Seletor de Status das Memórias */}
-                <div className="flex bg-gray-50 dark:bg-gray-900 border border-gray-150 dark:border-gray-800 rounded-lg p-1 w-fit gap-1 text-[11px] font-semibold">
+                <div className="flex bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-1 w-fit gap-1 text-xs font-semibold">
                   <button
                     type="button"
                     onClick={() => setMemoryFilterStatus('pending_admin_approval')}
-                    className={`px-3 py-1 rounded-md transition-all ${
-                      memoryFilterStatus === 'pending_admin_approval'
-                        ? 'bg-white dark:bg-gray-700 text-primary-650 dark:text-primary-400 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-800'
-                    }`}
+                    className={`px-3.5 py-1.5 rounded-lg transition-all ${memoryFilterStatus === 'pending_admin_approval'
+                        ? 'bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-sm font-bold border border-gray-200/50 dark:border-gray-700'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
                   >
                     Pendentes
                   </button>
                   <button
                     type="button"
                     onClick={() => setMemoryFilterStatus('approved')}
-                    className={`px-3 py-1 rounded-md transition-all ${
-                      memoryFilterStatus === 'approved'
-                        ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-800'
-                    }`}
+                    className={`px-3.5 py-1.5 rounded-lg transition-all ${memoryFilterStatus === 'approved'
+                        ? 'bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-sm font-bold border border-gray-200/50 dark:border-gray-700'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
                   >
                     Aprovadas
                   </button>
                   <button
                     type="button"
                     onClick={() => setMemoryFilterStatus('rejected')}
-                    className={`px-3 py-1 rounded-md transition-all ${
-                      memoryFilterStatus === 'rejected'
-                        ? 'bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-800'
-                    }`}
+                    className={`px-3.5 py-1.5 rounded-lg transition-all ${memoryFilterStatus === 'rejected'
+                        ? 'bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 shadow-sm font-bold border border-gray-200/50 dark:border-gray-700'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
                   >
                     Rejeitadas
                   </button>
                   <button
                     type="button"
                     onClick={() => setMemoryFilterStatus('archived')}
-                    className={`px-3 py-1 rounded-md transition-all ${
-                      memoryFilterStatus === 'archived'
-                        ? 'bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 shadow-sm'
-                        : 'text-gray-500 hover:text-gray-800'
-                    }`}
+                    className={`px-3.5 py-1.5 rounded-lg transition-all ${memoryFilterStatus === 'archived'
+                        ? 'bg-white dark:bg-gray-800 text-amber-600 dark:text-amber-400 shadow-sm font-bold border border-gray-200/50 dark:border-gray-700'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
                   >
                     Arquivadas
                   </button>
                 </div>
+
+                {/* Bulk select bar para memórias */}
+                {learningMemories.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={selectedMemoryIds.length > 0 && selectedMemoryIds.length === learningMemories.length}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedMemoryIds(learningMemories.map(m => m.id));
+                          else setSelectedMemoryIds([]);
+                        }}
+                        className="w-4 h-4 text-primary-600 rounded border-gray-300 dark:border-gray-600 focus:ring-primary-500"
+                      />
+                      <span>Selecionar Todos</span>
+                    </label>
+                    {selectedMemoryIds.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleBulkDeleteMemories}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs shadow-sm transition-all"
+                      >
+                        <Trash2 size={13} />
+                        Excluir ({selectedMemoryIds.length})
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {learningMemories.length === 0 ? (
                   <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-8">Nenhuma memória encontrada com este status.</p>
@@ -3696,6 +4203,7 @@ export default function KaiaChats() {
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 uppercase tracking-wider text-[10px]">
+                          <th className="py-2.5 px-3 font-semibold w-8"></th>
                           <th className="py-2.5 px-3 font-semibold">Cliente / Sessão</th>
                           <th className="py-2.5 px-3 font-semibold">Categoria</th>
                           <th className="py-2.5 px-3 font-semibold">Preferência Extraída</th>
@@ -3706,6 +4214,17 @@ export default function KaiaChats() {
                       <tbody>
                         {learningMemories.map((item) => (
                           <tr key={item.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/40 transition-colors">
+                            <td className="py-3 px-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedMemoryIds.includes(item.id)}
+                                onChange={(e) => {
+                                  if (e.target.checked) setSelectedMemoryIds(prev => [...prev, item.id]);
+                                  else setSelectedMemoryIds(prev => prev.filter(id => id !== item.id));
+                                }}
+                                className="w-4 h-4 text-primary-600 rounded border-gray-300 dark:border-gray-600 focus:ring-primary-500 cursor-pointer"
+                              />
+                            </td>
                             <td className="py-3 px-3">
                               <span className="font-bold text-gray-900 dark:text-white">
                                 {item.user_id ? `ID: ${item.user_id.slice(0, 8)}` : `Sessão: ${item.session_id?.slice(0, 8)}`}
@@ -3723,7 +4242,7 @@ export default function KaiaChats() {
                                 {(memoryFilterStatus === 'pending_admin_approval' || memoryFilterStatus === 'rejected' || memoryFilterStatus === 'archived') && (
                                   <button
                                     onClick={() => handleReviewMemory(item.id, 'approved')}
-                                    className="px-2 py-1 text-[10px] rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-450 transition-colors font-semibold"
+                                    className="px-2.5 py-1 text-[10px] rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 transition-colors font-bold"
                                     title="Aprovar Memória"
                                   >
                                     Aprovar
@@ -3732,7 +4251,7 @@ export default function KaiaChats() {
                                 {memoryFilterStatus === 'pending_admin_approval' && (
                                   <button
                                     onClick={() => handleReviewMemory(item.id, 'rejected')}
-                                    className="px-2 py-1 text-[10px] rounded bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-450 transition-colors font-semibold"
+                                    className="px-2.5 py-1 text-[10px] rounded-md bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 transition-colors font-bold"
                                     title="Rejeitar Memória"
                                   >
                                     Rejeitar
@@ -3741,15 +4260,15 @@ export default function KaiaChats() {
                                 {memoryFilterStatus === 'approved' && (
                                   <button
                                     onClick={() => handleReviewMemory(item.id, 'archived')}
-                                    className="px-2 py-1 text-[10px] rounded bg-amber-50 text-amber-750 hover:bg-amber-100 dark:bg-amber-950/20 dark:text-amber-450 transition-colors font-semibold"
+                                    className="px-2.5 py-1 text-[10px] rounded-md bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-400 transition-colors font-bold"
                                     title="Arquivar Memória"
                                   >
                                     Arquivar
                                   </button>
                                 )}
                                 <button
-                                  onClick={() => handleDeleteMemory(item.id)}
-                                  className="p-1 text-gray-400 hover:text-red-650 dark:hover:text-red-400 rounded transition-colors"
+                                  onClick={() => handleDeleteMemory(item.id, item.value)}
+                                  className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded transition-colors"
                                   title="Excluir Definitivamente (LGPD)"
                                 >
                                   <Trash2 size={14} />
@@ -3829,13 +4348,12 @@ export default function KaiaChats() {
                               <span className="text-gray-400 dark:text-gray-500 text-[10px] block font-mono">{item.expected_agent}</span>
                             </td>
                             <td className="py-3 px-3">
-                              <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] uppercase ${
-                                item.status === 'passed'
+                              <span className={`px-2 py-0.5 rounded-full font-bold text-[9px] uppercase ${item.status === 'passed'
                                   ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400'
                                   : item.status === 'failed'
-                                  ? 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400'
-                                  : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
-                              }`}>
+                                    ? 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400'
+                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                                }`}>
                                 {item.status}
                               </span>
                             </td>
@@ -3858,118 +4376,53 @@ export default function KaiaChats() {
           {/* Métricas de Chaves */}
           {keyStatus && (
             <div className="space-y-4">
-              {(keyStatus.models || keyStatus.sdk) && (
-                <div className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl space-y-3">
-                  <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">Status dos modelos Gemini</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        SDK {keyStatus.sdk?.package || '@google/genai'} {keyStatus.sdk?.version || ''}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleProbeModels}
-                      disabled={probingModels}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-60"
-                    >
-                      {probingModels ? 'Testando…' : 'Testar modelos'}
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {(['chat', 'extraction'] as const).map((kind) => {
-                      const model = keyStatus.models?.[kind];
-                      if (!model) return null;
-                      const categoryLabel = (() => {
-                        switch (model.lastErrorCategory) {
-                          case 'model_not_found':
-                          case 'model_deprecated':
-                            return 'Modelo indisponível';
-                          case 'invalid_api_key':
-                            return 'Chave inválida';
-                          case 'rate_limited':
-                            return 'Rate limit atingido';
-                          case 'quota_exhausted':
-                            return 'Cota diária atingida';
-                          case 'timeout':
-                            return 'Timeout do provedor';
-                          case 'network_error':
-                            return 'Erro de rede';
-                          case null:
-                          case undefined:
-                            return model.available === true ? 'Disponível' : model.available === false ? 'Indisponível' : 'Não testado';
-                          default:
-                            return model.lastErrorCategory;
-                        }
-                      })();
-                      return (
-                        <div key={kind} className="p-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60">
-                          <div className="text-[10px] uppercase font-semibold text-gray-400">{kind === 'chat' ? 'Chat model' : 'Extraction model'}</div>
-                          <div className="font-mono text-sm text-gray-800 dark:text-gray-100 mt-1">{model.configuredModel}</div>
-                          <div className="mt-2 text-xs text-gray-600 dark:text-gray-300 space-y-1">
-                            <div>Disponibilidade: <span className="font-semibold">{categoryLabel}</span></div>
-                            <div>Latência: {model.latencyMs != null ? `${model.latencyMs} ms` : '—'}</div>
-                            <div>Último teste ok: {model.lastSuccessfulTest ? new Date(model.lastSuccessfulTest).toLocaleString('pt-BR') : '—'}</div>
-                            <div>Última categoria de erro: {model.lastErrorCategory || '—'}</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {keyStatus.lastQuotaOrRateLimitError && (
-                    <div className="text-xs text-amber-700 dark:text-amber-400">
-                      Último erro de cota/rate-limit: <strong>{keyStatus.lastQuotaOrRateLimitError.category === 'quota_exhausted' ? 'Cota diária atingida' : 'Rate limit atingido'}</strong>
-                      {keyStatus.lastQuotaOrRateLimitError.at ? ` (${new Date(keyStatus.lastQuotaOrRateLimitError.at).toLocaleString('pt-BR')})` : ''}
-                    </div>
-                  )}
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-3">
+                <div className="p-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl flex flex-col gap-1 shadow-sm">
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold">Total de Chaves</span>
+                  <span className="text-xl font-bold text-gray-800 dark:text-white">{keyStatus.totalKeys}</span>
                 </div>
-              )}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-3">
-              <div className="p-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl flex flex-col gap-1 shadow-sm">
-                <span className="text-[10px] text-gray-400 uppercase font-semibold">Total de Chaves</span>
-                <span className="text-xl font-bold text-gray-800 dark:text-white">{keyStatus.totalKeys}</span>
+                <div className="p-3.5 bg-green-50/50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
+                  <span className="text-[10px] text-green-700 dark:text-green-400 uppercase font-semibold">Ativas</span>
+                  <span className="text-xl font-bold text-green-700 dark:text-green-400">
+                    {keyStats.active}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl flex flex-col gap-1 shadow-sm">
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold">Desativadas</span>
+                  <span className="text-xl font-bold text-gray-800 dark:text-white">
+                    {keyStats.inactive}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-green-50/50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
+                  <span className="text-[10px] text-green-700 dark:text-green-400 uppercase font-semibold">Saudáveis</span>
+                  <span className="text-xl font-bold text-green-700 dark:text-green-400">{keyStatus.healthyKeys}</span>
+                </div>
+                <div className="p-3.5 bg-yellow-50/50 dark:bg-yellow-950/20 border border-yellow-100 dark:border-yellow-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
+                  <span className="text-[10px] text-yellow-700 dark:text-yellow-400 uppercase font-semibold">Cooldown</span>
+                  <span className="text-xl font-bold text-yellow-700 dark:text-yellow-400">{keyStatus.cooldownKeys}</span>
+                </div>
+                <div className="p-3.5 bg-orange-50/50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
+                  <span className="text-[10px] text-orange-700 dark:text-orange-400 uppercase font-semibold">Suspeitas</span>
+                  <span className="text-xl font-bold text-orange-700 dark:text-orange-400">{keyStatus.suspectedDeadKeys}</span>
+                </div>
+                <div className="p-3.5 bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
+                  <span className="text-[10px] text-red-700 dark:text-red-400 uppercase font-semibold">Mortas</span>
+                  <span className="text-xl font-bold text-red-700 dark:text-red-400">{keyStatus.deadKeys}</span>
+                </div>
+                <div className="p-3.5 bg-primary-50/50 dark:bg-primary-950/20 border border-primary-100 dark:border-primary-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
+                  <span className="text-[10px] text-primary-700 dark:text-primary-400 uppercase font-semibold">Origem</span>
+                  <span className="text-sm font-bold text-primary-700 dark:text-primary-400 truncate mt-1">
+                    {keyStatus.keySource === 'db' ? 'Banco Encriptado' : keyStatus.keySource}
+                  </span>
+                </div>
+                <div className="p-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl flex flex-col gap-1 shadow-sm">
+                  <span className="text-[10px] text-gray-400 uppercase font-semibold">Atualizado</span>
+                  <span className="text-xs font-bold text-gray-800 dark:text-white mt-1">
+                    {keyStats.lastUpdated ? new Date(keyStats.lastUpdated).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                  </span>
+                </div>
               </div>
-              <div className="p-3.5 bg-green-50/50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
-                <span className="text-[10px] text-green-700 dark:text-green-400 uppercase font-semibold">Ativas</span>
-                <span className="text-xl font-bold text-green-700 dark:text-green-400">
-                  {keyStats.active}
-                </span>
-              </div>
-              <div className="p-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl flex flex-col gap-1 shadow-sm">
-                <span className="text-[10px] text-gray-400 uppercase font-semibold">Desativadas</span>
-                <span className="text-xl font-bold text-gray-800 dark:text-white">
-                  {keyStats.inactive}
-                </span>
-              </div>
-              <div className="p-3.5 bg-green-50/50 dark:bg-green-950/20 border border-green-100 dark:border-green-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
-                <span className="text-[10px] text-green-700 dark:text-green-400 uppercase font-semibold">Saudáveis</span>
-                <span className="text-xl font-bold text-green-700 dark:text-green-400">{keyStatus.healthyKeys}</span>
-              </div>
-              <div className="p-3.5 bg-yellow-50/50 dark:bg-yellow-950/20 border border-yellow-100 dark:border-yellow-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
-                <span className="text-[10px] text-yellow-700 dark:text-yellow-400 uppercase font-semibold">Cooldown</span>
-                <span className="text-xl font-bold text-yellow-700 dark:text-yellow-400">{keyStatus.cooldownKeys}</span>
-              </div>
-              <div className="p-3.5 bg-orange-50/50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
-                <span className="text-[10px] text-orange-700 dark:text-orange-400 uppercase font-semibold">Suspeitas</span>
-                <span className="text-xl font-bold text-orange-700 dark:text-orange-400">{keyStatus.suspectedDeadKeys}</span>
-              </div>
-              <div className="p-3.5 bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
-                <span className="text-[10px] text-red-700 dark:text-red-400 uppercase font-semibold">Mortas</span>
-                <span className="text-xl font-bold text-red-700 dark:text-red-400">{keyStatus.deadKeys}</span>
-              </div>
-              <div className="p-3.5 bg-primary-50/50 dark:bg-primary-950/20 border border-primary-100 dark:border-primary-900/30 rounded-xl flex flex-col gap-1 shadow-sm">
-                <span className="text-[10px] text-primary-700 dark:text-primary-400 uppercase font-semibold">Origem</span>
-                <span className="text-sm font-bold text-primary-700 dark:text-primary-400 truncate mt-1">
-                  {keyStatus.keySource === 'db' ? 'Banco Encriptado' : keyStatus.keySource}
-                </span>
-              </div>
-              <div className="p-3.5 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl flex flex-col gap-1 shadow-sm">
-                <span className="text-[10px] text-gray-400 uppercase font-semibold">Atualizado</span>
-                <span className="text-xs font-bold text-gray-800 dark:text-white mt-1">
-                  {keyStats.lastUpdated ? new Date(keyStats.lastUpdated).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '—'}
-                </span>
-              </div>
-            </div>
             </div>
           )}
 
@@ -4072,17 +4525,16 @@ export default function KaiaChats() {
                 const isDead = key.health_status === 'dead';
 
                 return (
-                  <div key={key.id} className={`bg-white dark:bg-gray-800 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md flex flex-col gap-3.5 relative ${
-                    !key.enabled
+                  <div key={key.id} className={`bg-white dark:bg-gray-800 rounded-xl border p-4 shadow-sm transition-all hover:shadow-md flex flex-col gap-3.5 relative ${!key.enabled
                       ? 'border-gray-205 dark:border-gray-750 opacity-60'
                       : isHealthy
-                      ? 'border-green-200 hover:border-green-300 dark:border-green-900/50'
-                      : isCooldown
-                      ? 'border-yellow-250 hover:border-yellow-350 dark:border-yellow-900/50'
-                      : isSuspected
-                      ? 'border-orange-250 hover:border-orange-355 dark:border-orange-900/50'
-                      : 'border-red-200 hover:border-red-300 dark:border-red-900/50'
-                  }`}>
+                        ? 'border-green-200 hover:border-green-300 dark:border-green-900/50'
+                        : isCooldown
+                          ? 'border-yellow-250 hover:border-yellow-350 dark:border-yellow-900/50'
+                          : isSuspected
+                            ? 'border-orange-250 hover:border-orange-355 dark:border-orange-900/50'
+                            : 'border-red-200 hover:border-red-300 dark:border-red-900/50'
+                    }`}>
                     {/* Top Row: Name and health status badge */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -4091,7 +4543,7 @@ export default function KaiaChats() {
                           {key.provider}
                         </span>
                       </div>
-                      
+
                       {/* Action Dropdown Toggle Button */}
                       <div className="relative">
                         <button
@@ -4100,7 +4552,7 @@ export default function KaiaChats() {
                         >
                           <MoreVertical size={14} className="text-gray-500" />
                         </button>
-                        
+
                         {openMenuId === key.id && (
                           <div
                             className="absolute right-0 mt-1 w-44 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-150 dark:border-gray-800 py-1.5 z-10 animate-in fade-in slide-in-from-top-2 duration-100"
@@ -4202,15 +4654,14 @@ export default function KaiaChats() {
                     {/* Health Status & Meta */}
                     <div className="flex items-center justify-between mt-auto pt-1 text-[10px] text-gray-400">
                       <span>Prioridade: <strong className="text-gray-700 dark:text-gray-300">{key.priority}</strong></span>
-                      <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider ${
-                        !key.enabled
+                      <span className={`px-2 py-0.5 rounded font-bold uppercase tracking-wider ${!key.enabled
                           ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
                           : isHealthy
-                          ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400'
-                          : isCooldown
-                          ? 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/20 dark:text-yellow-400'
-                          : 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400'
-                      }`}>
+                            ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400'
+                            : isCooldown
+                              ? 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950/20 dark:text-yellow-400'
+                              : 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400'
+                        }`}>
                         {!key.enabled ? 'Desativada' : key.health_status}
                       </span>
                     </div>
@@ -4468,6 +4919,105 @@ export default function KaiaChats() {
             </div>
           </div>
         </div>
+      )}
+      {confirmModalConfig && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-150">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full p-6 border border-gray-200 dark:border-gray-800 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-xl ${confirmModalConfig.variant === 'danger' ? 'bg-red-100 text-red-600 dark:bg-red-950/40 dark:text-red-400' :
+                  confirmModalConfig.variant === 'warning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400' :
+                    'bg-primary-100 text-primary-600 dark:bg-primary-950/40 dark:text-primary-400'
+                }`}>
+                <AlertTriangle size={20} />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">{confirmModalConfig.title}</h3>
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{confirmModalConfig.message}</p>
+            <div className="flex justify-end gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+              <button
+                type="button"
+                onClick={() => setConfirmModalConfig(null)}
+                className="px-4 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-xl transition-colors"
+              >
+                {confirmModalConfig.cancelLabel || 'Cancelar'}
+              </button>
+              <button
+                type="button"
+                disabled={confirmModalConfig.loading}
+                onClick={async () => {
+                  setConfirmModalConfig(prev => prev ? { ...prev, loading: true } : null);
+                  try {
+                    await confirmModalConfig.onConfirm();
+                  } finally {
+                    setConfirmModalConfig(null);
+                  }
+                }}
+                className={`px-4 py-2 text-xs font-semibold text-white rounded-xl shadow-sm flex items-center gap-1.5 transition-colors ${confirmModalConfig.variant === 'danger'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : confirmModalConfig.variant === 'warning'
+                      ? 'bg-amber-600 hover:bg-amber-700'
+                      : 'bg-primary-600 hover:bg-primary-700'
+                  }`}
+              >
+                {confirmModalConfig.loading && <Loader2 size={13} className="animate-spin" />}
+                {confirmModalConfig.confirmLabel || 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Explicativo: Como funciona o Aprendizado e a Memória da Kaia */}
+      {showLearningGuideModal && (
+        <AdminModal
+          isOpen={showLearningGuideModal}
+          onClose={() => setShowLearningGuideModal(false)}
+          title="Como Funciona o Aprendizado & Memória da Kaia?"
+          widthClass="max-w-2xl"
+          footer={
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowLearningGuideModal(false)}
+                className="px-4 py-2 text-xs font-semibold text-white bg-primary-600 hover:bg-primary-700 rounded-xl transition-colors shadow-sm"
+              >
+                Entendi
+              </button>
+            </div>
+          }
+        >
+          <div className="space-y-4 py-2 text-xs">
+            <div className="p-4 rounded-2xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 space-y-2">
+              <div className="flex items-center gap-2 font-bold text-amber-800 dark:text-amber-300 text-sm">
+                <Tag size={16} />
+                <span>Apelido de Produto (Alias)</span>
+              </div>
+              <p className="leading-relaxed text-gray-700 dark:text-gray-300">
+                Quando um cliente busca um produto por um nome informal, código ou abreviação (ex: <em>"pg"</em>, <em>"whey de morango"</em>, <em>"potinho verde"</em>), a Kaia detecta essa intenção. Ao aprovar o apelido e associá-lo ao produto correto do catálogo, a Kaia aprende essa variação e passará a recomendar o produto automaticamente em todas as conversas futuras.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-900/40 space-y-2">
+              <div className="flex items-center gap-2 font-bold text-blue-800 dark:text-blue-300 text-sm">
+                <Brain size={16} />
+                <span>Fila de Melhorias (Issues)</span>
+              </div>
+              <p className="leading-relaxed text-gray-700 dark:text-gray-300">
+                Registra desvios de intenção, dúvidas não compreendidas ou falhas de tom detectados automaticamente. O administrador pode revisar a mensagem do cliente e aprovar regras corretivas de IA com 1 clique para aperfeiçoar o comportamento do robô continuamente.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200/70 dark:border-purple-900/40 space-y-2">
+              <div className="flex items-center gap-2 font-bold text-purple-800 dark:text-purple-300 text-sm">
+                <Sparkles size={16} />
+                <span>Memória do Cliente (Long-Term)</span>
+              </div>
+              <p className="leading-relaxed text-gray-700 dark:text-gray-300">
+                Extrai preferências comerciais dos clientes (ex: <em>"Prefere pagar por Pix"</em> ou <em>"Só compra suplementos em cápsulas"</em>). Ao aprovar uma memória, a Kaia reutilizará essa informação em atendimentos futuros com aquele cliente específico para tornar a conversa mais rápida e personalizada.
+              </p>
+            </div>
+          </div>
+        </AdminModal>
       )}
     </div>
   );
