@@ -30,7 +30,7 @@ dist-ssr
 
 # Scratch files
 scratch/
-.codex-tmp/
+.codex-*/
 *.patch
 patch-kaia*.cjs
 
