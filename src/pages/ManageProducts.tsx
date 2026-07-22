@@ -57,17 +57,21 @@ function autoDetect(headers: string[]): Record<FieldKey, string> {
     intended_form: '', intended_presentation: '', intended_units_per_dose: '',
   }
   for (const h of headers) {
-    const low = h.toLowerCase()
+    const low = h.toLowerCase().trim()
     if (!m.name && (low.includes('nome') || low.includes('name') || low.includes('produto') || low.includes('product') || low === 'item' || low === 'titulo' || low === 'title')) m.name = h
-    else if (!m.price && (low.includes('venda') || low.includes('price') || low === 'preço' || low === 'preco')) m.price = h
-    else if (!m.purchase_price && (low.includes('compra') || low.includes('custo') || low.includes('cost'))) m.purchase_price = h
+    // promo antes de compra/venda para não confundir
     else if (!m.promo_price && (low.includes('promo') || low.includes('promoc'))) m.promo_price = h
-    else if (!m.status && (low.includes('status') || low.includes('situacao') || low.includes('situação') || low.includes('estado'))) m.status = h
+    // distribuidora → preço de compra (antes de 'venda' para evitar match errado)
+    else if (!m.purchase_price && (low.includes('distribui') || low.includes('compra') || low.includes('custo') || low.includes('cost'))) m.purchase_price = h
+    // preço de venda
+    else if (!m.price && (low.includes('venda') || low === 'preço' || low === 'preco' || low === 'price')) m.price = h
+    // status: 'ativo', 'inativo', 'ativa', 'status', 'situação', 'estado'
+    else if (!m.status && (low === 'ativo' || low === 'ativa' || low === 'inativo' || low === 'inativa' || low === 'status' || low.includes('situacao') || low.includes('situação') || low.includes('estado'))) m.status = h
     else if (!m.description && (low.includes('desc') || low.includes('about') || low.includes('detalhe'))) m.description = h
     else if (!m.category && (low.includes('cat') || low.includes('grupo'))) m.category = h
     else if (!m.indication && (low.includes('indica') || low.includes('indicação') || low.includes('indicacao'))) m.indication = h
     else if (!m.contraindication && (low.includes('contra') || low.includes('contraindicação') || low.includes('contraindicacao'))) m.contraindication = h
-    else if (!m.compositions && (low.includes('comp') || low.includes('form') || low.includes('composição') || low.includes('composicao') || low.includes('formula') || low.includes('fórmula'))) m.compositions = h
+    else if (!m.compositions && (low.includes('composição') || low.includes('composicao') || low.includes('formula') || low.includes('fórmula') || low.includes('formulação') || low.includes('formulacao'))) m.compositions = h
     else if (!m.benefits && (low.includes('benef') || low.includes('vantagem') || low === 'beneficios')) m.benefits = h
     else if (!m.intended_form && (low.includes('forma pretendida') || low.includes('forma_pretendida') || low === 'forma')) m.intended_form = h
     else if (!m.intended_presentation && (low.includes('apresentação pretendida') || low.includes('apresentacao pretendida') || low.includes('apresentacao_pretendida') || low.includes('apresentação') || low.includes('apresentacao'))) m.intended_presentation = h
@@ -231,6 +235,8 @@ export default function ManageProducts() {
     indication: false, contraindication: false, compositions: false, benefits: false,
     intended_form: false, intended_presentation: false, intended_units_per_dose: false,
   })
+  // Campos desabilitados manualmente para esta importação (só campos opcionais)
+  const [importSkipFields, setImportSkipFields] = useState<Set<FieldKey>>(new Set())
   const [isImporting, setIsImporting] = useState(false)
   const [importProgress, setImportProgress] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -748,6 +754,8 @@ export default function ManageProducts() {
       const rows = productsToExport.map(product => {
         const publicImageUrl = product.image ? productsService.getImageUrl(product.image) : ''
 
+        // Status unificado: Ativo / Inativo / Arquivado
+        const status = product.archived ? 'Arquivado' : product.active ? 'Ativo' : 'Inativo'
         return {
           ID: product.id,
           Nome: product.name,
@@ -757,8 +765,7 @@ export default function ManageProducts() {
           'Preço Promocional': product.promo_price != null ? Number(product.promo_price) : '',
           'Markup (%)': product.markup != null ? Number(product.markup) : '',
           Categoria: product.category || '',
-          Ativo: product.active ? 'Sim' : 'Não',
-          Arquivado: product.archived ? 'Sim' : 'Não',
+          'Status': status,
           'Frete Grátis': product.free_shipping ? 'Sim' : 'Não',
           'Link Público da Imagem': publicImageUrl,
           'Formulação / Composição': product.compositions || '',
@@ -776,14 +783,15 @@ export default function ManageProducts() {
       const worksheet = XLSX.utils.json_to_sheet(rows)
       worksheet['!cols'] = [
         { wch: 38 }, { wch: 36 }, { wch: 48 }, { wch: 15 }, { wch: 18 },
-        { wch: 16 }, { wch: 12 }, { wch: 24 }, { wch: 10 }, { wch: 12 },
-        { wch: 13 }, { wch: 64 }, { wch: 48 }, { wch: 42 }, { wch: 42 },
+        { wch: 16 }, { wch: 12 }, { wch: 24 }, { wch: 14 }, { wch: 13 },
+        { wch: 64 }, { wch: 48 }, { wch: 42 }, { wch: 42 },
         { wch: 48 }, { wch: 24 }, { wch: 24 }, { wch: 28 }, { wch: 20 }, { wch: 20 },
       ]
 
       productsToExport.forEach((product, index) => {
         if (!product.image) return
-        const cellAddress = `L${index + 2}`
+        // Link Público da Imagem agora é coluna K (sem Ativo+Arquivado separados)
+        const cellAddress = `K${index + 2}`
         const cell = worksheet[cellAddress]
         if (cell?.v) {
           cell.l = { Target: String(cell.v), Tooltip: 'Abrir imagem pública' }
@@ -841,11 +849,14 @@ export default function ManageProducts() {
       const flags: Record<FieldKey, boolean> = {} as any
       for (const k of Object.keys(detected) as FieldKey[]) flags[k] = detected[k] !== ''
       setAutoDetected(flags)
+      setImportSkipFields(new Set()) // limpar campos pulados ao trocar arquivo
     }
     reader.readAsBinaryString(file)
   }
 
   const getImportCellValue = (row: any[], field: FieldKey) => {
+    // Campo desabilitado pelo usuário para esta importação
+    if (importSkipFields.has(field)) return undefined
     const col = columnMapping[field]
     if (!col) return undefined
     const idx = importHeaders.indexOf(col)
@@ -913,7 +924,7 @@ export default function ManageProducts() {
     if (hasField('status')) {
       const val = String(getImportCellValue(row, 'status') ?? '').trim().toLowerCase()
       if (val) {
-        if (val.includes('inativ') || val.includes('desativ') || val === '0' || val === 'false' || val === 'off') {
+        if (val.includes('inativ') || val.includes('desativ') || val === 'não' || val === 'nao' || val === '0' || val === 'false' || val === 'off') {
           payload.active = false
           payload.archived = false
           hasUpdatableData = true
@@ -921,7 +932,7 @@ export default function ManageProducts() {
           payload.active = false
           payload.archived = true
           hasUpdatableData = true
-        } else if (val.includes('ativ') || val === '1' || val === 'true' || val === 'on') {
+        } else if (val.includes('ativ') || val === 'sim' || val === '1' || val === 'true' || val === 'on') {
           payload.active = true
           payload.archived = false
           hasUpdatableData = true
@@ -1278,6 +1289,7 @@ export default function ManageProducts() {
       indication: false, contraindication: false, compositions: false, benefits: false,
       intended_form: false, intended_presentation: false, intended_units_per_dose: false,
     })
+    setImportSkipFields(new Set())
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -1681,7 +1693,6 @@ export default function ManageProducts() {
                         <input type="checkbox" checked={selectedIds.length === filteredProducts.length && filteredProducts.length > 0} onChange={e => setSelectedIds(e.target.checked ? filteredProducts.map(p => p.id) : [])} className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 focus-visible:ring-2 focus-visible:ring-blue-500" />
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('name', 'Produto')}</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('sku', 'SKU')}</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('category', 'Categoria')}</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('purchase_price', 'Compra')}</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('margin', 'Markup / Margem')}</th>
@@ -1692,7 +1703,7 @@ export default function ManageProducts() {
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {filteredProducts.length === 0 ? (
-                      <tr><td colSpan={9} className="px-6 py-10 text-center text-gray-500 dark:text-gray-400 text-sm">Nenhum produto encontrado.</td></tr>
+                      <tr><td colSpan={8} className="px-6 py-10 text-center text-gray-500 dark:text-gray-400 text-sm">Nenhum produto encontrado.</td></tr>
                     ) : sortedProducts.map(p => (
                       <tr key={p.id} className={`group hover:bg-gray-50 dark:hover:bg-[#065084]/40 transition-colors ${p.archived ? 'opacity-70' : ''}`}>
                         <td className="px-4 py-3 whitespace-nowrap">
@@ -1726,12 +1737,8 @@ export default function ManageProducts() {
                                 </a>
                                 {p.archived && <Archive size={12} className="text-gray-400" />}
                               </div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">{p.description || 'Sem descrição'}</div>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap font-mono">
-                          {p.sku || <span className="text-gray-300 dark:text-gray-600">—</span>}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-1">
@@ -1875,20 +1882,25 @@ export default function ManageProducts() {
                       <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Vincular Colunas do Excel</p>
                       <p className="text-xs text-gray-400">{importRows.length} linha(s) detectada(s) • Mapeie as colunas correspondentes</p>
                     </div>
-                    <button onClick={resetImport} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline flex-shrink-0">
-                      Trocar arquivo
-                    </button>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button onClick={resetImport} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline flex-shrink-0">
+                        Trocar arquivo
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 overflow-y-auto max-h-[52vh] pr-1.5 py-0.5 scrollbar-thin">
                     {IMPORT_FIELDS.map(field => {
                       const detected = autoDetected[field.key]
                       const hasValue = !!columnMapping[field.key]
+                      const isSkipped = importSkipFields.has(field.key)
                       return (
                         <div
                           key={field.key}
                           className={`p-2.5 rounded-xl border transition-colors flex flex-col justify-between gap-1.5 ${
-                            field.required && !hasValue
+                            isSkipped
+                              ? 'border-orange-200 dark:border-orange-800/60 bg-orange-50/30 dark:bg-orange-900/10 opacity-60'
+                              : field.required && !hasValue
                               ? 'border-red-200 dark:border-red-800/80 bg-red-50/40 dark:bg-red-900/10'
                               : hasValue
                               ? 'border-green-200 dark:border-green-800/80 bg-green-50/20 dark:bg-green-900/10'
@@ -1897,29 +1909,60 @@ export default function ManageProducts() {
                         >
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{field.label}</span>
+                              <button
+                                type="button"
+                                disabled={field.required}
+                                aria-pressed={isSkipped}
+                                onClick={() => {
+                                  setImportSkipFields(prev => {
+                                    const next = new Set(prev)
+                                    if (next.has(field.key)) next.delete(field.key)
+                                    else next.add(field.key)
+                                    return next
+                                  })
+                                }}
+                                title={field.required ? 'Campo obrigatório' : isSkipped ? `Clique para importar ${field.label}` : `Clique para não importar ${field.label}`}
+                                className={`text-xs font-semibold truncate text-left transition-colors ${
+                                  field.required
+                                    ? 'text-gray-800 dark:text-gray-200 cursor-default'
+                                    : isSkipped
+                                    ? 'line-through text-gray-400 dark:text-gray-500 hover:text-orange-600 dark:hover:text-orange-400'
+                                    : 'text-gray-800 dark:text-gray-200 cursor-pointer hover:text-orange-600 dark:hover:text-orange-400'
+                                }`}
+                              >
+                                {field.label}
+                              </button>
                               {field.required && <span className="text-[10px] font-bold text-red-500 flex-shrink-0">*obrigatório</span>}
                             </div>
                             <div className="flex items-center gap-1 flex-shrink-0">
-                              {detected && hasValue && (
-                                <span className="flex items-center gap-0.5 text-[10px] text-green-600 dark:text-green-400 font-medium bg-green-100/70 dark:bg-green-900/40 px-1.5 py-0.5 rounded-full">
-                                  <Sparkles size={10} />auto
-                                </span>
-                              )}
-                              {hasValue ? (
-                                <Check size={14} className="text-green-500" />
+                              {isSkipped ? (
+                                <span className="text-[10px] text-orange-600 dark:text-orange-400 font-medium">ignorado</span>
                               ) : (
-                                <AlertCircle size={14} className={field.required ? 'text-red-400' : 'text-gray-300 dark:text-gray-600'} />
+                                <>
+                                  {detected && hasValue && (
+                                    <span className="flex items-center gap-0.5 text-[10px] text-green-600 dark:text-green-400 font-medium bg-green-100/70 dark:bg-green-900/40 px-1.5 py-0.5 rounded-full">
+                                      <Sparkles size={10} />auto
+                                    </span>
+                                  )}
+                                  {hasValue ? (
+                                    <Check size={14} className="text-green-500" />
+                                  ) : (
+                                    <AlertCircle size={14} className={field.required ? 'text-red-400' : 'text-gray-300 dark:text-gray-600'} />
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
 
                           <div className="relative w-full">
                             <select
+                              disabled={isSkipped}
                               value={columnMapping[field.key]}
                               onChange={e => setColumnMapping(prev => ({ ...prev, [field.key]: e.target.value }))}
                               className={`w-full text-xs rounded-lg border px-2.5 py-1.5 pr-7 appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors ${
-                                hasValue
+                                isSkipped
+                                  ? 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                                  : hasValue
                                   ? 'border-green-400 dark:border-green-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-medium'
                                   : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500'
                               }`}
