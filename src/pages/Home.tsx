@@ -118,12 +118,12 @@ export default function Home() {
         // Busca produtos em destaque da API (seção "featured")
         try {
           const featured = await homeSectionsService.getFeaturedProducts()
-          setFeaturedProducts(featured)
+          setFeaturedProducts(featured.filter(p => p.active !== false && !p.archived))
         } catch (error) {
           console.error('Erro ao carregar produtos em destaque:', error)
           // Fallback: busca todos e pega os primeiros 6
           const allProducts = await productsService.getAll()
-          setFeaturedProducts(allProducts.slice(0, 6))
+          setFeaturedProducts(allProducts.filter(p => p.active !== false && !p.archived).slice(0, 6))
         }
 
         // Busca produtos de todas as seções ativas (exceto "featured")
@@ -132,7 +132,7 @@ export default function Home() {
         const promises = activeSections.map(async (section) => {
           try {
             const products = await homeSectionsService.getSectionProducts(section.id)
-            return { sectionId: section.id, products }
+            return { sectionId: section.id, products: products.filter(p => p.active !== false && !p.archived) }
           } catch (err) {
             console.error(`Erro ao carregar produtos da seção ${section.name}:`, err)
             return { sectionId: section.id, products: [] }

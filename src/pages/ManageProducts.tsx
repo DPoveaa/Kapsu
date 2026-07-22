@@ -36,6 +36,7 @@ const IMPORT_FIELDS = [
   { key: 'price', label: 'Preço de Venda', required: false },
   { key: 'purchase_price', label: 'Preço de Compra', required: false },
   { key: 'promo_price', label: 'Preço Promocional', required: false },
+  { key: 'status', label: 'Status (Ativo / Inativo / Arquivado)', required: false },
   { key: 'description', label: 'Descrição', required: false },
   { key: 'category', label: 'Categoria', required: false },
   { key: 'indication', label: 'Indicação', required: false },
@@ -51,7 +52,7 @@ type FieldKey = typeof IMPORT_FIELDS[number]['key']
 
 function autoDetect(headers: string[]): Record<FieldKey, string> {
   const m: Record<FieldKey, string> = {
-    name: '', price: '', purchase_price: '', promo_price: '', description: '', category: '',
+    name: '', price: '', purchase_price: '', promo_price: '', status: '', description: '', category: '',
     indication: '', contraindication: '', compositions: '', benefits: '',
     intended_form: '', intended_presentation: '', intended_units_per_dose: '',
   }
@@ -61,6 +62,7 @@ function autoDetect(headers: string[]): Record<FieldKey, string> {
     else if (!m.price && (low.includes('venda') || low.includes('price') || low === 'preço' || low === 'preco')) m.price = h
     else if (!m.purchase_price && (low.includes('compra') || low.includes('custo') || low.includes('cost'))) m.purchase_price = h
     else if (!m.promo_price && (low.includes('promo') || low.includes('promoc'))) m.promo_price = h
+    else if (!m.status && (low.includes('status') || low.includes('situacao') || low.includes('situação') || low.includes('estado'))) m.status = h
     else if (!m.description && (low.includes('desc') || low.includes('about') || low.includes('detalhe'))) m.description = h
     else if (!m.category && (low.includes('cat') || low.includes('grupo'))) m.category = h
     else if (!m.indication && (low.includes('indica') || low.includes('indicação') || low.includes('indicacao'))) m.indication = h
@@ -220,12 +222,12 @@ export default function ManageProducts() {
   const [importHeaders, setImportHeaders] = useState<string[]>([])
   const [importRows, setImportRows] = useState<any[]>([])
   const [columnMapping, setColumnMapping] = useState<Record<FieldKey, string>>({
-    name: '', price: '', purchase_price: '', promo_price: '', description: '', category: '',
+    name: '', price: '', purchase_price: '', promo_price: '', status: '', description: '', category: '',
     indication: '', contraindication: '', compositions: '', benefits: '',
     intended_form: '', intended_presentation: '', intended_units_per_dose: '',
   })
   const [autoDetected, setAutoDetected] = useState<Record<FieldKey, boolean>>({
-    name: false, price: false, purchase_price: false, promo_price: false, description: false, category: false,
+    name: false, price: false, purchase_price: false, promo_price: false, status: false, description: false, category: false,
     indication: false, contraindication: false, compositions: false, benefits: false,
     intended_form: false, intended_presentation: false, intended_units_per_dose: false,
   })
@@ -908,6 +910,25 @@ export default function ManageProducts() {
     setTextField('intended_presentation')
     setTextField('intended_units_per_dose')
 
+    if (hasField('status')) {
+      const val = String(getImportCellValue(row, 'status') ?? '').trim().toLowerCase()
+      if (val) {
+        if (val.includes('inativ') || val.includes('desativ') || val === '0' || val === 'false' || val === 'off') {
+          payload.active = false
+          payload.archived = false
+          hasUpdatableData = true
+        } else if (val.includes('arquiv') || val.includes('archived')) {
+          payload.active = false
+          payload.archived = true
+          hasUpdatableData = true
+        } else if (val.includes('ativ') || val === '1' || val === 'true' || val === 'on') {
+          payload.active = true
+          payload.archived = false
+          hasUpdatableData = true
+        }
+      }
+    }
+
     if (hasField('purchase_price')) {
       const purchasePrice = cleanPrice(getImportCellValue(row, 'purchase_price'))
       if (purchasePrice !== null) {
@@ -975,7 +996,8 @@ export default function ManageProducts() {
             }
             await productsService.create({
               ...payload,
-              active: true,
+              active: payload.active !== undefined ? payload.active : true,
+              archived: payload.archived !== undefined ? payload.archived : false,
             })
             count++
             setImportProgress(Math.round((count / progressTotal) * 100))
@@ -987,12 +1009,12 @@ export default function ManageProducts() {
         const existing = products.find(p => p.name.trim().toLowerCase() === nameLower)
         if (existing) {
           if (existing.archived || !existing.active) {
-            if (idsToReactivate.has(existing.id)) {
-              // Reactivate and update
+            if (idsToReactivate.has(existing.id) || payload.active !== undefined || payload.archived !== undefined) {
+              // Reactivate / update status and data
               await productsService.update(existing.id, {
                 ...payload,
-                active: true,
-                archived: false,
+                active: payload.active !== undefined ? payload.active : true,
+                archived: payload.archived !== undefined ? payload.archived : false,
               })
               count++
             } else {
@@ -1012,7 +1034,8 @@ export default function ManageProducts() {
           // If it doesn't exist, create it
           await productsService.create({
             ...payload,
-            active: true,
+            active: payload.active !== undefined ? payload.active : true,
+            archived: payload.archived !== undefined ? payload.archived : false,
           })
           count++
         }
@@ -1246,12 +1269,12 @@ export default function ManageProducts() {
   const resetImport = () => {
     setImportHeaders([]); setImportRows([]); setImportProgress(0)
     setColumnMapping({
-      name: '', price: '', purchase_price: '', promo_price: '', description: '', category: '',
+      name: '', price: '', purchase_price: '', promo_price: '', status: '', description: '', category: '',
       indication: '', contraindication: '', compositions: '', benefits: '',
       intended_form: '', intended_presentation: '', intended_units_per_dose: '',
     })
     setAutoDetected({
-      name: false, price: false, purchase_price: false, promo_price: false, description: false, category: false,
+      name: false, price: false, purchase_price: false, promo_price: false, status: false, description: false, category: false,
       indication: false, contraindication: false, compositions: false, benefits: false,
       intended_form: false, intended_presentation: false, intended_units_per_dose: false,
     })
@@ -1800,10 +1823,10 @@ export default function ManageProducts() {
 
       {/* ═══════════════ IMPORT MODAL ═══════════════════════════════════════ */}
       {isImportOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-700 my-auto">
             {/* Modal header */}
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-green-50 dark:bg-green-900/30">
                   <Upload size={20} className="text-green-600 dark:text-green-400" />
@@ -1818,12 +1841,12 @@ export default function ManageProducts() {
               </button>
             </div>
 
-            <div className="p-5">
+            <div className="p-4 sm:p-5 overflow-y-auto flex-1 flex flex-col min-h-0">
               {/* Step 1: File drop area */}
               {importHeaders.length === 0 ? (
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="cursor-pointer border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-10 flex flex-col items-center gap-4 hover:border-green-400 dark:hover:border-green-600 hover:bg-green-50/50 dark:hover:bg-green-900/10 transition-all group"
+                  className="cursor-pointer border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-8 sm:p-10 flex flex-col items-center gap-4 hover:border-green-400 dark:hover:border-green-600 hover:bg-green-50/50 dark:hover:bg-green-900/10 transition-all group my-auto"
                 >
                   <div className="p-4 rounded-2xl bg-gray-100 dark:bg-gray-800 group-hover:bg-green-100 dark:group-hover:bg-green-900/30 transition-colors">
                     <Upload size={28} className="text-gray-400 group-hover:text-green-600 dark:group-hover:text-green-400 transition-colors" />
@@ -1836,7 +1859,7 @@ export default function ManageProducts() {
                 </div>
               ) : isImporting ? (
                 /* Importing progress */
-                <div className="text-center py-8">
+                <div className="text-center py-8 my-auto">
                   <Loader2 size={40} className="animate-spin text-green-500 mx-auto mb-4" />
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Importando produtos...</p>
                   <div className="mt-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
@@ -1846,60 +1869,86 @@ export default function ManageProducts() {
                 </div>
               ) : (
                 /* Step 2: Column mapping */
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                <div className="flex flex-col h-full min-h-0 space-y-3">
+                  <div className="flex items-center justify-between flex-shrink-0 pb-1">
                     <div>
-                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Vincular Colunas</p>
-                      <p className="text-xs text-gray-400">{importRows.length} linha(s) detectada(s)</p>
+                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">Vincular Colunas do Excel</p>
+                      <p className="text-xs text-gray-400">{importRows.length} linha(s) detectada(s) • Mapeie as colunas correspondentes</p>
                     </div>
-                    <button onClick={resetImport} className="text-xs text-gray-400 hover:text-gray-600 underline">Trocar arquivo</button>
+                    <button onClick={resetImport} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 underline flex-shrink-0">
+                      Trocar arquivo
+                    </button>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 overflow-y-auto max-h-[52vh] pr-1.5 py-0.5 scrollbar-thin">
                     {IMPORT_FIELDS.map(field => {
                       const detected = autoDetected[field.key]
                       const hasValue = !!columnMapping[field.key]
                       return (
-                        <div key={field.key} className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${field.required && !hasValue ? 'border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10' : hasValue ? 'border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-900/10' : 'border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30'}`}>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{field.label}</span>
-                              {field.required && <span className="text-[10px] text-red-500">*obrigatório</span>}
+                        <div
+                          key={field.key}
+                          className={`p-2.5 rounded-xl border transition-colors flex flex-col justify-between gap-1.5 ${
+                            field.required && !hasValue
+                              ? 'border-red-200 dark:border-red-800/80 bg-red-50/40 dark:bg-red-900/10'
+                              : hasValue
+                              ? 'border-green-200 dark:border-green-800/80 bg-green-50/20 dark:bg-green-900/10'
+                              : 'border-gray-200 dark:border-gray-700/80 bg-gray-50/40 dark:bg-gray-800/30'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{field.label}</span>
+                              {field.required && <span className="text-[10px] font-bold text-red-500 flex-shrink-0">*obrigatório</span>}
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
                               {detected && hasValue && (
-                                <span className="flex items-center gap-0.5 text-[10px] text-green-600 dark:text-green-400 font-medium">
+                                <span className="flex items-center gap-0.5 text-[10px] text-green-600 dark:text-green-400 font-medium bg-green-100/70 dark:bg-green-900/40 px-1.5 py-0.5 rounded-full">
                                   <Sparkles size={10} />auto
                                 </span>
                               )}
+                              {hasValue ? (
+                                <Check size={14} className="text-green-500" />
+                              ) : (
+                                <AlertCircle size={14} className={field.required ? 'text-red-400' : 'text-gray-300 dark:text-gray-600'} />
+                              )}
                             </div>
                           </div>
-                          <div className="relative min-w-[180px]">
+
+                          <div className="relative w-full">
                             <select
                               value={columnMapping[field.key]}
                               onChange={e => setColumnMapping(prev => ({ ...prev, [field.key]: e.target.value }))}
-                              className={`w-full text-xs rounded-lg border px-2.5 py-1.5 pr-7 appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors ${hasValue ? 'border-green-300 dark:border-green-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}
+                              className={`w-full text-xs rounded-lg border px-2.5 py-1.5 pr-7 appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors ${
+                                hasValue
+                                  ? 'border-green-400 dark:border-green-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-medium'
+                                  : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+                              }`}
                             >
                               <option value="">— Não vincular —</option>
-                              {importHeaders.map(h => <option key={h} value={h}>{h}</option>)}
+                              {importHeaders.map(h => (
+                                <option key={h} value={h}>
+                                  {h}
+                                </option>
+                              ))}
                             </select>
                             <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                           </div>
-                          {hasValue
-                            ? <Check size={15} className="text-green-500 flex-shrink-0" />
-                            : <AlertCircle size={15} className={`flex-shrink-0 ${field.required ? 'text-red-400' : 'text-gray-300 dark:text-gray-600'}`} />
-                          }
                         </div>
                       )
                     })}
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-3 pt-2">
-                    <button onClick={() => { setIsImportOpen(false); resetImport() }} className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                  <div className="flex gap-3 pt-3 mt-auto border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
+                    <button
+                      onClick={() => { setIsImportOpen(false); resetImport() }}
+                      className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    >
                       Cancelar
                     </button>
                     <button
                       onClick={handleImportConfirm}
-                      disabled={!columnMapping.name || !columnMapping.price}
+                      disabled={!columnMapping.name}
                       className="flex-1 py-2.5 rounded-xl bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       Importar {importRows.length} linha(s)
