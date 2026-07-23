@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  KeyRound, Plus, RefreshCw, Play, Pause, Trash2, Clock, CheckCircle2,
+  KeyRound, Plus, Play, Pause, Trash2, Clock, CheckCircle2,
   AlertTriangle, Skull, ShieldAlert, RotateCcw, Eye, MoreVertical, Search,
   Loader2, Database, Copy
 } from 'lucide-react';
@@ -63,7 +63,7 @@ export default function ManageAIKeys() {
   const [keys, setKeys] = useState<AiApiKey[]>([]);
   const [status, setStatus] = useState<AiKeyPoolStatus | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -92,10 +92,9 @@ export default function ManageAIKeys() {
   });
 
 
-  const loadData = async (silent = false) => {
+  const loadData = async () => {
     try {
-      if (silent) setRefreshing(true);
-      else setLoading(true);
+      setLoading(true);
       const [keysData, statusData] = await Promise.all([
         aiApiKeysService.listKeys(),
         aiApiKeysService.getStatus(),
@@ -106,7 +105,6 @@ export default function ManageAIKeys() {
       toast.error(err.message || 'Erro ao carregar chaves');
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
@@ -191,7 +189,7 @@ export default function ManageAIKeys() {
       await action();
       if (toastType === 'warning') toast.warning(successMsg);
       else toast.success(successMsg);
-      await loadData(true);
+      await loadData();
     } catch (err: any) {
       toast.error(err.message || 'Erro na operação');
     } finally {
@@ -212,7 +210,7 @@ export default function ManageAIKeys() {
       } else {
         toast.warning(`Teste de "${key.name}" falhou: ${result.message}`, 5000);
       }
-      await loadData(true);
+      await loadData();
     } catch (err: any) {
       toast.error(err.message || 'Erro ao testar chave');
     } finally {
@@ -312,7 +310,7 @@ export default function ManageAIKeys() {
       }
       setShowForm(false);
       setFormData({ name: '', provider: 'gemini', model: '', apiKey: '', priority: 0, testOnCreate: true });
-      await loadData(true);
+      await loadData();
     } catch (err: any) {
       if (err instanceof DuplicateApiKeyError) {
         setDuplicatePrompt({
@@ -359,13 +357,6 @@ export default function ManageAIKeys() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => loadData(true)}
-            disabled={refreshing}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
-          >
-            <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} /> Atualizar
-          </button>
           <button
             onClick={() => setShowForm(true)}
             className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-600 text-white text-sm hover:bg-primary-700"
@@ -571,7 +562,7 @@ export default function ManageAIKeys() {
                     await aiApiKeysService.enableKey(duplicatePrompt.existingKey.id);
                     toast.success(`Chave "${duplicatePrompt.existingKey.name}" reativada com sucesso`);
                     setDuplicatePrompt(null);
-                    await loadData(true);
+                    await loadData();
                   } catch (err: any) {
                     toast.error(err.message || 'Erro ao reativar chave');
                   } finally {

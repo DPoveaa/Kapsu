@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react'
 import { isAdminEmail } from '../config/env'
 import { authService } from '../services/auth.service'
 import { cartService } from '../services/cart.service'
@@ -11,7 +11,8 @@ interface User {
   profile_image?: string
   cpf?: string
   isAdmin: boolean
-  role?: 'user' | 'admin' | 'pharmacist'
+  role?: 'user' | 'admin' | 'pharmacist' | 'supplier_admin' | 'supplier_employee'
+  supplier_id?: string
   whatsapp_notifications_enabled?: boolean
   email_notifications_enabled?: boolean
   order_status_notifications_enabled?: boolean
@@ -31,6 +32,7 @@ interface AuthContextType {
   isAuthenticated: boolean
   isAdmin: boolean
   isPharmacist: boolean
+  isSupplier: boolean
   loading: boolean
 }
 
@@ -63,8 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 name: isValid.user.name,
                 phone: isValid.user.phone,
                 profile_image: (isValid.user as any).profile_image,
-                cpf: (isValid.user as any).cpf,
-                role: 'user',
+                role: (isValid.user as any).role || parsedUser.role || 'user',
+                supplier_id: (isValid.user as any).supplier_id || parsedUser.supplier_id,
                 isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || false,
                 whatsapp_notifications_enabled: (isValid.user as any).whatsapp_notifications_enabled !== undefined ? Boolean((isValid.user as any).whatsapp_notifications_enabled) : true,
                 email_notifications_enabled: (isValid.user as any).email_notifications_enabled !== undefined ? Boolean((isValid.user as any).email_notifications_enabled) : true,
@@ -125,8 +127,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: isValid.user.email,
             name: isValid.user.name,
             phone: isValid.user.phone,
-            profile_image: (isValid.user as any).profile_image,
-            role: 'user',
+            role: (isValid.user as any).role || user?.role || 'user',
+            supplier_id: (isValid.user as any).supplier_id || user?.supplier_id,
             isAdmin: isAdminEmail(isValid.user.email) || isValid.user.isAdmin || false,
              whatsapp_notifications_enabled: (isValid.user as any).whatsapp_notifications_enabled !== undefined ? Boolean((isValid.user as any).whatsapp_notifications_enabled) : true,
              email_notifications_enabled: (isValid.user as any).email_notifications_enabled !== undefined ? Boolean((isValid.user as any).email_notifications_enabled) : true,
@@ -180,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         phone: response.user.phone,
         profile_image: (response.user as any).profile_image,
         cpf: (response.user as any).cpf,
-        role: 'user',
+        role: (response.user as any).role || 'user',
         isAdmin: isAdminEmail(response.user.email) || response.user.isAdmin || false,
         whatsapp_notifications_enabled: response.user.whatsapp_notifications_enabled !== undefined ? Boolean(response.user.whatsapp_notifications_enabled) : true,
         email_notifications_enabled: response.user.email_notifications_enabled !== undefined ? Boolean(response.user.email_notifications_enabled) : true,
@@ -246,6 +248,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: !!user,
       isAdmin: user?.isAdmin || user?.role === 'admin' || false,
       isPharmacist: user?.role === 'pharmacist' || false,
+      isSupplier: user?.role === 'supplier_admin' || user?.role === 'supplier_employee' || Boolean(user?.supplier_id) || false,
       loading
     }}>
       {children}

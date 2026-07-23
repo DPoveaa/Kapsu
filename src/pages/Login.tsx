@@ -466,14 +466,8 @@ export default function Login() {
     setGeneralError('')
     setLoading(true)
 
-    if (!loginEmail || !loginPassword) {
+    if (!loginEmail.trim() || !loginPassword.trim()) {
       setGeneralError('Por favor, preencha todos os campos')
-      setLoading(false)
-      return
-    }
-
-    if (!validateEmail(loginEmail)) {
-      setGeneralError('Por favor, insira um e-mail válido')
       setLoading(false)
       return
     }
@@ -481,11 +475,19 @@ export default function Login() {
     try {
       await login(loginEmail, loginPassword)
       
+      const savedUserStr = localStorage.getItem('kapsu_user')
+      let userRole = ''
+      if (savedUserStr) {
+        try { userRole = JSON.parse(savedUserStr).role || ''; } catch {}
+      }
+      
       const redirect = searchParams.get('redirect')
       const returnTo = searchParams.get('returnTo')
       const pendingToken = cartService.getPendingToken()
       
-      if (pendingToken) {
+      if (userRole === 'supplier_admin' || userRole === 'supplier_employee') {
+        navigate('/supplier')
+      } else if (pendingToken) {
         navigate('/carrinho')
       } else if (redirect) {
         navigate(redirect)
@@ -820,14 +822,14 @@ export default function Login() {
             <form key="login-form" onSubmit={handleLoginSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                  E-mail
+                  E-mail ou Código de Acesso do Fornecedor
                 </label>
                 <div className="relative" onBlur={(event) => handlePasswordGroupBlur(event, () => setShowLoginPassword(false))}>
                   <input
-                    type="email"
+                    type="text"
                     value={loginEmail}
                     onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="seu@email.com"
+                    placeholder="seu@email.com ou FORN-12345"
                     className="w-full pl-10 pr-4 py-3 bg-[#eef2f6] dark:bg-gray-800 border-none rounded-xl focus:ring-2 focus:ring-[#00A86B] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 transition-all font-sans outline-none"
                     required
                   />

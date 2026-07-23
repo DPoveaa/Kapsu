@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
   ArrowLeft, Search, Calendar, Shield, Filter, RotateCcw, 
-  CheckCircle, XCircle, Info, ChevronLeft, ChevronRight, Eye, RefreshCw,
+  CheckCircle, XCircle, Info, ChevronLeft, ChevronRight, Eye, Loader2,
   Globe, Laptop
 } from 'lucide-react'
 import { adminService, AuditLog } from '../services/admin.service'
@@ -288,14 +288,6 @@ export default function AuditLogs() {
                 Log completo e imutável de ações administrativas críticas
               </p>
             </div>
-            <button
-              onClick={loadLogs}
-              disabled={loading}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors shadow-sm disabled:opacity-60"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              Atualizar Logs
-            </button>
           </div>
         </div>
 
@@ -468,7 +460,7 @@ export default function AuditLogs() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <RefreshCw className="w-10 h-10 text-primary-500 animate-spin" />
+              <Loader2 className="w-10 h-10 text-primary-500 animate-spin" />
               <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Carregando logs de auditoria...</p>
             </div>
           ) : logs.length === 0 ? (

@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingCart, User, Menu, LogOut, Shield, MessageCircle, UserCircle, Search, Loader2 } from 'lucide-react'
+import { ShoppingCart, User, Menu, LogOut, Shield, MessageCircle, UserCircle, Search, Loader2, Building2 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
@@ -37,7 +37,7 @@ export default function Header() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [interventionCount, setInterventionCount] = useState(0)
   const { getItemCount } = useCart()
-  const { user, logout, isAdmin, isPharmacist } = useAuth()
+  const { user, logout, isAdmin, isPharmacist, isSupplier } = useAuth()
   const itemCount = getItemCount()
   const userMenuRef = useRef<HTMLDivElement>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -396,6 +396,16 @@ export default function Header() {
                       >
                         <Shield size={16} />
                         <span>Painel Admin</span>
+                      </Link>
+                    )}
+                    {(isSupplier || user.role === 'supplier_admin' || user.role === 'supplier_employee' || user.supplier_id) && (
+                      <Link
+                        to="/supplier/orders"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="block px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-gray-700 hover:text-primary-600 dark:hover:text-primary-300 flex items-center space-x-2 transition-colors"
+                      >
+                        <Building2 size={16} className="text-primary-500" />
+                        <span>Portal do Fornecedor</span>
                       </Link>
                     )}
                     <Link

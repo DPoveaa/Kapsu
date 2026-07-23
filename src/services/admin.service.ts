@@ -1,6 +1,8 @@
-﻿import { env } from '../config/env'
+import { env } from '../config/env'
 
 const API_URL = env.apiUrl
+
+export type UserRole = 'user' | 'admin' | 'support' | 'pharmacist' | 'supplier_admin' | 'supplier_employee'
 
 export interface User {
   id: string
@@ -9,7 +11,11 @@ export interface User {
   phone: string | null
   cpf: string | null
   address: string | null
-  role: 'user' | 'admin' | 'support'
+  role: UserRole
+  supplier_id?: string | null
+  supplier_name?: string | null
+  active?: boolean
+  permissions?: string[]
   last_login: string | null
   created_at: string
   updated_at: string
@@ -17,6 +23,43 @@ export interface User {
   ignore_reason?: string | null
   ignore_enabled_at?: string | null
   ignore_enabled_by?: string | null
+}
+
+export interface Supplier {
+  id: string
+  name: string
+  trade_name?: string | null
+  cnpj?: string | null
+  email?: string | null
+  phone?: string | null
+  address?: string | null
+  active: boolean
+  totalUsers?: number
+  masterUser?: { id: string; name: string; email: string } | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SupplierPayment {
+  id: string
+  supplier_id: string
+  supplier_name?: string
+  amount: number
+  payment_date: string
+  period_start?: string | null
+  period_end?: string | null
+  payment_method?: string | null
+  description?: string | null
+  related_order_ids?: string[] | string | null
+  status: 'PAID' | 'PENDING' | 'CANCELLED'
+  receipt_file_path?: string | null
+  receipt_original_name?: string | null
+  receipt_mime_type?: string | null
+  receipt_size_bytes?: number | null
+  created_by?: string | null
+  creator_name?: string
+  created_at: string
+  updated_at: string
 }
 
 export interface UserDetails extends User {
@@ -92,7 +135,9 @@ class AdminService {
     search: string = '',
     role: string = '',
     noCpf: string = '',
-    ignored: string = ''
+    ignored: string = '',
+    active: string = '',
+    supplier_id: string = ''
   ): Promise<UsersListResponse> {
     try {
       const token = localStorage.getItem('kapsu_token')
@@ -107,6 +152,8 @@ class AdminService {
         ...(role && { role }),
         ...(noCpf && { noCpf }),
         ...(ignored && { ignored }),
+        ...(active && { active }),
+        ...(supplier_id && { supplier_id }),
       })
 
       const response = await fetch(`${this.baseUrl}/users?${params}`, {
@@ -212,7 +259,7 @@ class AdminService {
   /**
    * Atualiza dados básicos de um usuário
    */
-  async updateUser(userId: string, data: { name?: string; cpf?: string | null; phone?: string | null; email?: string; ignore_business_metrics?: boolean; ignore_reason?: string | null; apply_to_existing_orders?: boolean }): Promise<{ success: boolean; message: string; user: User }> {
+  async updateUser(userId: string, data: Partial<User> & { permissions?: string[]; ignore_business_metrics?: boolean; ignore_reason?: string | null; apply_to_existing_orders?: boolean }): Promise<{ success: boolean; message: string; user?: User }> {
     try {
       const token = localStorage.getItem('kapsu_token')
       if (!token) {
@@ -1397,6 +1444,178 @@ class AdminService {
     } catch (error: any) {
       throw new Error(error.message || 'Erro de conexão ao buscar status das chaves Gemini')
     }
+  }
+
+  /**
+   * Criação direta de usuário por admin
+   */
+  async createUser(payload: {
+    name: string
+    email: string
+    password?: string
+    phone?: string
+    cpf?: string
+    role: string
+    supplier_id?: string | null
+    active?: boolean
+    permissions?: string[]
+  }): Promise<{ success: boolean; message: string; user: User }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao criar usuário')
+    return data
+  }
+
+  /**
+   * Alterna status ativo/inativo de um usuário
+   */
+  async toggleUserActive(userId: string): Promise<{ success: boolean; message: string; active: boolean }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/users/${userId}/toggle-active`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao alterar status do usuário')
+    return data
+  }
+
+  /**
+   * Lista fornecedores
+   */
+  async listSuppliers(page: number = 1, limit: number = 50, search: string = '', active: string = ''): Promise<{
+    success: boolean
+    suppliers: Supplier[]
+    pagination: { page: number; limit: number; total: number; totalPages: number }
+  }> {
+    const token = localStorage.getItem('kapsu_token')
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...(search && { search }),
+      ...(active && { active }),
+    })
+    const response = await fetch(`${this.baseUrl}/suppliers?${params}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao listar fornecedores')
+    return data
+  }
+
+  /**
+   * Cria fornecedor
+   */
+  async createSupplier(payload: Partial<Supplier> & { master_user?: any; employee_user?: any }): Promise<{
+    success: boolean;
+    message: string;
+    supplier: Supplier;
+    masterUserCredentials?: {
+      id: string;
+      name: string;
+      email?: string | null;
+      username?: string | null;
+      loginCode: string;
+      tempPassword?: string;
+      mustChangePassword: boolean;
+    };
+  }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/suppliers`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao criar fornecedor')
+    return data
+  }
+
+  /**
+   * Atualiza fornecedor
+   */
+  async updateSupplier(supplierId: string, payload: Partial<Supplier>): Promise<{ success: boolean; message: string }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/suppliers/${supplierId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao atualizar fornecedor')
+    return data
+  }
+
+  /**
+   * Lista pagamentos a fornecedores
+   */
+  async listSupplierPayments(page: number = 1, limit: number = 50, supplierId: string = '', status: string = ''): Promise<{
+    success: boolean
+    payments: SupplierPayment[]
+    pagination: { page: number; limit: number; total: number; totalPages: number }
+  }> {
+    const token = localStorage.getItem('kapsu_token')
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      ...(supplierId && { supplier_id: supplierId }),
+      ...(status && { status }),
+    })
+    const response = await fetch(`${this.baseUrl}/supplier-payments?${params}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao listar pagamentos')
+    return data
+  }
+
+  /**
+   * Cadastra pagamento efetuado ao fornecedor com upload de comprovante
+   */
+  async createSupplierPayment(formData: FormData): Promise<{ success: boolean; message: string; payment: SupplierPayment }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/supplier-payments`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao registrar pagamento')
+    return data
+  }
+
+  /**
+   * Remove registro de pagamento
+   */
+  async deleteSupplierPayment(paymentId: string): Promise<{ success: boolean; message: string }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/supplier-payments/${paymentId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao remover pagamento')
+    return data
   }
 }
 

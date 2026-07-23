@@ -12,10 +12,11 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation()
   const isAdminRoute = location.pathname.startsWith('/admin')
+  const isSupplierRoute = location.pathname.startsWith('/supplier')
   
   // Rotas que não devem mostrar Header e Footer
   const legalRoutes = ['/termos-de-servico', '/politica-de-privacidade']
-  const hideHeaderFooter = ['/login', '/cadastro', '/recuperar-senha', ...legalRoutes].includes(location.pathname)
+  const hideHeaderFooter = ['/login', '/cadastro', '/recuperar-senha', ...legalRoutes].includes(location.pathname) || isSupplierRoute
   const showFooter = !hideHeaderFooter && !isAdminRoute
 
   // Rastreia acessos automaticamente

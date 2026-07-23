@@ -22,8 +22,18 @@ import FreeShippingRules from './pages/FreeShippingRules'
 import ManagePromotions from './pages/ManagePromotions'
 import ManagePromoCodes from './pages/ManagePromoCodes'
 import AuditLogs from './pages/AuditLogs'
-import KaiaChats from './pages/KaiaChats'
 import ManageInstallmentRules from './pages/ManageInstallmentRules'
+
+import SupplierManagement from './pages/SupplierManagement'
+import SupplierPayments from './pages/SupplierPayments'
+
+import SupplierLayout from './components/SupplierLayout'
+import SupplierDashboard from './pages/supplier/SupplierDashboard'
+import SupplierOrders from './pages/supplier/SupplierOrders'
+import SupplierPaymentHistory from './pages/supplier/SupplierPaymentHistory'
+import SupplierUserManagement from './pages/supplier/SupplierUserManagement'
+import SupplierAuditLogs from './pages/supplier/SupplierAuditLogs'
+import SupplierProfile from './pages/supplier/SupplierProfile'
 
 import ManageBanners from './pages/ManageBanners'
 import ManageReviews from './pages/ManageReviews'
@@ -56,7 +66,9 @@ function PaymentSuccessRedirect() {
 function AppContent() {
   const location = useLocation()
   const [chatbotEnabled, setChatbotEnabled] = useState(true)
-  const hideChat = ['/login', '/cadastro', '/recuperar-senha'].includes(location.pathname)
+  const isAdminRoute = location.pathname.startsWith('/admin')
+  const isSupplierRoute = location.pathname.startsWith('/supplier')
+  const hideChat = ['/login', '/cadastro', '/recuperar-senha'].includes(location.pathname) || isAdminRoute || isSupplierRoute
 
   useEffect(() => {
     let isMounted = true
@@ -343,19 +355,53 @@ function AppContent() {
           }
         />
         <Route
-          path="/admin/ai-keys"
-          element={<Navigate to="/admin/central-ia?tab=keys" replace />}
-        />
-        <Route
-          path="/admin/central-ia"
+          path="/admin/users"
           element={
             <ProtectedRoute requireAdmin>
               <AdminLayout>
-                <KaiaChats />
+                <UserManagement />
               </AdminLayout>
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/suppliers"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <SupplierManagement />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/supplier-payments"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <SupplierPayments />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Portal do Fornecedor / Farmácia Parceira */}
+        <Route
+          path="/supplier"
+          element={
+            <ProtectedRoute>
+              <SupplierLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="/supplier/orders" replace />} />
+          <Route path="orders" element={<SupplierOrders />} />
+          <Route path="dashboard" element={<SupplierDashboard />} />
+          <Route path="payments" element={<SupplierPaymentHistory />} />
+          <Route path="users" element={<SupplierUserManagement />} />
+          <Route path="profile" element={<SupplierProfile />} />
+          <Route path="audit" element={<SupplierAuditLogs />} />
+        </Route>
       </Routes>
     </Layout>
   )

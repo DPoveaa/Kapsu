@@ -43,6 +43,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { title: "Central da IA", icon: Bot, link: "/admin/central-ia" },
         { title: "WhatsApp", icon: MessageSquare, link: "/admin/whatsapp" },
         { title: "Usuários", icon: Users, link: "/admin/users" },
+        { title: "Fornecedores", icon: Globe, link: "/admin/suppliers" },
+        { title: "Pagamentos Fornecedor", icon: CreditCard, link: "/admin/supplier-payments" },
         { title: "Auditoria", icon: ShieldCheck, link: "/admin/audit" },
         { title: "Relatórios", icon: BarChart3, link: "/admin/reports" },
         { title: "Google Sheets", icon: Globe, link: "/admin/google-sheets" },
