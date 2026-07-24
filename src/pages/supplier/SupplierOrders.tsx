@@ -22,6 +22,12 @@ const getShippingAddressLabel = (order: SupplierOrder): string => (
   formatStoredShippingAddress(order.shipping_address) || 'Endereço não informado'
 );
 
+const formatTotalDoses = (totalDoses: number | null | undefined): string | null => (
+  totalDoses && totalDoses > 0
+    ? `${totalDoses} ${totalDoses === 1 ? 'dose' : 'doses'}`
+    : null
+);
+
 export default function SupplierOrders() {
   const [searchParams, setSearchParams] = useSearchParams();
   const deepLinkedOrderId = searchParams.get('orderId');
@@ -325,6 +331,7 @@ export default function SupplierOrders() {
       item.intended_form ? `Forma: ${item.intended_form}` : '',
       item.intended_presentation ? `Apresentação: ${item.intended_presentation}` : '',
       item.intended_units_per_dose ? `Unidades por dose: ${item.intended_units_per_dose}` : '',
+      item.total_doses ? `Total de doses do produto: ${formatTotalDoses(item.total_doses)}` : '',
       item.capsule_color_preference
         ? `Padrão de produção: ${item.capsule_color_preference}`
         : '',
@@ -643,6 +650,13 @@ export default function SupplierOrders() {
                     </div>
                   )}
 
+                  {item.total_doses && (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2.5 dark:border-indigo-800 dark:bg-indigo-950/30">
+                      <span className="font-semibold text-indigo-900 dark:text-indigo-200">Total de doses do produto</span>
+                      <span className="rounded-full bg-indigo-600 px-3 py-1 text-sm font-bold text-white">{formatTotalDoses(item.total_doses)}</span>
+                    </div>
+                  )}
+
                   {item.intended_units_per_dose && (
                     <div className="text-gray-600 dark:text-gray-400 pt-1">
                       <span className="font-medium text-gray-900 dark:text-gray-200">Unidades por dose:</span> {item.intended_units_per_dose}
@@ -676,7 +690,7 @@ export default function SupplierOrders() {
                 const itemKey = item.id || `${item.product_id}-${idx}`;
                 const reviewed = reviewedItemIds.includes(itemKey);
                 const expanded = expandedItemIds.includes(itemKey);
-                const hasDetails = Boolean(item.compositions || item.description || item.intended_form || item.intended_presentation || item.intended_units_per_dose || item.capsule_color_preference);
+                const hasDetails = Boolean(item.compositions || item.description || item.intended_form || item.intended_presentation || item.intended_units_per_dose || item.total_doses || item.capsule_color_preference);
                 return (
                   <div key={itemKey} className={`rounded-xl bg-white dark:bg-gray-800 border transition-colors ${reviewed ? 'border-emerald-300 dark:border-emerald-800' : 'border-gray-200 dark:border-gray-700'}`}>
                     <div className="flex items-center gap-2 p-3">
@@ -714,11 +728,12 @@ export default function SupplierOrders() {
                             <div className="whitespace-pre-line text-gray-600 dark:text-gray-400">{item.description}</div>
                           </div>
                         )}
-                        {(item.intended_form || item.intended_presentation || item.intended_units_per_dose) && (
+                        {(item.intended_form || item.intended_presentation || item.intended_units_per_dose || item.total_doses) && (
                           <div className="flex flex-wrap gap-x-5 gap-y-1 text-gray-600 dark:text-gray-400">
                             {item.intended_form && <span><strong className="text-gray-700 dark:text-gray-300">Forma:</strong> {item.intended_form}</span>}
                             {item.intended_presentation && <span><strong className="text-gray-700 dark:text-gray-300">Apresentação:</strong> {item.intended_presentation}</span>}
                             {item.intended_units_per_dose && <span><strong className="text-gray-700 dark:text-gray-300">Unidades por dose:</strong> {item.intended_units_per_dose}</span>}
+                            {item.total_doses && <span className="font-semibold text-indigo-700 dark:text-indigo-300"><strong>Total:</strong> {formatTotalDoses(item.total_doses)}</span>}
                           </div>
                         )}
 
