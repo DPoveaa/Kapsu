@@ -3324,6 +3324,9 @@ export default function ManageProducts() {
                         placeholder="Ex: Não se aplica"
                       />
                       <span className="text-[9px] text-gray-400 mt-1 block font-normal">Ex: 1 cápsula por dose, 5g ao dia</span>
+                      <span className="mt-1 block text-[9px] font-medium text-emerald-600 dark:text-emerald-400">
+                        Para cápsulas, a produção recebe automaticamente a preferência verde e branca; se indisponível, toda branca.
+                      </span>
                     </div>
                   </div>
 

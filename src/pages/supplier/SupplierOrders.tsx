@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Search, Truck, Eye, RefreshCw, Copy, ExternalLink, ChevronDown, Check, SlidersHorizontal, X } from 'lucide-react';
+import { Search, Truck, Eye, RefreshCw, Copy, ExternalLink, ChevronDown, Check, SlidersHorizontal, X, Pill } from 'lucide-react';
 import { supplierService, SupplierOrder } from '../../services/supplier.service';
 import { toast } from '../../utils/toast';
 import AdminModal from '../../components/AdminModal';
@@ -319,7 +319,16 @@ export default function SupplierOrders() {
   };
 
   const formatItemsForCopy = (order: SupplierOrder) => order.items
-    .map(item => `${item.quantity}x ${item.product_name}${item.compositions ? `\nComposição: ${item.compositions}` : ''}`)
+    .map(item => [
+      `${item.quantity}x ${item.product_name}`,
+      item.compositions ? `Composição: ${item.compositions}` : '',
+      item.intended_form ? `Forma: ${item.intended_form}` : '',
+      item.intended_presentation ? `Apresentação: ${item.intended_presentation}` : '',
+      item.intended_units_per_dose ? `Unidades por dose: ${item.intended_units_per_dose}` : '',
+      item.capsule_color_preference
+        ? `Padrão de produção: ${item.capsule_color_preference}`
+        : '',
+    ].filter(Boolean).join('\n'))
     .join('\n\n');
 
   const activeFilterCount = [statusFilter, trackingFilter, dateStart, dateEnd, shippingMethodFilter, sortOrder !== 'newest' ? sortOrder : ''].filter(Boolean).length;
@@ -634,7 +643,18 @@ export default function SupplierOrders() {
                     </div>
                   )}
 
-                  <div className="text-gray-600 dark:text-gray-400 pt-1"><span className="font-medium text-gray-900 dark:text-gray-200">Dose diária:</span> 1 comprimido</div>
+                  {item.intended_units_per_dose && (
+                    <div className="text-gray-600 dark:text-gray-400 pt-1">
+                      <span className="font-medium text-gray-900 dark:text-gray-200">Unidades por dose:</span> {item.intended_units_per_dose}
+                    </div>
+                  )}
+
+                  {item.capsule_color_preference && (
+                    <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+                      <Pill className="mt-0.5 h-4 w-4 shrink-0" />
+                      <div><strong>Padrão de produção:</strong> {item.capsule_color_preference}</div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -656,7 +676,7 @@ export default function SupplierOrders() {
                 const itemKey = item.id || `${item.product_id}-${idx}`;
                 const reviewed = reviewedItemIds.includes(itemKey);
                 const expanded = expandedItemIds.includes(itemKey);
-                const hasDetails = Boolean(item.compositions || item.description || item.intended_form || item.intended_presentation);
+                const hasDetails = Boolean(item.compositions || item.description || item.intended_form || item.intended_presentation || item.intended_units_per_dose || item.capsule_color_preference);
                 return (
                   <div key={itemKey} className={`rounded-xl bg-white dark:bg-gray-800 border transition-colors ${reviewed ? 'border-emerald-300 dark:border-emerald-800' : 'border-gray-200 dark:border-gray-700'}`}>
                     <div className="flex items-center gap-2 p-3">
@@ -694,10 +714,20 @@ export default function SupplierOrders() {
                             <div className="whitespace-pre-line text-gray-600 dark:text-gray-400">{item.description}</div>
                           </div>
                         )}
-                        {(item.intended_form || item.intended_presentation) && (
+                        {(item.intended_form || item.intended_presentation || item.intended_units_per_dose) && (
                           <div className="flex flex-wrap gap-x-5 gap-y-1 text-gray-600 dark:text-gray-400">
                             {item.intended_form && <span><strong className="text-gray-700 dark:text-gray-300">Forma:</strong> {item.intended_form}</span>}
                             {item.intended_presentation && <span><strong className="text-gray-700 dark:text-gray-300">Apresentação:</strong> {item.intended_presentation}</span>}
+                            {item.intended_units_per_dose && <span><strong className="text-gray-700 dark:text-gray-300">Unidades por dose:</strong> {item.intended_units_per_dose}</span>}
+                          </div>
+                        )}
+
+                        {item.capsule_color_preference && (
+                          <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
+                            <Pill className="mt-0.5 h-4 w-4 shrink-0" />
+                            <div>
+                              <strong>Padrão de produção:</strong> {item.capsule_color_preference}
+                            </div>
                           </div>
                         )}
                       </div>

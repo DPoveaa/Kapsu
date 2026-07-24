@@ -43,6 +43,7 @@ export interface SupplierOrderItem {
   intended_form?: string | null;
   intended_presentation?: string | null;
   intended_units_per_dose?: string | null;
+  capsule_color_preference?: string | null;
   quantity: number;
   price?: number;
   purchase_price?: number;
