@@ -1,4 +1,4 @@
-﻿import { env } from '../config/env'
+import { env } from '../config/env'
 import { Product } from '../types'
 
 const API_URL = env.apiUrl
@@ -82,10 +82,8 @@ class HomeSectionsService {
       ? `${API_URL}/home-sections?include_inactive=true`
       : `${API_URL}/home-sections`
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    })
+    const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token')
+    const response = await fetch(url, { method: 'GET', headers: token ? { Authorization: `Bearer ${token}` } : undefined })
 
     if (!response.ok) {
       throw new Error('Erro ao obter seções')

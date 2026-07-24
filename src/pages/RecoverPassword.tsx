@@ -3,8 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Mail, Lock, Loader2, CheckCircle, XCircle, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import { authService } from '../services/auth.service'
 import AnimatedLogo from '../components/AnimatedLogo'
-import loginBannerPortrait from '../images/optimized/3x4.jpg'
-import loginBannerLandscape from '../images/optimized/4x3.jpg'
+import loginBannerPortrait from '../images/3x4.webp'
+import loginBannerLandscape from '../images/4x3.webp'
 
 export default function RecoverPassword() {
   const navigate = useNavigate()

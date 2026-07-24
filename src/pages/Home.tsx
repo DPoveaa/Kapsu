@@ -7,18 +7,19 @@ import { bannersService, Banner } from '../services/banners.service'
 import { reviewsService, Review } from '../services/reviews.service'
 import { homeSectionsService, HomeSection } from '../services/home-sections.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
-import { getImageUrl } from '../utils/imageUrl'
+import { getImageUrl, getResponsiveImageSrcSet } from '../utils/imageUrl'
 import { HorizontalScrollContainer } from '../components/HorizontalScrollContainer'
 import { generateProductUrl } from '../utils/productUrl'
 
 interface DecodedBannerImageProps {
   src: string
+  srcSet?: string
   alt: string
   isCurrent: boolean
   isNearby: boolean
 }
 
-function DecodedBannerImage({ src, alt, isCurrent, isNearby }: DecodedBannerImageProps) {
+function DecodedBannerImage({ src, srcSet, alt, isCurrent, isNearby }: DecodedBannerImageProps) {
   const [isDecoded, setIsDecoded] = useState(false)
 
   useEffect(() => {
@@ -37,6 +38,8 @@ function DecodedBannerImage({ src, alt, isCurrent, isNearby }: DecodedBannerImag
   return (
     <img
       src={src}
+      srcSet={srcSet}
+      sizes="100vw"
       alt={alt}
       className={`w-full h-full object-cover object-center select-none pointer-events-none transition-opacity duration-200 ${isDecoded ? 'opacity-100' : 'opacity-0'}`}
       draggable={false}
@@ -521,10 +524,12 @@ export default function Home() {
             onTouchEnd={isInfinite ? handleBannerTouchEnd : undefined}
           >
             {infiniteBannerImages.map((banner, index) => {
+              const selectedBannerImage = (isMobile && banner.mobile_image_url) ? banner.mobile_image_url : banner.image_url
               const bannerContent = (
                 <div className="min-w-full h-full relative bg-gray-100 dark:bg-gray-800 select-none">
                   <DecodedBannerImage
-                    src={getImageUrl((isMobile && banner.mobile_image_url) ? banner.mobile_image_url : banner.image_url)}
+                    src={getImageUrl(selectedBannerImage)}
+                    srcSet={getResponsiveImageSrcSet(selectedBannerImage, [480, 768, 1024, 1440, 1920], 'banners')}
                     alt={banner.title || `Banner ${index + 1}`}
                     isCurrent={index === bannerIndex}
                     isNearby={Math.abs(index - bannerIndex) <= 1}
@@ -896,6 +901,8 @@ export default function Home() {
                                   alt={review.name || 'Cliente'}
                                   loading="lazy"
                                   decoding="async"
+                                  width={48}
+                                  height={48}
                                   className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement

@@ -77,6 +77,27 @@ export function getImageUrl(imagePath: string | null | undefined): string {
   return getUploadsImageUrl(imagePath, 'banners')
 }
 
+export function getResponsiveImageSrcSet(
+  imagePath: string | null | undefined,
+  widths: number[],
+  kind: 'products' | 'banners' = 'products'
+): string | undefined {
+  if (!imagePath) return undefined
+  if (/-\d+w\.webp(?:$|[?#])/i.test(imagePath)) {
+    return widths.map(width => {
+      const variant = imagePath.replace(/-\d+w\.webp(?=$|[?#])/i, `-${width}w.webp`)
+      return `${getUploadsImageUrl(variant, kind)} ${width}w`
+    }).join(', ')
+  }
+  const uploadsPath = extractUploadsPath(imagePath)
+  if (!uploadsPath || !env.imageVariantsEnabled) return undefined
+  const filename = uploadsPath.split('/').pop()
+  if (!filename) return undefined
+  return widths.map(width =>
+    `${env.apiUrl.replace(/\/$/, '')}/upload/variant/${kind}/${width}/${encodeURIComponent(filename)} ${width}w`
+  ).join(', ')
+}
+
 export function normalizeImagePath(imagePath: string | null | undefined): string {
   if (!imagePath || imagePath.trim() === '') {
     return ''

@@ -1,4 +1,4 @@
-﻿import { env } from '../config/env'
+import { env } from '../config/env'
 import { BANNER_IMAGE_FALLBACK } from '../utils/imageFallback'
 import { getImageUrl, normalizeImagePath } from '../utils/imageUrl'
 
@@ -80,10 +80,8 @@ class BannersService {
       ? `${API_URL}/banners?include_inactive=true`
       : `${API_URL}/banners`
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: this.getAuthHeaders(),
-    })
+    const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token')
+    const response = await fetch(url, { method: 'GET', headers: token ? { Authorization: `Bearer ${token}` } : undefined })
 
     if (!response.ok) {
       throw new Error('Erro ao obter banners')
