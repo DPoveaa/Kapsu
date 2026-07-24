@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Search, Truck, Eye, RefreshCw, Copy, ExternalLink, ChevronDown, Check, SlidersHorizontal, X, Pill } from 'lucide-react';
+import { Search, Truck, Eye, RefreshCw, Copy, ExternalLink, ChevronDown, Check, SlidersHorizontal, X, Pill, MapPin, Package } from 'lucide-react';
 import { supplierService, SupplierOrder } from '../../services/supplier.service';
 import { toast } from '../../utils/toast';
 import AdminModal from '../../components/AdminModal';
@@ -325,17 +325,42 @@ export default function SupplierOrders() {
   };
 
   const formatItemsForCopy = (order: SupplierOrder) => order.items
-    .map(item => [
-      `${item.quantity}x ${item.product_name}`,
-      item.compositions ? `Composição: ${item.compositions}` : '',
-      item.intended_form ? `Forma: ${item.intended_form}` : '',
-      item.intended_presentation ? `Apresentação: ${item.intended_presentation}` : '',
-      item.intended_units_per_dose ? `Unidades por dose: ${item.intended_units_per_dose}` : '',
-      item.total_doses ? `Total de doses do produto: ${formatTotalDoses(item.total_doses)}` : '',
-      item.capsule_color_preference
-        ? `Padrão de produção: ${item.capsule_color_preference}`
-        : '',
-    ].filter(Boolean).join('\n'))
+    .map(item => {
+      const lines: string[] = [];
+
+      lines.push(`${item.quantity}x ${item.product_name}`);
+
+      if (item.compositions) {
+        const cleanedCompLines = item.compositions
+          .split('\n')
+          .map(l => l.trim())
+          .filter(l => l && !/^quantidades por dose$/i.test(l));
+
+        if (cleanedCompLines.length > 0) {
+          lines.push(`Composição:\n  ${cleanedCompLines.join('\n  ')}`);
+        }
+      }
+
+      if (item.intended_form) {
+        lines.push(`Forma: ${item.intended_form}`);
+      }
+      if (item.intended_presentation) {
+        lines.push(`Apresentação: ${item.intended_presentation}`);
+      }
+      if (item.intended_units_per_dose) {
+        lines.push(`Dose: ${item.intended_units_per_dose}`);
+      }
+
+      if (item.total_doses) {
+        const totalStr = formatTotalDoses(item.total_doses);
+        const presStr = item.intended_presentation || '';
+        if (totalStr && !presStr.toLowerCase().includes(`${item.total_doses} dose`)) {
+          lines.push(`Total de doses: ${totalStr}`);
+        }
+      }
+
+      return lines.join('\n');
+    })
     .join('\n\n');
 
   const activeFilterCount = [statusFilter, trackingFilter, dateStart, dateEnd, shippingMethodFilter, sortOrder !== 'newest' ? sortOrder : ''].filter(Boolean).length;
@@ -620,57 +645,138 @@ export default function SupplierOrders() {
         title={`Produtos e dados de produção #${selectedOrder?.id?.slice(-8).toUpperCase()}`}
       >
         {selectedOrder && (
-          <div className="space-y-4 text-xs">
-            <div className="p-3.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl space-y-1">
-              <div className="flex items-center justify-between gap-3">
-                <div className="font-semibold text-gray-900 dark:text-white text-sm">Dados de Entrega do Cliente</div>
-                <button type="button" onClick={() => copyText(getShippingAddressLabel(selectedOrder), 'Endereço')} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"><Copy size={14} /></button>
+          <div className="space-y-5 text-xs">
+            {/* Header info / Envio */}
+            <div className="rounded-2xl border border-indigo-100 dark:border-indigo-950/60 bg-gradient-to-r from-indigo-50/60 via-purple-50/30 to-white dark:from-indigo-950/20 dark:via-purple-950/10 dark:to-gray-900 p-4 space-y-3 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-indigo-600 text-white shadow-sm">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white text-sm">Dados de Entrega do Cliente</h3>
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
+                      <span>Envio:</span>
+                      <span className="font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-100/70 dark:bg-indigo-900/50 px-2 py-0.5 rounded-md">
+                        {selectedOrder.shipping_method || 'Não informado'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyText(getShippingAddressLabel(selectedOrder), 'Endereço de entrega')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+                >
+                  <Copy size={13} className="text-gray-500" />
+                  <span>Copiar endereço</span>
+                </button>
               </div>
-              <div className="text-gray-600 dark:text-gray-300 font-medium">Envio: {selectedOrder.shipping_method || 'Não informado'}</div>
-              <div className="text-gray-600 dark:text-gray-300">{getShippingAddressLabel(selectedOrder)}</div>
+
+              <div className="p-3 bg-white/80 dark:bg-gray-900/80 border border-gray-200/80 dark:border-gray-800 rounded-xl text-gray-800 dark:text-gray-200 font-medium leading-relaxed">
+                {getShippingAddressLabel(selectedOrder)}
+              </div>
             </div>
 
+            {/* Cabeçalho da Seção de Fórmulas */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="font-semibold text-gray-900 dark:text-white text-sm">Itens da Fórmula</div>
-                <button type="button" onClick={() => copyText(formatItemsForCopy(selectedOrder), 'Itens do pedido')} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"><Copy size={14} /></button>
-              </div>
-              {selectedOrder.items.map((item, idx) => (
-                <div key={idx} className="p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl space-y-2">
-                  <div className="flex items-center justify-between text-sm font-bold text-gray-900 dark:text-white">
-                    <span>{item.quantity}x {item.product_name}</span>
-                  </div>
-
-                  {item.compositions && (
-                    <div>
-                      <span className="font-semibold text-gray-700 dark:text-gray-300 block mb-0.5">Composição & Ativos:</span>
-                      <p className="text-gray-800 dark:text-gray-200 whitespace-pre-line bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-                        {item.compositions}
-                      </p>
-                    </div>
-                  )}
-
-                  {item.total_doses && (
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2.5 dark:border-indigo-800 dark:bg-indigo-950/30">
-                      <span className="font-semibold text-indigo-900 dark:text-indigo-200">Total de doses do produto</span>
-                      <span className="rounded-full bg-indigo-600 px-3 py-1 text-sm font-bold text-white">{formatTotalDoses(item.total_doses)}</span>
-                    </div>
-                  )}
-
-                  {item.intended_units_per_dose && (
-                    <div className="text-gray-600 dark:text-gray-400 pt-1">
-                      <span className="font-medium text-gray-900 dark:text-gray-200">Unidades por dose:</span> {item.intended_units_per_dose}
-                    </div>
-                  )}
-
-                  {item.capsule_color_preference && (
-                    <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
-                      <Pill className="mt-0.5 h-4 w-4 shrink-0" />
-                      <div><strong>Padrão de produção:</strong> {item.capsule_color_preference}</div>
-                    </div>
-                  )}
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4.5 h-4.5 text-primary-600 dark:text-primary-400" />
+                  <span className="font-bold text-gray-900 dark:text-white text-sm">
+                    Fórmulas ({selectedOrder.items.length})
+                  </span>
                 </div>
-              ))}
+                <button
+                  type="button"
+                  onClick={() => copyText(formatItemsForCopy(selectedOrder), 'Itens do pedido')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-semibold shadow-sm transition-all active:scale-95"
+                >
+                  <Copy size={13} />
+                  <span>Copiar todas as fórmulas</span>
+                </button>
+              </div>
+
+              {/* Lista de itens */}
+              {selectedOrder.items.map((item, idx) => {
+                const cleanedCompositions = item.compositions
+                  ? item.compositions
+                      .split('\n')
+                      .map(l => l.trim())
+                      .filter(l => l && !/^quantidades por dose$/i.test(l))
+                      .join('\n')
+                  : null;
+
+                return (
+                  <div
+                    key={idx}
+                    className="p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl space-y-3.5 shadow-sm hover:border-gray-300 dark:hover:border-gray-700 transition-colors"
+                  >
+                    {/* Item title header */}
+                    <div className="flex items-start justify-between gap-3 pb-3 border-b border-gray-100 dark:border-gray-800">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="shrink-0 px-2.5 py-1 rounded-xl bg-primary-100 dark:bg-primary-950/80 text-primary-700 dark:text-primary-300 font-extrabold text-sm border border-primary-200 dark:border-primary-800">
+                          {item.quantity}x
+                        </span>
+                        <span className="font-bold text-sm text-gray-900 dark:text-white truncate">
+                          {item.product_name}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyText(formatItemsForCopy({ ...selectedOrder, items: [item] }), `Fórmula de ${item.product_name}`)}
+                        className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 font-medium transition text-[11px]"
+                        title="Copiar apenas este item"
+                      >
+                        <Copy size={12} />
+                        <span>Copiar item</span>
+                      </button>
+                    </div>
+
+                    {/* Composição */}
+                    {cleanedCompositions && (
+                      <div className="space-y-1.5">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300 text-xs block">
+                          Composição & Ativos
+                        </span>
+                        <div className="whitespace-pre-line text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-800/60 p-3.5 rounded-xl border border-gray-200/80 dark:border-gray-700/80 leading-relaxed font-sans">
+                          {cleanedCompositions}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Especificações de Produção */}
+                    {(item.intended_form || item.intended_presentation || item.intended_units_per_dose || item.total_doses) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                        {item.intended_form && (
+                          <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2">
+                            <span className="text-gray-500 dark:text-gray-400 font-medium">Forma:</span>
+                            <span className="font-semibold text-gray-900 dark:text-white text-right">{item.intended_form}</span>
+                          </div>
+                        )}
+                        {item.intended_presentation && (
+                          <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2">
+                            <span className="text-gray-500 dark:text-gray-400 font-medium">Apresentação:</span>
+                            <span className="font-semibold text-gray-900 dark:text-white text-right">{item.intended_presentation}</span>
+                          </div>
+                        )}
+                        {item.intended_units_per_dose && (
+                          <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2">
+                            <span className="text-gray-500 dark:text-gray-400 font-medium">Dose:</span>
+                            <span className="font-semibold text-gray-900 dark:text-white text-right">{item.intended_units_per_dose}</span>
+                          </div>
+                        )}
+                        {item.total_doses && (
+                          <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between gap-2">
+                            <span className="text-indigo-700 dark:text-indigo-300 font-medium">Total de Doses:</span>
+                            <span className="font-bold text-indigo-900 dark:text-indigo-200 text-right">{formatTotalDoses(item.total_doses)}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -690,7 +796,7 @@ export default function SupplierOrders() {
                 const itemKey = item.id || `${item.product_id}-${idx}`;
                 const reviewed = reviewedItemIds.includes(itemKey);
                 const expanded = expandedItemIds.includes(itemKey);
-                const hasDetails = Boolean(item.compositions || item.description || item.intended_form || item.intended_presentation || item.intended_units_per_dose || item.total_doses || item.capsule_color_preference);
+                const hasDetails = Boolean(item.compositions || item.description || item.intended_form || item.intended_presentation || item.intended_units_per_dose || item.total_doses);
                 return (
                   <div key={itemKey} className={`rounded-xl bg-white dark:bg-gray-800 border transition-colors ${reviewed ? 'border-emerald-300 dark:border-emerald-800' : 'border-gray-200 dark:border-gray-700'}`}>
                     <div className="flex items-center gap-2 p-3">
@@ -734,15 +840,6 @@ export default function SupplierOrders() {
                             {item.intended_presentation && <span><strong className="text-gray-700 dark:text-gray-300">Apresentação:</strong> {item.intended_presentation}</span>}
                             {item.intended_units_per_dose && <span><strong className="text-gray-700 dark:text-gray-300">Unidades por dose:</strong> {item.intended_units_per_dose}</span>}
                             {item.total_doses && <span className="font-semibold text-indigo-700 dark:text-indigo-300"><strong>Total:</strong> {formatTotalDoses(item.total_doses)}</span>}
-                          </div>
-                        )}
-
-                        {item.capsule_color_preference && (
-                          <div className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-200">
-                            <Pill className="mt-0.5 h-4 w-4 shrink-0" />
-                            <div>
-                              <strong>Padrão de produção:</strong> {item.capsule_color_preference}
-                            </div>
                           </div>
                         )}
                       </div>
