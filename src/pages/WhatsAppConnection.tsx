@@ -21,6 +21,7 @@ interface ContactUser {
   email: string;
   phone: string;
   active: boolean;
+  role: string;
   supplierId: string | null;
   supplierName: string | null;
 }
@@ -297,7 +298,7 @@ export default function WhatsAppConnection() {
                   <option value="">{loadingUsers ? 'Carregando usuários...' : 'Contato preenchido manualmente'}</option>
                   {contactUsers.map(user => (
                     <option key={user.id} value={user.id} disabled={!user.active}>
-                      {user.name} · {user.email}{user.active ? '' : ' (inativo)'}
+                      {user.name} · {user.email}{user.role === 'admin' && !user.supplierId ? ' · Admin Kapsu' : ''}{user.active ? '' : ' (inativo)'}
                     </option>
                   ))}
                 </select>

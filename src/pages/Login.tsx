@@ -9,6 +9,7 @@ import AnimatedLogo from '../components/AnimatedLogo'
 import loginBannerPortrait from '../images/3x4.webp'
 import loginBannerLandscape from '../images/4x3.webp'
 import { env } from '../config/env'
+import { ensureGoogleIdentityScript } from '../utils/googleIdentity'
 import LegalAcceptanceCheckbox from '../components/legal/LegalAcceptanceCheckbox'
 import { getLegalAcceptancePayload } from '../content/legal'
 
@@ -114,6 +115,8 @@ export default function Login() {
 
   // Inicialização do Google GSI com Logs de Diagnóstico Detalhados
   useEffect(() => {
+    ensureGoogleIdentityScript()
+
     console.log('[GSI DIAGNOSTICS] useEffect disparado. Estado:', {
       isLogin,
       socialRegisterRequired,

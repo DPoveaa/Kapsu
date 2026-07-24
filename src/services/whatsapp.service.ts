@@ -736,6 +736,7 @@ class WhatsAppService {
     email: string
     phone: string
     active: boolean
+    role: string
     supplierId: string | null
     supplierName: string | null
   }>> {

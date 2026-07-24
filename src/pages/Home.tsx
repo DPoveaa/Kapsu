@@ -10,6 +10,7 @@ import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback
 import { getImageUrl, getResponsiveImageSrcSet } from '../utils/imageUrl'
 import { HorizontalScrollContainer } from '../components/HorizontalScrollContainer'
 import { generateProductUrl } from '../utils/productUrl'
+import DeferredProductImage from '../components/DeferredProductImage'
 
 interface DecodedBannerImageProps {
   src: string
@@ -676,8 +677,8 @@ export default function Home() {
                       >
                         {/* 1:1 image fills top of card */}
                         <div className="w-full aspect-square bg-white overflow-hidden flex-shrink-0 relative">
-                          <img
-                            src={productsService.getImageUrl(product.image)}
+                          <DeferredProductImage
+                            imagePath={product.image}
                             alt={product.name}
                             loading="lazy"
                             decoding="async"
@@ -795,8 +796,8 @@ export default function Home() {
                       >
                         {/* 1:1 image fills top of card */}
                         <div className="w-full aspect-square bg-white overflow-hidden flex-shrink-0 relative">
-                          <img
-                            src={productsService.getImageUrl(product.image)}
+                          <DeferredProductImage
+                            imagePath={product.image}
                             alt={product.name}
                             loading="lazy"
                             decoding="async"

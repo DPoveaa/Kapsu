@@ -83,8 +83,12 @@ export function getResponsiveImageSrcSet(
   kind: 'products' | 'banners' = 'products'
 ): string | undefined {
   if (!imagePath) return undefined
-  if (/-\d+w\.webp(?:$|[?#])/i.test(imagePath)) {
-    return widths.map(width => {
+  const generatedVariantMatch = imagePath.match(/-(\d+)w\.webp(?:$|[?#])/i)
+  if (generatedVariantMatch) {
+    const primaryWidth = Number(generatedVariantMatch[1])
+    const availableWidths = widths.filter(width => width <= primaryWidth)
+    if (availableWidths.length === 0) return undefined
+    return availableWidths.map(width => {
       const variant = imagePath.replace(/-\d+w\.webp(?=$|[?#])/i, `-${width}w.webp`)
       return `${getUploadsImageUrl(variant, kind)} ${width}w`
     }).join(', ')
