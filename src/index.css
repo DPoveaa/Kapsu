@@ -3,15 +3,13 @@
 @tailwind utilities;
 
 @layer base {
-  /* Transição suave para mudança de tema */
+  /* Transição suave gradual para mudança de tema */
   html.theme-transitioning,
-  html.theme-transitioning *,
-  html.theme-transitioning *::before,
-  html.theme-transitioning *::after {
-    transition: background-color 0.3s ease, 
-                color 0.3s ease, 
-                border-color 0.3s ease,
-                opacity 0.3s ease !important;
+  html.theme-transitioning body,
+  html.theme-transitioning [class*="dark:"]:not([data-kapsu-theme-animation]):not([data-kapsu-theme-animation] *):not([data-kapsu-capsule]):not([data-kapsu-capsule] *) {
+    transition: background-color var(--kapsu-theme-transition-duration, 1.9s) cubic-bezier(0.4, 0, 0.2, 1),
+                color var(--kapsu-theme-transition-duration, 1.9s) cubic-bezier(0.4, 0, 0.2, 1),
+                border-color var(--kapsu-theme-transition-duration, 1.9s) cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
   body {
@@ -262,19 +260,66 @@
 }
 
 /* Custom Animations for Notifications & Modals */
-@keyframes slideInRight {
-  from {
+@keyframes toastBounceIn {
+  0% {
     opacity: 0;
-    transform: translateX(120%);
+    transform: translateX(100%) scale(0.88);
   }
-  to {
+  65% {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateX(-6px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
   }
 }
 
-.animate-slide-in-right {
-  animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+@keyframes toastBounceOut {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(110%) scale(0.9);
+  }
+}
+
+.animate-toast-in {
+  animation: toastBounceIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-toast-out {
+  animation: toastBounceOut 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* Breathing Emerald Glow Animation for AnimatedLogo */
+@keyframes logoGlowBreathe {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px rgba(16, 185, 129, 0.25)) drop-shadow(0 0 6px rgba(16, 185, 129, 0.1));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.45)) drop-shadow(0 0 14px rgba(16, 185, 129, 0.2));
+  }
+}
+
+@keyframes logoGlowBreatheDark {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.35)) drop-shadow(0 0 8px rgba(16, 185, 129, 0.15));
+  }
+  50% {
+    filter: drop-shadow(0 0 11px rgba(16, 185, 129, 0.55)) drop-shadow(0 0 18px rgba(16, 185, 129, 0.25));
+  }
+}
+
+.animate-logo-glow {
+  animation: none;
+  filter: none;
+}
+
+.dark .animate-logo-glow {
+  animation: logoGlowBreatheDark 5.5s ease-in-out infinite;
 }
 
 @keyframes scaleIn {
@@ -443,5 +488,177 @@ html.dark select:focus {
   .animate-brand-fade-in {
     animation: none;
     opacity: 1;
+  }
+}
+
+/* ─── Kapsu Day/Night Theme Toggle Animations ────────────────────────────── */
+
+/* Respiração do Panda Noturno */
+@keyframes pandaBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.025); }
+}
+
+.animate-panda-breathe {
+  animation: pandaBreathe 3.6s ease-in-out infinite;
+}
+
+/* Piscar Aleatório do Panda */
+@keyframes pandaBlink {
+  0%, 94%, 98%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.1); }
+}
+
+.animate-panda-blink {
+  animation: pandaBlink 6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Panda Feliz Idle */
+@keyframes pandaIdle {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-1px) rotate(1deg); }
+}
+
+.animate-panda-idle {
+  animation: pandaIdle 4s ease-in-out infinite;
+}
+
+/* Mastigação do Bambu pelo Panda */
+@keyframes pandaChew {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-1.5px) rotate(2deg); }
+  50% { transform: translateY(0.5px) rotate(-1deg); }
+  75% { transform: translateY(-1px) rotate(1.5deg); }
+}
+
+.animate-bamboo-chew {
+  animation: pandaChew 2.4s ease-in-out infinite;
+}
+
+@keyframes pandaChewMouth {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scaleX(1.1) scaleY(0.85); }
+}
+
+.animate-panda-chew-mouth {
+  animation: pandaChewMouth 1.2s ease-in-out infinite;
+  transform-origin: 50px 59px;
+}
+
+/* Bolha de Sono Inflando e Deflando com a Respiração */
+@keyframes sleepBubble {
+  0%, 100% { transform: scale(0.8); opacity: 0.5; }
+  50% { transform: scale(1.35); opacity: 0.95; }
+}
+
+.animate-sleep-bubble {
+  animation: sleepBubble 3.6s ease-in-out infinite;
+}
+
+/* Flutuação de "Z"s do Sono */
+@keyframes zFloat1 {
+  0% { transform: translateY(0px) translateX(0px) scale(0.7); opacity: 0; }
+  20% { opacity: 0.9; }
+  80% { opacity: 0.8; }
+  100% { transform: translateY(-16px) translateX(4px) scale(1.1); opacity: 0; }
+}
+
+@keyframes zFloat2 {
+  0% { transform: translateY(0px) translateX(0px) scale(0.6); opacity: 0; }
+  30% { opacity: 0.7; }
+  85% { opacity: 0.6; }
+  100% { transform: translateY(-22px) translateX(8px) scale(1.2); opacity: 0; }
+}
+
+.animate-z-float-1 {
+  animation: zFloat1 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-z-float-2 {
+  animation: zFloat2 3.2s cubic-bezier(0.4, 0, 0.2, 1) 1.2s infinite;
+}
+
+/* Rotação dos Raios do Sol */
+@keyframes sunSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-sun-spin {
+  animation: sunSpin 18s linear infinite;
+}
+
+/* Flutuação da Lua Crescente */
+@keyframes moonFloat {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-1.5px) rotate(-3deg); }
+}
+
+.animate-moon-float {
+  animation: moonFloat 4.5s ease-in-out infinite;
+}
+
+/* Cintilação das Estrelas */
+@keyframes starTwinkle1 {
+  0%, 100% { transform: scale(0.8); opacity: 0.4; }
+  50% { transform: scale(1.2); opacity: 1; }
+}
+
+@keyframes starTwinkle2 {
+  0%, 100% { transform: scale(1.1); opacity: 0.9; }
+  50% { transform: scale(0.7); opacity: 0.3; }
+}
+
+.animate-star-twinkle-1 {
+  animation: starTwinkle1 2.8s ease-in-out infinite;
+}
+
+.animate-star-twinkle-2 {
+  animation: starTwinkle2 3.5s ease-in-out infinite 0.5s;
+}
+
+.animate-star-twinkle-3 {
+  animation: starTwinkle1 3.2s ease-in-out infinite 1.2s;
+}
+
+/* Flutuação de Folhas do Dia */
+@keyframes leafFloat1 {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-2.5px) rotate(8deg); }
+}
+
+@keyframes leafFloat2 {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(2px) rotate(-10deg); }
+}
+
+.animate-leaf-float-1 {
+  animation: leafFloat1 4s ease-in-out infinite;
+}
+
+.animate-leaf-float-2 {
+  animation: leafFloat2 4.8s ease-in-out infinite 0.6s;
+}
+
+/* Redução de Movimentos para acessibilidade (prefers-reduced-motion) */
+@media (prefers-reduced-motion: reduce) {
+  .animate-panda-breathe,
+  .animate-panda-blink,
+  .animate-panda-idle,
+  .animate-bamboo-chew,
+  .animate-panda-chew-mouth,
+  .animate-sleep-bubble,
+  .animate-z-float-1,
+  .animate-z-float-2,
+  .animate-sun-spin,
+  .animate-moon-float,
+  .animate-star-twinkle-1,
+  .animate-star-twinkle-2,
+  .animate-star-twinkle-3,
+  .animate-leaf-float-1,
+  .animate-leaf-float-2 {
+    animation: none !important;
+    transform: none !important;
   }
 }

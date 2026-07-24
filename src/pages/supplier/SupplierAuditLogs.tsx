@@ -17,6 +17,8 @@ const ACTION_LABELS: Record<string, string> = {
   VIEW_PAYMENTS: 'Visualização de Repasses',
   UPDATE_PROFILE: 'Atualização de Perfil/Empresa',
   VIEW_AUDIT: 'Acesso ao Histórico de Auditoria',
+  ASSIGN_ORDER: 'Atribuição de Pedido',
+  ASSIGN_SUPPLIER: 'Vínculo de Fornecedor',
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -29,6 +31,7 @@ const RESULT_COLORS: Record<string, string> = {
   SUCCESS: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60',
   ERROR: 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60',
   FORBIDDEN: 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60',
+  FAILURE: 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800/60',
 };
 
 function formatDateTime(dt?: string) {
@@ -45,16 +48,21 @@ export default function SupplierAuditLogs() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  useEffect(() => { fetchLogs(); }, [page]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { fetchLogs(); }, 300);
+    return () => window.clearTimeout(timer);
+  }, [page, search]);
 
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const res = await supplierService.getAuditLogs(page);
+      const res = await supplierService.getAuditLogs(page, 10, search);
       if (res.success) {
         setLogs(res.data || []);
-        if (res.pagination?.totalPages) setTotalPages(res.pagination.totalPages);
+        setTotalPages(Math.max(1, Number(res.pagination?.totalPages) || 1));
+        setTotal(Number(res.pagination?.total) || 0);
       }
     } catch (err) {
       console.error('Erro ao buscar logs de auditoria:', err);
@@ -63,15 +71,11 @@ export default function SupplierAuditLogs() {
     }
   };
 
-  const filtered = logs.filter(log => {
-    const q = search.toLowerCase();
-    return (
-      !q ||
-      (log.user_email || '').toLowerCase().includes(q) ||
-      (log.action || '').toLowerCase().includes(q) ||
-      (log.resource || '').toLowerCase().includes(q)
-    );
-  });
+  const firstVisiblePage = Math.max(1, Math.min(page - 2, totalPages - 4));
+  const visiblePages = Array.from(
+    { length: Math.min(5, totalPages) },
+    (_, index) => firstVisiblePage + index,
+  );
 
   return (
     <div className="space-y-6">
@@ -98,7 +102,7 @@ export default function SupplierAuditLogs() {
             type="text"
             placeholder="Buscar por e-mail, ação ou recurso..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
             className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>
@@ -111,7 +115,7 @@ export default function SupplierAuditLogs() {
             <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
             <span className="text-sm">Carregando registros...</span>
           </div>
-        ) : filtered.length === 0 ? (
+        ) : logs.length === 0 ? (
           <div className="py-20 text-center text-gray-500 dark:text-gray-400 text-sm">
             Nenhum registro encontrado{search ? ` para "${search}"` : ''}.
           </div>
@@ -141,7 +145,7 @@ export default function SupplierAuditLogs() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {filtered.map((log, i) => (
+                {logs.map((log, i) => (
                   <tr
                     key={log.id || i}
                     className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -204,10 +208,10 @@ export default function SupplierAuditLogs() {
         )}
 
         {/* Paginação */}
-        {!loading && totalPages > 1 && (
+        {!loading && total > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              Página {page} de {totalPages}
+              {total} registro{total === 1 ? '' : 's'} · Página {page} de {totalPages} · 10 por página
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -217,6 +221,21 @@ export default function SupplierAuditLogs() {
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
+              {visiblePages.map(pageNumber => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  onClick={() => setPage(pageNumber)}
+                  aria-current={pageNumber === page ? 'page' : undefined}
+                  className={`min-w-8 h-8 px-2 rounded-lg text-xs font-semibold transition ${
+                    pageNumber === page
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
+                >
+                  {pageNumber}
+                </button>
+              ))}
               <button
                 disabled={page >= totalPages}
                 onClick={() => setPage(p => p + 1)}

@@ -61,6 +61,7 @@ export interface CreatePreferenceParams {
   addressId?: string
   subscriptionPlan?: 'monthly' | 'quarterly'
   shippingFee?: number
+  shippingMethod?: string
   orderId?: string
   creditCard?: CreditCardData
   installments?: number

@@ -1,58 +1,65 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useSearchParams } from 'react-router-dom'
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
-import AdminLayout from './components/AdminLayout'
 import Home from './pages/Home'
-import Products from './pages/Products'
-import ProductDetail from './pages/ProductDetail'
-import Cart from './pages/Cart'
-import Login from './pages/Login'
-import AdminPanel from './pages/AdminPanel'
-import WhatsAppConnection from './pages/WhatsAppConnection'
-import WhatsAppSupport from './pages/WhatsAppSupport'
-import UserManagement from './pages/UserManagement'
-import ManageProducts from './pages/ManageProducts'
-import ManageOrders from './pages/ManageOrders'
-import Reports from './pages/Reports'
-import SiteSettings from './pages/SiteSettings'
-import GoogleSheetsSettings from './pages/GoogleSheetsSettings'
-import ShippingSettings from './pages/ShippingSettings'
-import FreeShippingRules from './pages/FreeShippingRules'
-import ManagePromotions from './pages/ManagePromotions'
-import ManagePromoCodes from './pages/ManagePromoCodes'
-import AuditLogs from './pages/AuditLogs'
-import ManageInstallmentRules from './pages/ManageInstallmentRules'
-
-import SupplierManagement from './pages/SupplierManagement'
-import SupplierPayments from './pages/SupplierPayments'
-
-import SupplierLayout from './components/SupplierLayout'
-import SupplierDashboard from './pages/supplier/SupplierDashboard'
-import SupplierOrders from './pages/supplier/SupplierOrders'
-import SupplierPaymentHistory from './pages/supplier/SupplierPaymentHistory'
-import SupplierUserManagement from './pages/supplier/SupplierUserManagement'
-import SupplierAuditLogs from './pages/supplier/SupplierAuditLogs'
-import SupplierProfile from './pages/supplier/SupplierProfile'
-
-import ManageBanners from './pages/ManageBanners'
-import ManageReviews from './pages/ManageReviews'
-import ManageHomeSections from './pages/ManageHomeSections'
-import ManageHeaderCategories from './pages/ManageHeaderCategories'
-import OrderDetail from './pages/OrderDetail'
-import SupplierOrderDetail from './pages/SupplierOrderDetail'
-import PaymentFailure from './pages/PaymentFailure'
-import Profile from './pages/Profile'
-import RecoverPassword from './pages/RecoverPassword'
-import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
-import TermsOfServicePage from './pages/TermsOfServicePage'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import { FavoritesProvider } from './context/FavoritesContext'
-import FloatingChat from './components/FloatingChat'
 import ToastContainer from './components/ToastContainer'
 import { siteSettingsService, SiteSettings as SiteSettingsType } from './services/site-settings.service'
+
+// Keep the storefront shell and Home in the initial bundle. Every other route is
+// downloaded only when visited, so admin/reporting libraries never delay Home.
+const Products = lazy(() => import('./pages/Products'))
+const ProductDetail = lazy(() => import('./pages/ProductDetail'))
+const Cart = lazy(() => import('./pages/Cart'))
+const Login = lazy(() => import('./pages/Login'))
+const AdminLayout = lazy(() => import('./components/AdminLayout'))
+const AdminPanel = lazy(() => import('./pages/AdminPanel'))
+const WhatsAppConnection = lazy(() => import('./pages/WhatsAppConnection'))
+const WhatsAppSupport = lazy(() => import('./pages/WhatsAppSupport'))
+const UserManagement = lazy(() => import('./pages/UserManagement'))
+const ManageProducts = lazy(() => import('./pages/ManageProducts'))
+const ManageOrders = lazy(() => import('./pages/ManageOrders'))
+const Reports = lazy(() => import('./pages/Reports'))
+const SiteSettings = lazy(() => import('./pages/SiteSettings'))
+const GoogleSheetsSettings = lazy(() => import('./pages/GoogleSheetsSettings'))
+const ShippingSettings = lazy(() => import('./pages/ShippingSettings'))
+const FreeShippingRules = lazy(() => import('./pages/FreeShippingRules'))
+const ManagePromotions = lazy(() => import('./pages/ManagePromotions'))
+const ManagePromoCodes = lazy(() => import('./pages/ManagePromoCodes'))
+const AuditLogs = lazy(() => import('./pages/AuditLogs'))
+const ManageInstallmentRules = lazy(() => import('./pages/ManageInstallmentRules'))
+const SupplierManagement = lazy(() => import('./pages/SupplierManagement'))
+const SupplierPayments = lazy(() => import('./pages/SupplierPayments'))
+const SupplierLayout = lazy(() => import('./components/SupplierLayout'))
+const SupplierOrders = lazy(() => import('./pages/supplier/SupplierOrders'))
+const SupplierPaymentHistory = lazy(() => import('./pages/supplier/SupplierPaymentHistory'))
+const SupplierUserManagement = lazy(() => import('./pages/supplier/SupplierUserManagement'))
+const SupplierAuditLogs = lazy(() => import('./pages/supplier/SupplierAuditLogs'))
+const SupplierProfile = lazy(() => import('./pages/supplier/SupplierProfile'))
+const ManageBanners = lazy(() => import('./pages/ManageBanners'))
+const ManageReviews = lazy(() => import('./pages/ManageReviews'))
+const ManageHomeSections = lazy(() => import('./pages/ManageHomeSections'))
+const ManageHeaderCategories = lazy(() => import('./pages/ManageHeaderCategories'))
+const OrderDetail = lazy(() => import('./pages/OrderDetail'))
+const SupplierOrderDetail = lazy(() => import('./pages/SupplierOrderDetail'))
+const PaymentFailure = lazy(() => import('./pages/PaymentFailure'))
+const Profile = lazy(() => import('./pages/Profile'))
+const RecoverPassword = lazy(() => import('./pages/RecoverPassword'))
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
+const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'))
+const FloatingChat = lazy(() => import('./components/FloatingChat'))
+
+function RouteFallback() {
+  return (
+    <div className="min-h-[45vh] flex items-center justify-center" role="status" aria-label="Carregando pagina">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-200 border-b-primary-600" />
+    </div>
+  )
+}
 
 function PaymentSuccessRedirect() {
   const [searchParams] = useSearchParams()
@@ -65,7 +72,8 @@ function PaymentSuccessRedirect() {
 
 function AppContent() {
   const location = useLocation()
-  const [chatbotEnabled, setChatbotEnabled] = useState(true)
+  const [chatbotEnabled, setChatbotEnabled] = useState(false)
+  const [chatReady, setChatReady] = useState(false)
   const isAdminRoute = location.pathname.startsWith('/admin')
   const isSupplierRoute = location.pathname.startsWith('/supplier')
   const hideChat = ['/login', '/cadastro', '/recuperar-senha'].includes(location.pathname) || isAdminRoute || isSupplierRoute
@@ -103,10 +111,27 @@ function AppContent() {
     }
   }, [])
 
+  useEffect(() => {
+    if (hideChat || !chatbotEnabled) {
+      setChatReady(false)
+      return
+    }
+
+    // The chat is non-critical for first paint. Let the banner and storefront
+    // finish first so its large module does not compete with the Home LCP.
+    const timer = window.setTimeout(() => setChatReady(true), 1200)
+    return () => window.clearTimeout(timer)
+  }, [hideChat, chatbotEnabled])
+
   return (
     <Layout>
       <ToastContainer />
-      {!hideChat && chatbotEnabled && <FloatingChat />}
+      {!hideChat && chatbotEnabled && chatReady && (
+        <Suspense fallback={null}>
+          <FloatingChat />
+        </Suspense>
+      )}
+      <Suspense fallback={<RouteFallback />}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/produtos" element={<Products />} />
@@ -394,15 +419,16 @@ function AppContent() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Navigate to="/supplier/orders" replace />} />
+          <Route index element={<Navigate to="/supplier/payments" replace />} />
           <Route path="orders" element={<SupplierOrders />} />
-          <Route path="dashboard" element={<SupplierDashboard />} />
+          <Route path="dashboard" element={<Navigate to="/supplier/payments" replace />} />
           <Route path="payments" element={<SupplierPaymentHistory />} />
           <Route path="users" element={<SupplierUserManagement />} />
           <Route path="profile" element={<SupplierProfile />} />
           <Route path="audit" element={<SupplierAuditLogs />} />
         </Route>
       </Routes>
+      </Suspense>
     </Layout>
   )
 }

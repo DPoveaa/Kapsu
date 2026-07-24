@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { headerCategoriesService, HeaderCategory } from '../services/header-categories.service'
 import { siteSettingsService } from '../services/site-settings.service'
-import * as LucideIcons from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
+import { getHeaderIcon } from '../utils/headerIcons'
 
 export default function HeaderCategories() {
   const { theme } = useTheme()
@@ -15,10 +15,12 @@ export default function HeaderCategories() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const data = await headerCategoriesService.getAll(true)
+        const [data, settings] = await Promise.all([
+          headerCategoriesService.getAll(true),
+          siteSettingsService.getSettings(),
+        ])
         setCategories(data)
-        
-        const settings = await siteSettingsService.getSettings()
+
         if ((settings as any).header_bar_bg_color) {
           setBarBgColor((settings as any).header_bar_bg_color)
         }
@@ -48,7 +50,7 @@ export default function HeaderCategories() {
       style={{ backgroundColor: currentBgColor }}
     >
       {categories.map(cat => {
-        const CatIcon = (LucideIcons as any)[cat.icon || 'Tag'] || LucideIcons.Tag
+        const CatIcon = getHeaderIcon(cat.icon)
         
         // Verifica se é link interno ou externo
         const isExternal = cat.url.startsWith('http')

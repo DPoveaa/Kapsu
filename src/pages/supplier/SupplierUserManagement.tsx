@@ -17,6 +17,8 @@ export default function SupplierUserManagement() {
     password: '',
     role: 'supplier_employee' as 'supplier_admin' | 'supplier_employee',
     active: true,
+    canCancelOrders: false,
+    existingPermissions: [] as string[],
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -46,18 +48,26 @@ export default function SupplierUserManagement() {
       password: '',
       role: 'supplier_employee',
       active: true,
+      canCancelOrders: false,
+      existingPermissions: [],
     });
     setShowModal(true);
   };
 
   const handleOpenEditModal = (u: SupplierUser) => {
     setEditingUser(u);
+    let permissions: string[] = [];
+    try {
+      permissions = Array.isArray(u.permissions) ? u.permissions : JSON.parse(u.permissions || '[]');
+    } catch { permissions = []; }
     setFormState({
       name: u.name,
       email: u.email,
       password: '',
       role: u.role as 'supplier_admin' | 'supplier_employee',
       active: u.active !== false,
+      canCancelOrders: permissions.includes('orders:cancel'),
+      existingPermissions: permissions,
     });
     setShowModal(true);
   };
@@ -78,6 +88,7 @@ export default function SupplierUserManagement() {
           password: formState.password || undefined,
           role: formState.role,
           active: formState.active,
+          permissions: Array.from(new Set([...formState.existingPermissions.filter(p => p !== 'orders:cancel'), 'orders:read', 'orders:write', 'tracking:write', ...(formState.canCancelOrders ? ['orders:cancel'] : [])])),
         });
         toast.success('Dados do funcionário atualizados!');
       } else {
@@ -86,6 +97,7 @@ export default function SupplierUserManagement() {
           email: formState.email,
           password: formState.password,
           role: formState.role,
+          permissions: Array.from(new Set(['orders:read', 'orders:write', 'tracking:write', ...(formState.canCancelOrders ? ['orders:cancel'] : [])])),
         });
         toast.success('Novo funcionário cadastrado com sucesso!');
       }
@@ -243,6 +255,21 @@ export default function SupplierUserManagement() {
               <option value="supplier_admin">Administrador do Fornecedor (Acesso Total + Financeiro)</option>
             </select>
           </div>
+
+          {formState.role === 'supplier_employee' && (
+            <label className="flex items-start gap-3 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50/70 dark:bg-rose-950/20 p-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formState.canCancelOrders}
+                onChange={e => setFormState({ ...formState, canCancelOrders: e.target.checked })}
+                className="mt-0.5 rounded border-gray-300 text-rose-600 focus:ring-rose-500"
+              />
+              <span>
+                <span className="block text-xs font-semibold text-gray-900 dark:text-white">Permitir cancelamento de pedidos</span>
+                <span className="block mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">Permissão sensível: exige motivo e fica registrada na auditoria.</span>
+              </span>
+            </label>
+          )}
 
           {editingUser && (
             <label className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 cursor-pointer pt-2">

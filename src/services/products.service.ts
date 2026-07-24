@@ -8,6 +8,8 @@ const API_URL = env.apiUrl
 // Tipo do produto vindo do backend
 export interface BackendProduct {
   id: string
+  supplier_id?: string | null
+  supplier_name?: string | null
   name: string
   description: string | null
   price: number
@@ -93,6 +95,8 @@ class ProductsService {
   private mapProduct(product: BackendProduct): Product {
     return {
       id: product.id,
+      supplier_id: product.supplier_id || null,
+      supplier_name: product.supplier_name || null,
       name: product.name,
       description: product.description || '',
       price: Number(product.price),
@@ -461,6 +465,7 @@ class ProductsService {
    * Atualiza um produto
    */
   async update(id: string, productData: {
+    supplier_id?: string | null
     name?: string
     description?: string
     price?: number
@@ -562,6 +567,17 @@ class ProductsService {
       if (error.message) throw error
       throw new Error('Erro de conexão. Verifique se o servidor está rodando.')
     }
+  }
+
+  async assignSupplierBulk(ids: string[], supplierId: string | null): Promise<{ success: boolean; message: string; updated: number }> {
+    const response = await fetch(`${this.baseUrl}/admin/bulk-supplier`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ ids, supplierId }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao vincular fornecedor aos produtos')
+    return data
   }
 
   /**
@@ -720,6 +736,40 @@ class ProductsService {
       if (error.message) throw error
       throw new Error('Erro de conexão ao aplicar margem mínima.')
     }
+  }
+
+  async roundPricesByMargin(
+    threshold: number,
+    ids?: string[],
+    preview: boolean = false
+  ): Promise<{
+    success: boolean
+    message: string
+    data: {
+      updatedCount: number
+      roundedDown: number
+      roundedUp: number
+      unchanged: number
+      skippedWithoutCost: number
+      skippedPromoConflict: number
+      updatedProducts: Array<{
+        id: string
+        name: string
+        oldPrice: number
+        newPrice: number
+        margin: number
+        direction: 'up' | 'down'
+      }>
+    }
+  }> {
+    const response = await fetch(`${this.baseUrl}/admin/round-prices-by-margin`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ threshold, ids, preview }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao arredondar preços por margem')
+    return data
   }
 
   /**

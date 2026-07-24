@@ -177,6 +177,8 @@ export default function ProductCard({ product }: ProductCardProps) {
             <img
               src={imageUrl}
               alt={product.name}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
               onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
             />
@@ -245,7 +247,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       </Link>
 
       {/* ── Portal: all visual effects bypass overflow-hidden ── */}
-      {createPortal(
+      {(bursts.length > 0 || confetti.length > 0 || rings.length > 0) && createPortal(
         <>
           {/* Regular burst particles */}
           {bursts.map(p => (

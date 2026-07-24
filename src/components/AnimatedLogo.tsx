@@ -1,178 +1,158 @@
-import { useState, useEffect, useRef } from 'react'
-import orelhaLogo from '../images/orelha_logo.png'
-import olhoLogo from '../images/olho_logo.png'
-import pupilaNormalEsquerdo from '../images/pupila_esquerda_base.png'
-import pupilaNormalDireito from '../images/pupila_direita_base.png'
-import pupilaDormindoEsquerdo from '../images/pupila_dormindo_esquerda.png'
-import pupilaDormindoDireito from '../images/pupila_dormindo_direita.png'
-import nariz from '../images/nariz.png'
-import comprimidoEsquerdo from '../images/comprimido_esquerdo.png'
-import comprimidoDireito from '../images/comprimido_direito.png'
+import { useState, useEffect, useRef } from 'react';
+import orelhaLogo from '../images/optimized/orelha_logo.png';
+import olhoLogo from '../images/optimized/olho_logo.png';
+import pupilaNormalEsquerdo from '../images/pupila_esquerda_base.png';
+import pupilaNormalDireito from '../images/pupila_direita_base.png';
+import pupilaDormindoEsquerdo from '../images/pupila_dormindo_esquerda.png';
+import pupilaDormindoDireito from '../images/pupila_dormindo_direita.png';
+import nariz from '../images/optimized/nariz.png';
+import comprimidoEsquerdo from '../images/optimized/comprimido_esquerdo.png';
+import comprimidoDireito from '../images/optimized/comprimido_direito.png';
 
 interface AnimatedLogoProps {
-  className?: string
-  alt?: string
-  forceSleeping?: boolean
+  className?: string;
+  alt?: string;
+  forceSleeping?: boolean;
 }
 
 interface ZBubble {
-  id: number
-  delay: number
+  id: number;
+  delay: number;
 }
 
 export default function AnimatedLogo({ className = '', forceSleeping = false }: AnimatedLogoProps) {
-  const [isBlinking, setIsBlinking] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(false)
-  const [zBubbles, setZBubbles] = useState<ZBubble[]>([])
-  const blinkChanceRef = useRef(10) // Começa com 10% (1 em 10)
-  const zChanceRef = useRef(10) // Começa com 10% (1 em 10) para os Z
-  const intervalRef = useRef<number | null>(null)
-  const zIntervalRef = useRef<number | null>(null)
-  const zIdCounterRef = useRef(0)
-  const eyesClosed = forceSleeping || isBlinking
+  const [isBlinking, setIsBlinking] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [capsuleOpen, setCapsuleOpen] = useState(false);
+  const [showGlowPulse, setShowGlowPulse] = useState(false);
+  const [zBubbles, setZBubbles] = useState<ZBubble[]>([]);
+
+  const blinkChanceRef = useRef(10);
+  const zChanceRef = useRef(10);
+  const intervalRef = useRef<number | null>(null);
+  const zIntervalRef = useRef<number | null>(null);
+  const zIdCounterRef = useRef(0);
+  const eyesClosed = forceSleeping || isBlinking;
+
+  // Ouve o evento de controle orbital da cápsula
+  useEffect(() => {
+    const handleOrbitalEvent = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (!detail) return;
+
+      if (detail.phase === 'opening') {
+        setCapsuleOpen(true);
+        setShowGlowPulse(false);
+      } else if (detail.phase === 'closing') {
+        setCapsuleOpen(false);
+        setTimeout(() => {
+          setShowGlowPulse(true);
+          setTimeout(() => setShowGlowPulse(false), 600);
+        }, 280);
+      } else if (detail.phase === 'idle') {
+        setCapsuleOpen(false);
+        setShowGlowPulse(false);
+      }
+    };
+
+    window.addEventListener('kapsu-orbital-toggle', handleOrbitalEvent);
+    return () => window.removeEventListener('kapsu-orbital-toggle', handleOrbitalEvent);
+  }, []);
 
   // Detecta modo escuro
   useEffect(() => {
     const checkDarkMode = () => {
-      const isDark = document.documentElement.classList.contains('dark')
-      setIsDarkMode(isDark)
-      // Se estiver em modo escuro, mantém os olhos fechados
+      const isDark = document.documentElement.classList.contains('dark');
+      setIsDarkMode(isDark);
       if (isDark) {
-        setIsBlinking(true)
+        setIsBlinking(true);
       } else {
-        setIsBlinking(false)
+        setIsBlinking(false);
       }
-    }
+    };
 
-    // Verifica inicialmente
-    checkDarkMode()
+    checkDarkMode();
 
-    // Observa mudanças no elemento raiz
-    const observer = new MutationObserver(checkDarkMode)
+    const observer = new MutationObserver(checkDarkMode);
     observer.observe(document.documentElement, {
       attributes: true,
-      attributeFilter: ['class']
-    })
+      attributeFilter: ['class'],
+    });
 
     return () => {
-      observer.disconnect()
-    }
-  }, [])
+      observer.disconnect();
+    };
+  }, []);
 
-  // Lógica de piscar aleatório (apenas no modo claro)
+  // Piscar de olhos no modo claro
   useEffect(() => {
-    // Se estiver em modo escuro, não faz nada (olhos ficam fechados)
     if (isDarkMode || forceSleeping) {
-      // Limpa qualquer intervalo existente
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-      return
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      return;
     }
 
     const checkBlink = () => {
-      // Gera número aleatório de 1 a 100
-      const random = Math.floor(Math.random() * 100) + 1
-
-      // Se o número aleatório for menor ou igual à chance atual, pisca
-      if (random <= blinkChanceRef.current) {
-        setIsBlinking(true)
-        // Reseta a chance para 10% após piscar
-        blinkChanceRef.current = 10
-
-        // Remove a classe de piscar após a animação (200ms)
-        setTimeout(() => {
-          setIsBlinking(false)
-        }, 200)
+      const randomValue = Math.random() * 100;
+      if (randomValue < blinkChanceRef.current) {
+        setIsBlinking(true);
+        setTimeout(() => setIsBlinking(false), 250);
+        blinkChanceRef.current = 10;
       } else {
-        // Se não piscou, aumenta a chance para a próxima tentativa
-        // Aumenta em 5% a cada tentativa (máximo 100%)
-        blinkChanceRef.current = Math.min(blinkChanceRef.current + 5, 100)
+        blinkChanceRef.current = Math.min(blinkChanceRef.current + 10, 80);
       }
-    }
+    };
 
-    // Verifica a cada 5 segundos
-    const intervalTime = 5000
-    intervalRef.current = window.setInterval(checkBlink, intervalTime)
-
-    // Primeira verificação após o intervalo
-    const timeoutId = window.setTimeout(checkBlink, intervalTime)
-
+    intervalRef.current = window.setInterval(checkBlink, 3000);
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-      clearTimeout(timeoutId)
-    }
-  }, [isDarkMode, forceSleeping])
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [isDarkMode, forceSleeping]);
 
-  // Lógica de Z saindo (apenas no modo escuro)
+  // Bolhas Z Z z no modo escuro
   useEffect(() => {
-    // Se não estiver em modo escuro, não faz nada
     if (!isDarkMode) {
-      // Limpa qualquer intervalo existente
-      if (zIntervalRef.current) {
-        clearInterval(zIntervalRef.current)
-        zIntervalRef.current = null
-      }
-      // Remove todos os Z quando sair do modo escuro
-      setZBubbles([])
-      return
+      setZBubbles([]);
+      if (zIntervalRef.current) clearInterval(zIntervalRef.current);
+      return;
     }
 
     const checkZ = () => {
-      // Gera número aleatório de 1 a 100
-      const random = Math.floor(Math.random() * 100) + 1
+      const randomValue = Math.random() * 100;
+      if (randomValue < zChanceRef.current) {
+        const newZ: ZBubble = {
+          id: zIdCounterRef.current++,
+          delay: Math.random() * 200,
+        };
 
-      // Se o número aleatório for menor ou igual à chance atual, mostra os Z
-      if (random <= zChanceRef.current) {
-        // Cria sequência de 3 Z com micro intervalo entre cada (200ms)
-        const newZBubbles: ZBubble[] = []
-        for (let i = 0; i < 3; i++) {
-          newZBubbles.push({
-            id: zIdCounterRef.current++,
-            delay: i * 200 // 200ms de intervalo entre cada Z
-          })
-        }
-        setZBubbles(newZBubbles)
-
-        // Reseta a chance para 10% após mostrar os Z
-        zChanceRef.current = 10
-
-        // Remove os Z após a animação (2 segundos para subir e desaparecer)
+        setZBubbles((prev) => [...prev.slice(-4), newZ]);
         setTimeout(() => {
-          setZBubbles([])
-        }, 2000 + (2 * 200)) // 2000ms de animação + 2 intervalos de 200ms
+          setZBubbles((prev) => prev.filter((z) => z.id !== newZ.id));
+        }, 2200);
+
+        zChanceRef.current = 10;
       } else {
-        // Se não mostrou os Z, aumenta a chance para a próxima tentativa
-        // Aumenta em 5% a cada tentativa (máximo 100%)
-        zChanceRef.current = Math.min(zChanceRef.current + 5, 100)
+        zChanceRef.current = Math.min(zChanceRef.current + 5, 100);
       }
-    }
+    };
 
-    // Verifica a cada 5 segundos
-    const intervalTime = 5000
-    zIntervalRef.current = window.setInterval(checkZ, intervalTime)
-
-    // Primeira verificação após o intervalo
-    const timeoutId = window.setTimeout(checkZ, intervalTime)
+    const intervalTime = 5000;
+    zIntervalRef.current = window.setInterval(checkZ, intervalTime);
+    const timeoutId = window.setTimeout(checkZ, intervalTime);
 
     return () => {
-      if (zIntervalRef.current) {
-        clearInterval(zIntervalRef.current)
-      }
-      clearTimeout(timeoutId)
-    }
-  }, [isDarkMode])
+      if (zIntervalRef.current) clearInterval(zIntervalRef.current);
+      clearTimeout(timeoutId);
+    };
+  }, [isDarkMode]);
 
   return (
     <div
-      className={`relative inline-block ${className}`}
+      data-kapsu-capsule="true"
+      className={`relative inline-flex items-center justify-center transition-all duration-300 animate-logo-glow ${className}`}
     >
       {/* Container principal com proporção mantida */}
       <div className="relative w-full h-full" style={{ aspectRatio: '1 / 1' }}>
-        {/* Orelha Esquerda - Topo esquerdo (espelho da direita) */}
+        {/* Orelha Esquerda */}
         <img
           src={orelhaLogo}
           alt=""
@@ -185,11 +165,11 @@ export default function AnimatedLogo({ className = '', forceSleeping = false }: 
             zIndex: 1,
             objectFit: 'contain',
             transform: 'scaleX(-1)',
-            transformOrigin: 'center center'
+            transformOrigin: 'center center',
           }}
         />
 
-        {/* Orelha Direita - Topo direito */}
+        {/* Orelha Direita */}
         <img
           src={orelhaLogo}
           alt=""
@@ -202,11 +182,11 @@ export default function AnimatedLogo({ className = '', forceSleeping = false }: 
             zIndex: 1,
             objectFit: 'contain',
             transform: 'none',
-            transformOrigin: 'center center'
+            transformOrigin: 'center center',
           }}
         />
 
-        {/* olho esquerdo */}
+        {/* Olho Esquerdo */}
         <img
           src={olhoLogo}
           alt=""
@@ -219,11 +199,11 @@ export default function AnimatedLogo({ className = '', forceSleeping = false }: 
             zIndex: 2,
             objectFit: 'contain',
             transform: 'scaleX(-1)',
-            transformOrigin: 'center center'
+            transformOrigin: 'center center',
           }}
         />
 
-        {/* pupila esquerdo */}
+        {/* Pupila Esquerda */}
         <img
           src={eyesClosed ? pupilaDormindoEsquerdo : pupilaNormalEsquerdo}
           alt=""
@@ -235,11 +215,11 @@ export default function AnimatedLogo({ className = '', forceSleeping = false }: 
             height: 'auto',
             zIndex: 3,
             objectFit: 'contain',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
           }}
         />
 
-        {/* olho direito */}
+        {/* Olho Direito */}
         <img
           src={olhoLogo}
           alt=""
@@ -252,11 +232,11 @@ export default function AnimatedLogo({ className = '', forceSleeping = false }: 
             zIndex: 2,
             objectFit: 'contain',
             transform: 'none',
-            transformOrigin: 'center center'
+            transformOrigin: 'center center',
           }}
         />
 
-        {/* pupila direita */}
+        {/* Pupila Direita */}
         <img
           src={eyesClosed ? pupilaDormindoDireito : pupilaNormalDireito}
           alt=""
@@ -268,11 +248,11 @@ export default function AnimatedLogo({ className = '', forceSleeping = false }: 
             height: 'auto',
             zIndex: 3,
             objectFit: 'contain',
-            pointerEvents: 'none'
+            pointerEvents: 'none',
           }}
         />
 
-        {/* Nariz - Centro inferior, muito próximo dos olhos */}
+        {/* Nariz */}
         <img
           src={nariz}
           alt=""
@@ -284,26 +264,34 @@ export default function AnimatedLogo({ className = '', forceSleeping = false }: 
             width: '25%',
             height: 'auto',
             zIndex: 2,
-            objectFit: 'contain'
+            objectFit: 'contain',
           }}
         />
 
-        {/* Comprimido Esquerdo - Parte inferior esquerda, próximo ao nariz */}
+
+
+        {/* Comprimido Esquerdo (Metade Verde da Cápsula) - Abre estritamente na horizontal (X-axis) */}
         <img
           src={comprimidoEsquerdo}
           alt=""
+          data-kapsu-capsule-seam="true"
           className="absolute"
           style={{
             bottom: '19%',
             left: '-1%',
             width: '51%',
             height: 'auto',
-            zIndex: 1,
-            objectFit: 'contain'
+            zIndex: 2,
+            objectFit: 'contain',
+            transition: 'transform 550ms cubic-bezier(0.16, 1, 0.3, 1), filter 500ms ease',
+            transform: capsuleOpen ? 'translateX(-16px)' : 'translateX(0px)',
+            filter: showGlowPulse
+              ? 'drop-shadow(0 0 12px rgba(16, 185, 129, 0.95))'
+              : 'none',
           }}
         />
 
-        {/* Comprimido Direito - Parte inferior direita, próximo ao nariz */}
+        {/* Comprimido Direito (Metade Branca da Cápsula) - Abre estritamente na horizontal (X-axis) */}
         <img
           src={comprimidoDireito}
           alt=""
@@ -313,14 +301,18 @@ export default function AnimatedLogo({ className = '', forceSleeping = false }: 
             right: '-1%',
             width: '51%',
             height: 'auto',
-            zIndex: 1,
-            objectFit: 'contain'
+            zIndex: 2,
+            objectFit: 'contain',
+            transition: 'transform 550ms cubic-bezier(0.16, 1, 0.3, 1), filter 500ms ease',
+            transform: capsuleOpen ? 'translateX(16px)' : 'translateX(0px)',
+            filter: showGlowPulse
+              ? 'drop-shadow(0 0 12px rgba(16, 185, 129, 0.95))'
+              : 'none',
           }}
         />
-
       </div>
 
-      {/* Z bubbles - aparecem quando está dormindo (modo escuro) */}
+      {/* Bolhas Z do Sono no modo escuro */}
       {zBubbles.map((zBubble, index) => (
         <div
           key={zBubble.id}
@@ -330,7 +322,7 @@ export default function AnimatedLogo({ className = '', forceSleeping = false }: 
             top: '50%',
             transform: 'translate(-50%, -50%)',
             animation: `zFloat${zBubble.id} 2s ${zBubble.delay}ms ease-out forwards`,
-            opacity: 0
+            opacity: 0,
           }}
         >
           <style>{`
@@ -345,7 +337,7 @@ export default function AnimatedLogo({ className = '', forceSleeping = false }: 
               }
               100% {
                 opacity: 0;
-                transform: translate(-50%, -50%) translateY(-120px) translateX(${(index * 6 - 3) * 0.3}px) rotate(${(index % 2 === 0 ? -2 : 2)}deg) scale(0.5);
+                transform: translate(-50%, -50%) translateY(-120px) translateX(${(index * 6 - 3) * 0.3}px) rotate(${index % 2 === 0 ? -2 : 2}deg) scale(0.5);
               }
             }
           `}</style>
@@ -353,5 +345,5 @@ export default function AnimatedLogo({ className = '', forceSleeping = false }: 
         </div>
       ))}
     </div>
-  )
+  );
 }

@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Building2, User, Save, LogOut } from 'lucide-react';
+import { Building2, User, Save } from 'lucide-react';
 import { supplierService } from '../../services/supplier.service';
 import { toast } from '../../utils/toast';
 
 export default function SupplierProfile() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -92,12 +90,6 @@ export default function SupplierProfile() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('kapsu_token');
-    localStorage.removeItem('kapsu_user');
-    navigate('/login');
-  };
-
   if (loading) {
     return <div className="p-12 text-center text-gray-500 dark:text-gray-400">Carregando configurações...</div>;
   }
@@ -114,14 +106,6 @@ export default function SupplierProfile() {
             Atualize suas informações pessoais e os dados cadastrais da farmácia
           </p>
         </div>
-
-        <button
-          onClick={handleLogout}
-          className="px-4 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition flex items-center gap-2 text-xs font-semibold w-fit"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>Encerrar Sessão</span>
-        </button>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">

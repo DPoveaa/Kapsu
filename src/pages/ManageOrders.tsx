@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader2, Search, Eye, Package, Plus, Trash2, ChevronDown } from 'lucide-react'
-import { adminService } from '../services/admin.service'
+import { adminService, Supplier } from '../services/admin.service'
 import CreateOrderModal from '../components/CreateOrderModal'
 import { useAuth } from '../context/AuthContext'
 import { confirm, toast } from '../utils/toast'
@@ -10,10 +10,12 @@ import { getOrderStatusLabel, getOrderStatusBadgeClass } from '../utils/orderSta
 interface Order {
   id: string
   user_id: string
+  supplier_id?: string | null
   total: number
   status: string
   payment_method: string | null
   shipping_address: string | null
+  shipping_method?: string | null
   created_at: string
   updated_at: string
   user: {
@@ -22,6 +24,7 @@ interface Order {
     email: string
     phone: string | null
   } | null
+  supplier?: { id: string; name: string; trade_name?: string | null } | null
 }
 
 type OrdersTab = 'active' | 'cancelled'
@@ -52,6 +55,10 @@ export default function ManageOrders() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [bulkSupplierId, setBulkSupplierId] = useState('')
+  const [assigningSupplier, setAssigningSupplier] = useState(false)
   const [activeTab, setActiveTab] = useState<OrdersTab>('active')
   const [ordersSort, setOrdersSort] = useState<{ key: OrdersSortKey; direction: SortDirection }>({
     key: 'created_at',
@@ -105,6 +112,9 @@ export default function ManageOrders() {
   // Carrega pedidos
   useEffect(() => {
     loadOrders()
+    adminService.listSuppliers(1, 100, '', 'true')
+      .then(response => setSuppliers(response.suppliers || []))
+      .catch(error => console.error('Erro ao carregar fornecedores:', error))
   }, [])
 
   const loadOrders = async () => {
@@ -122,6 +132,23 @@ export default function ManageOrders() {
   }
 
   const activeOrders = useMemo(() => orders.filter(order => !isCancelledOrderStatus(order.status)), [orders])
+
+  const handleBulkAssignSupplier = async () => {
+    if (!selectedIds.length || !bulkSupplierId) return
+    try {
+      setAssigningSupplier(true)
+      const supplierId = bulkSupplierId === '__none__' ? null : bulkSupplierId
+      const result = await adminService.assignOrdersSupplier(selectedIds, supplierId)
+      toast.success(result.message)
+      setSelectedIds([])
+      setBulkSupplierId('')
+      await loadOrders()
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao vincular fornecedor aos pedidos')
+    } finally {
+      setAssigningSupplier(false)
+    }
+  }
   const cancelledOrders = useMemo(() => orders.filter(order => isCancelledOrderStatus(order.status)), [orders])
   const tabOrders = activeTab === 'cancelled' ? cancelledOrders : activeOrders
 
@@ -380,15 +407,35 @@ export default function ManageOrders() {
               </div>
             </div>
 
+            {selectedIds.length > 0 && (
+              <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 border rounded-lg flex items-center justify-between gap-3 flex-wrap">
+                <span className="text-sm font-medium">{selectedIds.length} pedido(s) selecionado(s)</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <select value={bulkSupplierId} onChange={e => setBulkSupplierId(e.target.value)} className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-900 text-sm">
+                    <option value="">Escolher fornecedor...</option>
+                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.trade_name || s.name}</option>)}
+                    <option value="__none__">Sem fornecedor</option>
+                  </select>
+                  <button onClick={handleBulkAssignSupplier} disabled={!bulkSupplierId || assigningSupplier} className="bg-indigo-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm">
+                    {assigningSupplier ? 'Vinculando...' : 'Vincular fornecedor'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Table wrapper with horizontal scroll and responsive design */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg overflow-hidden border border-gray-200 dark:border-gray-700">
               <div className="overflow-x-auto relative">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-800">
                     <tr>
+                      <th className="px-4 py-3 text-left">
+                        <input type="checkbox" checked={filteredOrders.length > 0 && filteredOrders.every(order => selectedIds.includes(order.id))} onChange={e => setSelectedIds(e.target.checked ? filteredOrders.map(order => order.id) : [])} />
+                      </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         {renderSortableHeader('id', 'ID do Pedido')}
                       </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Fornecedor</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         {renderSortableHeader('customer', 'Cliente')}
                       </th>
@@ -401,6 +448,8 @@ export default function ManageOrders() {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         {renderSortableHeader('payment_method', 'Método de Pagamento')}
                       </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Método de Envio</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Endereço</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                         {renderSortableHeader('created_at', 'Data')}
                       </th>
@@ -412,7 +461,7 @@ export default function ManageOrders() {
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {filteredOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                        <td colSpan={11} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                           {tabOrders.length === 0
                             ? activeTab === 'cancelled'
                               ? 'Nenhum pedido cancelado encontrado'
@@ -423,10 +472,16 @@ export default function ManageOrders() {
                     ) : (
                       filteredOrders.map((order) => (
                         <tr key={order.id} className="group hover:bg-gray-50 dark:hover:bg-[#065084]/40 transition-colors">
+                          <td className="px-4 py-4 whitespace-nowrap">
+                            <input type="checkbox" checked={selectedIds.includes(order.id)} onChange={e => setSelectedIds(e.target.checked ? [...selectedIds, order.id] : selectedIds.filter(id => id !== order.id))} />
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            <button onClick={() => navigate(`/admin/orders/${order.id}`)} className="text-sm font-medium text-blue-700 dark:text-blue-300 hover:underline">
                               #{order.id.substring(0, 8)}
-                            </div>
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                            {order.supplier?.trade_name || order.supplier?.name || suppliers.find(s => s.id === order.supplier_id)?.trade_name || suppliers.find(s => s.id === order.supplier_id)?.name || 'Sem vínculo'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             {order.user ? (
@@ -459,6 +514,10 @@ export default function ManageOrders() {
                                 ? 'Dinheiro'
                                 : order.payment_method || 'Não informado'}
                             </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200">{order.shipping_method || 'Não informado'}</td>
+                          <td className="px-6 py-4 max-w-[280px]">
+                            <div className="truncate text-sm text-gray-700 dark:text-gray-200" title={order.shipping_address || ''}>{order.shipping_address || 'Não informado'}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900 dark:text-white">

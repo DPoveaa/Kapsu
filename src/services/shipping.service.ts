@@ -3,7 +3,7 @@ import { env } from '../config/env'
 const API_URL = env.apiUrl
 
 export interface ShippingOption {
-  method: 'custom' | 'sedex'
+  method: string
   name: string
   shippingFee: number
   isFreeShipping: boolean
@@ -16,6 +16,20 @@ export interface ShippingOption {
   service?: string | null
   externalShipping?: boolean
   message?: string | null
+}
+
+export interface ShippingMethod {
+  id: string
+  code: string
+  name: string
+  checkout_enabled: boolean
+  internal_enabled: boolean
+  calculation_type: 'SEDEX' | 'LOCAL_TABLE' | 'FIXED' | 'INTERNAL_ONLY'
+  fixed_fee: number | null
+  delivery_time: number | null
+  delivery_time_type: 'business' | 'calendar'
+  position: number
+  active: boolean
 }
 
 export interface ShippingCalculation {
@@ -209,6 +223,27 @@ class ShippingService {
     }
 
     const data = await response.json()
+    return data.data
+  }
+
+  async getShippingMethods(scope: 'all' | 'checkout' | 'internal' = 'all'): Promise<ShippingMethod[]> {
+    const response = await fetch(`${API_URL}/shipping/methods?scope=${scope}`, {
+      method: 'GET',
+      headers: this.getAuthHeaders(),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao buscar métodos de entrega')
+    return data.data
+  }
+
+  async updateShippingMethod(id: string, method: Partial<ShippingMethod>): Promise<ShippingMethod> {
+    const response = await fetch(`${API_URL}/shipping/methods/${id}`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(method),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao atualizar método de entrega')
     return data.data
   }
 

@@ -1,4 +1,5 @@
 import { Calendar, Loader2, Truck } from 'lucide-react'
+import type { ShippingOption } from '../../services/shipping.service'
 
 interface ShippingCardProps {
   service: string | null
@@ -9,6 +10,9 @@ interface ShippingCardProps {
   hasFreeShipping: boolean
   calculatingShipping: boolean
   hasInvalidCep: boolean
+  options?: ShippingOption[]
+  selectedMethod?: string | null
+  onSelect?: (option: ShippingOption) => void
 }
 
 export default function ShippingCard({
@@ -20,6 +24,9 @@ export default function ShippingCard({
   hasFreeShipping,
   calculatingShipping,
   hasInvalidCep,
+  options = [],
+  selectedMethod,
+  onSelect,
 }: ShippingCardProps) {
   if (hasInvalidCep) {
     return (
@@ -44,6 +51,35 @@ export default function ShippingCard({
     return (
       <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-600 p-5 text-center">
         <p className="text-sm text-gray-500 dark:text-gray-400">Informe um CEP válido para calcular o frete.</p>
+      </div>
+    )
+  }
+
+  if (options.length > 1) {
+    return (
+      <div className="space-y-2">
+        {options.map(option => {
+          const selected = option.method === selectedMethod
+          return (
+            <button
+              key={option.method}
+              type="button"
+              onClick={() => onSelect?.(option)}
+              className={`w-full rounded-2xl border p-4 text-left transition-all ${selected ? 'border-primary-500 bg-primary-50/60 ring-2 ring-primary-500/20 dark:bg-primary-950/20' : 'border-gray-200 bg-white hover:border-primary-300 dark:border-gray-700 dark:bg-gray-800'}`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className={`mt-1 h-4 w-4 shrink-0 rounded-full border-2 ${selected ? 'border-primary-600 bg-primary-600 shadow-[inset_0_0_0_3px_white]' : 'border-gray-400'}`} />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{option.name}</p>
+                    {option.deliveryTime != null && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{option.deliveryTime} {option.deliveryTimeType === 'business' ? 'dias úteis' : 'dias corridos'}</p>}
+                  </div>
+                </div>
+                <span className={`shrink-0 text-sm font-black ${option.isFreeShipping ? 'text-green-600' : 'text-gray-900 dark:text-white'}`}>{option.isFreeShipping ? 'Grátis' : `R$ ${option.shippingFee.toFixed(2).replace('.', ',')}`}</span>
+              </div>
+            </button>
+          )
+        })}
       </div>
     )
   }

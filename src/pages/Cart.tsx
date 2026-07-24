@@ -7,7 +7,7 @@ import { productsService } from '../services/products.service'
 import { cartService } from '../services/cart.service'
 import { promotionsService, Promotion } from '../services/promotions.service'
 import { promoCodesService, MultiplePromoCodesValidation } from '../services/promo-codes.service'
-import { shippingService } from '../services/shipping.service'
+import { shippingService, ShippingOption } from '../services/shipping.service'
 import { addressService, SavedAddress } from '../services/address.service'
 import { paymentService, buildShippingAddress } from '../services/payment.service'
 import { orderService } from '../services/order.service'
@@ -440,6 +440,8 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   const [estimatedDate, setEstimatedDate] = useState<string | null>(null)
   const [estimatedDateFormatted, setEstimatedDateFormatted] = useState<string | null>(null)
   const [service, setService] = useState<string | null>(null)
+  const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([])
+  const [selectedShippingMethod, setSelectedShippingMethod] = useState<string | null>(null)
   const [defaultDeliveryTime, setDefaultDeliveryTime] = useState<number | null>(null)
   const [defaultDeliveryTimeType, setDefaultDeliveryTimeType] = useState<'business' | 'calendar'>('business')
   const [cepWarning, setCepWarning] = useState<string | null>(null)
@@ -766,19 +768,25 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
             setEstimatedDate(null)
             setEstimatedDateFormatted(null)
             setService(null)
+            setShippingOptions([])
+            setSelectedShippingMethod(null)
             setCepWarning(result.message || 'CEP inválido ou não atendido.')
             setShowCepWarning(true)
             setIsFreeShippingApplicable(false)
           } else {
-            setShippingFee(result.shippingFee)
-            setIsFreeShipping(result.isFreeShipping)
-            setDeliveryTime(result.deliveryTime || null)
-            setDeliveryTimeType(result.deliveryTimeType || null)
-            setEstimatedDate(result.estimatedDate || null)
+            const availableOptions = result.options?.length ? result.options : []
+            const selectedOption = availableOptions.find(option => option.method === selectedShippingMethod) || availableOptions[0]
+            setShippingOptions(availableOptions)
+            setSelectedShippingMethod(selectedOption?.method || null)
+            setShippingFee(selectedOption?.shippingFee ?? result.shippingFee)
+            setIsFreeShipping(selectedOption?.isFreeShipping ?? result.isFreeShipping)
+            setDeliveryTime(selectedOption?.deliveryTime ?? result.deliveryTime ?? null)
+            setDeliveryTimeType(selectedOption?.deliveryTimeType ?? result.deliveryTimeType ?? null)
+            setEstimatedDate(selectedOption?.estimatedDate ?? result.estimatedDate ?? null)
             setEstimatedDateFormatted(result.estimatedDateFormatted || null)
-            setService(result.service || null)
+            setService(selectedOption?.service || selectedOption?.name || result.service || null)
             setShowCepWarning(false)
-            setIsFreeShippingApplicable(!result.externalShipping)
+            setIsFreeShippingApplicable(!(selectedOption?.externalShipping ?? result.externalShipping))
           }
         } catch (error: any) {
           console.error('Erro ao calcular frete no carrinho:', error)
@@ -804,6 +812,8 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
         setEstimatedDate(null)
         setEstimatedDateFormatted(null)
         setService(null)
+        setShippingOptions([])
+        setSelectedShippingMethod(null)
         setIsFreeShippingApplicable(true)
       }
     }
@@ -812,6 +822,18 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     const timeoutId = setTimeout(calculateShippingFee, 500)
     return () => clearTimeout(timeoutId)
   }, [shippingCep, totalAfterPromotions, items])
+
+  const selectShippingOption = (option: ShippingOption) => {
+    setSelectedShippingMethod(option.method)
+    setShippingFee(option.shippingFee)
+    setIsFreeShipping(option.isFreeShipping)
+    setDeliveryTime(option.deliveryTime)
+    setDeliveryTimeType(option.deliveryTimeType)
+    setEstimatedDate(option.estimatedDate || null)
+    setEstimatedDateFormatted(null)
+    setService(option.service || option.name)
+    setIsFreeShippingApplicable(!option.externalShipping)
+  }
 
   // Carrega endereços salvos
   const loadAddresses = async () => {
@@ -1093,6 +1115,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     const base = {
       ...(isSubscription ? { subscriptionPlan } : {}),
       ...(shippingCost > 0 ? { shippingFee: shippingCost } : {}),
+      ...(selectedShippingMethod ? { shippingMethod: shippingOptions.find(option => option.method === selectedShippingMethod)?.name || selectedShippingMethod } : {}),
       paymentMethod: selectedPaymentMethod,
       ...(resolvedOrderId ? { orderId: resolvedOrderId } : {}),
     }
@@ -2984,6 +3007,9 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
                   hasFreeShipping={hasFreeShipping}
                   calculatingShipping={calculatingShipping}
                   hasInvalidCep={hasInvalidCep()}
+                  options={shippingOptions}
+                  selectedMethod={selectedShippingMethod}
+                  onSelect={selectShippingOption}
                 />
               </div>
             )}
@@ -3014,6 +3040,9 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
                   hasFreeShipping={hasFreeShipping}
                   calculatingShipping={calculatingShipping}
                   hasInvalidCep={hasInvalidCep()}
+                  options={shippingOptions}
+                  selectedMethod={selectedShippingMethod}
+                  onSelect={selectShippingOption}
                 />
               </div>
             )}

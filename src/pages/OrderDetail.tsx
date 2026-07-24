@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Package, User, MapPin, CreditCard, Calendar, FileText } from 'lucide-react'
+import { ArrowLeft, Loader2, Package, User, MapPin, CreditCard, Calendar, FileText, Truck } from 'lucide-react'
 import { adminService } from '../services/admin.service'
 import { productsService } from '../services/products.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
@@ -29,6 +29,14 @@ interface OrderDetail {
   status: string
   payment_method: string | null
   shipping_address: string | null
+  shipping_method?: string | null
+  shipping_postal_code?: string | null
+  shipping_street?: string | null
+  shipping_number?: string | null
+  shipping_complement?: string | null
+  shipping_neighborhood?: string | null
+  shipping_city?: string | null
+  shipping_state?: string | null
   created_at: string
   updated_at: string
   card_installments?: number | null
@@ -331,7 +339,7 @@ export default function OrderDetail() {
             </div>
 
             {/* Endereço de Entrega */}
-            {order.shipping_address && (
+            {(order.shipping_address || order.shipping_method) && (
               <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
@@ -340,7 +348,8 @@ export default function OrderDetail() {
                   </h2>
                 </div>
                 <div className="px-6 py-4">
-                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">{order.shipping_address}</p>
+                  {order.shipping_method && <p className="mb-3 text-sm font-semibold text-primary-700 dark:text-primary-300 flex items-center gap-2"><Truck size={17} /> {order.shipping_method}</p>}
+                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">{order.shipping_address || 'Endereço não informado'}</p>
                 </div>
               </div>
             )}

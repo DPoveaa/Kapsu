@@ -49,6 +49,7 @@ class WhatsAppService {
     }
     return fetch(`${this.baseUrl}${endpoint}`, {
       ...options,
+      cache: options.cache || 'no-store',
       headers,
     })
   }
@@ -729,15 +730,19 @@ class WhatsAppService {
   /**
    * Lista usuários do sistema que têm telefone cadastrado
    */
-  async getUsersWithPhone(): Promise<Array<{
+  async getUsersWithPhone(supplierId?: string): Promise<Array<{
     id: string
     name: string
     email: string
     phone: string
+    active: boolean
+    supplierId: string | null
+    supplierName: string | null
   }>> {
     try {
       const token = localStorage.getItem('kapsu_token')
-      const response = await fetch(`${this.baseUrl}/users-with-phone`, {
+      const query = supplierId ? `?supplierId=${encodeURIComponent(supplierId)}` : ''
+      const response = await fetch(`${this.baseUrl}/users-with-phone${query}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -996,6 +1001,8 @@ class WhatsAppService {
     id: string
     phone: string
     name: string | null
+    supplierId: string | null
+    supplierName: string | null
     userId: string | null
     userEmail: string | null
     isActive: boolean
@@ -1025,10 +1032,12 @@ class WhatsAppService {
   /**
    * Adiciona um novo número da distribuidora
    */
-  async addDistributorNumber(phone: string, userId?: string, name?: string): Promise<{
+  async addDistributorNumber(phone: string, userId?: string, name?: string, supplierId?: string): Promise<{
     id: string
     phone: string
     name: string | null
+    supplierId: string | null
+    supplierName: string | null
     userId: string | null
     userEmail: string | null
     isActive: boolean
@@ -1043,7 +1052,7 @@ class WhatsAppService {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ phone, userId, name }),
+        body: JSON.stringify({ phone, userId, name, supplierId }),
       })
 
       if (!response.ok) {
@@ -1083,14 +1092,14 @@ class WhatsAppService {
   /**
    * Envia uma mensagem de teste para todos os números da distribuidora ativos
    */
-  async sendTestDistributorMessage(message?: string): Promise<{ success: boolean; message: string; notifiedNumbers: any[] }> {
+  async sendTestDistributorMessage(message?: string, distributorNumberId?: string): Promise<{ success: boolean; message: string; notifiedNumbers: any[] }> {
     try {
       const response = await this.fetchWithAuth('/test-distributor-message', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message, distributorNumberId }),
       })
 
       const text = await response.text()

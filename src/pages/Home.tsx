@@ -11,6 +11,49 @@ import { getImageUrl } from '../utils/imageUrl'
 import { HorizontalScrollContainer } from '../components/HorizontalScrollContainer'
 import { generateProductUrl } from '../utils/productUrl'
 
+interface DecodedBannerImageProps {
+  src: string
+  alt: string
+  isCurrent: boolean
+  isNearby: boolean
+}
+
+function DecodedBannerImage({ src, alt, isCurrent, isNearby }: DecodedBannerImageProps) {
+  const [isDecoded, setIsDecoded] = useState(false)
+
+  useEffect(() => {
+    setIsDecoded(false)
+  }, [src])
+
+  const revealAfterDecode = (image: HTMLImageElement) => {
+    const reveal = () => setIsDecoded(true)
+    if (typeof image.decode === 'function') {
+      image.decode().then(reveal, reveal)
+    } else {
+      reveal()
+    }
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={`w-full h-full object-cover object-center select-none pointer-events-none transition-opacity duration-200 ${isDecoded ? 'opacity-100' : 'opacity-0'}`}
+      draggable={false}
+      loading={isNearby ? 'eager' : 'lazy'}
+      decoding="async"
+      fetchPriority={isCurrent ? 'high' : 'low'}
+      onLoad={(event) => revealAfterDecode(event.currentTarget)}
+      onDragStart={(event) => event.preventDefault()}
+      onError={(event) => {
+        const target = event.currentTarget
+        target.onerror = null
+        target.style.display = 'none'
+      }}
+    />
+  )
+}
+
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([])
   const [sections, setSections] = useState<HomeSection[]>([])
@@ -28,6 +71,7 @@ export default function Home() {
   const [currentX, setCurrentX] = useState(0)
   const [autoRotatePaused, setAutoRotatePaused] = useState(false)
   const bannerRef = useRef<HTMLDivElement>(null)
+  const featuredProductsRequest = useRef<Promise<Product[]> | null>(null)
 
   // Carrega banners da API ou usa fallback
   useEffect(() => {
@@ -99,6 +143,8 @@ export default function Home() {
   // Carrega seções da home
   useEffect(() => {
     const loadSections = async () => {
+      featuredProductsRequest.current ??= homeSectionsService.getFeaturedProducts()
+      featuredProductsRequest.current.catch(() => undefined)
       try {
         const sectionsData = await homeSectionsService.getAll()
         setSections(sectionsData)
@@ -117,7 +163,7 @@ export default function Home() {
 
         // Busca produtos em destaque da API (seção "featured")
         try {
-          const featured = await homeSectionsService.getFeaturedProducts()
+          const featured = await (featuredProductsRequest.current ??= homeSectionsService.getFeaturedProducts())
           setFeaturedProducts(featured.filter(p => p.active !== false && !p.archived))
         } catch (error) {
           console.error('Erro ao carregar produtos em destaque:', error)
@@ -477,17 +523,11 @@ export default function Home() {
             {infiniteBannerImages.map((banner, index) => {
               const bannerContent = (
                 <div className="min-w-full h-full relative bg-gray-100 dark:bg-gray-800 select-none">
-                  <img
+                  <DecodedBannerImage
                     src={getImageUrl((isMobile && banner.mobile_image_url) ? banner.mobile_image_url : banner.image_url)}
                     alt={banner.title || `Banner ${index + 1}`}
-                    className="w-full h-full object-cover object-center select-none pointer-events-none"
-                    draggable={false}
-                    onDragStart={(e) => e.preventDefault()}
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement
-                      target.onerror = null
-                      target.style.display = 'none'
-                    }}
+                    isCurrent={index === bannerIndex}
+                    isNearby={Math.abs(index - bannerIndex) <= 1}
                   />
                   <div
                     className="absolute inset-0 z-10 pointer-events-none dark:hidden"
@@ -634,6 +674,8 @@ export default function Home() {
                           <img
                             src={productsService.getImageUrl(product.image)}
                             alt={product.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-contain select-none pointer-events-none group-hover:scale-105 transition-transform duration-300"
                             draggable={false}
                             onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
@@ -751,6 +793,8 @@ export default function Home() {
                           <img
                             src={productsService.getImageUrl(product.image)}
                             alt={product.name}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-contain select-none pointer-events-none group-hover:scale-105 transition-transform duration-300"
                             draggable={false}
                             onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
@@ -850,6 +894,8 @@ export default function Home() {
                                 <img
                                   src={review.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(review.name || 'Cliente')}&size=64&background=00A86B&color=fff&bold=true`}
                                   alt={review.name || 'Cliente'}
+                                  loading="lazy"
+                                  decoding="async"
                                   className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-700"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement

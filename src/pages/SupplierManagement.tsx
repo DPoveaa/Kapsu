@@ -29,6 +29,9 @@ export default function SupplierManagement() {
     phone: '',
     address: '',
     active: true,
+    payout_frequency: 'WEEKLY' as 'WEEKLY' | 'MONTHLY',
+    payout_weekday: 1,
+    payout_month_day: 1,
     master_name: '',
     master_email: '',
     master_password: '',
@@ -77,6 +80,9 @@ export default function SupplierManagement() {
       phone: '',
       address: '',
       active: true,
+      payout_frequency: 'WEEKLY',
+      payout_weekday: 1,
+      payout_month_day: 1,
       master_name: '',
       master_email: '',
       master_password: '',
@@ -97,6 +103,9 @@ export default function SupplierManagement() {
       phone: supplier.phone || '',
       address: supplier.address || '',
       active: supplier.active !== false,
+      payout_frequency: supplier.payout_frequency || 'WEEKLY',
+      payout_weekday: supplier.payout_weekday ?? 1,
+      payout_month_day: supplier.payout_month_day ?? 1,
       master_name: supplier.masterUser?.name || '',
       master_email: supplier.masterUser?.email || '',
       master_password: '',
@@ -124,6 +133,9 @@ export default function SupplierManagement() {
         phone: formState.phone,
         address: formState.address,
         active: formState.active,
+        payout_frequency: formState.payout_frequency,
+        payout_weekday: formState.payout_weekday,
+        payout_month_day: formState.payout_month_day,
       };
 
       if (!editingSupplier || formState.master_name || formState.master_email || formState.master_password) {
@@ -270,6 +282,9 @@ export default function SupplierManagement() {
                           Fantasia: {sup.trade_name}
                         </div>
                       )}
+                      <div className="mt-1 text-[11px] text-blue-600 dark:text-blue-400 ml-6">
+                        Repasse {sup.payout_frequency === 'MONTHLY' ? `mensal · dia ${sup.payout_month_day || 1}` : 'semanal · segunda-feira'}
+                      </div>
                     </td>
 
                     <td className="py-4 px-4 text-xs">
@@ -414,6 +429,34 @@ export default function SupplierManagement() {
               onChange={e => setFormState({ ...formState, address: e.target.value })}
               className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
+          </div>
+
+          <div className="rounded-2xl border border-blue-200 bg-blue-50/60 p-4 dark:border-blue-900 dark:bg-blue-950/20">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-blue-900 dark:text-blue-200">Configuração dos repasses</h3>
+            <p className="mt-1 text-[11px] text-blue-700 dark:text-blue-300">Define como as vendas pagas são agrupadas para pagamento ao fornecedor.</p>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-[11px] font-medium text-gray-700 dark:text-gray-300">Periodicidade</label>
+                <select value={formState.payout_frequency} onChange={e => setFormState({ ...formState, payout_frequency: e.target.value as 'WEEKLY' | 'MONTHLY' })} className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                  <option value="WEEKLY">Semanal</option>
+                  <option value="MONTHLY">Mensal</option>
+                </select>
+              </div>
+              {formState.payout_frequency === 'WEEKLY' ? (
+                <div>
+                  <label className="mb-1 block text-[11px] font-medium text-gray-700 dark:text-gray-300">Dia do pagamento</label>
+                  <select value={formState.payout_weekday} onChange={e => setFormState({ ...formState, payout_weekday: Number(e.target.value) })} className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white">
+                    <option value={1}>Segunda-feira</option><option value={2}>Terça-feira</option><option value={3}>Quarta-feira</option><option value={4}>Quinta-feira</option><option value={5}>Sexta-feira</option>
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="mb-1 block text-[11px] font-medium text-gray-700 dark:text-gray-300">Dia do pagamento no mês</label>
+                  <input type="number" min={1} max={28} value={formState.payout_month_day} onChange={e => setFormState({ ...formState, payout_month_day: Number(e.target.value) })} className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-xs text-gray-900 dark:border-gray-700 dark:bg-gray-900 dark:text-white" />
+                </div>
+              )}
+            </div>
+            {formState.payout_frequency === 'WEEKLY' && formState.payout_weekday === 1 && <p className="mt-3 text-[11px] text-blue-700 dark:text-blue-300">Fechamento domingo às 00:00. Vendas feitas a partir desse horário entram no pagamento da segunda-feira seguinte.</p>}
           </div>
 
           {/* Seção Usuário Mestre (Admin do Fornecedor) */}

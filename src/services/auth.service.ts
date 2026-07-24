@@ -1,4 +1,4 @@
-﻿import { env } from '../config/env'
+import { env } from '../config/env'
 
 const API_URL = env.apiUrl
 
@@ -70,7 +70,11 @@ class AuthService {
       }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Erro ao fazer login')
+        const error: any = new Error(data.message || 'Erro ao fazer login')
+        if ((data as any).code) {
+          error.code = (data as any).code
+        }
+        throw error
       }
 
       return data
@@ -362,11 +366,18 @@ class AuthService {
       }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Erro no login social')
+        const error: any = new Error(data.message || 'Erro no login social')
+        if (data && data.code) {
+          error.code = data.code
+        }
+        throw error
       }
 
       return data
     } catch (error: any) {
+      if (error.code) {
+        throw error
+      }
       throw new Error(error.message || 'Erro de conexão no login social')
     }
   }

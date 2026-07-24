@@ -2,6 +2,8 @@ export type ProductTargetAudience = 'male' | 'female' | 'unisex' | 'unknown';
 
 export interface Product {
   id: string;
+  supplier_id?: string | null;
+  supplier_name?: string | null;
   name: string;
   description: string;
   price: number;

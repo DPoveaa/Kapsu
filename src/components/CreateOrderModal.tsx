@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { X, Plus, Trash2, Loader2, Search } from 'lucide-react'
 import { adminService, User } from '../services/admin.service'
 import { productsService } from '../services/products.service'
+import { shippingService } from '../services/shipping.service'
 import { Product } from '../types'
 
 interface OrderItem {
@@ -31,6 +32,10 @@ const orderStatuses = [
   { value: 'CANCELLED', label: 'Cancelado' },
 ]
 
+const emptyShippingAddress = {
+  postalCode: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '',
+}
+
 export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateOrderModalProps) {
   const [loading, setLoading] = useState(false)
   const [loadingUsers, setLoadingUsers] = useState(false)
@@ -44,7 +49,10 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
   const [selectedProductId, setSelectedProductId] = useState('')
   const [orderItems, setOrderItems] = useState<OrderItem[]>([])
   const [paymentMethod, setPaymentMethod] = useState('')
-  const [shippingAddress, setShippingAddress] = useState('')
+  const [shippingMethod, setShippingMethod] = useState('')
+  const [shippingMethods, setShippingMethods] = useState<string[]>([])
+  const [customShippingMethod, setCustomShippingMethod] = useState('')
+  const [shippingAddress, setShippingAddress] = useState(emptyShippingAddress)
   const [status, setStatus] = useState('PENDING')
 
   // Carrega usuários e produtos quando o modal abre
@@ -52,6 +60,9 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
     if (isOpen) {
       loadAllUsers()
       loadProducts()
+      shippingService.getShippingMethods('internal')
+        .then(methods => setShippingMethods(methods.map(method => method.name)))
+        .catch(() => setShippingMethods([]))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
@@ -167,6 +178,11 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
       return
     }
 
+    if (shippingMethod === 'Outro' && !customShippingMethod.trim()) {
+      setError('Informe o nome do método de envio.')
+      return
+    }
+
     try {
       setLoading(true)
       const response = await adminService.createOrder({
@@ -176,7 +192,8 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
           quantity: item.quantity,
         })),
         paymentMethod: paymentMethod || undefined,
-        shippingAddress: shippingAddress || undefined,
+        shippingMethod: shippingMethod === 'Outro' ? customShippingMethod.trim() : (shippingMethod || undefined),
+        shippingAddress: Object.values(shippingAddress).some(Boolean) ? shippingAddress : undefined,
         status: status,
       })
 
@@ -196,7 +213,9 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
     setSelectedUserId('')
     setOrderItems([])
     setPaymentMethod('')
-    setShippingAddress('')
+    setShippingMethod('')
+    setCustomShippingMethod('')
+    setShippingAddress(emptyShippingAddress)
     setStatus('PENDING')
     setUserSearch('')
     setProductSearch('')
@@ -415,18 +434,38 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
             </select>
           </div>
 
+          <div>
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">Método de Envio</label>
+            <select value={shippingMethod} onChange={(e) => setShippingMethod(e.target.value)} className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white">
+              <option value="">Selecione o método de envio</option>
+              {[...shippingMethods, 'Outro'].map(method => <option key={method} value={method}>{method}</option>)}
+            </select>
+            {shippingMethod === 'Outro' && (
+              <input
+                autoFocus
+                required
+                value={customShippingMethod}
+                onChange={(e) => setCustomShippingMethod(e.target.value)}
+                placeholder="Digite o nome do método ou transportadora"
+                className="mt-2 w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white"
+              />
+            )}
+          </div>
+
           {/* Endereço de Entrega */}
           <div>
             <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
               Endereço de Entrega
             </label>
-            <textarea
-              value={shippingAddress}
-              onChange={(e) => setShippingAddress(e.target.value)}
-              rows={3}
-              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-2.5 sm:px-4 py-2 text-sm sm:text-base focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-900 dark:text-white resize-none"
-              placeholder="Rua, número, complemento, cidade - estado, CEP"
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-6 gap-2">
+              <input value={shippingAddress.postalCode} onChange={e => setShippingAddress({ ...shippingAddress, postalCode: e.target.value })} placeholder="CEP" className="sm:col-span-2 border border-gray-300 dark:border-gray-400 rounded-lg px-3 py-2 dark:bg-gray-900 dark:text-white" />
+              <input value={shippingAddress.street} onChange={e => setShippingAddress({ ...shippingAddress, street: e.target.value })} placeholder="Rua / avenida" className="sm:col-span-4 border border-gray-300 dark:border-gray-400 rounded-lg px-3 py-2 dark:bg-gray-900 dark:text-white" />
+              <input value={shippingAddress.number} onChange={e => setShippingAddress({ ...shippingAddress, number: e.target.value })} placeholder="Número" className="sm:col-span-2 border border-gray-300 dark:border-gray-400 rounded-lg px-3 py-2 dark:bg-gray-900 dark:text-white" />
+              <input value={shippingAddress.complement} onChange={e => setShippingAddress({ ...shippingAddress, complement: e.target.value })} placeholder="Complemento" className="sm:col-span-4 border border-gray-300 dark:border-gray-400 rounded-lg px-3 py-2 dark:bg-gray-900 dark:text-white" />
+              <input value={shippingAddress.neighborhood} onChange={e => setShippingAddress({ ...shippingAddress, neighborhood: e.target.value })} placeholder="Bairro" className="sm:col-span-2 border border-gray-300 dark:border-gray-400 rounded-lg px-3 py-2 dark:bg-gray-900 dark:text-white" />
+              <input value={shippingAddress.city} onChange={e => setShippingAddress({ ...shippingAddress, city: e.target.value })} placeholder="Cidade" className="sm:col-span-3 border border-gray-300 dark:border-gray-400 rounded-lg px-3 py-2 dark:bg-gray-900 dark:text-white" />
+              <input value={shippingAddress.state} onChange={e => setShippingAddress({ ...shippingAddress, state: e.target.value.toUpperCase().slice(0, 2) })} placeholder="UF" className="sm:col-span-1 border border-gray-300 dark:border-gray-400 rounded-lg px-3 py-2 dark:bg-gray-900 dark:text-white" />
+            </div>
           </div>
 
           {/* Status */}

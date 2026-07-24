@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react'
 
 type Theme = 'light' | 'dark'
 
 interface ThemeContextType {
   theme: Theme
-  toggleTheme: () => void
+  toggleTheme: (transitionDurationMs?: number) => void
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined)
@@ -22,15 +22,16 @@ interface ThemeProviderProps {
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
+  const transitionTimerRef = useRef<number | null>(null)
+  const nativeControlsTimerRef = useRef<number | null>(null)
+
   // Função para obter o tema inicial
   const getInitialTheme = (): Theme => {
-    // Verifica se há tema salvo no localStorage
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('theme') as Theme
       if (savedTheme === 'dark' || savedTheme === 'light') {
         return savedTheme
       }
-      // Verifica a preferência do sistema
       if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         return 'dark'
       }
@@ -38,10 +39,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     return 'light'
   }
 
-  // Carrega o tema do localStorage ou usa a preferência do sistema
   const [theme, setTheme] = useState<Theme>(() => {
     const initialTheme = getInitialTheme()
-    // Aplica o tema imediatamente na inicialização
     if (typeof window !== 'undefined') {
       const root = document.documentElement
       const body = document.body
@@ -58,45 +57,74 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     return initialTheme
   })
 
-  // Função auxiliar para aplicar o tema ao DOM
-  const applyTheme = (themeToApply: Theme) => {
+  // Aplicação de transição gradual e suave das cores do site sem qualquer piscada amarela.
+  // A duração é controlada pelo evento kapsu-theme-transition-duration (disparado pelo KapsuOrbitalPortal
+  // no momento exato da troca de tema), sincronizando o fim da transição com o fechamento da cápsula.
+  const applyTheme = (themeToApply: Theme, transitionDurationMs = 1900) => {
+    if (typeof document === 'undefined') return
     const root = document.documentElement
     const body = document.body
-    
-    // Adiciona classe de transição
+
+    // Aplica duração dinâmica via CSS custom property
+    if (transitionTimerRef.current !== null) {
+      window.clearTimeout(transitionTimerRef.current)
+    }
+    if (nativeControlsTimerRef.current !== null) {
+      window.clearTimeout(nativeControlsTimerRef.current)
+    }
+
+    root.style.setProperty('--kapsu-theme-transition-duration', `${transitionDurationMs}ms`)
     root.classList.add('theme-transitioning')
-    
-    // Aplica o tema após um pequeno delay para suavizar a transição
-    setTimeout(() => {
+
+    // Registra as cores iniciais antes de aplicar o destino. Sem esta leitura,
+    // as duas classes podem cair no mesmo frame e a mudança parece instantânea.
+    // Resolve apenas estilos; ler offsetWidth forçava o layout completo da página.
+    void window.getComputedStyle(root).transitionProperty
+
     if (themeToApply === 'dark') {
       root.classList.add('dark')
       body.classList.add('dark')
-      root.style.colorScheme = 'dark'
     } else {
       root.classList.remove('dark')
       body.classList.remove('dark')
-      root.style.colorScheme = 'light'
     }
-      
-      // Remove a classe de transição após a animação
-      setTimeout(() => {
-        root.classList.remove('theme-transitioning')
-      }, 300)
-    }, 10)
+
+    // Scrollbars, checkboxes e controles nativos não interpolam color-scheme.
+    // A troca discreta acontece no meio do blend, quando fica menos perceptível.
+    nativeControlsTimerRef.current = window.setTimeout(() => {
+      root.style.colorScheme = themeToApply
+      nativeControlsTimerRef.current = null
+    }, Math.round(transitionDurationMs * 0.4))
+
+    transitionTimerRef.current = window.setTimeout(() => {
+      root.style.colorScheme = themeToApply
+      root.classList.remove('theme-transitioning')
+      root.style.removeProperty('--kapsu-theme-transition-duration')
+      transitionTimerRef.current = null
+    }, transitionDurationMs)
   }
 
-  // Aplica o tema ao documento sempre que mudar
   useEffect(() => {
-    applyTheme(theme)
-    // Salva no localStorage
     if (typeof window !== 'undefined') {
       localStorage.setItem('theme', theme)
     }
   }, [theme])
 
-  const toggleTheme = () => {
+  useEffect(() => () => {
+    if (transitionTimerRef.current !== null) {
+      window.clearTimeout(transitionTimerRef.current)
+    }
+    if (nativeControlsTimerRef.current !== null) {
+      window.clearTimeout(nativeControlsTimerRef.current)
+    }
+  }, [])
+
+  const toggleTheme = (transitionDurationMs?: number) => {
     setTheme(prevTheme => {
-      return prevTheme === 'light' ? 'dark' : 'light'
+      const next = prevTheme === 'light' ? 'dark' : 'light'
+      // Aplica o tema com a duração dinâmica fornecida pelo KapsuOrbitalPortal
+      applyTheme(next, transitionDurationMs ?? 1900)
+      return next
     })
   }
 
@@ -106,4 +134,3 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     </ThemeContext.Provider>
   )
 }
-

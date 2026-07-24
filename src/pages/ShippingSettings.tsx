@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Save, Plus, Trash2, Truck, Gift, Search, AlertTriangle, MapPin } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { shippingService, ShippingRegion, ShippingSettings as ShippingSettingsType, ShippingCalculation } from '../services/shipping.service'
+import { shippingService, ShippingRegion, ShippingSettings as ShippingSettingsType, ShippingCalculation, ShippingMethod } from '../services/shipping.service'
 import { confirm } from '../utils/toast'
 import AdminModal from '../components/AdminModal'
 
 export default function ShippingSettings() {
   const [regions, setRegions] = useState<ShippingRegion[]>([])
+  const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([])
   const [settings, setSettings] = useState<ShippingSettingsType>({ 
     custom_shipping_enabled: true,
     sedex_shipping_enabled: true,
@@ -50,15 +51,17 @@ export default function ShippingSettings() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [regionsData, settingsData] = await Promise.all([
+      const [regionsData, settingsData, methodsData] = await Promise.all([
         shippingService.getShippingRegions(),
         shippingService.getShippingSettings(),
+        shippingService.getShippingMethods(),
       ])
       setRegions(regionsData)
+      setShippingMethods(methodsData)
       
       setSettings({
-        custom_shipping_enabled: settingsData.custom_shipping_enabled !== undefined ? Boolean(settingsData.custom_shipping_enabled) : true,
-        sedex_shipping_enabled: settingsData.sedex_shipping_enabled !== undefined ? Boolean(settingsData.sedex_shipping_enabled) : true,
+        custom_shipping_enabled: methodsData.find(method => method.code === 'local_delivery')?.checkout_enabled ?? false,
+        sedex_shipping_enabled: methodsData.find(method => method.code === 'sedex')?.checkout_enabled ?? true,
         sedex_origin_cep: settingsData.sedex_origin_cep || '',
         custom_free_shipping_enabled: settingsData.custom_free_shipping_enabled !== undefined ? Boolean(settingsData.custom_free_shipping_enabled) : true,
         custom_free_shipping_threshold: settingsData.custom_free_shipping_threshold !== undefined ? Number(settingsData.custom_free_shipping_threshold) : (settingsData.free_shipping_threshold || 200),
@@ -81,7 +84,8 @@ export default function ShippingSettings() {
       setError(null)
 
       // Validação de CEP de origem se SEDEX estiver ativado
-      if (settings.sedex_shipping_enabled) {
+      const sedexCheckoutEnabled = shippingMethods.find(method => method.code === 'sedex')?.checkout_enabled ?? false
+      if (sedexCheckoutEnabled) {
         const cleanOrigin = (settings.sedex_origin_cep || '').replace(/\D/g, '')
         if (cleanOrigin.length !== 8) {
           setError('O CEP de origem do SEDEX é obrigatório e deve conter 8 dígitos quando o SEDEX estiver ativado.')
@@ -90,7 +94,12 @@ export default function ShippingSettings() {
         }
       }
 
-      await shippingService.updateShippingSettings(settings)
+      await Promise.all(shippingMethods.map(method => shippingService.updateShippingMethod(method.id, method)))
+      await shippingService.updateShippingSettings({
+        ...settings,
+        sedex_shipping_enabled: sedexCheckoutEnabled,
+        custom_shipping_enabled: shippingMethods.find(method => method.code === 'local_delivery')?.checkout_enabled ?? false,
+      })
       setSuccess('Configurações salvas com sucesso!')
       setTimeout(() => setSuccess(null), 3000)
       await loadData()
@@ -224,8 +233,10 @@ export default function ShippingSettings() {
     )
   }
 
-  const noMethodsActive = !settings.custom_shipping_enabled && !settings.sedex_shipping_enabled
-  const sedexMissingOrigin = settings.sedex_shipping_enabled && (!settings.sedex_origin_cep || settings.sedex_origin_cep.replace(/\D/g, '').length !== 8)
+  const noMethodsActive = !shippingMethods.some(method => method.checkout_enabled)
+  const sedexCheckoutEnabled = shippingMethods.find(method => method.code === 'sedex')?.checkout_enabled ?? false
+  const localCheckoutEnabled = shippingMethods.find(method => method.code === 'local_delivery')?.checkout_enabled ?? false
+  const sedexMissingOrigin = sedexCheckoutEnabled && (!settings.sedex_origin_cep || settings.sedex_origin_cep.replace(/\D/g, '').length !== 8)
 
   return (
     <div className="w-full">
@@ -265,7 +276,7 @@ export default function ShippingSettings() {
           </div>
         )}
 
-        {!settings.custom_shipping_enabled && (
+        {!localCheckoutEnabled && (
           <div className="mb-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200 px-4 py-3 rounded-lg flex items-center gap-3">
             <MapPin className="w-5 h-5 text-blue-600 shrink-0" />
             <div className="text-xs sm:text-sm">
@@ -297,48 +308,37 @@ export default function ShippingSettings() {
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Métodos de Envio Oferecidos</h2>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Toggle Frete Local */}
-                <div className={`p-4 rounded-lg border transition-all ${settings.custom_shipping_enabled ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10' : 'border-gray-200 dark:border-gray-700 opacity-75'}`}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">Entrega Local / Tabela</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Cotação por faixas de CEP cadastradas</p>
+              <div className="mb-3 grid grid-cols-[minmax(0,1fr)_76px_76px] gap-2 px-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 sm:grid-cols-[minmax(0,1fr)_96px_96px]">
+                <span>Método</span><span className="text-center">Checkout</span><span className="text-center">Interno</span>
+              </div>
+              <div className="space-y-3">
+                {shippingMethods.map((method, index) => (
+                  <div key={method.id} className={`rounded-xl border p-3 sm:p-4 ${method.checkout_enabled ? 'border-blue-400 bg-blue-50/40 dark:bg-blue-950/20' : 'border-gray-200 dark:border-gray-700'}`}>
+                    <div className="grid grid-cols-[minmax(0,1fr)_76px_76px] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_96px_96px]">
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold text-gray-900 dark:text-white">{method.name}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{method.calculation_type === 'SEDEX' ? 'Cotação automática' : method.calculation_type === 'LOCAL_TABLE' ? 'Tabela por faixa de CEP' : 'Valor configurado'}</div>
+                      </div>
+                      {(['checkout_enabled', 'internal_enabled'] as const).map(field => (
+                        <label key={field} className="relative mx-auto inline-flex cursor-pointer items-center">
+                          <input type="checkbox" checked={method[field]} onChange={event => setShippingMethods(current => current.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: event.target.checked } : item))} className="sr-only peer" />
+                          <div className="h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full dark:bg-gray-700"></div>
+                        </label>
+                      ))}
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.custom_shipping_enabled}
-                        onChange={(e) => setSettings({ ...settings, custom_shipping_enabled: e.target.checked })}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-gray-600 peer-checked:bg-blue-600"></div>
-                    </label>
+                    {method.calculation_type === 'FIXED' && (
+                      <div className="mt-3 grid grid-cols-1 gap-3 border-t border-gray-200 pt-3 sm:grid-cols-3 dark:border-gray-700">
+                        <label className="text-xs text-gray-600 dark:text-gray-300">Valor no checkout (R$)<input type="number" min="0" step="0.01" value={method.fixed_fee ?? ''} onChange={event => setShippingMethods(current => current.map((item, itemIndex) => itemIndex === index ? { ...item, fixed_fee: event.target.value === '' ? null : Number(event.target.value) } : item))} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900" /></label>
+                        <label className="text-xs text-gray-600 dark:text-gray-300">Prazo<input type="number" min="0" value={method.delivery_time ?? ''} onChange={event => setShippingMethods(current => current.map((item, itemIndex) => itemIndex === index ? { ...item, delivery_time: event.target.value === '' ? null : Number(event.target.value) } : item))} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900" /></label>
+                        <label className="text-xs text-gray-600 dark:text-gray-300">Tipo<select value={method.delivery_time_type} onChange={event => setShippingMethods(current => current.map((item, itemIndex) => itemIndex === index ? { ...item, delivery_time_type: event.target.value as 'business' | 'calendar' } : item))} className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900"><option value="business">Dias úteis</option><option value="calendar">Dias corridos</option></select></label>
+                      </div>
+                    )}
                   </div>
-                </div>
-
-                {/* Toggle SEDEX */}
-                <div className={`p-4 rounded-lg border transition-all ${settings.sedex_shipping_enabled ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10' : 'border-gray-200 dark:border-gray-700 opacity-75'}`}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm sm:text-base">Correios SEDEX</h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Integração online dos Correios</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={settings.sedex_shipping_enabled}
-                        onChange={(e) => setSettings({ ...settings, sedex_shipping_enabled: e.target.checked })}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-gray-600 peer-checked:bg-blue-600"></div>
-                    </label>
-                  </div>
-                </div>
+                ))}
               </div>
 
               {/* CEP de Origem do SEDEX */}
-              {settings.sedex_shipping_enabled && (
+              {sedexCheckoutEnabled && (
                 <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                     CEP de Origem dos Correios (Despacho) *

@@ -2,7 +2,7 @@ import { env } from '../config/env'
 
 const API_URL = env.apiUrl
 
-export type UserRole = 'user' | 'admin' | 'support' | 'pharmacist' | 'supplier_admin' | 'supplier_employee'
+export type UserRole = 'user' | 'admin' | 'support' | 'supplier_admin' | 'supplier_employee'
 
 export interface User {
   id: string
@@ -34,6 +34,9 @@ export interface Supplier {
   phone?: string | null
   address?: string | null
   active: boolean
+  payout_frequency?: 'WEEKLY' | 'MONTHLY'
+  payout_weekday?: number
+  payout_month_day?: number
   totalUsers?: number
   masterUser?: { id: string; name: string; email: string } | null
   created_at: string
@@ -364,6 +367,23 @@ class AdminService {
       }
       throw new Error('Erro de conexão ao listar pedidos')
     }
+  }
+
+  async assignOrdersSupplier(orderIds: string[], supplierId: string | null): Promise<{ success: boolean; message: string; updated: number }> {
+    const token = localStorage.getItem('kapsu_token')
+    if (!token) throw new Error('Token não encontrado')
+
+    const response = await fetch(`${this.baseUrl}/orders/supplier`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ orderIds, supplierId }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao vincular fornecedor aos pedidos')
+    return data
   }
 
   /**
@@ -859,7 +879,16 @@ class AdminService {
     userId: string
     items: Array<{ productId: string; quantity: number }>
     paymentMethod?: string
-    shippingAddress?: string
+    shippingMethod?: string
+    shippingAddress?: {
+      postalCode?: string
+      street?: string
+      number?: string
+      complement?: string
+      neighborhood?: string
+      city?: string
+      state?: string
+    }
     status?: string
   }): Promise<{ success: boolean; message: string; data: any }> {
     try {
@@ -1582,6 +1611,16 @@ class AdminService {
     })
     const data = await response.json()
     if (!response.ok) throw new Error(data.message || 'Erro ao listar pagamentos')
+    return data
+  }
+
+  async getSupplierSettlements(supplierId: string): Promise<{ success: boolean; data: import('./supplier.service').SupplierSettlementOverview }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/supplier-settlements/${encodeURIComponent(supplierId)}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao calcular os repasses')
     return data
   }
 

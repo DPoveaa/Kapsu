@@ -7,6 +7,7 @@ import {
   Sparkles, Check, AlertCircle, Save, Download, FileText
 } from 'lucide-react'
 import { productsService } from '../services/products.service'
+import { adminService, Supplier } from '../services/admin.service'
 import { siteSettingsService } from '../services/site-settings.service'
 import { Product, ProductPriceHistory, ProductTargetAudience } from '../types'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
@@ -215,11 +216,20 @@ export default function ManageProducts() {
   })
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [bulkSupplierId, setBulkSupplierId] = useState('')
+  const [assigningSupplier, setAssigningSupplier] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('active')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const exportDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    adminService.listSuppliers(1, 100, '', 'true')
+      .then(response => setSuppliers(response.suppliers || []))
+      .catch(error => console.error('Erro ao carregar fornecedores:', error))
+  }, [])
 
   // ── Import modal state ────────────────────────────────────────────────────
   const [isImportOpen, setIsImportOpen] = useState(false)
@@ -588,6 +598,7 @@ export default function ManageProducts() {
   // ── Price history modal state ─────────────────────────────────────────────
   const [isHistoryOpen, setIsHistoryOpen] = useState(false)
   const [isMinimumMarginModalOpen, setIsMinimumMarginModalOpen] = useState(false)
+  const [isPriceRoundingModalOpen, setIsPriceRoundingModalOpen] = useState(false)
   const [historyData, setHistoryData] = useState<{
     product: { id: string; name: string; active: boolean; archived: boolean };
     history: ProductPriceHistory[];
@@ -621,14 +632,18 @@ export default function ManageProducts() {
   const [minimumMarginInput, setMinimumMarginInput] = useState<string>('')
   const [minimumMarginRoundingMode, setMinimumMarginRoundingMode] = useState<'cents_up' | 'commercial_90_up' | 'commercial_99_up'>('commercial_90_up')
   const [isApplyingMinimumMargin, setIsApplyingMinimumMargin] = useState(false)
+  const [priceRoundingThresholdInput, setPriceRoundingThresholdInput] = useState('40')
+  const [priceRoundingPreview, setPriceRoundingPreview] = useState<Awaited<ReturnType<typeof productsService.roundPricesByMargin>>['data'] | null>(null)
+  const [isLoadingPriceRounding, setIsLoadingPriceRounding] = useState(false)
   const [editingMarkupId, setEditingMarkupId] = useState<string | null>(null)
   const [tempMarkupValue, setTempMarkupValue] = useState<string>('')
 
   const loadMinimumMarginSettings = useCallback(async () => {
     try {
-      const [margin, roundingMode] = await Promise.all([
+      const [margin, roundingMode, roundingThreshold] = await Promise.all([
         siteSettingsService.getSetting('minimum_margin'),
         siteSettingsService.getSetting('minimum_margin_rounding_mode'),
+        siteSettingsService.getSetting('price_rounding_margin_threshold'),
       ])
       if (margin !== null && margin !== undefined) {
         setMinimumMargin(Number(margin))
@@ -636,6 +651,9 @@ export default function ManageProducts() {
       }
       if (roundingMode === 'cents_up' || roundingMode === 'commercial_90_up' || roundingMode === 'commercial_99_up') {
         setMinimumMarginRoundingMode(roundingMode)
+      }
+      if (roundingThreshold !== null && roundingThreshold !== undefined) {
+        setPriceRoundingThresholdInput(String(roundingThreshold))
       }
     } catch (e) {
       console.error('Erro ao carregar configurações de margem mínima:', e)
@@ -1390,6 +1408,76 @@ export default function ManageProducts() {
     )
   }
 
+  const getPriceRoundingThreshold = () => {
+    const threshold = Number(priceRoundingThresholdInput.trim().replace(',', '.'))
+    if (!Number.isFinite(threshold) || threshold < 0 || threshold >= 100) {
+      toast.error('Informe um limite entre 0 e 99,99%.')
+      return null
+    }
+    return threshold
+  }
+
+  const loadPriceRoundingPreview = async () => {
+    const threshold = getPriceRoundingThreshold()
+    if (threshold === null) return
+    try {
+      setIsLoadingPriceRounding(true)
+      const result = await productsService.roundPricesByMargin(threshold, selectedIds.length ? selectedIds : undefined, true)
+      setPriceRoundingPreview(result.data)
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao calcular prévia do arredondamento.')
+    } finally {
+      setIsLoadingPriceRounding(false)
+    }
+  }
+
+  const openPriceRoundingModal = () => {
+    setPriceRoundingPreview(null)
+    setIsPriceRoundingModalOpen(true)
+  }
+
+  const handleApplyPriceRounding = () => {
+    const threshold = getPriceRoundingThreshold()
+    if (threshold === null || !priceRoundingPreview) return
+    confirm.show(
+      `Aplicar arredondamento em ${priceRoundingPreview.updatedCount} produto(s)?`,
+      async () => {
+        try {
+          setIsLoadingPriceRounding(true)
+          const result = await productsService.roundPricesByMargin(threshold, selectedIds.length ? selectedIds : undefined, false)
+          toast.success(result.message)
+          setIsPriceRoundingModalOpen(false)
+          setSelectedIds([])
+          await loadProducts()
+        } catch (e: any) {
+          toast.error(e.message || 'Erro ao arredondar preços.')
+        } finally {
+          setIsLoadingPriceRounding(false)
+        }
+      },
+      undefined,
+      'Arredondar',
+      'Cancelar'
+    )
+  }
+
+  const handleBulkAssignSupplier = async () => {
+    if (!selectedIds.length || !bulkSupplierId) return
+    try {
+      setAssigningSupplier(true)
+      const supplierId = bulkSupplierId === '__none__' ? null : bulkSupplierId
+      const result = await productsService.assignSupplierBulk(selectedIds, supplierId)
+      toast.success(result.message)
+      setSelectedIds([])
+      setBulkSupplierId('')
+      await loadProducts()
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao vincular fornecedor aos produtos')
+    } finally {
+      setAssigningSupplier(false)
+    }
+  }
+
   const handleBulkUnarchive = () => {
     if (!selectedIds.length) return
     confirm.show(`Desarquivar ${selectedIds.length} produto(s)?`, async () => {
@@ -1559,6 +1647,9 @@ export default function ManageProducts() {
             <button onClick={() => setIsMinimumMarginModalOpen(true)} className="flex items-center justify-center p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm" title="Margem minima">
               <TrendingUp size={18} className="text-green-600 dark:text-green-400" />
             </button>
+            <button onClick={openPriceRoundingModal} className="flex items-center justify-center p-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm" title="Arredondar preços por margem">
+              <Sparkles size={18} className="text-indigo-600 dark:text-indigo-400" />
+            </button>
             {/* Scan Duplicates button */}
             <button
               onClick={handleScanDuplicates}
@@ -1676,6 +1767,16 @@ export default function ManageProducts() {
             {selectedIds.length > 0 && (
               <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-between gap-3 flex-wrap">
                 <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{selectedIds.length} produto(s) selecionado(s)</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <select value={bulkSupplierId} onChange={e => setBulkSupplierId(e.target.value)} className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-900 text-sm">
+                    <option value="">Escolher fornecedor...</option>
+                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.trade_name || s.name}</option>)}
+                    <option value="__none__">Sem fornecedor</option>
+                  </select>
+                  <button onClick={handleBulkAssignSupplier} disabled={!bulkSupplierId || assigningSupplier} className="bg-indigo-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm">
+                    {assigningSupplier ? 'Vinculando...' : 'Vincular fornecedor'}
+                  </button>
+                </div>
                 {activeTab === 'archived'
                   ? <button onClick={handleBulkUnarchive} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"><ArchiveRestore size={15} />Desarquivar Selecionados</button>
                   : <button onClick={handleBulkDelete} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex items-center gap-2"><Trash2 size={15} />Excluir Selecionados</button>
@@ -1694,6 +1795,7 @@ export default function ManageProducts() {
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('name', 'Produto')}</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('category', 'Categoria')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Fornecedor</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('purchase_price', 'Compra')}</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('margin', 'Markup / Margem')}</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('price', 'Venda')}</th>
@@ -1703,7 +1805,7 @@ export default function ManageProducts() {
                   </thead>
                   <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {filteredProducts.length === 0 ? (
-                      <tr><td colSpan={8} className="px-6 py-10 text-center text-gray-500 dark:text-gray-400 text-sm">Nenhum produto encontrado.</td></tr>
+                      <tr><td colSpan={9} className="px-6 py-10 text-center text-gray-500 dark:text-gray-400 text-sm">Nenhum produto encontrado.</td></tr>
                     ) : sortedProducts.map(p => (
                       <tr key={p.id} className={`group hover:bg-gray-50 dark:hover:bg-[#065084]/40 transition-colors ${p.archived ? 'opacity-70' : ''}`}>
                         <td className="px-4 py-3 whitespace-nowrap">
@@ -1751,6 +1853,9 @@ export default function ManageProducts() {
                               );
                             })}
                           </div>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                          {suppliers.find(s => s.id === p.supplier_id)?.trade_name || suppliers.find(s => s.id === p.supplier_id)?.name || 'Sem vínculo'}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                           {p.purchase_price != null ? <span className="text-purple-705 dark:text-purple-400 font-medium">{fmt(p.purchase_price)}</span> : <span className="text-gray-300 dark:text-gray-600">—</span>}
@@ -2242,6 +2347,72 @@ export default function ManageProducts() {
               >
                 Confirmar e Importar
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isPriceRoundingModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-xl max-h-[92vh] overflow-y-auto border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between p-5 border-b dark:border-gray-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-900/30"><Sparkles size={20} className="text-indigo-600" /></div>
+                <div>
+                  <h2 className="font-bold text-gray-900 dark:text-white">Arredondar preços</h2>
+                  <p className="text-xs text-gray-500">{selectedIds.length ? `${selectedIds.length} produto(s) selecionado(s)` : 'Todos os produtos não arquivados'}</p>
+                </div>
+              </div>
+              <button onClick={() => setIsPriceRoundingModalOpen(false)} disabled={isLoadingPriceRounding} className="p-2 text-gray-400"><X size={18} /></button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Limite da margem de lucro</label>
+                <div className="relative max-w-40">
+                  <input type="number" min="0" max="99.99" step="0.01" value={priceRoundingThresholdInput} onChange={e => { setPriceRoundingThresholdInput(e.target.value); setPriceRoundingPreview(null) }} className="w-full px-3 py-2.5 pr-8 rounded-lg border dark:bg-gray-800 dark:text-white" />
+                  <span className="absolute right-3 top-2.5 text-gray-400">%</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
+                  <strong className="text-blue-700 dark:text-blue-300">Acima do limite</strong>
+                  <p className="mt-1 text-gray-600 dark:text-gray-400">Arredonda para baixo: R$ 29,90 → R$ 29,00.</p>
+                </div>
+                <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900">
+                  <strong className="text-amber-700 dark:text-amber-300">No limite ou abaixo</strong>
+                  <p className="mt-1 text-gray-600 dark:text-gray-400">Arredonda para cima: R$ 29,10 → R$ 30,00.</p>
+                </div>
+              </div>
+
+              <button onClick={loadPriceRoundingPreview} disabled={isLoadingPriceRounding} className="w-full py-2.5 rounded-xl border border-indigo-300 text-indigo-700 dark:text-indigo-300 font-semibold text-sm disabled:opacity-50">
+                {isLoadingPriceRounding ? 'Calculando...' : 'Calcular prévia'}
+              </button>
+
+              {priceRoundingPreview && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-center text-xs">
+                    <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800"><strong className="block text-lg">{priceRoundingPreview.updatedCount}</strong>alterações</div>
+                    <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20"><strong className="block text-lg">{priceRoundingPreview.roundedDown}</strong>para baixo</div>
+                    <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20"><strong className="block text-lg">{priceRoundingPreview.roundedUp}</strong>para cima</div>
+                  </div>
+                  <p className="text-xs text-gray-500">Ignorados: {priceRoundingPreview.skippedWithoutCost} sem custo/preço válido, {priceRoundingPreview.skippedPromoConflict} por conflito com promoção e {priceRoundingPreview.unchanged} já inteiros.</p>
+                  <div className="max-h-44 overflow-y-auto divide-y dark:divide-gray-800 border rounded-lg">
+                    {priceRoundingPreview.updatedProducts.slice(0, 20).map(product => (
+                      <div key={product.id} className="flex justify-between gap-3 p-2.5 text-xs">
+                        <span className="truncate">{product.name} <span className="text-gray-400">({product.margin.toFixed(2)}%)</span></span>
+                        <span className="font-semibold whitespace-nowrap">{fmt(product.oldPrice)} → {fmt(product.newPrice)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-5 border-t dark:border-gray-800 flex gap-3">
+              <button onClick={() => setIsPriceRoundingModalOpen(false)} disabled={isLoadingPriceRounding} className="flex-1 py-2 rounded-xl border text-sm">Cancelar</button>
+              <button onClick={handleApplyPriceRounding} disabled={isLoadingPriceRounding || !priceRoundingPreview || priceRoundingPreview.updatedCount === 0} className="flex-1 py-2 rounded-xl bg-indigo-600 text-white text-sm font-semibold disabled:opacity-40">Aplicar arredondamento</button>
             </div>
           </div>
         </div>

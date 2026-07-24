@@ -24,7 +24,8 @@ const ACTION_LABELS: Record<string, string> = {
   UPDATE: 'Edição',
   DELETE: 'Exclusão',
   REVEAL_PERSONAL_DATA: 'Acesso a Dados',
-  CHANGE_STATUS: 'Status Alterado'
+  CHANGE_STATUS: 'Status Alterado',
+  ROUND_PRICES: 'Arredondamento de Preços'
 }
 
 export default function AuditLogs() {

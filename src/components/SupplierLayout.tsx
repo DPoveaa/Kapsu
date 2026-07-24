@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
-  LayoutDashboard,
   ShoppingBag,
   DollarSign,
   Users,
@@ -22,6 +21,7 @@ import {
 import { supplierService, SupplierProfileResponse } from '../services/supplier.service';
 import { useTheme } from '../context/ThemeContext';
 import AnimatedLogo from './AnimatedLogo';
+import KapsuThemeControl from './theme-toggle/KapsuThemeControl';
 
 // ---- Toast helpers ----
 type ToastType = 'success' | 'error' | 'info';
@@ -59,8 +59,7 @@ type ProfileData = NonNullable<SupplierProfileResponse['data']>;
 // ---- Nav items ----
 const NAV = [
   { label: 'Pedidos de Manipulação', path: '/supplier/orders', Icon: ShoppingBag, perm: null },
-  { label: 'Painel Financeiro', path: '/supplier/dashboard', Icon: LayoutDashboard, perm: 'financial:read' },
-  { label: 'Histórico de Repasses', path: '/supplier/payments', Icon: DollarSign, perm: 'payments:read' },
+  { label: 'Repasses Financeiros', path: '/supplier/payments', Icon: DollarSign, perm: 'payments:read' },
   { label: 'Equipe de Operadores', path: '/supplier/users', Icon: Users, perm: 'users:manage' },
   { label: 'Configurações', path: '/supplier/profile', Icon: Building2, perm: null },
   { label: 'Registros & Auditoria', path: '/supplier/audit', Icon: ShieldCheck, perm: 'audit:read' },
@@ -147,25 +146,44 @@ export default function SupplierLayout() {
 
     return (
       <>
-        {/* Logo Kapsu */}
-        <div
-          className={`flex items-center gap-3 px-4 py-4 border-b border-gray-200 dark:border-gray-800 ${isCollapsed ? 'justify-center px-2' : ''
-            }`}
-        >
-          <AnimatedLogo
-            className={`transition-all duration-300 ${isCollapsed ? 'w-8 h-8' : 'w-9 h-9'
-              }`}
+        <div className="relative flex-shrink-0 bg-white dark:bg-gray-900">
+          <div className="absolute inset-x-0 bottom-0 h-[61px] bg-primary-50 dark:bg-primary-950/40" />
+          <div
+            className="absolute inset-0 pointer-events-none z-10 overflow-hidden"
+            data-kapsu-header-stars-container="true"
           />
-          {!isCollapsed && (
-            <div>
-              <span className="font-bold text-gray-900 dark:text-white text-sm tracking-tight">
-                Kapsu
-              </span>
-              <span className="block text-[10px] text-primary-600 dark:text-primary-400 font-medium -mt-0.5">
-                Portal do Fornecedor
-              </span>
+        {/* Logo Kapsu & Controle de Tema */}
+        <div
+          className="relative z-20 flex items-center gap-2 px-3.5 py-4 border-b border-gray-200 dark:border-gray-800 overflow-hidden"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <AnimatedLogo
+              className="w-9 h-9 flex-shrink-0"
+            />
+            <div className={`min-w-0 whitespace-nowrap overflow-hidden transition-all duration-150 ${isCollapsed ? 'max-w-0 opacity-0' : 'max-w-[150px] opacity-100 delay-150'}`}>
+              <span className="block whitespace-nowrap font-bold text-gray-900 dark:text-white text-sm tracking-tight">Kapsu</span>
+              <span className="block whitespace-nowrap text-[10px] text-primary-600 dark:text-primary-400 font-medium -mt-0.5">Portal do Fornecedor</span>
             </div>
-          )}
+          </div>
+
+          <div
+            className={`absolute top-1/2 -translate-y-1/2 transition-opacity ease-in-out ${
+              isMobile ? 'right-10' : 'left-[188px]'
+            } ${
+              isMobile
+                ? 'opacity-100 duration-200 delay-100'
+                : isCollapsed
+                  ? 'pointer-events-none opacity-0 duration-[450ms] delay-0'
+                  : 'opacity-100 duration-[900ms] delay-[600ms]'
+            }`}
+          >
+            <KapsuThemeControl
+              compact
+              interactive={!isCollapsed}
+              orbitalTarget={!isCollapsed}
+              renderPortal
+            />
+          </div>
 
           {isMobile && (
             <button
@@ -177,30 +195,17 @@ export default function SupplierLayout() {
           )}
         </div>
 
-        {/* Info do Fornecedor */}
-        {!isCollapsed && (
-          <div className="px-4 py-3 bg-primary-50 dark:bg-primary-950/40 border-b border-primary-100 dark:border-primary-900/60 flex items-center gap-3">
-            <div className="w-9 h-9 flex-shrink-0 rounded-xl bg-primary-100 dark:bg-primary-900/60 border border-primary-200 dark:border-primary-800/60 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold text-base select-none">
-              {supplierInitial}
-            </div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate leading-tight">
-                {supplierName}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                {userName}
-              </p>
-            </div>
+        {/* Info do Fornecedor — o avatar mantém o mesmo eixo nos dois estados */}
+        <div className="relative z-20 px-4 py-3 border-b border-primary-100 dark:border-primary-900/60 flex items-center gap-3 overflow-hidden">
+          <div className="w-9 h-9 flex-shrink-0 rounded-xl bg-primary-100 dark:bg-primary-900/60 border border-primary-200 dark:border-primary-800/60 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold text-base select-none">
+            {supplierInitial}
           </div>
-        )}
-
-        {isCollapsed && (
-          <div className="flex justify-center py-3 border-b border-gray-200 dark:border-gray-800">
-            <div className="w-9 h-9 rounded-xl bg-primary-100 dark:bg-primary-900/60 border border-primary-200 dark:border-primary-800/60 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold text-base select-none">
-              {supplierInitial}
-            </div>
+          <div className={`min-w-0 whitespace-nowrap overflow-hidden transition-all duration-150 ${isCollapsed ? 'max-w-0 opacity-0' : 'max-w-[150px] opacity-100 delay-150'}`}>
+            <p className="whitespace-nowrap text-sm font-semibold text-gray-900 dark:text-gray-100 truncate leading-tight">{supplierName}</p>
+            <p className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400 truncate">{userName}</p>
           </div>
-        )}
+        </div>
+        </div>
 
         {/* Navegação */}
         <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
@@ -212,10 +217,10 @@ export default function SupplierLayout() {
                 to={path}
                 onClick={() => isMobile && setMobileOpen(false)}
                 title={isCollapsed ? label : undefined}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all group ${active
+                className={`flex items-center gap-3 rounded-xl px-[18px] py-2.5 text-sm font-medium transition-colors group overflow-hidden ${active
                   ? 'bg-primary-50 dark:bg-primary-950/60 text-primary-700 dark:text-primary-300 border border-primary-200 dark:border-primary-800/60'
                   : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
-                  } ${isCollapsed ? 'justify-center px-2' : ''}`}
+                  }`}
               >
                 <Icon
                   className={`w-4 h-4 flex-shrink-0 transition-colors ${active
@@ -223,7 +228,9 @@ export default function SupplierLayout() {
                     : 'text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200'
                     }`}
                 />
-                {!isCollapsed && <span>{label}</span>}
+                <span className={`whitespace-nowrap overflow-hidden transition-all duration-150 ${isCollapsed ? 'max-w-0 opacity-0' : 'max-w-[180px] opacity-100 delay-150'}`}>
+                  {label}
+                </span>
               </Link>
             );
           })}
@@ -231,32 +238,30 @@ export default function SupplierLayout() {
 
         {/* Rodapé: Toggle Tema + Logout */}
         <div className={`border-t border-gray-200 dark:border-gray-800 px-2 py-3 space-y-1`}>
-          {/* Toggle Tema */}
-          <button
-            onClick={toggleTheme}
-            title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
-            className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-all ${isCollapsed ? 'justify-center px-2' : ''
-              }`}
+          {/* Toggle Tema Kapsu (Exibido quando a sidebar está colapsada) */}
+          <div
+            className={`h-14 flex items-center justify-start pl-1 transition-opacity ease-in-out ${
+              isCollapsed
+                ? 'opacity-100 duration-[900ms] delay-[600ms]'
+                : 'pointer-events-none opacity-0 duration-[450ms] delay-0'
+            }`}
           >
-            {theme === 'dark' ? (
-              <Sun className="w-4 h-4 flex-shrink-0 text-amber-500" />
-            ) : (
-              <Moon className="w-4 h-4 flex-shrink-0 text-slate-500 dark:text-slate-400" />
-            )}
-            {!isCollapsed && (
-              <span>{theme === 'dark' ? 'Tema Claro' : 'Tema Escuro'}</span>
-            )}
-          </button>
+            <KapsuThemeControl
+              compact
+              interactive={isCollapsed}
+              orbitalTarget={isCollapsed}
+              renderPortal={false}
+            />
+          </div>
 
           {/* Logout */}
           <button
             onClick={handleLogout}
             title={isCollapsed ? 'Encerrar Sessão' : undefined}
-            className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-rose-50 dark:hover:bg-rose-950/50 hover:text-rose-700 dark:hover:text-rose-400 transition-all ${isCollapsed ? 'justify-center px-2' : ''
-              }`}
+            className="w-full flex items-center gap-3 rounded-xl px-[18px] py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-rose-50 dark:hover:bg-rose-950/50 hover:text-rose-700 dark:hover:text-rose-400 transition-colors overflow-hidden"
           >
             <LogOut className="w-4 h-4 flex-shrink-0" />
-            {!isCollapsed && <span>Encerrar Sessão</span>}
+            <span className={`whitespace-nowrap overflow-hidden transition-all duration-150 ${isCollapsed ? 'max-w-0 opacity-0' : 'max-w-[150px] opacity-100 delay-150'}`}>Encerrar Sessão</span>
           </button>
         </div>
       </>
@@ -268,7 +273,7 @@ export default function SupplierLayout() {
 
       {/* ── Sidebar Desktop ─────────────────────────────────────────────────── */}
       <aside
-        className={`hidden md:flex flex-col flex-shrink-0 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 min-h-screen sticky top-0 z-20 transition-all duration-300 ${collapsed ? 'w-[68px]' : 'w-60'
+        className={`hidden md:flex fixed inset-y-0 left-0 flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 h-dvh min-h-0 z-20 transition-all duration-300 ${collapsed ? 'w-[68px]' : 'w-60'
           }`}
       >
         {/* Botão Colapsar (flutuante na borda) */}
@@ -283,8 +288,11 @@ export default function SupplierLayout() {
           }
         </button>
 
-        <SidebarContent />
+        {SidebarContent({})}
       </aside>
+
+      {/* Reserva no fluxo a mesma largura da sidebar fixa */}
+      <div aria-hidden="true" className={`hidden md:block flex-shrink-0 transition-all duration-300 ${collapsed ? 'w-[68px]' : 'w-60'}`} />
 
       {/* ── Mobile Overlay ──────────────────────────────────────────────────── */}
       {mobileOpen && (
@@ -296,7 +304,7 @@ export default function SupplierLayout() {
             className="w-64 h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
-            <SidebarContent isMobile />
+            {SidebarContent({ isMobile: true })}
           </div>
         </div>
       )}
@@ -320,7 +328,7 @@ export default function SupplierLayout() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={toggleTheme}
+              onClick={() => toggleTheme()}
               className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
             >
               {theme === 'dark'

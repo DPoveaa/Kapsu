@@ -59,11 +59,20 @@ export interface SupplierOrder {
   client_address?: string | null;
   status: string;
   shipping_address?: string | null;
+  shipping_method?: string | null;
+  shipping_postal_code?: string | null;
+  shipping_street?: string | null;
+  shipping_number?: string | null;
+  shipping_complement?: string | null;
+  shipping_neighborhood?: string | null;
+  shipping_city?: string | null;
+  shipping_state?: string | null;
   tracking_code?: string | null;
   tracking_url?: string | null;
   shipping_carrier?: string | null;
   shipped_at?: string | null;
   shipping_notes?: string | null;
+  cancellation_reason?: string | null;
   assigned_to_user_id?: string | null;
   assignee_name?: string | null;
   total?: number;
@@ -119,13 +128,71 @@ export interface SupplierFinancialMetrics {
   }>;
 }
 
+export interface SupplierSettlementOrderItem {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitCost: number;
+  totalCost: number;
+}
+
+export interface SupplierSettlementOrder {
+  id: string;
+  status: string;
+  createdAt: string;
+  paymentMethod?: string | null;
+  customerName: string;
+  customerEmail?: string | null;
+  amount: number;
+  items: SupplierSettlementOrderItem[];
+}
+
+export interface SupplierSettlementCycle {
+  id: string;
+  periodStart: string;
+  periodEnd: string;
+  dueDate: string;
+  isCurrent: boolean;
+  amount: number;
+  paidAmount: number;
+  balance: number;
+  status: 'PAID' | 'PARTIAL' | 'DUE' | 'ACCRUING' | 'EMPTY';
+  orders: SupplierSettlementOrder[];
+  payments: Array<{ id: string; amount: number; paymentDate: string; paymentMethod?: string | null }>;
+}
+
+export interface SupplierSettlementOverview {
+  supplier: { id: string; name: string; tradeName?: string | null };
+  configuration: {
+    frequency: 'WEEKLY' | 'MONTHLY';
+    payoutWeekday: number;
+    payoutMonthDay: number;
+    timezone: string;
+    ruleDescription: string;
+  };
+  summary: {
+    totalSalesAmount: number;
+    totalPaid: number;
+    outstandingAmount: number;
+    dueAmount: number;
+    currentAccruedAmount: number;
+    currentOrderCount: number;
+    unallocatedCredit: number;
+  };
+  cycles: SupplierSettlementCycle[];
+}
+
 export interface SupplierPayment {
   id: string;
   amount: number;
   status: 'PAID' | 'PENDING' | 'PROCESSING';
-  paid_at?: string | null;
-  reference_period?: string | null;
-  receipt_url?: string | null;
+  payment_date: string;
+  payment_method?: string | null;
+  period_start?: string | null;
+  period_end?: string | null;
+  description?: string | null;
+  related_order_ids?: string[] | string | null;
+  receipt_file_path?: string | null;
   created_at: string;
 }
 
@@ -147,6 +214,7 @@ export interface SupplierUser {
   email: string;
   role: string;
   active: boolean;
+  permissions?: string[] | string;
 }
 
 class SupplierService {
@@ -184,6 +252,8 @@ class SupplierService {
     date_end?: string;
     tracking_status?: string;
     assigned_to?: string;
+    shipping_method?: string;
+    sort?: 'newest' | 'oldest';
   }): Promise<SupplierOrdersResponse> {
     const query = new URLSearchParams();
     if (params.page) query.append('page', params.page.toString());
@@ -194,6 +264,8 @@ class SupplierService {
     if (params.date_end) query.append('date_end', params.date_end);
     if (params.tracking_status) query.append('tracking_status', params.tracking_status);
     if (params.assigned_to) query.append('assigned_to', params.assigned_to);
+    if (params.shipping_method) query.append('shipping_method', params.shipping_method);
+    if (params.sort) query.append('sort', params.sort);
 
     const response = await fetch(`${this.baseUrl}/orders?${query.toString()}`, {
       headers: this.getAuthHeaders(),
@@ -218,11 +290,11 @@ class SupplierService {
   /**
    * Atualização de status de um pedido
    */
-  async updateOrderStatus(id: string, status: string): Promise<{ success: boolean; message: string }> {
+  async updateOrderStatus(id: string, status: string, cancellationReason?: string): Promise<{ success: boolean; message: string }> {
     const response = await fetch(`${this.baseUrl}/orders/${id}/status`, {
       method: 'PATCH',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, cancellation_reason: cancellationReason }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Erro ao atualizar status do pedido');
@@ -266,12 +338,29 @@ class SupplierService {
   /**
    * Dashboard financeiro de produção (SUPPLIER_ADMIN)
    */
-  async getDashboardMetrics(days: number = 30): Promise<{ success: boolean; data: SupplierFinancialMetrics }> {
-    const response = await fetch(`${this.baseUrl}/financial/dashboard?days=${days}`, {
+  async getDashboardMetrics(params: number | { days?: number; startDate?: string; endDate?: string } = 30): Promise<{ success: boolean; data: SupplierFinancialMetrics }> {
+    const query = new URLSearchParams();
+    if (typeof params === 'number') {
+      query.set('days', String(params));
+    } else {
+      if (params.days) query.set('days', String(params.days));
+      if (params.startDate) query.set('startDate', params.startDate);
+      if (params.endDate) query.set('endDate', params.endDate);
+    }
+    const response = await fetch(`${this.baseUrl}/financial/dashboard?${query.toString()}`, {
       headers: this.getAuthHeaders(),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Erro ao buscar dashboard financeiro');
+    return data;
+  }
+
+  async getSettlementOverview(): Promise<{ success: boolean; data: SupplierSettlementOverview }> {
+    const response = await fetch(`${this.baseUrl}/financial/settlements`, {
+      headers: this.getAuthHeaders(),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Erro ao calcular repasses');
     return data;
   }
 
@@ -384,8 +473,10 @@ class SupplierService {
   /**
    * Audit logs da organização
    */
-  async getAuditLogs(page: number = 1): Promise<{ success: boolean; data: any[]; pagination: any }> {
-    const response = await fetch(`${this.baseUrl}/audit-logs?page=${page}`, {
+  async getAuditLogs(page: number = 1, limit: number = 10, search: string = ''): Promise<{ success: boolean; data: any[]; pagination: any }> {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (search.trim()) params.set('search', search.trim());
+    const response = await fetch(`${this.baseUrl}/audit-logs?${params.toString()}`, {
       headers: this.getAuthHeaders(),
     });
     const data = await response.json();

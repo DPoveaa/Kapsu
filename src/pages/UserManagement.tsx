@@ -9,7 +9,7 @@ import AdminModal from '../components/AdminModal';
 import { formatPhone } from '../utils/validators';
 import { toast, confirm } from '../utils/toast';
 
-type UserRole = 'user' | 'admin' | 'support' | 'pharmacist' | 'supplier_admin' | 'supplier_employee';
+type UserRole = 'user' | 'admin' | 'support' | 'supplier_admin' | 'supplier_employee';
 
 const ROLE_LABELS: Record<UserRole, { label: string; style: string }> = {
   admin: {
@@ -23,10 +23,6 @@ const ROLE_LABELS: Record<UserRole, { label: string; style: string }> = {
   supplier_employee: {
     label: 'Operador Fornecedor',
     style: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-  },
-  pharmacist: {
-    label: 'Farmacêutico / RT',
-    style: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
   },
   support: {
     label: 'Suporte',
@@ -304,7 +300,6 @@ export default function UserManagement() {
             <option value="admin">Administrador Kapsu</option>
             <option value="supplier_admin">Admin do Fornecedor</option>
             <option value="supplier_employee">Operador do Fornecedor</option>
-            <option value="pharmacist">Farmacêutico / RT</option>
             <option value="support">Atendimento / Suporte</option>
             <option value="user">Cliente Final</option>
           </select>
@@ -595,7 +590,6 @@ export default function UserManagement() {
                 <option value="user">Cliente Final (Comprador)</option>
                 <option value="admin">Administrador Geral Kapsu</option>
                 <option value="support">Atendimento / Suporte</option>
-                <option value="pharmacist">Farmacêutico / Responsável Técnico</option>
                 <option value="supplier_admin">Administrador do Fornecedor</option>
                 <option value="supplier_employee">Operador de Produção do Fornecedor</option>
               </select>

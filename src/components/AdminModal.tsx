@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 interface AdminModalProps {
@@ -52,10 +53,10 @@ export default function AdminModal({
 
   if (!isOpen) return null
 
-  return (
+  return createPortal(
     /* Backdrop — NÃO fecha ao clicar fora */
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4"
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-4"
       style={{ backgroundColor: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
       role="dialog"
       aria-modal="true"
@@ -96,6 +97,7 @@ export default function AdminModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

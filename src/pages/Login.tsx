@@ -6,8 +6,8 @@ import { authService } from '../services/auth.service'
 import { cartService } from '../services/cart.service'
 import { validateCPF, formatCPF, validatePhone, formatPhone, validateEmail, validatePassword } from '../utils/validators'
 import AnimatedLogo from '../components/AnimatedLogo'
-import loginBannerPortrait from '../images/3x4.png'
-import loginBannerLandscape from '../images/4x3.png'
+import loginBannerPortrait from '../images/optimized/3x4.jpg'
+import loginBannerLandscape from '../images/optimized/4x3.jpg'
 import { env } from '../config/env'
 import LegalAcceptanceCheckbox from '../components/legal/LegalAcceptanceCheckbox'
 import { getLegalAcceptancePayload } from '../content/legal'
@@ -483,10 +483,14 @@ export default function Login() {
       
       const redirect = searchParams.get('redirect')
       const returnTo = searchParams.get('returnTo')
+      const requestedDestination = redirect || returnTo
+      const safeDestination = requestedDestination?.startsWith('/') && !requestedDestination.startsWith('//')
+        ? requestedDestination
+        : null
       const pendingToken = cartService.getPendingToken()
       
       if (userRole === 'supplier_admin' || userRole === 'supplier_employee') {
-        navigate('/supplier')
+        navigate(safeDestination?.startsWith('/supplier') ? safeDestination : '/supplier')
       } else if (pendingToken) {
         navigate('/carrinho')
       } else if (redirect) {
@@ -1142,6 +1146,8 @@ export default function Login() {
           <source media="(min-aspect-ratio: 16/10)" srcSet={loginBannerLandscape} />
           <img
           src={loginBannerPortrait}
+          decoding="async"
+          fetchPriority="high"
           alt="Kapsu Suplementação de Alta Qualidade"
           className="h-full w-full object-fill"
           />
