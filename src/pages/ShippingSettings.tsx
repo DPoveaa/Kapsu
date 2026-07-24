@@ -83,12 +83,12 @@ export default function ShippingSettings() {
       setSaving(true)
       setError(null)
 
-      // Validação de CEP de origem se SEDEX estiver ativado
-      const sedexCheckoutEnabled = shippingMethods.find(method => method.code === 'sedex')?.checkout_enabled ?? false
-      if (sedexCheckoutEnabled) {
+      // SEDEX e PAC usam o mesmo CEP de origem dos Correios.
+      const correiosCheckoutEnabled = shippingMethods.some(method => ['sedex', 'pac'].includes(method.code) && method.checkout_enabled)
+      if (correiosCheckoutEnabled) {
         const cleanOrigin = (settings.sedex_origin_cep || '').replace(/\D/g, '')
         if (cleanOrigin.length !== 8) {
-          setError('O CEP de origem do SEDEX é obrigatório e deve conter 8 dígitos quando o SEDEX estiver ativado.')
+          setError('O CEP de origem dos Correios é obrigatório e deve conter 8 dígitos quando PAC ou SEDEX estiver ativado.')
           setSaving(false)
           return
         }
@@ -97,7 +97,7 @@ export default function ShippingSettings() {
       await Promise.all(shippingMethods.map(method => shippingService.updateShippingMethod(method.id, method)))
       await shippingService.updateShippingSettings({
         ...settings,
-        sedex_shipping_enabled: sedexCheckoutEnabled,
+        sedex_shipping_enabled: correiosCheckoutEnabled,
         custom_shipping_enabled: shippingMethods.find(method => method.code === 'local_delivery')?.checkout_enabled ?? false,
       })
       setSuccess('Configurações salvas com sucesso!')
@@ -234,9 +234,9 @@ export default function ShippingSettings() {
   }
 
   const noMethodsActive = !shippingMethods.some(method => method.checkout_enabled)
-  const sedexCheckoutEnabled = shippingMethods.find(method => method.code === 'sedex')?.checkout_enabled ?? false
+  const correiosCheckoutEnabled = shippingMethods.some(method => ['sedex', 'pac'].includes(method.code) && method.checkout_enabled)
   const localCheckoutEnabled = shippingMethods.find(method => method.code === 'local_delivery')?.checkout_enabled ?? false
-  const sedexMissingOrigin = sedexCheckoutEnabled && (!settings.sedex_origin_cep || settings.sedex_origin_cep.replace(/\D/g, '').length !== 8)
+  const correiosMissingOrigin = correiosCheckoutEnabled && (!settings.sedex_origin_cep || settings.sedex_origin_cep.replace(/\D/g, '').length !== 8)
 
   return (
     <div className="w-full">
@@ -245,7 +245,7 @@ export default function ShippingSettings() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
             <div className="flex-1">
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white">Configurações de Frete</h1>
-              <p className="mt-1 sm:mt-2 text-xs sm:text-sm lg:text-base text-gray-600 dark:text-gray-300">Gerencie métodos de entrega, SEDEX, frete grátis e regiões ativas</p>
+              <p className="mt-1 sm:mt-2 text-xs sm:text-sm lg:text-base text-gray-600 dark:text-gray-300">Gerencie métodos de entrega, PAC, SEDEX, frete grátis e regiões ativas</p>
             </div>
             <Link
               to="/admin/shipping/free-rules"
@@ -267,11 +267,11 @@ export default function ShippingSettings() {
           </div>
         )}
 
-        {sedexMissingOrigin && (
+        {correiosMissingOrigin && (
           <div className="mb-4 bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-700 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
             <div className="text-xs sm:text-sm">
-              <strong>CEP de Origem ausente:</strong> O envio por SEDEX está ativado, mas requer um CEP de origem válido com 8 dígitos para realizar cotações com os Correios.
+              <strong>CEP de Origem ausente:</strong> PAC ou SEDEX está ativado, mas é necessário um CEP de origem válido para realizar cotações com os Correios.
             </div>
           </div>
         )}
@@ -317,7 +317,7 @@ export default function ShippingSettings() {
                     <div className="grid grid-cols-[minmax(0,1fr)_76px_76px] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_96px_96px]">
                       <div className="min-w-0">
                         <div className="truncate font-semibold text-gray-900 dark:text-white">{method.name}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">{method.calculation_type === 'SEDEX' ? 'Cotação automática' : method.calculation_type === 'LOCAL_TABLE' ? 'Tabela por faixa de CEP' : 'Valor configurado'}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">{['CORREIOS', 'SEDEX'].includes(method.calculation_type) ? 'Cotação automática' : method.calculation_type === 'LOCAL_TABLE' ? 'Tabela por faixa de CEP' : 'Valor configurado'}</div>
                       </div>
                       {(['checkout_enabled', 'internal_enabled'] as const).map(field => (
                         <label key={field} className="relative mx-auto inline-flex cursor-pointer items-center">
@@ -337,8 +337,8 @@ export default function ShippingSettings() {
                 ))}
               </div>
 
-              {/* CEP de Origem do SEDEX */}
-              {sedexCheckoutEnabled && (
+              {/* CEP de origem compartilhado por PAC e SEDEX */}
+              {correiosCheckoutEnabled && (
                 <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                     CEP de Origem dos Correios (Despacho) *
@@ -354,7 +354,7 @@ export default function ShippingSettings() {
                     />
                   </div>
                   <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-                    Utilizado como origem para calcular os custos e prazos exatos do SEDEX.
+                    Utilizado como origem para calcular separadamente custos e prazos de PAC e SEDEX.
                   </p>
                 </div>
               )}
@@ -408,10 +408,10 @@ export default function ShippingSettings() {
                   )}
                 </div>
 
-                {/* Frete Grátis SEDEX */}
+                {/* Frete Grátis Correios */}
                 <div className="space-y-3 bg-gray-50 dark:bg-gray-900/40 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">Correios SEDEX</h3>
+                    <h3 className="font-semibold text-sm sm:text-base text-gray-900 dark:text-white">Correios (PAC e SEDEX)</h3>
                     <label className="relative inline-flex items-center cursor-pointer">
                       <input
                         type="checkbox"
@@ -441,8 +441,8 @@ export default function ShippingSettings() {
                       />
                       <p className="mt-1 text-[11px] text-gray-500">
                         {settings.sedex_free_shipping_threshold && settings.sedex_free_shipping_threshold > 0
-                          ? `Grátis via SEDEX acima de R$ ${Number(settings.sedex_free_shipping_threshold).toFixed(2).replace('.', ',')}`
-                          : 'Frete grátis SEDEX sem valor mínimo'}
+                          ? `Grátis via PAC ou SEDEX acima de R$ ${Number(settings.sedex_free_shipping_threshold).toFixed(2).replace('.', ',')}`
+                          : 'Frete grátis nos Correios sem valor mínimo'}
                       </p>
                     </div>
                   )}

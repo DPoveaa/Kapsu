@@ -24,7 +24,7 @@ export interface ShippingMethod {
   name: string
   checkout_enabled: boolean
   internal_enabled: boolean
-  calculation_type: 'SEDEX' | 'LOCAL_TABLE' | 'FIXED' | 'INTERNAL_ONLY'
+  calculation_type: 'CORREIOS' | 'SEDEX' | 'LOCAL_TABLE' | 'FIXED' | 'INTERNAL_ONLY'
   fixed_fee: number | null
   delivery_time: number | null
   delivery_time_type: 'business' | 'calendar'

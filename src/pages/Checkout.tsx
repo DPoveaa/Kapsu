@@ -4,13 +4,14 @@ import { ArrowLeft, MapPin, Loader2, Truck, Plus, Edit2, Trash2, X, TestTube } f
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { paymentService, buildShippingAddress } from '../services/payment.service'
-import { shippingService } from '../services/shipping.service'
+import { shippingService, ShippingOption } from '../services/shipping.service'
 import { addressService, SavedAddress } from '../services/address.service'
 import { orderService } from '../services/order.service'
 import { MultiplePromoCodesValidation } from '../services/promo-codes.service'
 import { cepService } from '../services/cep.service'
 import { CheckoutPayment } from '../components/Checkout/CheckoutPayment'
 import { Copy, Download, CheckCircle } from 'lucide-react'
+import ShippingCard from '../components/Checkout/ShippingCard'
 import { isPaidOrderStatus } from '../utils/orderStatus'
 
 export default function Checkout() {
@@ -128,6 +129,11 @@ export default function Checkout() {
   const [isFreeShipping, setIsFreeShipping] = useState(false)
   const [calculatingShipping, setCalculatingShipping] = useState(false)
   const [shippingMessage, setShippingMessage] = useState<string | null>(null)
+  const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([])
+  const [selectedShippingMethod, setSelectedShippingMethod] = useState<string | null>(null)
+  const [shippingServiceName, setShippingServiceName] = useState<string | null>(null)
+  const [deliveryTime, setDeliveryTime] = useState<number | null>(null)
+  const [deliveryTimeType, setDeliveryTimeType] = useState<'business' | 'calendar' | null>(null)
   const [freeShippingThreshold, setFreeShippingThreshold] = useState(0)
   const [shippingCalculationFailed, setShippingCalculationFailed] = useState(false)
 
@@ -263,24 +269,35 @@ export default function Checkout() {
           if (result.shippingFee === null) {
             // CEP não atendido - marca como inválido mesmo com cupom de frete grátis
             setShippingFee(null)
+            setShippingOptions([])
+            setSelectedShippingMethod(null)
+            setShippingServiceName(null)
+            setDeliveryTime(null)
+            setDeliveryTimeType(null)
             setIsFreeShipping(false)
             setShippingMessage(result.message || 'Não entregamos para este CEP no momento. Em breve estaremos por aí!')
             setShippingCalculationFailed(true)
             setFreeShippingThreshold(0)
           } else {
-            // CEP válido - seta o shippingFee do resultado
-            setShippingFee(result.shippingFee)
+            const availableOptions = result.options?.length ? result.options : []
+            const selectedOption = availableOptions.find(option => option.method === selectedShippingMethod) || availableOptions[0]
+            setShippingOptions(availableOptions)
+            setSelectedShippingMethod(selectedOption?.method || null)
+            setShippingFee(selectedOption?.shippingFee ?? result.shippingFee)
+            setShippingServiceName(selectedOption?.service || selectedOption?.name || result.service || null)
+            setDeliveryTime(selectedOption?.deliveryTime ?? result.deliveryTime ?? null)
+            setDeliveryTimeType(selectedOption?.deliveryTimeType ?? result.deliveryTimeType ?? null)
 
             // Se houver cupom de frete grátis, mantém isFreeShipping como true
             // Caso contrário, usa o resultado do cálculo
             if (promoCodesValidation?.freeShipping) {
               setIsFreeShipping(true)
             } else {
-              setIsFreeShipping(result.isFreeShipping)
+              setIsFreeShipping(selectedOption?.isFreeShipping ?? result.isFreeShipping)
             }
 
-            setFreeShippingThreshold(result.freeShippingThreshold || 0)
-            setShippingMessage(result.message)
+            setFreeShippingThreshold(selectedOption?.freeShippingThreshold ?? result.freeShippingThreshold ?? 0)
+            setShippingMessage(selectedOption?.message || result.message)
             setShippingCalculationFailed(false) // Sucesso, não falhou - CEP é válido
           }
         } catch (error: any) {
@@ -289,6 +306,11 @@ export default function Checkout() {
           setIsFreeShipping(false)
 
           // Verifica se o erro indica que não entregamos para o CEP
+          setShippingOptions([])
+          setSelectedShippingMethod(null)
+          setShippingServiceName(null)
+          setDeliveryTime(null)
+          setDeliveryTimeType(null)
           const errorMessage = (error.message || error.toString() || '').toLowerCase()
           const isCepNotServed = errorMessage.includes('não atendemos') ||
             errorMessage.includes('não entregamos') ||
@@ -315,6 +337,11 @@ export default function Checkout() {
         setIsFreeShipping(false)
         setShippingMessage(null)
         setShippingCalculationFailed(false) // Reset quando CEP não está completo
+        setShippingOptions([])
+        setSelectedShippingMethod(null)
+        setShippingServiceName(null)
+        setDeliveryTime(null)
+        setDeliveryTimeType(null)
       }
     }
 
@@ -322,6 +349,18 @@ export default function Checkout() {
     const timeoutId = setTimeout(calculateShipping, 500)
     return () => clearTimeout(timeoutId)
   }, [formData.cep, subtotal, items])
+  const handleShippingOptionSelect = (option: ShippingOption) => {
+    setSelectedShippingMethod(option.method)
+    setShippingFee(option.shippingFee)
+    setShippingServiceName(option.service || option.name)
+    setDeliveryTime(option.deliveryTime)
+    setDeliveryTimeType(option.deliveryTimeType)
+    setFreeShippingThreshold(option.freeShippingThreshold || 0)
+    setShippingMessage(option.message || null)
+    setIsFreeShipping(promoCodesValidation?.freeShipping ? true : option.isFreeShipping)
+    setShippingCalculationFailed(false)
+  }
+
 
   // Busca endereço por CEP
   useEffect(() => {
@@ -546,7 +585,8 @@ export default function Checkout() {
       ...(isSubscription ? { subscriptionPlan } : {}),
       ...(shippingCost > 0 ? { shippingFee: shippingCost } : {}),
       paymentMethod: selectedPaymentMethod,
-      ...(existingOrderId ? { orderId: existingOrderId } : {})
+      ...(existingOrderId ? { orderId: existingOrderId } : {}),
+      ...(selectedShippingMethod ? { shippingMethod: selectedShippingMethod } : {}),
     }
 
     if (canUseSavedAddressId()) {
@@ -1265,6 +1305,23 @@ export default function Checkout() {
                             <div className="mt-2 text-sm flex items-center text-green-600 dark:text-green-400">
                               <Truck className="w-4 h-4 mr-1" />
                               {shippingMessage}
+                            </div>
+                          )}
+                          {formData.cep.replace(/\D/g, '').length === 8 && (
+                            <div className="mt-3">
+                              <ShippingCard
+                                service={shippingServiceName}
+                                deliveryTime={deliveryTime}
+                                deliveryTimeType={deliveryTimeType}
+                                estimatedDateFormatted=""
+                                shippingFee={shippingFee}
+                                hasFreeShipping={Boolean(promoCodesValidation?.freeShipping || isFreeShipping || isSubscription)}
+                                calculatingShipping={calculatingShipping}
+                                hasInvalidCep={hasInvalidCep()}
+                                options={shippingOptions}
+                                selectedMethod={selectedShippingMethod}
+                                onSelect={handleShippingOptionSelect}
+                              />
                             </div>
                           )}
                           {!isFreeShipping && shippingFee !== null && subtotal < freeShippingThreshold && (
