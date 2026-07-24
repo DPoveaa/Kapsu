@@ -484,7 +484,7 @@ export const KapsuOrbitalPortal: React.FC<KapsuOrbitalPortalProps> = ({ visible 
 
   return createPortal(
     <div
-      className="fixed inset-0 pointer-events-none z-[999999] overflow-visible transition-opacity ease-in-out"
+      className="fixed inset-0 pointer-events-none z-[900] overflow-visible transition-opacity ease-in-out"
       style={{
         opacity: visible ? 1 : 0,
         transitionDuration: visible ? '450ms' : '180ms',

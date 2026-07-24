@@ -13,13 +13,10 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Sun,
-  Moon,
   Eye,
   EyeOff,
 } from 'lucide-react';
 import { supplierService, SupplierProfileResponse } from '../services/supplier.service';
-import { useTheme } from '../context/ThemeContext';
 import AnimatedLogo from './AnimatedLogo';
 import KapsuThemeControl from './theme-toggle/KapsuThemeControl';
 
@@ -68,12 +65,12 @@ const NAV = [
 export default function SupplierLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { theme, toggleTheme } = useTheme();
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isDesktopViewport, setIsDesktopViewport] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches);
   const [themeTargetCollapsed, setThemeTargetCollapsed] = useState(false);
   const [themePortalVisible, setThemePortalVisible] = useState(true);
   const themeTargetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -87,6 +84,17 @@ export default function SupplierLayout() {
   const [showObConfirm, setShowObConfirm] = useState(false);
 
   useEffect(() => { fetchProfile(); }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const handleViewportChange = (event: MediaQueryListEvent) => {
+      setIsDesktopViewport(event.matches);
+    };
+
+    setIsDesktopViewport(mediaQuery.matches);
+    mediaQuery.addEventListener('change', handleViewportChange);
+    return () => mediaQuery.removeEventListener('change', handleViewportChange);
+  }, []);
 
   useEffect(() => () => {
     if (themeTargetTimerRef.current) clearTimeout(themeTargetTimerRef.current);
@@ -196,7 +204,8 @@ export default function SupplierLayout() {
             </div>
           </div>
 
-          <div
+          {!isMobile && (
+            <div
             className={`absolute top-1/2 -translate-y-1/2 transition-opacity ease-in-out ${
               isMobile ? 'right-10' : 'left-[188px]'
             } ${
@@ -209,12 +218,13 @@ export default function SupplierLayout() {
           >
             <KapsuThemeControl
               compact
-              interactive={!isCollapsed && themePortalVisible}
-              orbitalTarget={!themeTargetCollapsed}
-              renderPortal
+              interactive={isDesktopViewport && !isCollapsed && themePortalVisible}
+              orbitalTarget={isDesktopViewport && !themeTargetCollapsed}
+              renderPortal={isDesktopViewport}
               portalVisible={themePortalVisible}
             />
           </div>
+          )}
 
           {isMobile && (
             <button
@@ -271,7 +281,7 @@ export default function SupplierLayout() {
         <div className={`border-t border-gray-200 dark:border-gray-800 px-2 py-3 space-y-1`}>
           {/* Toggle Tema Kapsu (Exibido quando a sidebar está colapsada) */}
           <div
-            className={`h-14 flex items-center justify-start pl-1 transition-opacity ease-in-out ${
+            className={`${isMobile ? 'hidden' : 'h-14 flex items-center justify-start pl-1'} transition-opacity ease-in-out ${
               isCollapsed
                 ? 'opacity-100 duration-[450ms] delay-[350ms]'
                 : 'pointer-events-none opacity-0 duration-[180ms] delay-0'
@@ -279,8 +289,8 @@ export default function SupplierLayout() {
           >
             <KapsuThemeControl
               compact
-              interactive={isCollapsed && themePortalVisible}
-              orbitalTarget={themeTargetCollapsed}
+              interactive={isDesktopViewport && isCollapsed && themePortalVisible}
+              orbitalTarget={isDesktopViewport && themeTargetCollapsed}
               renderPortal={false}
             />
           </div>
@@ -328,7 +338,7 @@ export default function SupplierLayout() {
       {/* ── Mobile Overlay ──────────────────────────────────────────────────── */}
       {mobileOpen && (
         <div
-          className="md:hidden fixed inset-0 z-40 bg-gray-900/60 backdrop-blur-sm"
+          className="md:hidden fixed inset-0 z-[1000] bg-gray-900/60 backdrop-blur-sm"
           onClick={() => setMobileOpen(false)}
         >
           <div
@@ -358,15 +368,12 @@ export default function SupplierLayout() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={() => toggleTheme()}
-              className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-            >
-              {theme === 'dark'
-                ? <Sun className="w-4 h-4 text-amber-500" />
-                : <Moon className="w-4 h-4 text-slate-500" />
-              }
-            </button>
+            <KapsuThemeControl
+              compact
+              interactive={!isDesktopViewport}
+              orbitalTarget={!isDesktopViewport}
+              renderPortal={!isDesktopViewport}
+            />
             <div className="w-8 h-8 rounded-xl bg-primary-100 dark:bg-primary-900/60 border border-primary-200 dark:border-primary-800/60 flex items-center justify-center text-primary-700 dark:text-primary-300 font-bold text-sm">
               {supplierInitial}
             </div>
