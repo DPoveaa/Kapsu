@@ -11,6 +11,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const location = useLocation()
+  const isAiCenter = location.pathname === ADMIN_AI_CENTER_PATH
 
   const menuGroups = [
     {
@@ -137,7 +138,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="flex h-dvh min-h-0 w-full bg-gray-50 dark:bg-gray-900 overflow-hidden relative">
+    <div className="flex h-full min-h-0 w-full bg-gray-50 dark:bg-gray-900 overflow-hidden relative">
       {/* Mobile Menu Button - só aparece em telas pequenas se não estiver aberto */}
       {!mobileMenuOpen && (
         <div className="md:hidden absolute top-4 left-4 z-20">
@@ -155,7 +156,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       {/* Sidebar Desktop */}
-      <aside className={`hidden md:block relative h-dvh min-h-0 sticky top-0 transition-all duration-300 ease-in-out z-10 shadow-sm ${isCollapsed ? 'w-20' : 'w-64'}`}>
+      <aside className={`hidden md:block relative h-full min-h-0 transition-all duration-300 ease-in-out z-10 shadow-sm ${isCollapsed ? 'w-20' : 'w-64'}`}>
         <button
           type="button"
           onClick={() => setIsCollapsed(value => !value)}
@@ -193,7 +194,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main Content Area */}
       <main className="flex-1 min-w-0 flex flex-col overflow-hidden">
-        <div className="flex-1 flex flex-col p-4 md:p-6 lg:p-8 mt-12 md:mt-0 w-full md:max-w-none overflow-y-auto min-h-0">
+        <div className={`flex-1 flex flex-col p-4 md:p-6 lg:p-8 mt-12 md:mt-0 w-full md:max-w-none min-h-0 ${isAiCenter ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           {children}
         </div>
       </main>

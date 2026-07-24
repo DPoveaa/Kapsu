@@ -2073,7 +2073,6 @@ export default function KaiaChats() {
   const [autoRefresh] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [confirmModal, setConfirmModal] = useState<{ action: string; title: string; message: string } | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const isInitialLoadRef = useRef(true);
   const toastIdRef = useRef(0);
@@ -2240,13 +2239,13 @@ export default function KaiaChats() {
 
     if (isInitialLoadRef.current) {
       // Carregamento inicial ou troca de conversa: vai direto para o fim
-      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      container.scrollTop = container.scrollHeight;
       isInitialLoadRef.current = false;
     } else {
       // Polling: só rola se o usuário já estiver perto do final (~100px)
       const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
       if (distanceFromBottom <= 100) {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
       }
     }
   }, [messages]);
@@ -2459,7 +2458,7 @@ export default function KaiaChats() {
           {/* ===== Layout Principal: Lista | Chat ===== */}
           <div className="flex flex-1 min-h-0 gap-0 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
             {/* ===== Painel Esquerdo: Lista de Conversas ===== */}
-            <div className="w-80 flex-shrink-0 flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
+            <div className="w-80 min-h-0 flex-shrink-0 flex flex-col overflow-hidden bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700">
               {/* Busca e Filtros */}
               <div className="p-3 border-b border-gray-100 dark:border-gray-800">
                 <div className="flex flex-wrap gap-1.5 mb-2">
@@ -2646,7 +2645,7 @@ export default function KaiaChats() {
               </div>
 
               {/* Lista agrupada por usuário */}
-              <div className="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-gray-100 dark:divide-gray-800">
                 {groupedUsers.length === 0 && !loading && (
                   <div className="flex flex-col items-center justify-center h-40 text-gray-400 dark:text-gray-600">
                     <MessageSquare size={32} className="mb-2 opacity-50" />
@@ -2835,8 +2834,8 @@ export default function KaiaChats() {
 
             {/* ===== Painel Direito: Conversa ===== */}
             {selectedConv ? (
-              <div className="flex-1 flex min-w-0 bg-gray-50 dark:bg-gray-950">
-                <div className="flex-1 flex flex-col min-w-0 border-r border-gray-200 dark:border-gray-800">
+              <div className="flex-1 min-h-0 flex min-w-0 overflow-hidden bg-gray-50 dark:bg-gray-950">
+                <div className="flex-1 min-h-0 flex flex-col min-w-0 overflow-hidden border-r border-gray-200 dark:border-gray-800">
                   {/* Header da Conversa */}
                   <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
                     <div className="flex items-start justify-between gap-3">
@@ -3004,7 +3003,7 @@ export default function KaiaChats() {
                   </div>
 
                   {/* Mensagens */}
-                  <div ref={messagesContainerRef} className="flex-1 overflow-y-auto px-4 py-4">
+                  <div ref={messagesContainerRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4">
                     {loadingMessages ? (
                       <div className="flex items-center justify-center h-40">
                         <Loader2 size={24} className="animate-spin text-primary-500" />
@@ -3019,7 +3018,6 @@ export default function KaiaChats() {
                         {messages.map(msg => (
                           <ChatMessage key={msg.id} message={msg} />
                         ))}
-                        <div ref={messagesEndRef} />
                       </>
                     )}
                   </div>
@@ -3050,7 +3048,7 @@ export default function KaiaChats() {
                 </div>
 
                 {/* NEW Right sidebar for Memory Diagnostics */}
-                <div className="w-80 flex-shrink-0 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 flex flex-col p-4 overflow-y-auto space-y-4">
+                <div className="w-80 min-h-0 flex-shrink-0 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 flex flex-col p-4 overflow-y-auto overscroll-contain space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-bold text-xs text-gray-450 dark:text-gray-500 uppercase tracking-wider mb-1">Diagnóstico de Memória</h3>
