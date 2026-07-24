@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Search, Truck, Eye, RefreshCw, Copy, ExternalLink, ChevronDown, Check, SlidersHorizontal, X, Pill, MapPin, Package } from 'lucide-react';
+import { Search, Truck, Eye, RefreshCw, Copy, ExternalLink, ChevronDown, Check, SlidersHorizontal, X, MapPin, Package } from 'lucide-react';
 import { supplierService, SupplierOrder } from '../../services/supplier.service';
 import { toast } from '../../utils/toast';
 import AdminModal from '../../components/AdminModal';
@@ -701,10 +701,10 @@ export default function SupplierOrders() {
               {selectedOrder.items.map((item, idx) => {
                 const cleanedCompositions = item.compositions
                   ? item.compositions
-                      .split('\n')
-                      .map(l => l.trim())
-                      .filter(l => l && !/^quantidades por dose$/i.test(l))
-                      .join('\n')
+                    .split('\n')
+                    .map(l => l.trim())
+                    .filter(l => l && !/^quantidades por dose$/i.test(l))
+                    .join('\n')
                   : null;
 
                 return (
