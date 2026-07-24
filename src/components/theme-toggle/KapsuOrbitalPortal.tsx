@@ -6,7 +6,11 @@ import SunIcon from './SunIcon';
 import StarSparkles from './StarSparkles';
 import ShootingStarCanvas, { MeteorItem } from './ShootingStarCanvas';
 
-export const KapsuOrbitalPortal: React.FC = () => {
+interface KapsuOrbitalPortalProps {
+  visible?: boolean;
+}
+
+export const KapsuOrbitalPortal: React.FC<KapsuOrbitalPortalProps> = ({ visible = true }) => {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
 
@@ -480,7 +484,11 @@ export const KapsuOrbitalPortal: React.FC = () => {
 
   return createPortal(
     <div
-      className="fixed inset-0 pointer-events-none z-[999999] overflow-visible"
+      className="fixed inset-0 pointer-events-none z-[999999] overflow-visible transition-opacity ease-in-out"
+      style={{
+        opacity: visible ? 1 : 0,
+        transitionDuration: visible ? '450ms' : '180ms',
+      }}
       data-kapsu-theme-animation="true"
     >
       {/* ── 0. CAMADA DE ESTRELAS CADENTES ── */}
@@ -488,13 +496,12 @@ export const KapsuOrbitalPortal: React.FC = () => {
 
       {/* ── 1. ELEMENTO CELESTIAL ÚNICO: SOL HD COM ANIMAÇÃO IDLE SOLAR ── */}
       <div
-        className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center transition-opacity duration-300 pointer-events-none"
+        className="absolute left-0 top-0 flex items-center justify-center transition-opacity duration-300 pointer-events-none"
         style={{
-          left: `${sunX}px`,
-          top: `${sunY}px`,
-          transform: `translate(-50%, -50%) scale(${sunScale})`,
+          transform: `translate3d(${sunX}px, ${sunY}px, 0) translate(-50%, -50%) scale(${sunScale})`,
           opacity: sunOpacity,
           zIndex: sunZIndex,
+          willChange: animStage === 'idle' ? 'auto' : 'transform, opacity',
         }}
       >
         <SunIcon size={28} />
@@ -502,13 +509,12 @@ export const KapsuOrbitalPortal: React.FC = () => {
 
       {/* ── 2. ELEMENTO CELESTIAL ÚNICO: LUA SÓLIDA HD COM FASES E ESTRELAS PASSANTES ── */}
       <div
-        className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center transition-opacity duration-300 pointer-events-none"
+        className="absolute left-0 top-0 flex items-center justify-center transition-opacity duration-300 pointer-events-none"
         style={{
-          left: `${moonX}px`,
-          top: `${moonY}px`,
-          transform: `translate(-50%, -50%) scale(${moonScale})`,
+          transform: `translate3d(${moonX}px, ${moonY}px, 0) translate(-50%, -50%) scale(${moonScale})`,
           opacity: moonOpacity,
           zIndex: moonZIndex,
+          willChange: animStage === 'idle' ? 'auto' : 'transform, opacity',
         }}
       >
         <div className="relative flex items-center justify-center">

@@ -9,6 +9,7 @@ export interface KapsuThemeControlProps {
   interactive?: boolean;
   orbitalTarget?: boolean;
   renderPortal?: boolean;
+  portalVisible?: boolean;
 }
 
 export const KapsuThemeControl: React.FC<KapsuThemeControlProps> = ({
@@ -16,6 +17,7 @@ export const KapsuThemeControl: React.FC<KapsuThemeControlProps> = ({
   interactive = true,
   orbitalTarget = true,
   renderPortal = true,
+  portalVisible = true,
 }) => {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -254,7 +256,7 @@ export const KapsuThemeControl: React.FC<KapsuThemeControlProps> = ({
       )}
 
       {/* Portal Celestial Único (Gerencia o Sol, Lua, Estrelas e Chuva de Meteoros) */}
-      {renderPortal && <KapsuOrbitalPortal />}
+      {renderPortal && <KapsuOrbitalPortal visible={portalVisible} />}
     </div>
   );
 };

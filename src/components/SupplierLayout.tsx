@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import {
   ShoppingBag,
@@ -74,6 +74,10 @@ export default function SupplierLayout() {
   const [pageLoading, setPageLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [themeTargetCollapsed, setThemeTargetCollapsed] = useState(false);
+  const [themePortalVisible, setThemePortalVisible] = useState(true);
+  const themeTargetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const themeTargetFrameRef = useRef<number | null>(null);
 
   // Onboarding (primeiro acesso — senha temporária)
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -83,6 +87,32 @@ export default function SupplierLayout() {
   const [showObConfirm, setShowObConfirm] = useState(false);
 
   useEffect(() => { fetchProfile(); }, []);
+
+  useEffect(() => () => {
+    if (themeTargetTimerRef.current) clearTimeout(themeTargetTimerRef.current);
+    if (themeTargetFrameRef.current) cancelAnimationFrame(themeTargetFrameRef.current);
+  }, []);
+
+  const handleSidebarToggle = () => {
+    const nextCollapsed = !collapsed;
+
+    if (themeTargetTimerRef.current) clearTimeout(themeTargetTimerRef.current);
+    if (themeTargetFrameRef.current) cancelAnimationFrame(themeTargetFrameRef.current);
+
+    // Fade the portal itself out before changing its horizon. This prevents the
+    // fixed Sun/Moon layer from jumping between the two duplicated controls.
+    setThemePortalVisible(false);
+    setCollapsed(nextCollapsed);
+
+    themeTargetTimerRef.current = setTimeout(() => {
+      setThemeTargetCollapsed(nextCollapsed);
+      themeTargetFrameRef.current = requestAnimationFrame(() => {
+        setThemePortalVisible(true);
+        themeTargetFrameRef.current = null;
+      });
+      themeTargetTimerRef.current = null;
+    }, 350);
+  };
 
   const fetchProfile = async () => {
     try {
@@ -173,15 +203,16 @@ export default function SupplierLayout() {
               isMobile
                 ? 'opacity-100 duration-200 delay-100'
                 : isCollapsed
-                  ? 'pointer-events-none opacity-0 duration-[450ms] delay-0'
-                  : 'opacity-100 duration-[900ms] delay-[600ms]'
+                  ? 'pointer-events-none opacity-0 duration-[180ms] delay-0'
+                  : 'opacity-100 duration-[450ms] delay-[350ms]'
             }`}
           >
             <KapsuThemeControl
               compact
-              interactive={!isCollapsed}
-              orbitalTarget={!isCollapsed}
+              interactive={!isCollapsed && themePortalVisible}
+              orbitalTarget={!themeTargetCollapsed}
               renderPortal
+              portalVisible={themePortalVisible}
             />
           </div>
 
@@ -242,14 +273,14 @@ export default function SupplierLayout() {
           <div
             className={`h-14 flex items-center justify-start pl-1 transition-opacity ease-in-out ${
               isCollapsed
-                ? 'opacity-100 duration-[900ms] delay-[600ms]'
-                : 'pointer-events-none opacity-0 duration-[450ms] delay-0'
+                ? 'opacity-100 duration-[450ms] delay-[350ms]'
+                : 'pointer-events-none opacity-0 duration-[180ms] delay-0'
             }`}
           >
             <KapsuThemeControl
               compact
-              interactive={isCollapsed}
-              orbitalTarget={isCollapsed}
+              interactive={isCollapsed && themePortalVisible}
+              orbitalTarget={themeTargetCollapsed}
               renderPortal={false}
             />
           </div>
@@ -278,7 +309,7 @@ export default function SupplierLayout() {
       >
         {/* Botão Colapsar (flutuante na borda) */}
         <button
-          onClick={() => setCollapsed(c => !c)}
+          onClick={handleSidebarToggle}
           className="absolute -right-3.5 top-6 z-30 w-7 h-7 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 shadow-md transition hover:scale-110"
           title={collapsed ? 'Expandir menu' : 'Recolher menu'}
         >
