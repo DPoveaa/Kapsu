@@ -1,6 +1,7 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Menu, LogOut, Shield, UserCircle, Search, Loader2, Building2 } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ShoppingCart, User, Menu, LogOut, Shield, UserCircle, Search, Loader2, Building2, X, Home, Package, ChevronRight } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import AnimatedLogo from './AnimatedLogo';
@@ -38,6 +39,8 @@ export default function Header() {
   const { user, logout, isAdmin, isSupplier } = useAuth();
   const itemCount = getItemCount();
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuCloseRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [suggestions, setSuggestions] = useState<Product[]>([]);
   const [searchCatalog, setSearchCatalog] = useState<Product[] | null>(null);
@@ -46,6 +49,7 @@ export default function Header() {
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState(SEARCH_PLACEHOLDERS[0]);
   const desktopSearchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
+  const location = useLocation();
   const navigate = useNavigate();
 
   const getProfileImageUrl = (profileImage?: string): string | null => {
@@ -86,6 +90,39 @@ export default function Header() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [userMenuOpen, showSuggestions]);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusTimer = window.setTimeout(() => mobileMenuCloseRef.current?.focus(), 0);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false);
+        window.setTimeout(() => mobileMenuTriggerRef.current?.focus(), 0);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [mobileMenuOpen]);
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+
+  const handleMobileLogout = () => {
+    logout();
+    closeMobileMenu();
+  };
 
   useEffect(() => {
     const q = searchTerm.trim();
@@ -184,6 +221,7 @@ export default function Header() {
     const q = searchTerm.trim();
     if (!q) return;
     setShowSuggestions(false);
+    closeMobileMenu();
     navigate(`/produtos?q=${encodeURIComponent(q)}`);
   };
 
@@ -263,7 +301,150 @@ export default function Header() {
     );
   };
 
+  const mobileMenu = mobileMenuOpen && typeof document !== 'undefined'
+    ? createPortal(
+      <div
+        id="mobile-navigation"
+        className="fixed inset-0 z-[1000] md:hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu principal"
+      >
+        <button
+          type="button"
+          className="absolute inset-0 h-full w-full bg-gray-950/55 backdrop-blur-[2px]"
+          aria-label="Fechar menu"
+          onClick={closeMobileMenu}
+        />
+        <aside className="absolute inset-y-0 right-0 flex w-[min(92vw,24rem)] flex-col overflow-hidden border-l border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-[#121C18]">
+          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3.5 dark:border-gray-800">
+            <Link to="/" onClick={closeMobileMenu} className="flex min-w-0 items-center gap-2.5 rounded-lg">
+              <AnimatedLogo className="h-9 w-9 object-contain" alt="Kapsu Logo" />
+              <div className="min-w-0">
+                <p className="truncate text-lg font-bold text-gray-900 dark:text-white">Kapsu</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">Navegue pela loja</p>
+              </div>
+            </Link>
+            <button
+              ref={mobileMenuCloseRef}
+              type="button"
+              onClick={closeMobileMenu}
+              className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-600 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:text-gray-300 dark:hover:bg-gray-800"
+              aria-label="Fechar menu"
+            >
+              <X size={24} />
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+            <div ref={mobileSearchRef}>
+            <form onSubmit={handleSearchSubmit} className="relative mb-4">
+              <label htmlFor="mobile-menu-search" className="sr-only">Buscar produtos</label>
+              <input
+                id="mobile-menu-search"
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="O que você está procurando?"
+                className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-4 pr-12 text-base text-gray-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+              />
+              <button
+                type="submit"
+                className="absolute right-1.5 top-1.5 flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 text-white"
+                aria-label="Buscar"
+              >
+                <Search size={18} />
+              </button>
+            </form>
+            </div>
+
+            <nav aria-label="Navegação principal" className="space-y-1">
+              <Link
+                to="/"
+                onClick={closeMobileMenu}
+                className="flex min-h-12 items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-gray-800 transition-colors hover:bg-primary-50 hover:text-primary-700 dark:text-gray-100 dark:hover:bg-primary-950/30 dark:hover:text-primary-300"
+              >
+                <Home size={20} className="text-primary-600" />
+                <span className="flex-1">Início</span>
+                <ChevronRight size={17} className="text-gray-400" />
+              </Link>
+              <Link
+                to="/produtos"
+                onClick={closeMobileMenu}
+                className="flex min-h-12 items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-gray-800 transition-colors hover:bg-primary-50 hover:text-primary-700 dark:text-gray-100 dark:hover:bg-primary-950/30 dark:hover:text-primary-300"
+              >
+                <Package size={20} className="text-primary-600" />
+                <span className="flex-1">Todos os produtos</span>
+                <ChevronRight size={17} className="text-gray-400" />
+              </Link>
+              <Link
+                to="/carrinho"
+                onClick={closeMobileMenu}
+                className="flex min-h-12 items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-gray-800 transition-colors hover:bg-primary-50 hover:text-primary-700 dark:text-gray-100 dark:hover:bg-primary-950/30 dark:hover:text-primary-300"
+              >
+                <ShoppingCart size={20} className="text-primary-600" />
+                <span className="flex-1">Carrinho</span>
+                {itemCount > 0 && (
+                  <span className="rounded-full bg-primary-600 px-2 py-0.5 text-xs font-bold text-white">
+                    {itemCount > 99 ? '99+' : itemCount}
+                  </span>
+                )}
+              </Link>
+            </nav>
+
+            <div className="my-4 h-px bg-gray-100 dark:bg-gray-800" />
+            <HeaderCategories variant="menu" onNavigate={closeMobileMenu} />
+
+            <div className="my-4 h-px bg-gray-100 dark:bg-gray-800" />
+            <p className="mb-2 px-1 text-xs font-bold uppercase tracking-wider text-gray-400">Sua conta</p>
+            <div className="space-y-1">
+              {user ? (
+                <>
+                  <Link to="/perfil" onClick={closeMobileMenu} className="flex min-h-12 items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800">
+                    <UserCircle size={20} className="text-primary-600" />
+                    <span className="min-w-0 flex-1 truncate">{user.name || 'Meu perfil'}</span>
+                    <ChevronRight size={17} className="text-gray-400" />
+                  </Link>
+                  {isAdmin && (
+                    <Link to="/admin" onClick={closeMobileMenu} className="flex min-h-12 items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800">
+                      <Shield size={20} className="text-amber-500" />
+                      <span className="flex-1">Painel administrativo</span>
+                      <ChevronRight size={17} className="text-gray-400" />
+                    </Link>
+                  )}
+                  {(isSupplier || user.role === 'supplier_admin' || user.role === 'supplier_employee' || user.supplier_id) && (
+                    <Link to="/supplier/orders" onClick={closeMobileMenu} className="flex min-h-12 items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-800">
+                      <Building2 size={20} className="text-primary-600" />
+                      <span className="flex-1">Portal do fornecedor</span>
+                      <ChevronRight size={17} className="text-gray-400" />
+                    </Link>
+                  )}
+                  <button type="button" onClick={handleMobileLogout} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30">
+                    <LogOut size={20} />
+                    <span>Sair da conta</span>
+                  </button>
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <Link to="/login" onClick={closeMobileMenu} className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-primary-600 px-3 py-3 text-sm font-bold text-primary-700 dark:text-primary-300">
+                    <User size={18} />
+                    Entrar
+                  </Link>
+                  <Link to="/cadastro" onClick={closeMobileMenu} className="flex min-h-12 items-center justify-center rounded-xl bg-primary-600 px-3 py-3 text-sm font-bold text-white">
+                    Criar conta
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        </aside>
+      </div>,
+      document.body
+    )
+    : null;
+
   return (
+    <>
     <header className="bg-white dark:bg-[#121C18] border-b border-gray-100 dark:border-[#202C26] sticky top-0 z-50 backdrop-blur-sm bg-white/95 dark:bg-[#121C18]/95 transition-colors duration-500 relative">
       {/* Barra superior verde */}
       <div className="h-1 bg-primary-500"></div>
@@ -416,10 +597,15 @@ export default function Header() {
               </Link>
             )}
             <button
-              className="md:hidden p-2.5 text-gray-600 dark:text-[#AAB5AF] hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              ref={mobileMenuTriggerRef}
+              type="button"
+              className="relative z-10 flex h-11 w-11 items-center justify-center rounded-xl text-gray-700 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 md:hidden dark:text-gray-200 dark:hover:bg-gray-800"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Abrir menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
             >
-              <Menu size={22} />
+              <Menu size={24} />
             </button>
           </div>
         </div>
@@ -428,5 +614,7 @@ export default function Header() {
       {/* Faixa de Categorias */}
       <HeaderCategories />
     </header>
+    {mobileMenu}
+    </>
   );
 }

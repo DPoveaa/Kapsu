@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { 
   Settings, MessageSquare, Users, Package, ShoppingCart, BarChart3, 
@@ -60,6 +60,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return location.pathname.startsWith(path);
   }
 
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMobileMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [mobileMenuOpen])
+
   const renderNavItems = (isMobile = false) => {
     const collapsed = isCollapsed && !isMobile
 
@@ -70,6 +92,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="px-3 mb-4">
           <Link 
             to="/admin"
+            onClick={() => isMobile && setMobileMenuOpen(false)}
             className={`flex items-center px-[18px] py-2.5 rounded-lg transition-colors overflow-hidden ${
               isActive('/admin') 
                 ? 'bg-primary-50 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400 font-medium' 
@@ -118,8 +141,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {!mobileMenuOpen && (
         <div className="md:hidden absolute top-4 left-4 z-20">
           <button 
+            type="button"
             onClick={() => setMobileMenuOpen(true)}
             className="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-md text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            aria-label="Abrir menu administrativo"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="admin-mobile-navigation"
           >
             <MenuIcon size={24} />
           </button>
@@ -142,12 +169,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Sidebar Mobile Overlay */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 z-50 flex">
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={() => setMobileMenuOpen(false)}></div>
-          <aside className="relative w-72 bg-white dark:bg-gray-900 h-full flex flex-col shadow-xl animate-in slide-in-from-left-full duration-300">
+        <div id="admin-mobile-navigation" className="md:hidden fixed inset-0 z-[1000] flex" role="dialog" aria-modal="true" aria-label="Menu administrativo">
+          <button
+            type="button"
+            className="fixed inset-0 h-full w-full bg-black/55 backdrop-blur-sm transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Fechar menu administrativo"
+          />
+          <aside className="relative h-full w-[min(88vw,20rem)] bg-white dark:bg-gray-900 flex flex-col shadow-2xl animate-in slide-in-from-left duration-200">
             <button 
+              type="button"
               onClick={() => setMobileMenuOpen(false)}
-              className="absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-full"
+              className="absolute top-3 right-3 z-10 flex h-11 w-11 items-center justify-center text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500"
+              aria-label="Fechar menu administrativo"
             >
               <X size={20} />
             </button>

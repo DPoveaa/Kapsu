@@ -5,7 +5,12 @@ import { siteSettingsService } from '../services/site-settings.service'
 import { useTheme } from '../context/ThemeContext'
 import { getHeaderIcon } from '../utils/headerIcons'
 
-export default function HeaderCategories() {
+interface HeaderCategoriesProps {
+  variant?: 'bar' | 'menu'
+  onNavigate?: () => void
+}
+
+export default function HeaderCategories({ variant = 'bar', onNavigate }: HeaderCategoriesProps) {
   const { theme } = useTheme()
   const [categories, setCategories] = useState<HeaderCategory[]>([])
   const [barBgColor, setBarBgColor] = useState('#1F2937')
@@ -44,9 +49,47 @@ export default function HeaderCategories() {
 
   const currentBgColor = theme === 'dark' ? barBgColorDark : barBgColor
 
+  if (variant === 'menu') {
+    return (
+      <div>
+        <p className="mb-2 px-1 text-xs font-bold uppercase tracking-wider text-gray-400">Categorias</p>
+        <div className="space-y-1">
+          {categories.map(cat => {
+            const CatIcon = getHeaderIcon(cat.icon)
+            const isExternal = cat.url.startsWith('http')
+            const content = (
+              <>
+                {cat.show_icon && <CatIcon size={20} className="text-primary-600 dark:text-primary-400" />}
+                <span className="min-w-0 flex-1 truncate">{cat.name}</span>
+              </>
+            )
+            const className = "flex min-h-12 items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-gray-800 transition-colors hover:bg-primary-50 hover:text-primary-700 dark:text-gray-100 dark:hover:bg-primary-950/30 dark:hover:text-primary-300"
+
+            return isExternal ? (
+              <a
+                key={cat.id}
+                href={cat.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onNavigate}
+                className={className}
+              >
+                {content}
+              </a>
+            ) : (
+              <Link key={cat.id} to={cat.url} onClick={onNavigate} className={className}>
+                {content}
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div 
-      className="w-full flex items-center justify-start md:justify-center gap-3 md:gap-5 pt-0 pb-1 px-4 overflow-x-auto shadow-sm [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+      className="hidden w-full items-center justify-center gap-5 overflow-x-auto px-4 pb-1 pt-0 shadow-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden md:flex"
       style={{ backgroundColor: currentBgColor }}
     >
       {categories.map(cat => {
