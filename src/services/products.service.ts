@@ -2,6 +2,7 @@ import { env } from '../config/env'
 import { Product, ProductPriceHistory, ProductTargetAudience } from '../types'
 import { PRODUCT_IMAGE_FALLBACK } from '../utils/imageFallback'
 import { getUploadsImageUrl } from '../utils/imageUrl'
+import { ProductPdfReportOptions } from '../types/productPdfReport'
 
 const API_URL = env.apiUrl
 
@@ -374,9 +375,15 @@ class ProductsService {
   /**
    * Obtém o relatório de produtos em formato PDF binário/blob (admin)
    */
-  async getPdfReportBlob(): Promise<Blob> {
+  async getPdfReportBlob(options?: ProductPdfReportOptions): Promise<Blob> {
     try {
-      const response = await fetch(`${this.baseUrl}/admin/pdf-report`, {
+      const searchParams = new URLSearchParams()
+      if (options) {
+        searchParams.set('fields', options.fields.join(','))
+        searchParams.set('scope', options.scope)
+      }
+      const query = searchParams.toString()
+      const response = await fetch(`${this.baseUrl}/admin/pdf-report${query ? `?${query}` : ''}`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });

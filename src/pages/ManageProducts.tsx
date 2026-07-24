@@ -26,6 +26,8 @@ import AdminModal from '../components/AdminModal'
 import ImageUpload from '../components/ImageUpload'
 import { normalizeImagePath } from '../utils/imageUrl'
 import { generateProductUrl } from '../utils/productUrl'
+import ProductPdfExportModal from '../components/ProductPdfExportModal'
+import { ProductPdfReportOptions } from '../types/productPdfReport'
 
 type Tab = 'active' | 'inactive' | 'archived'
 type ProductsSortKey = 'name' | 'sku' | 'category' | 'purchase_price' | 'margin' | 'price' | 'status'
@@ -209,6 +211,7 @@ export default function ManageProducts() {
   const [error, setError] = useState<string | null>(null)
   const [isExporting, setIsExporting] = useState(false)
   const [isExportingPdf, setIsExportingPdf] = useState(false)
+  const [isPdfExportModalOpen, setIsPdfExportModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [productsSort, setProductsSort] = useState<{ key: ProductsSortKey; direction: SortDirection }>({
     key: 'name',
@@ -827,10 +830,10 @@ export default function ManageProducts() {
     }
   }
 
-  const handleDownloadPDF = async () => {
+  const handleDownloadPDF = async (options: ProductPdfReportOptions) => {
     try {
       setIsExportingPdf(true)
-      const blob = await productsService.getPdfReportBlob()
+      const blob = await productsService.getPdfReportBlob(options)
       const today = new Date().toISOString().slice(0, 10)
       const filename = `catalogo-produtos-kapsu-${today}.pdf`
 
@@ -842,9 +845,10 @@ export default function ManageProducts() {
       URL.revokeObjectURL(objectUrl)
 
       toast.success('Relatório em PDF baixado com sucesso.')
+      setIsPdfExportModalOpen(false)
     } catch (e: any) {
       console.error(e)
-      toast.error('Não foi possível gerar o PDF. Tente novamente.')
+      toast.error(e.message || 'Não foi possível gerar o PDF. Tente novamente.')
     } finally {
       setIsExportingPdf(false)
     }
@@ -1683,7 +1687,7 @@ export default function ManageProducts() {
                       Exportar Excel
                     </button>
                     <button
-                      onClick={() => { handleDownloadPDF(); setIsExportDropdownOpen(false) }}
+                      onClick={() => { setIsPdfExportModalOpen(true); setIsExportDropdownOpen(false) }}
                       disabled={isExportingPdf}
                       className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
                     >
@@ -2814,6 +2818,13 @@ export default function ManageProducts() {
       )}
 
       {/* ═══════════════ PRODUCT CREATE/EDIT MODAL ═════════════════════════ */}
+      <ProductPdfExportModal
+        isOpen={isPdfExportModalOpen}
+        isExporting={isExportingPdf}
+        onClose={() => setIsPdfExportModalOpen(false)}
+        onExport={handleDownloadPDF}
+      />
+
       <AdminModal
         isOpen={isProductModalOpen}
         onClose={closeProductModal}
