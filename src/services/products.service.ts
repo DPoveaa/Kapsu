@@ -752,6 +752,7 @@ class ProductsService {
       unchanged: number
       skippedWithoutCost: number
       skippedPromoConflict: number
+      endingCounts?: { '00': number; '50': number; '90': number; '99': number }
       updatedProducts: Array<{
         id: string
         name: string

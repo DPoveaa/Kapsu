@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Loader2, Package, User, MapPin, CreditCard, Calendar, FileText, Truck } from 'lucide-react'
 import { adminService } from '../services/admin.service'
+import { Building2 } from 'lucide-react'
+import type { Supplier } from '../services/admin.service'
 import { productsService } from '../services/products.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import { getOrderStatusLabel, getOrderStatusBadgeClass } from '../utils/orderStatus'
@@ -25,6 +27,7 @@ interface OrderItem {
 interface OrderDetail {
   id: string
   user_id: string
+  supplier_id?: string | null
   total: number
   status: string
   payment_method: string | null
@@ -74,6 +77,9 @@ export default function OrderDetail() {
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [pendingSupplierId, setPendingSupplierId] = useState('')
+  const [updatingSupplier, setUpdatingSupplier] = useState(false)
 
   const handleProductImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     handleImageError(e, PRODUCT_IMAGE_FALLBACK)
@@ -85,6 +91,16 @@ export default function OrderDetail() {
     }
   }, [id])
 
+  useEffect(() => {
+    if (!isAdmin) return
+    adminService.listSuppliers(1, 100)
+      .then(response => setSuppliers(response.suppliers || []))
+      .catch((err: any) => {
+        console.error('Erro ao carregar fornecedores:', err)
+        toast.error('Não foi possível carregar a lista de fornecedores.')
+      })
+  }, [isAdmin])
+
   const loadOrderDetails = async () => {
     if (!id) return
 
@@ -95,6 +111,7 @@ export default function OrderDetail() {
       if (response.success) {
         setOrder(response.data)
         setPendingStatus(response.data.status)
+        setPendingSupplierId(response.data.supplier_id || '')
       }
     } catch (err: any) {
       console.error('Erro ao carregar detalhes do pedido:', err)
@@ -160,6 +177,23 @@ export default function OrderDetail() {
     }
   }
 
+
+  const handleUpdateSupplier = async () => {
+    if (!id || !order || pendingSupplierId === (order.supplier_id || '')) return
+    try {
+      setUpdatingSupplier(true)
+      const supplierId = pendingSupplierId || null
+      await adminService.assignOrdersSupplier([id], supplierId)
+      setOrder(current => current ? { ...current, supplier_id: supplierId } : current)
+      toast.success(supplierId ? 'Fornecedor vinculado com sucesso.' : 'Vínculo com fornecedor removido.')
+    } catch (err: any) {
+      console.error('Erro ao vincular fornecedor:', err)
+      toast.error(err.message || 'Erro ao vincular fornecedor ao pedido.')
+      setPendingSupplierId(order.supplier_id || '')
+    } finally {
+      setUpdatingSupplier(false)
+    }
+  }
   if (loading) {
     return (
       <div className="w-full">
@@ -227,6 +261,34 @@ export default function OrderDetail() {
         {isAdmin && (
           <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md p-4">
             <div className="flex flex-col gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 items-end border-b border-gray-200 dark:border-gray-700 pb-4">
+                <div className="flex-1 w-full">
+                  <label htmlFor="order-supplier" className="block text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">
+                    Fornecedor responsável
+                  </label>
+                  <div className="relative">
+                    <Building2 size={16} className="absolute left-3 top-3 text-gray-400" />
+                    <select
+                      id="order-supplier"
+                      value={pendingSupplierId}
+                      onChange={(event) => setPendingSupplierId(event.target.value)}
+                      disabled={updatingSupplier}
+                      className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 disabled:opacity-60"
+                    >
+                      <option value="">Sem fornecedor vinculado</option>
+                      {suppliers.map(supplier => (
+                        <option key={supplier.id} value={supplier.id} disabled={!supplier.active && supplier.id !== order.supplier_id}>
+                          {supplier.trade_name || supplier.name}{supplier.active ? '' : ' (inativo)'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <button type="button" onClick={handleUpdateSupplier} disabled={updatingSupplier || pendingSupplierId === (order.supplier_id || '')} className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white rounded-lg min-w-[160px]">
+                  {updatingSupplier && <Loader2 size={17} className="animate-spin mr-2" />}
+                  Salvar fornecedor
+                </button>
+              </div>
               <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
                 <div className="flex-1 w-full">
                   <label htmlFor="order-status" className="block text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">

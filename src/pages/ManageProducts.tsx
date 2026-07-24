@@ -2377,14 +2377,15 @@ export default function ManageProducts() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900">
-                  <strong className="text-blue-700 dark:text-blue-300">Acima do limite</strong>
-                  <p className="mt-1 text-gray-600 dark:text-gray-400">Arredonda para baixo: R$ 29,90 → R$ 29,00.</p>
+                  <strong className="text-blue-700 dark:text-blue-300">Margem já protegida</strong>
+                  <p className="mt-1 text-gray-600 dark:text-gray-400">Usa o final comercial mais próximo para baixo, sem cruzar a margem mínima.</p>
                 </div>
                 <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900">
-                  <strong className="text-amber-700 dark:text-amber-300">No limite ou abaixo</strong>
-                  <p className="mt-1 text-gray-600 dark:text-gray-400">Arredonda para cima: R$ 29,10 → R$ 30,00.</p>
+                  <strong className="text-amber-700 dark:text-amber-300">Margem abaixo do limite</strong>
+                  <p className="mt-1 text-gray-600 dark:text-gray-400">Calcula primeiro o preço mínimo seguro e escolhe o próximo final comercial acima.</p>
                 </div>
               </div>
+              <p className="text-xs text-gray-500">Finais aceitos: <strong>,00</strong>, <strong>,50</strong>, <strong>,90</strong> e <strong>,99</strong>. A escolha é pela menor alteração possível, nunca aleatória.</p>
 
               <button onClick={loadPriceRoundingPreview} disabled={isLoadingPriceRounding} className="w-full py-2.5 rounded-xl border border-indigo-300 text-indigo-700 dark:text-indigo-300 font-semibold text-sm disabled:opacity-50">
                 {isLoadingPriceRounding ? 'Calculando...' : 'Calcular prévia'}
@@ -2397,7 +2398,14 @@ export default function ManageProducts() {
                     <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20"><strong className="block text-lg">{priceRoundingPreview.roundedDown}</strong>para baixo</div>
                     <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20"><strong className="block text-lg">{priceRoundingPreview.roundedUp}</strong>para cima</div>
                   </div>
-                  <p className="text-xs text-gray-500">Ignorados: {priceRoundingPreview.skippedWithoutCost} sem custo/preço válido, {priceRoundingPreview.skippedPromoConflict} por conflito com promoção e {priceRoundingPreview.unchanged} já inteiros.</p>
+                  <div className="grid grid-cols-4 gap-2 text-center text-[11px]">
+                    {(['00', '50', '90', '99'] as const).map(ending => (
+                      <div key={ending} className="rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+                        <strong className="block text-sm">{priceRoundingPreview.endingCounts?.[ending] ?? 0}</strong>final ,{ending}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-500">Ignorados: {priceRoundingPreview.skippedWithoutCost} sem custo/preço válido, {priceRoundingPreview.skippedPromoConflict} por conflito com promoção e {priceRoundingPreview.unchanged} já estavam em um final seguro.</p>
                   <div className="max-h-44 overflow-y-auto divide-y dark:divide-gray-800 border rounded-lg">
                     {priceRoundingPreview.updatedProducts.slice(0, 20).map(product => (
                       <div key={product.id} className="flex justify-between gap-3 p-2.5 text-xs">
