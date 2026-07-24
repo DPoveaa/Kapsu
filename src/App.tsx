@@ -9,6 +9,8 @@ import { ThemeProvider } from './context/ThemeContext'
 import { FavoritesProvider } from './context/FavoritesContext'
 import ToastContainer from './components/ToastContainer'
 import { siteSettingsService, SiteSettings as SiteSettingsType } from './services/site-settings.service'
+import { ADMIN_AI_CENTER_LEGACY_ROUTES, ADMIN_AI_CENTER_PATH } from './constants/adminRoutes'
+import { lazyWithRetry } from './utils/lazyWithRetry'
 
 // Keep the storefront shell and Home in the initial bundle. Every other route is
 // downloaded only when visited, so admin/reporting libraries never delay Home.
@@ -44,6 +46,7 @@ const ManageBanners = lazy(() => import('./pages/ManageBanners'))
 const ManageReviews = lazy(() => import('./pages/ManageReviews'))
 const ManageHomeSections = lazy(() => import('./pages/ManageHomeSections'))
 const ManageHeaderCategories = lazy(() => import('./pages/ManageHeaderCategories'))
+const KaiaChats = lazyWithRetry(() => import('./pages/KaiaChats'), 'admin-ai-center')
 const OrderDetail = lazy(() => import('./pages/OrderDetail'))
 const SupplierOrderDetail = lazy(() => import('./pages/SupplierOrderDetail'))
 const PaymentFailure = lazy(() => import('./pages/PaymentFailure'))
@@ -369,6 +372,19 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path={ADMIN_AI_CENTER_PATH}
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <KaiaChats />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        {ADMIN_AI_CENTER_LEGACY_ROUTES.map(({ path, target }) => (
+          <Route key={path} path={path} element={<Navigate to={target} replace />} />
+        ))}
         <Route
           path="/admin/orders/:id"
           element={

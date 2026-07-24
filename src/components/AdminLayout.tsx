@@ -5,6 +5,7 @@ import {
   Truck, Gift, Tag, Image, Star, Layout, Menu, ChevronLeft, ChevronRight, Menu as MenuIcon, X,
   ShieldCheck, Bot, CreditCard, Globe
 } from 'lucide-react'
+import { ADMIN_AI_CENTER_PATH } from '../constants/adminRoutes'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -40,7 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     {
       title: "Sistema",
       items: [
-        { title: "Central da IA", icon: Bot, link: "/admin/central-ia" },
+        { title: "Central da IA", icon: Bot, link: ADMIN_AI_CENTER_PATH },
         { title: "WhatsApp", icon: MessageSquare, link: "/admin/whatsapp" },
         { title: "Usuários", icon: Users, link: "/admin/users" },
         { title: "Fornecedores", icon: Globe, link: "/admin/suppliers" },
