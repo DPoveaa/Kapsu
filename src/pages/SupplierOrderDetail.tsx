@@ -20,6 +20,7 @@ interface OrderData {
   status: string
   client_name: string
   client_phone: string
+  shipping_method?: string | null
   shipping_address: string
   created_at: string
   updated_at: string
@@ -224,6 +225,10 @@ export default function SupplierOrderDetail() {
                 <div className="space-y-1">
                   <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">Cidade / Estado</span>
                   <span className="font-semibold text-gray-800 dark:text-gray-200">{cityState || '—'}</span>
+                </div>
+                <div className="md:col-span-2 space-y-1">
+                  <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">Forma de envio</span>
+                  <span className="font-semibold text-gray-800 dark:text-gray-200">{order.shipping_method || 'Não informada'}</span>
                 </div>
                 <div className="space-y-1">
                   <span className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">Rua</span>

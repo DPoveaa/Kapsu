@@ -43,6 +43,16 @@ export interface Supplier {
   updated_at: string
 }
 
+export interface SupplierTeamUser {
+  id: string
+  name: string
+  email: string
+  role: 'supplier_admin' | 'supplier_employee'
+  active: boolean
+  last_login?: string | null
+  created_at: string
+}
+
 export interface SupplierPayment {
   id: string
   supplier_id: string
@@ -1516,6 +1526,31 @@ class AdminService {
     })
     const data = await response.json()
     if (!response.ok) throw new Error(data.message || 'Erro ao alterar status do usuário')
+    return data
+  }
+
+  /** Lista a equipe vinculada a uma empresa fornecedora. */
+  async listSupplierUsers(supplierId: string): Promise<{ success: boolean; users: SupplierTeamUser[] }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/suppliers/${supplierId}/users`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao listar equipe do fornecedor')
+    return data
+  }
+
+  async deleteSupplierUser(
+    supplierId: string,
+    userId: string
+  ): Promise<{ success: boolean; message: string }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/suppliers/${supplierId}/users/${userId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao excluir funcionário')
     return data
   }
 

@@ -345,7 +345,7 @@ export default function Header() {
                 type="search"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="O que você está procurando?"
+                placeholder={animatedPlaceholder}
                 className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-4 pr-12 text-base text-gray-900 outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
               />
               <button

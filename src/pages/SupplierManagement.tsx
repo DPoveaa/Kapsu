@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Building2, Search, Plus, Edit2,
-  Loader2, ArrowLeft, KeyRound, Copy, Check
+  Loader2, ArrowLeft, KeyRound, Copy, Check, Users, Trash2, Shield
 } from 'lucide-react';
-import { adminService, Supplier } from '../services/admin.service';
+import { adminService, Supplier, SupplierTeamUser } from '../services/admin.service';
 import AdminModal from '../components/AdminModal';
 import { toast } from '../utils/toast';
 
@@ -17,6 +17,11 @@ export default function SupplierManagement() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalSuppliers, setTotalSuppliers] = useState(0);
+
+  const [teamSupplier, setTeamSupplier] = useState<Supplier | null>(null);
+  const [teamUsers, setTeamUsers] = useState<SupplierTeamUser[]>([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   // Modal de Criação / Edição
   const [showModal, setShowModal] = useState(false);
@@ -67,6 +72,42 @@ export default function SupplierManagement() {
       toast.error('Erro ao carregar fornecedores: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenTeam = async (supplier: Supplier) => {
+    setTeamSupplier(supplier);
+    setTeamUsers([]);
+    setTeamLoading(true);
+    try {
+      const response = await adminService.listSupplierUsers(supplier.id);
+      setTeamUsers(response.users || []);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao carregar equipe do fornecedor.');
+      setTeamSupplier(null);
+    } finally {
+      setTeamLoading(false);
+    }
+  };
+
+  const handleDeleteTeamUser = async (user: SupplierTeamUser) => {
+    if (!teamSupplier || user.role !== 'supplier_employee') return;
+    if (!window.confirm(`Excluir permanentemente o perfil de ${user.name}? O histórico de pedidos será preservado.`)) return;
+
+    try {
+      setDeletingUserId(user.id);
+      await adminService.deleteSupplierUser(teamSupplier.id, user.id);
+      setTeamUsers(current => current.filter(item => item.id !== user.id));
+      setSuppliers(current => current.map(supplier => (
+        supplier.id === teamSupplier.id
+          ? { ...supplier, totalUsers: Math.max(0, (supplier.totalUsers || 1) - 1) }
+          : supplier
+      )));
+      toast.success('Funcionário excluído com sucesso.');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao excluir funcionário.');
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -321,6 +362,13 @@ export default function SupplierManagement() {
                     <td className="py-4 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
+                          onClick={() => handleOpenTeam(sup)}
+                          className="p-2 rounded-lg hover:bg-primary-50 dark:hover:bg-primary-950/30 text-primary-600 dark:text-primary-400 transition"
+                          title={`Gerenciar equipe (${sup.totalUsers || 0})`}
+                        >
+                          <Users className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleOpenEditModal(sup)}
                           className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition"
                           title="Editar Fornecedor"
@@ -538,6 +586,55 @@ export default function SupplierManagement() {
             </div>
           </div>
         </form>
+      </AdminModal>
+
+      <AdminModal
+        isOpen={!!teamSupplier}
+        onClose={() => setTeamSupplier(null)}
+        title={`Equipe: ${teamSupplier?.name || ''}`}
+      >
+        <div className="space-y-3 text-sm">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Administradores são protegidos. Funcionários de teste podem ser excluídos sem apagar o histórico dos pedidos.
+          </p>
+          {teamLoading ? (
+            <div className="flex items-center justify-center gap-2 py-10 text-gray-500">
+              <Loader2 className="h-5 w-5 animate-spin" /> Carregando equipe...
+            </div>
+          ) : teamUsers.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-gray-300 py-8 text-center text-gray-500 dark:border-gray-700">
+              Nenhum usuário vinculado.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {teamUsers.map(user => (
+                <div key={user.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate font-semibold text-gray-900 dark:text-white">{user.name}</span>
+                      {user.role === 'supplier_admin' && <Shield className="h-3.5 w-3.5 shrink-0 text-indigo-500" />}
+                    </div>
+                    <div className="truncate text-xs text-gray-500">{user.email}</div>
+                    <div className="mt-1 text-[10px] uppercase tracking-wide text-gray-400">
+                      {user.role === 'supplier_admin' ? 'Administrador protegido' : 'Funcionário'}
+                    </div>
+                  </div>
+                  {user.role === 'supplier_employee' && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTeamUser(user)}
+                      disabled={deletingUserId === user.id}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-200 px-2.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                    >
+                      {deletingUserId === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      Excluir
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </AdminModal>
 
       {/* Modal Exibir Credenciais Geradas */}

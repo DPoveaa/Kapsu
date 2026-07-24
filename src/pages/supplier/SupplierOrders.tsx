@@ -5,6 +5,7 @@ import { Search, Truck, Eye, RefreshCw, Copy, ExternalLink, ChevronDown, Check, 
 import { supplierService, SupplierOrder } from '../../services/supplier.service';
 import { toast } from '../../utils/toast';
 import AdminModal from '../../components/AdminModal';
+import { formatStoredShippingAddress } from '../../utils/shippingAddress';
 import { playNewOrderSound } from '../../utils/sound';
 
 const ORDER_STATUS_MAP: Record<string, { label: string; color: string }> = {
@@ -16,6 +17,10 @@ const ORDER_STATUS_MAP: Record<string, { label: string; color: string }> = {
   DELIVERED: { label: 'Entregue', color: 'bg-green-50 dark:bg-green-950/50 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800' },
   CANCELLED: { label: 'Cancelado', color: 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800' },
 };
+
+const getShippingAddressLabel = (order: SupplierOrder): string => (
+  formatStoredShippingAddress(order.shipping_address) || 'Endereço não informado'
+);
 
 export default function SupplierOrders() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -397,10 +402,10 @@ export default function SupplierOrders() {
                       <div className="min-w-0 rounded-xl bg-gray-50 dark:bg-gray-800/70 p-3">
                         <div className="mb-1.5 flex items-center justify-between gap-2">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Entrega</span>
-                          <button type="button" onClick={() => copyText(order.shipping_address || '', 'Endereço')} className="p-1 rounded-md text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-950/50" title="Copiar endereço"><Copy size={14} /></button>
+                          <button type="button" onClick={() => copyText(getShippingAddressLabel(order), 'Endereço')} className="p-1 rounded-md text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-950/50" title="Copiar endereço"><Copy size={14} /></button>
                         </div>
                         <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">{order.shipping_method || 'Método não informado'}</div>
-                        <div className="truncate text-[11px] text-gray-500 dark:text-gray-400" title={order.shipping_address || ''}>{order.shipping_address || 'Endereço não informado'}</div>
+                        <div className="truncate text-[11px] text-gray-500 dark:text-gray-400" title={getShippingAddressLabel(order)}>{getShippingAddressLabel(order)}</div>
                       </div>
                     </div>
 
@@ -475,9 +480,9 @@ export default function SupplierOrders() {
                           <div className="flex items-center gap-2">
                             <div className="min-w-0 flex-1">
                               <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">{order.shipping_method || 'Método não informado'}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={order.shipping_address || ''}>{order.shipping_address || 'Endereço não informado'}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={getShippingAddressLabel(order)}>{getShippingAddressLabel(order)}</div>
                             </div>
-                            <button type="button" onClick={() => copyText(order.shipping_address || '', 'Endereço')} className="shrink-0 p-1.5 rounded-lg text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-950/40" title="Copiar endereço"><Copy size={15} /></button>
+                            <button type="button" onClick={() => copyText(getShippingAddressLabel(order), 'Endereço')} className="shrink-0 p-1.5 rounded-lg text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-950/40" title="Copiar endereço"><Copy size={15} /></button>
                           </div>
                         </td>
 
@@ -603,10 +608,10 @@ export default function SupplierOrders() {
             <div className="p-3.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl space-y-1">
               <div className="flex items-center justify-between gap-3">
                 <div className="font-semibold text-gray-900 dark:text-white text-sm">Dados de Entrega do Cliente</div>
-                <button type="button" onClick={() => copyText(selectedOrder.shipping_address || '', 'Endereço')} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"><Copy size={14} /></button>
+                <button type="button" onClick={() => copyText(getShippingAddressLabel(selectedOrder), 'Endereço')} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800"><Copy size={14} /></button>
               </div>
               <div className="text-gray-600 dark:text-gray-300 font-medium">Envio: {selectedOrder.shipping_method || 'Não informado'}</div>
-              <div className="text-gray-600 dark:text-gray-300">{selectedOrder.shipping_address || 'Endereço não informado'}</div>
+              <div className="text-gray-600 dark:text-gray-300">{getShippingAddressLabel(selectedOrder)}</div>
             </div>
 
             <div className="space-y-3">

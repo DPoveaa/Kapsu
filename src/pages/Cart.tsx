@@ -1810,7 +1810,8 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       const order = await orderService.createOrderWithoutPayment(
         shippingAddress,
         isSubscription ? subscriptionPlan : undefined,
-        shippingCost > 0 ? shippingCost : undefined
+        shippingCost > 0 ? shippingCost : undefined,
+        selectedShippingMethod ? shippingOptions.find(option => option.method === selectedShippingMethod)?.name || selectedShippingMethod : undefined
       )
 
       await clearCart()

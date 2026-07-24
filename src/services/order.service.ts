@@ -229,13 +229,14 @@ class OrderService {
   async createOrderWithoutPayment(
     shippingAddress: ShippingAddress,
     subscriptionPlan?: 'monthly' | 'quarterly',
-    shippingFee?: number
+    shippingFee?: number,
+    shippingMethod?: string
   ): Promise<Order> {
     try {
       const response = await fetch(`${this.baseUrl}/create-without-payment`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify({ shippingAddress, subscriptionPlan, shippingFee }),
+        body: JSON.stringify({ shippingAddress, subscriptionPlan, shippingFee, shippingMethod }),
       })
 
       const text = await response.text()
