@@ -197,9 +197,9 @@ export const KapsuThemeControl: React.FC<KapsuThemeControlProps> = ({
         tabIndex={interactive ? 0 : -1}
         className={`
           group relative flex flex-col items-center justify-center
-          w-11 h-11 rounded-full cursor-pointer transition-all duration-300 transform-gpu bg-transparent border-0
+          w-11 h-11 rounded-full cursor-pointer disabled:cursor-pointer transition-all duration-300 transform-gpu bg-transparent border-0
           focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 z-30
-          ${isAnimating ? 'cursor-wait opacity-50' : 'hover:scale-110 active:scale-95'}
+          ${isAnimating ? 'opacity-70' : 'hover:scale-110 active:scale-95'}
         `}
       >
         {/* ── DESIGN DO HORIZONTE DISCRETO EM BAIXO DO ÍCONE ── */}

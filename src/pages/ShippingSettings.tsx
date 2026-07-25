@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Save, Plus, Trash2, Truck, Gift, Search, AlertTriangle, MapPin } from 'lucide-react'
+import { Save, Plus, Trash2, Truck, Gift, Search, AlertTriangle, MapPin, TrendingUp, Percent, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { shippingService, ShippingRegion, ShippingSettings as ShippingSettingsType, ShippingCalculation, ShippingMethod } from '../services/shipping.service'
 import { confirm } from '../utils/toast'
@@ -18,7 +18,10 @@ export default function ShippingSettings() {
     sedex_free_shipping_threshold: 0,
     free_shipping_threshold: 200,
     general_delivery_time: 5,
-    general_delivery_time_type: 'business'
+    general_delivery_time_type: 'business',
+    profit_margin_subsidy_enabled: false,
+    profit_margin_min_threshold: 20,
+    profit_margin_subsidy_share: 50,
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -70,6 +73,9 @@ export default function ShippingSettings() {
         free_shipping_threshold: settingsData.free_shipping_threshold !== undefined ? Number(settingsData.free_shipping_threshold) : 200,
         general_delivery_time: settingsData.general_delivery_time !== undefined ? Number(settingsData.general_delivery_time) : 5,
         general_delivery_time_type: settingsData.general_delivery_time_type || 'business',
+        profit_margin_subsidy_enabled: settingsData.profit_margin_subsidy_enabled !== undefined ? Boolean(settingsData.profit_margin_subsidy_enabled) : false,
+        profit_margin_min_threshold: settingsData.profit_margin_min_threshold !== undefined ? Number(settingsData.profit_margin_min_threshold) : 20,
+        profit_margin_subsidy_share: settingsData.profit_margin_subsidy_share !== undefined ? Number(settingsData.profit_margin_subsidy_share) : 50,
       })
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar dados')
@@ -487,6 +493,137 @@ export default function ShippingSettings() {
                   <span>{saving ? 'Salvando...' : 'Salvar Alterações de Frete'}</span>
                 </button>
               </div>
+            </div>
+
+            {/* Bloco 3: Subsídio Dinâmico de Frete via Margem de Lucro */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3 mb-4">
+                <div className="flex items-center">
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg mr-3">
+                    <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Subsídio de Frete por Margem de Lucro</h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Abata o valor do frete utilizando parte do lucro excedente dos produtos</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={settings.profit_margin_subsidy_enabled || false}
+                    onChange={(e) => setSettings({ ...settings, profit_margin_subsidy_enabled: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:after:border-gray-600 peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              {settings.profit_margin_subsidy_enabled ? (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Margem Mínima Protegida */}
+                    <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                      <label className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        <ShieldCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                        Margem Mínima Protegida (%)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={settings.profit_margin_min_threshold !== undefined ? settings.profit_margin_min_threshold : 20}
+                          onChange={(e) => {
+                            const val = e.target.value === '' ? 0 : Number(e.target.value)
+                            setSettings({ ...settings, profit_margin_min_threshold: Math.max(0, Math.min(100, val)) })
+                          }}
+                          className="w-full pl-3 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-900 dark:text-white font-semibold"
+                          placeholder="20"
+                        />
+                        <span className="absolute right-3 top-2.5 text-xs font-bold text-gray-400">%</span>
+                      </div>
+                      <p className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400 leading-tight">
+                        Porcentagem de lucro por produto mantida intacta (não afetada pelo frete).
+                      </p>
+                    </div>
+
+                    {/* Percentual do Excedente para Frete */}
+                    <div className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                      <label className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                        <Percent className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        Percentual do Excedente para Frete (%)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={settings.profit_margin_subsidy_share !== undefined ? settings.profit_margin_subsidy_share : 50}
+                          onChange={(e) => {
+                            const val = e.target.value === '' ? 0 : Number(e.target.value)
+                            setSettings({ ...settings, profit_margin_subsidy_share: Math.max(0, Math.min(100, val)) })
+                          }}
+                          className="w-full pl-3 pr-8 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-900 dark:text-white font-semibold"
+                          placeholder="50"
+                        />
+                        <span className="absolute right-3 top-2.5 text-xs font-bold text-gray-400">%</span>
+                      </div>
+                      <p className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400 leading-tight">
+                        Fração da margem acima do mínimo a ser convertida em desconto no frete.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Demonstração / Exemplo de Cálculo em Tempo Real */}
+                  <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl">
+                    <div className="flex items-center gap-2 font-semibold text-xs sm:text-sm text-emerald-900 dark:text-emerald-300 mb-2">
+                      <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      Simulação do Cálculo com as Configurações Atuais:
+                    </div>
+                    <div className="text-xs text-emerald-800 dark:text-emerald-300 space-y-1 leading-relaxed">
+                      {(() => {
+                        const min = settings.profit_margin_min_threshold ?? 20
+                        const share = settings.profit_margin_subsidy_share ?? 50
+                        const exampleMargin = 30
+                        const examplePrice = 100
+                        const excess = Math.max(0, exampleMargin - min)
+                        const discountPercent = excess * (share / 100)
+                        const discountAmount = (discountPercent / 100) * examplePrice
+                        return (
+                          <>
+                            <p>Para um produto de <strong>R$ 100,00</strong> com <strong>30% de margem de lucro</strong> (Preço de Custo R$ 70,00):</p>
+                            <ul className="list-disc list-inside pl-2 space-y-0.5 text-[11px]">
+                              <li>Margem mínima preservada para a loja: <strong>{min}%</strong></li>
+                              <li>Margem excedente disponível: <strong>{excess}%</strong> (30% - {min}%)</li>
+                              <li>Desconto aplicado no frete: <strong>{share}% de {excess}% = {discountPercent}% do preço</strong> (R$ {discountAmount.toFixed(2).replace('.', ',')} por unidade)</li>
+                            </ul>
+                            <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-1 italic">
+                              * Ao adicionar múltiplos produtos ao carrinho, os descontos se acumulam para reduzir progressivamente o preço do frete exibido ao cliente.
+                            </p>
+                          </>
+                        )
+                      })()}
+                    </div>
+                  </div>
+
+                  <div>
+                    <button
+                      onClick={handleSaveSettings}
+                      disabled={saving}
+                      className="w-full sm:w-auto inline-flex items-center justify-center px-6 py-2.5 text-sm bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-all shadow-sm disabled:opacity-50"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      <span>{saving ? 'Salvando...' : 'Salvar Regra de Subsídio por Margem'}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-gray-50 dark:bg-gray-900/40 rounded-xl text-xs text-gray-500 dark:text-gray-400 flex items-center justify-between">
+                  <span>O subsídio dinâmico de frete por margem de lucro está <strong>desativado</strong> no momento.</span>
+                </div>
+              )}
             </div>
           </div>
 

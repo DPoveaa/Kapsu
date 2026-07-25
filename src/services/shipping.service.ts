@@ -77,6 +77,9 @@ export interface ShippingSettings {
   free_shipping_threshold?: number
   general_delivery_time?: number
   general_delivery_time_type?: 'business' | 'calendar'
+  profit_margin_subsidy_enabled?: boolean
+  profit_margin_min_threshold?: number
+  profit_margin_subsidy_share?: number
 }
 
 class ShippingService {
