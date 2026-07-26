@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { X, Plus, Trash2, Loader2, Search, FileText, Upload, FileCheck, ExternalLink } from 'lucide-react'
+import { X, Plus, Trash2, Loader2, Search, FileText, Upload, FileCheck, ExternalLink, MapPin } from 'lucide-react'
 import { adminService, User } from '../services/admin.service'
 import { productsService } from '../services/products.service'
 import { shippingService } from '../services/shipping.service'
 import { uploadService } from '../services/upload.service'
+import { cepService } from '../services/cep.service'
 import { Product } from '../types'
 
 interface OrderItem {
@@ -56,6 +57,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
   const [shippingMethods, setShippingMethods] = useState<string[]>([])
   const [customShippingMethod, setCustomShippingMethod] = useState('')
   const [shippingAddress, setShippingAddress] = useState(emptyShippingAddress)
+  const [loadingCep, setLoadingCep] = useState(false)
   const [status, setStatus] = useState('PENDING')
   const [invoiceUrl, setInvoiceUrl] = useState('')
   const [invoiceNumber, setInvoiceNumber] = useState('')
@@ -63,6 +65,32 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
 
   // Upload de arquivos
   const [uploadingInvoice, setUploadingInvoice] = useState(false)
+
+  const handleCepChange = async (value: string) => {
+    // Mask: keep only digits and format as 00000-000
+    const digits = value.replace(/\D/g, '').slice(0, 8)
+    const formatted = digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits
+    setShippingAddress(prev => ({ ...prev, postalCode: formatted }))
+
+    if (digits.length === 8) {
+      setLoadingCep(true)
+      try {
+        const data = await cepService.searchCep(digits)
+        if (data && !data.erro) {
+          setShippingAddress(prev => ({
+            ...prev,
+            street: data.logradouro || prev.street,
+            neighborhood: data.bairro || prev.neighborhood,
+            city: data.localidade || prev.city,
+            state: data.uf || prev.state,
+            complement: data.complemento || prev.complement,
+          }))
+        }
+      } finally {
+        setLoadingCep(false)
+      }
+    }
+  }
   const [invoiceFileName, setInvoiceFileName] = useState('')
   const [uploadingShippingLabel, setUploadingShippingLabel] = useState(false)
   const [shippingLabelFileName, setShippingLabelFileName] = useState('')
@@ -770,14 +798,20 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
             <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">Endereço de Entrega (Opcional)</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
+              <div className="relative">
                 <input
                   type="text"
                   placeholder="CEP"
                   value={shippingAddress.postalCode}
-                  onChange={(e) => setShippingAddress({ ...shippingAddress, postalCode: e.target.value })}
-                  className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-3 py-2 text-xs sm:text-sm dark:bg-gray-900 dark:text-white"
+                  onChange={(e) => handleCepChange(e.target.value)}
+                  maxLength={9}
+                  className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-3 py-2 text-xs sm:text-sm dark:bg-gray-900 dark:text-white pr-8"
                 />
+                {loadingCep ? (
+                  <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-500 animate-spin" />
+                ) : shippingAddress.postalCode.replace(/\D/g, '').length === 8 ? (
+                  <MapPin className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                ) : null}
               </div>
               <div className="sm:col-span-2">
                 <input
