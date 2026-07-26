@@ -1,12 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Search, Truck, Eye, RefreshCw, Copy, ExternalLink, ChevronDown, Check, SlidersHorizontal, X, MapPin, Package } from 'lucide-react';
+import { Search, Truck, Eye, RefreshCw, Copy, ExternalLink, ChevronDown, Check, SlidersHorizontal, X, MapPin, Package, CalendarClock, FileText } from 'lucide-react';
 import { supplierService, SupplierOrder } from '../../services/supplier.service';
 import { toast } from '../../utils/toast';
 import AdminModal from '../../components/AdminModal';
 import { formatStoredShippingAddress } from '../../utils/shippingAddress';
 import { playNewOrderSound } from '../../utils/sound';
+import logoMercadoLivre from '../../images/ml_logo.webp';
+
+const isMercadoLivreOrder = (order: SupplierOrder): boolean => {
+  const method = (order.shipping_method || '').toLowerCase();
+  const carrier = (order.shipping_carrier || '').toLowerCase();
+  return (
+    method.includes('mercado livre') ||
+    method.includes('mercado_livre') ||
+    method.includes('mercadolivre') ||
+    carrier.includes('mercado livre') ||
+    carrier.includes('mercado_livre') ||
+    Boolean(order.ml_pickup_deadline)
+  );
+};
 
 const ORDER_STATUS_MAP: Record<string, { label: string; color: string }> = {
   PENDING: { label: 'Aguardando Pagamento', color: 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800' },
@@ -27,6 +41,34 @@ const formatTotalDoses = (totalDoses: number | null | undefined): string | null 
     ? `${totalDoses} ${totalDoses === 1 ? 'dose' : 'doses'}`
     : null
 );
+
+type MlUrgency = 'ok' | 'warning' | 'urgent' | 'overdue' | null;
+
+const getMlDeadlineUrgency = (deadline: string | null | undefined): MlUrgency => {
+  if (!deadline) return null;
+  const diffMs = new Date(deadline).getTime() - Date.now();
+  const diffH = diffMs / (1000 * 60 * 60);
+  if (diffMs < 0) return 'overdue';
+  const dl = new Date(deadline);
+  const isToday = dl.toDateString() === new Date().toDateString();
+  if (isToday || diffH <= 3) return 'urgent';
+  if (diffH <= 48) return 'warning';
+  return 'ok';
+};
+
+const ML_URGENCY_ROW: Record<NonNullable<MlUrgency>, string> = {
+  ok: '',
+  warning: 'bg-amber-50/70 dark:bg-amber-950/20',
+  urgent: 'bg-orange-50/80 dark:bg-orange-950/25',
+  overdue: 'bg-rose-50/80 dark:bg-rose-950/20',
+};
+
+const ML_URGENCY_BADGE: Record<NonNullable<MlUrgency>, string> = {
+  ok: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300',
+  warning: 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300',
+  urgent: 'bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300',
+  overdue: 'bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300',
+};
 
 export default function SupplierOrders() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -415,7 +457,10 @@ export default function SupplierOrders() {
                 const statusBadge = ORDER_STATUS_MAP[order.status] || { label: order.status, color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700' };
                 const hasTracking = Boolean(order.tracking_code || order.tracking_url);
                 return (
-                  <article key={order.id} className="p-4 space-y-3 hover:bg-gray-50/70 dark:hover:bg-gray-800/30 transition-colors">
+                  <article key={order.id} className={`p-4 space-y-3 transition-colors hover:bg-gray-50/70 dark:hover:bg-gray-800/30 ${getMlDeadlineUrgency(order.ml_pickup_deadline)
+                      ? ML_URGENCY_ROW[getMlDeadlineUrgency(order.ml_pickup_deadline)!]
+                      : ''
+                    }`}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <button onClick={() => handleOpenDetailModal(order.id)} className="font-mono font-bold text-primary-700 dark:text-primary-300 hover:underline">#{order.id.slice(-8).toUpperCase()}</button>
@@ -446,6 +491,18 @@ export default function SupplierOrders() {
                           <button type="button" onClick={() => copyText(getShippingAddressLabel(order), 'Endereço')} className="p-1 rounded-md text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-950/50" title="Copiar endereço"><Copy size={14} /></button>
                         </div>
                         <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">{order.shipping_method || 'Método não informado'}</div>
+                        {order.ml_pickup_deadline && (() => {
+                          const urgency = getMlDeadlineUrgency(order.ml_pickup_deadline);
+                          const dl = new Date(order.ml_pickup_deadline);
+                          const isOverdue = urgency === 'overdue';
+                          return (
+                            <div className={`mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${urgency ? ML_URGENCY_BADGE[urgency] : ''}`}>
+                              <CalendarClock size={10} />
+                              {isOverdue ? '⚠ Vencido ' : 'Coleta até '}
+                              {dl.toLocaleDateString('pt-BR')} {dl.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          );
+                        })()}
                         <div className="truncate text-[11px] text-gray-500 dark:text-gray-400" title={getShippingAddressLabel(order)}>{getShippingAddressLabel(order)}</div>
                       </div>
                     </div>
@@ -463,7 +520,25 @@ export default function SupplierOrders() {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <button onClick={() => handleOpenDetailModal(order.id)} className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"><Eye className="w-4 h-4" /> Ver</button>
-                        <button onClick={() => handleOpenTrackingModal(order)} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs ${hasTracking ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800' : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'}`}><Truck className="w-4 h-4" /> {hasTracking ? 'Editar' : 'Rastreio'}</button>
+                        {isMercadoLivreOrder(order) ? (
+                          <a
+                            href={order.shipping_label_url || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => {
+                              if (!order.shipping_label_url) {
+                                e.preventDefault();
+                                toast.info('Etiqueta do Mercado Livre ainda não foi anexada a este pedido.');
+                              }
+                            }}
+                            className="inline-flex items-center justify-center p-0.5 rounded-full hover:scale-110 transition-transform shrink-0"
+                            title={order.shipping_label_url ? 'Abrir Etiqueta Mercado Livre' : 'Etiqueta não anexada'}
+                          >
+                            <img src={logoMercadoLivre} alt="Mercado Livre" className="w-8 h-8 object-contain rounded-full" />
+                          </a>
+                        ) : (
+                          <button onClick={() => handleOpenTrackingModal(order)} className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs ${hasTracking ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800' : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'}`}><Truck className="w-4 h-4" /> {hasTracking ? 'Editar' : 'Rastreio'}</button>
+                        )}
                       </div>
                     </div>
                   </article>
@@ -496,7 +571,10 @@ export default function SupplierOrders() {
                     const statusBadge = ORDER_STATUS_MAP[order.status] || { label: order.status, color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700' };
 
                     return (
-                      <tr key={order.id} className="hover:bg-gray-50/80 dark:hover:bg-gray-800/50 transition-colors">
+                      <tr key={order.id} className={`transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/50 ${getMlDeadlineUrgency(order.ml_pickup_deadline)
+                          ? ML_URGENCY_ROW[getMlDeadlineUrgency(order.ml_pickup_deadline)!]
+                          : ''
+                        }`}>
                         <td className="py-3.5 px-3 align-top">
                           <button onClick={() => handleOpenDetailModal(order.id)} className="font-mono font-bold text-primary-700 dark:text-primary-300 hover:underline">#{order.id.slice(-8).toUpperCase()}</button>
                           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
@@ -521,6 +599,18 @@ export default function SupplierOrders() {
                           <div className="flex items-center gap-2">
                             <div className="min-w-0 flex-1">
                               <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">{order.shipping_method || 'Método não informado'}</div>
+                              {order.ml_pickup_deadline && (() => {
+                                const urgency = getMlDeadlineUrgency(order.ml_pickup_deadline);
+                                const dl = new Date(order.ml_pickup_deadline);
+                                const isOverdue = urgency === 'overdue';
+                                return (
+                                  <div className={`mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${urgency ? ML_URGENCY_BADGE[urgency] : ''}`}>
+                                    <CalendarClock size={10} />
+                                    {isOverdue ? '⚠ Vencido ' : 'Coleta até '}
+                                    {dl.toLocaleDateString('pt-BR')} {dl.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                );
+                              })()}
                               <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={getShippingAddressLabel(order)}>{getShippingAddressLabel(order)}</div>
                             </div>
                             <button type="button" onClick={() => copyText(getShippingAddressLabel(order), 'Endereço')} className="shrink-0 p-1.5 rounded-lg text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-950/40" title="Copiar endereço"><Copy size={15} /></button>
@@ -565,13 +655,31 @@ export default function SupplierOrders() {
                               <Eye className="w-4 h-4" />
                             </button>
 
-                            <button
-                              onClick={() => handleOpenTrackingModal(order)}
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg border transition ${order.tracking_code || order.tracking_url ? 'bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'}`}
-                              title={order.tracking_code || order.tracking_url ? 'Editar rastreamento cadastrado' : 'Cadastrar rastreamento pendente'}
-                            >
-                              <Truck className="w-4 h-4" />
-                            </button>
+                            {isMercadoLivreOrder(order) ? (
+                              <a
+                                href={order.shipping_label_url || '#'}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => {
+                                  if (!order.shipping_label_url) {
+                                    e.preventDefault();
+                                    toast.info('Etiqueta do Mercado Livre ainda não foi anexada a este pedido.');
+                                  }
+                                }}
+                                className="inline-flex items-center justify-center p-0.5 rounded-full hover:scale-110 transition-transform shrink-0"
+                                title={order.shipping_label_url ? 'Abrir Etiqueta Mercado Livre' : 'Etiqueta não anexada'}
+                              >
+                                <img src={logoMercadoLivre} alt="Mercado Livre" className="w-8 h-8 object-contain rounded-full" />
+                              </a>
+                            ) : (
+                              <button
+                                onClick={() => handleOpenTrackingModal(order)}
+                                className={`inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg border transition ${order.tracking_code || order.tracking_url ? 'bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'}`}
+                                title={order.tracking_code || order.tracking_url ? 'Editar rastreamento cadastrado' : 'Cadastrar rastreamento pendente'}
+                              >
+                                <Truck className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -677,6 +785,27 @@ export default function SupplierOrders() {
                 {getShippingAddressLabel(selectedOrder)}
               </div>
             </div>
+
+            {/* Documentos: Etiqueta de Envio */}
+            {selectedOrder.shipping_label_url && (
+              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2.5 shadow-sm">
+                <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-amber-500" />
+                  Etiqueta de Envio
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={selectedOrder.shipping_label_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition shadow-sm"
+                  >
+                    <FileText size={13} />
+                    Abrir Etiqueta de Envio (PDF)
+                  </a>
+                </div>
+              </div>
+            )}
 
             {/* Cabeçalho da Seção de Fórmulas */}
             <div className="space-y-3">

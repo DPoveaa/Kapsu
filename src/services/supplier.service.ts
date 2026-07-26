@@ -77,6 +77,10 @@ export interface SupplierOrder {
   cancellation_reason?: string | null;
   assigned_to_user_id?: string | null;
   assignee_name?: string | null;
+  ml_pickup_deadline?: string | null;
+  invoice_url?: string | null;
+  shipping_label_url?: string | null;
+  invoice_number?: string | null;
   total?: number;
   items: SupplierOrderItem[];
   created_at: string;

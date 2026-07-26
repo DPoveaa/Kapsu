@@ -1,4 +1,4 @@
-﻿import { env } from '../config/env'
+import { env } from '../config/env'
 
 const API_URL = env.apiUrl
 
@@ -247,6 +247,47 @@ class UploadService {
         throw error
       }
       throw new Error('Erro de conexão ao deletar imagem de avaliação')
+    }
+  }
+
+  /**
+   * Faz upload de documento de pedido (Nota Fiscal ou Etiqueta ML)
+   */
+  async uploadOrderDoc(file: File): Promise<UploadResponse> {
+    try {
+      const token = localStorage.getItem('kapsu_token')
+      if (!token) {
+        throw new Error('Token não encontrado. Faça login novamente.')
+      }
+
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch(`${this.baseUrl}/order-doc`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      })
+
+      const text = await response.text()
+      if (!text) {
+        throw new Error('Resposta vazia do servidor')
+      }
+
+      const data: UploadResponse = JSON.parse(text)
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Erro ao fazer upload do documento')
+      }
+
+      return data
+    } catch (error: any) {
+      if (error.message) {
+        throw error
+      }
+      throw new Error('Erro de conexão ao fazer upload do documento')
     }
   }
 }

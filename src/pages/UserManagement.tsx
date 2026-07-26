@@ -298,8 +298,6 @@ export default function UserManagement() {
           >
             <option value="">Todos os Cargos</option>
             <option value="admin">Administrador Kapsu</option>
-            <option value="supplier_admin">Admin do Fornecedor</option>
-            <option value="supplier_employee">Operador do Fornecedor</option>
             <option value="support">Atendimento / Suporte</option>
             <option value="user">Cliente Final</option>
           </select>

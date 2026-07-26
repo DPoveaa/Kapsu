@@ -21,7 +21,7 @@ import CreditCardPayment from '../components/Checkout/CreditCardPayment'
 import ShippingCard from '../components/Checkout/ShippingCard'
 import CartItemCard from '../components/Checkout/CartItemCard'
 import CheckoutConfirmation from '../components/Checkout/CheckoutConfirmation'
-import { CheckoutStep, PaymentMethod, parseCheckoutStep } from '../types/checkout'
+import { CheckoutStep, PaymentMethod, getStepIndex, parseCheckoutStep } from '../types/checkout'
 import { CreditCardFormData, validateCreditCardForm } from '../utils/cardValidation'
 import { toast } from '../utils/toast'
 import {
@@ -171,22 +171,8 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
   // --- ESTADOS DO CHECKOUT ---
   const urlStep = parseCheckoutStep(searchParams.get('step')) || (initialStep !== 'confirmed' ? initialStep : 'cart')
-  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>(() => {
-    const saved = sessionStorage.getItem('cart_checkout_step')
-    if (saved) {
-      const parsed = parseCheckoutStep(saved)
-      if (parsed && parsed !== 'confirmed') return parsed
-    }
-    return urlStep || 'cart'
-  })
-  const [maxReachableStep, setMaxReachableStep] = useState<CheckoutStep>(() => {
-    const saved = sessionStorage.getItem('cart_max_reachable_step')
-    if (saved) {
-      const parsed = parseCheckoutStep(saved)
-      if (parsed) return parsed
-    }
-    return 'cart'
-  })
+  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>(urlStep)
+  const [maxReachableStep, setMaxReachableStep] = useState<CheckoutStep>(urlStep)
   const [creatingOrder, setCreatingOrder] = useState(false)
   const [creatingOrderWithoutPayment, setCreatingOrderWithoutPayment] = useState(false)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod>(() => parsePaymentMethod(sessionStorage.getItem(SELECTED_PAYMENT_METHOD_KEY)))
@@ -286,8 +272,6 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     setActivePaymentAttemptKey(null)
     setCheckoutStep('cart')
     setMaxReachableStep('cart')
-    sessionStorage.removeItem('cart_checkout_step')
-    sessionStorage.removeItem('cart_max_reachable_step')
     if (searchParams.get('step') === 'confirmed' || searchParams.get('paid')) {
       setSearchParams({ step: 'cart' }, { replace: true })
     }
@@ -303,8 +287,6 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     setPaymentResult(null)
     setCheckoutStep('cart')
     setMaxReachableStep('cart')
-    sessionStorage.removeItem('cart_checkout_step')
-    sessionStorage.removeItem('cart_max_reachable_step')
   }, [paymentResult, searchParams])
 
   // Estados para endereços salvos
@@ -1130,7 +1112,6 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   const goToStep = (step: CheckoutStep, replace = true) => {
     const resolvedStep = step === 'confirmed' && !paymentResult?.isPaid ? 'payment' : step
     setCheckoutStep(resolvedStep)
-    sessionStorage.setItem('cart_checkout_step', resolvedStep)
     const orderId =
       pendingPayment?.orderId ||
       paymentResult?.orderId ||
@@ -1149,11 +1130,9 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     const order: CheckoutStep[] = ['cart', 'delivery', 'payment', 'confirmed']
     if (order.indexOf(resolvedStep) > order.indexOf(maxReachableStep)) {
       setMaxReachableStep(resolvedStep)
-      sessionStorage.setItem('cart_max_reachable_step', resolvedStep)
     }
     if (resolvedStep === 'confirmed') {
       setMaxReachableStep('confirmed')
-      sessionStorage.setItem('cart_max_reachable_step', 'confirmed')
     }
   }
 
@@ -1178,7 +1157,6 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       })
       setCardFormErrors({})
       setMaxReachableStep(step)
-      sessionStorage.setItem('cart_max_reachable_step', step)
     }
 
     goToStep(step)
@@ -1194,8 +1172,6 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     clearPendingCheckoutOrderId()
     clearStoredCheckoutState()
     setStoredPaymentAttempts({})
-    sessionStorage.removeItem('cart_checkout_step')
-    sessionStorage.removeItem('cart_max_reachable_step')
     sessionStorage.removeItem(SELECTED_PAYMENT_METHOD_KEY)
     setPendingPayment(null)
     setPendingAsyncPayments({})
@@ -1309,10 +1285,8 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     setPendingPayment(result)
     setPendingAsyncPayments((current) => ({ ...current, [result.paymentMethod]: result }))
     setCheckoutStep('payment')
-    sessionStorage.setItem('cart_checkout_step', 'payment')
     if (maxReachableStep !== 'payment' && maxReachableStep !== 'confirmed') {
       setMaxReachableStep('payment')
-      sessionStorage.setItem('cart_max_reachable_step', 'payment')
     }
     const orderId = result.orderId
     setExistingOrderId(orderId)
@@ -1572,7 +1546,12 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       }
       return
     }
-    if (stepParam && stepParam !== checkoutStep && stepParam !== 'confirmed') setCheckoutStep(stepParam)
+    if (stepParam && stepParam !== checkoutStep && stepParam !== 'confirmed') {
+      setCheckoutStep(stepParam)
+      setMaxReachableStep((current) =>
+        getStepIndex(stepParam) > getStepIndex(current) ? stepParam : current
+      )
+    }
     else if (!stepParam && checkoutStep !== 'cart' && checkoutStep !== 'confirmed' && checkoutStep !== 'payment') setCheckoutStep('cart')
   }, [searchParams, items.length, paymentResult, pendingPayment, checkoutStep])
 

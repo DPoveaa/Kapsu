@@ -900,6 +900,12 @@ class AdminService {
       state?: string
     }
     status?: string
+    invoiceUrl?: string
+    invoice_url?: string
+    invoiceNumber?: string
+    invoice_number?: string
+    shippingLabelUrl?: string
+    shipping_label_url?: string
   }): Promise<{ success: boolean; message: string; data: any }> {
     try {
       const token = localStorage.getItem('kapsu_token')
@@ -1490,7 +1496,7 @@ class AdminService {
    */
   async createUser(payload: {
     name: string
-    email: string
+    email?: string
     password?: string
     phone?: string
     cpf?: string
@@ -1529,30 +1535,6 @@ class AdminService {
     return data
   }
 
-  /** Lista a equipe vinculada a uma empresa fornecedora. */
-  async listSupplierUsers(supplierId: string): Promise<{ success: boolean; users: SupplierTeamUser[] }> {
-    const token = localStorage.getItem('kapsu_token')
-    const response = await fetch(`${this.baseUrl}/suppliers/${supplierId}/users`, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    })
-    const data = await response.json()
-    if (!response.ok) throw new Error(data.message || 'Erro ao listar equipe do fornecedor')
-    return data
-  }
-
-  async deleteSupplierUser(
-    supplierId: string,
-    userId: string
-  ): Promise<{ success: boolean; message: string }> {
-    const token = localStorage.getItem('kapsu_token')
-    const response = await fetch(`${this.baseUrl}/suppliers/${supplierId}/users/${userId}`, {
-      method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${token}` },
-    })
-    const data = await response.json()
-    if (!response.ok) throw new Error(data.message || 'Erro ao excluir funcionário')
-    return data
-  }
 
   /**
    * Lista fornecedores
@@ -1691,9 +1673,111 @@ class AdminService {
     if (!response.ok) throw new Error(data.message || 'Erro ao remover pagamento')
     return data
   }
+
+  /**
+   * Atualiza a Nota Fiscal (NFe) de um pedido
+   */
+  async updateOrderInvoice(orderId: string, payload: { invoice_url?: string | null; invoice_number?: string | null }): Promise<{ success: boolean; message: string; invoice_url?: string | null; invoice_number?: string | null }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/orders/${orderId}/invoice`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao atualizar Nota Fiscal')
+    return data
+  }
+
+  /**
+   * Atualiza a etiqueta de envio (PDF) do Mercado Livre de um pedido
+   */
+  async updateOrderShippingLabel(orderId: string, payload: { shipping_label_url?: string | null }): Promise<{ success: boolean; message: string; shipping_label_url?: string | null }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/orders/${orderId}/shipping-label`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao atualizar etiqueta de envio')
+    return data
+  }
+
+  async updateOrderMlDeadline(orderId: string, ml_pickup_deadline: string | null): Promise<{ success: boolean; ml_pickup_deadline: string | null }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/orders/${orderId}/ml-deadline`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ ml_pickup_deadline }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao atualizar prazo ML')
+    return data
+  }
+
+  async listSupplierUsers(supplierId: string): Promise<{ success: boolean; users: any[] }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/suppliers/${supplierId}/users`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao listar equipe do fornecedor')
+    return data
+  }
+
+  async createSupplierUser(supplierId: string, payload: { name: string; email?: string; password?: string; role?: string; phone?: string; active?: boolean }): Promise<{ success: boolean; message: string; user: any; credentials?: { loginCode: string; tempPassword?: string } }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/suppliers/${supplierId}/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao criar usuário da equipe')
+    return data
+  }
+
+  async updateSupplierUser(supplierId: string, userId: string, payload: { name?: string; email?: string; password?: string; active?: boolean; role?: string; phone?: string }): Promise<{ success: boolean; message: string; user: any }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/suppliers/${supplierId}/users/${userId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao atualizar usuário da equipe')
+    return data
+  }
+
+  async deleteSupplierUser(supplierId: string, userId: string): Promise<{ success: boolean; message: string }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/suppliers/${supplierId}/users/${userId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao remover usuário da equipe')
+    return data
+  }
+
 }
 
 export const adminService = new AdminService()
-
-
-

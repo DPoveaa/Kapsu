@@ -2,6 +2,65 @@ import { env } from '../config/env'
 
 const API_URL = env.apiUrl
 
+export interface ShippingPriceAdjustment {
+  type: 'promotion' | 'free_shipping_rule' | 'free_shipping_threshold' | 'profit_margin_subsidy'
+  label: string
+  amount: number
+  before: number
+  after: number
+  source?: string | null
+  description?: string | null
+}
+
+export interface ShippingPricingDiagnostics {
+  quotedFee: number
+  finalFee: number
+  referenceBaseFee: number | null
+  cartValueImpact: number | null
+  packageImpact: number | null
+  adjustments: ShippingPriceAdjustment[]
+}
+
+export interface ShippingPackageDiagnostics {
+  weightGrams: number
+  lengthCm: number
+  widthCm: number
+  heightCm: number
+  declaredValue: number | null
+  originCep: string | null
+  destinationCep: string
+  itemCount: number
+  unitCount: number
+  usedDefaultWeight: boolean
+  usedDefaultDimensions: boolean
+  notes: string[]
+}
+
+export interface ShippingMethodDiagnostic {
+  method: string
+  name: string
+  calculationType: string
+  active: boolean
+  checkoutEnabled: boolean
+  eligible: boolean
+  reason: string | null
+}
+
+export interface ShippingCalculationDiagnostics {
+  cartTotal: number
+  package: ShippingPackageDiagnostics
+  methods: ShippingMethodDiagnostic[]
+  rules: {
+    localFreeShippingEnabled: boolean
+    localFreeShippingThreshold: number
+    correiosFreeShippingEnabled: boolean
+    correiosFreeShippingThreshold: number
+    profitMarginSubsidyEnabled: boolean
+    profitMarginMinThreshold: number
+    profitMarginSubsidyShare: number
+  }
+  notes: string[]
+}
 export interface ShippingOption {
   method: string
   name: string
@@ -16,6 +75,9 @@ export interface ShippingOption {
   service?: string | null
   externalShipping?: boolean
   message?: string | null
+  matchedPromotion?: { id: string; name: string; type: string }
+  matchedRule?: { id?: string; name?: string; type?: string }
+  pricing?: ShippingPricingDiagnostics
 }
 
 export interface ShippingMethod {
@@ -51,6 +113,7 @@ export interface ShippingCalculation {
   carrier?: string | null
   service?: string | null
   options?: ShippingOption[]
+  diagnostics?: ShippingCalculationDiagnostics
 }
 
 export interface ShippingRegion {
@@ -269,11 +332,16 @@ class ShippingService {
   /**
    * Testar cotação de frete diretamente do painel de admin
    */
-  async testShippingQuote(cep: string, cartTotal = 0): Promise<ShippingCalculation> {
+  async testShippingQuote(
+    cep: string,
+    cartTotal = 0,
+    cartItems?: Array<any>,
+    promoCode?: string
+  ): Promise<ShippingCalculation> {
     const response = await fetch(`${API_URL}/shipping/test-quote`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify({ cep, cartTotal }),
+      body: JSON.stringify({ cep, cartTotal, cartItems, promoCode }),
     })
 
     if (!response.ok) {

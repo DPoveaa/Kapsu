@@ -81,6 +81,10 @@ export default function SupplierUserManagement() {
 
     try {
       setSubmitting(true);
+      const defaultPerms = formState.role === 'supplier_admin'
+        ? ['orders:read', 'orders:write', 'financial:read', 'users:manage', 'tracking:write', 'payments:read', 'audit:read', 'orders:cancel', '*']
+        : Array.from(new Set(['orders:read', 'orders:write', 'tracking:write', ...(formState.canCancelOrders ? ['orders:cancel'] : [])]));
+
       if (editingUser) {
         await supplierService.updateUser(editingUser.id, {
           name: formState.name,
@@ -88,7 +92,7 @@ export default function SupplierUserManagement() {
           password: formState.password || undefined,
           role: formState.role,
           active: formState.active,
-          permissions: Array.from(new Set([...formState.existingPermissions.filter(p => p !== 'orders:cancel'), 'orders:read', 'orders:write', 'tracking:write', ...(formState.canCancelOrders ? ['orders:cancel'] : [])])),
+          permissions: defaultPerms,
         });
         toast.success('Dados do funcionário atualizados!');
       } else {
@@ -97,7 +101,7 @@ export default function SupplierUserManagement() {
           email: formState.email,
           password: formState.password,
           role: formState.role,
-          permissions: Array.from(new Set(['orders:read', 'orders:write', 'tracking:write', ...(formState.canCancelOrders ? ['orders:cancel'] : [])])),
+          permissions: defaultPerms,
         });
         toast.success('Novo funcionário cadastrado com sucesso!');
       }

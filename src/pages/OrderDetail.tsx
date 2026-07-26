@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Package, User, MapPin, CreditCard, Calendar, FileText, Truck } from 'lucide-react'
+import { ArrowLeft, Loader2, Package, User, MapPin, CreditCard, Calendar, FileText, Truck, ExternalLink, Copy } from 'lucide-react'
 import { adminService } from '../services/admin.service'
 import { Building2 } from 'lucide-react'
 import type { Supplier } from '../services/admin.service'
@@ -46,6 +46,9 @@ interface OrderDetail {
   card_installment_value?: number | string | null
   card_interest_free?: boolean | null
   installment_rule_id?: string | null
+  invoice_url?: string | null
+  invoice_number?: string | null
+  shipping_label_url?: string | null
   user: {
     id: string
     name: string
@@ -81,6 +84,13 @@ export default function OrderDetail() {
   const [pendingSupplierId, setPendingSupplierId] = useState('')
   const [updatingSupplier, setUpdatingSupplier] = useState(false)
 
+  // Invoice (NFe) state
+  const [showInvoiceForm, setShowInvoiceForm] = useState(false)
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null)
+  const [invoiceNumberInput, setInvoiceNumberInput] = useState('')
+  const [shippingLabelFile, setShippingLabelFile] = useState<File | null>(null)
+  const [savingInvoice, setSavingInvoice] = useState(false)
+
   const handleProductImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     handleImageError(e, PRODUCT_IMAGE_FALLBACK)
   }
@@ -112,6 +122,7 @@ export default function OrderDetail() {
         setOrder(response.data)
         setPendingStatus(response.data.status)
         setPendingSupplierId(response.data.supplier_id || '')
+        setInvoiceNumberInput(response.data.invoice_number || '')
       }
     } catch (err: any) {
       console.error('Erro ao carregar detalhes do pedido:', err)
@@ -147,6 +158,7 @@ export default function OrderDetail() {
       credit_card: 'Cartão de Crédito',
       pix: 'PIX',
       cash: 'Dinheiro',
+      mercado_pago: 'Mercado Pago',
     }
     return methods[method] || method
   }
@@ -506,6 +518,203 @@ export default function OrderDetail() {
                 )}
               </div>
             </div>
+
+            
+            {/* Nota Fiscal / NFe */}
+            {isAdmin && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                    <FileText className="mr-2 text-gray-500 dark:text-gray-400" size={20} />
+                    Nota Fiscal (NFe)
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInvoiceNumberInput(order.invoice_number || '')
+                      setInvoiceFile(null)
+                      setShippingLabelFile(null)
+                      setShowInvoiceForm(v => !v)
+                    }}
+                    className="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline"
+                  >
+                    {showInvoiceForm ? 'Cancelar' : order.invoice_url || order.invoice_number ? 'Editar' : '+ Vincular'}
+                  </button>
+                </div>
+                <div className="px-6 py-4">
+                  {showInvoiceForm ? (
+                    <div className="space-y-3">
+                      {/* Upload da NFe (PDF) */}
+                      <div>
+                        <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">
+                          Arquivo da NFe (PDF)
+                          {order.invoice_url && <span className="ml-2 text-green-600 dark:text-green-400 font-normal">✓ PDF vinculado</span>}
+                        </label>
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          onChange={e => setInvoiceFile(e.target.files?.[0] ?? null)}
+                          className="w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 file:mr-3 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-900/30 dark:file:text-primary-300"
+                        />
+                        {invoiceFile && <p className="text-[10px] text-gray-500 mt-1">{invoiceFile.name}</p>}
+                      </div>
+                      {/* Número / Chave da NFe */}
+                      <div>
+                        <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">Número / Chave da NFe</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: NF-001234 ou Chave de Acesso"
+                          value={invoiceNumberInput}
+                          onChange={e => setInvoiceNumberInput(e.target.value)}
+                          className="w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        />
+                      </div>
+                      {/* Upload da Etiqueta ML (PDF) */}
+                      {order.shipping_method?.toLowerCase().includes('mercado') && (
+                        <div>
+                          <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">
+                            Etiqueta de Envio ML (PDF)
+                            {order.shipping_label_url && <span className="ml-2 text-green-600 dark:text-green-400 font-normal">✓ PDF vinculado</span>}
+                          </label>
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            onChange={e => setShippingLabelFile(e.target.files?.[0] ?? null)}
+                            className="w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 file:mr-3 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-amber-50 file:text-amber-700 dark:file:bg-amber-900/30 dark:file:text-amber-300"
+                          />
+                          {shippingLabelFile && <p className="text-[10px] text-gray-500 mt-1">{shippingLabelFile.name}</p>}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        {(order.invoice_url || order.invoice_number) && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                setSavingInvoice(true)
+                                const fd = new FormData()
+                                fd.append('remove', 'true')
+                                const token = localStorage.getItem('kapsu_token')
+                                const res = await fetch(`${(adminService as any).baseUrl}/orders/${order.id}/invoice`, {
+                                  method: 'PATCH',
+                                  headers: { 'Authorization': `Bearer ${token}` },
+                                  body: fd,
+                                })
+                                if (!res.ok) throw new Error('Erro ao remover NFe')
+                                setOrder(prev => prev ? { ...prev, invoice_url: null, invoice_number: null } : prev)
+                                setInvoiceNumberInput('')
+                                setInvoiceFile(null)
+                                setShowInvoiceForm(false)
+                                toast.success('Nota Fiscal removida.')
+                              } catch (err: any) {
+                                toast.error(err.message || 'Erro ao remover NFe')
+                              } finally {
+                                setSavingInvoice(false)
+                              }
+                            }}
+                            className="text-[11px] text-rose-500 hover:underline"
+                          >
+                            Remover NFe
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          disabled={savingInvoice || (!invoiceFile && !invoiceNumberInput.trim() && !shippingLabelFile)}
+                          onClick={async () => {
+                            try {
+                              setSavingInvoice(true)
+                              // Salvar Etiqueta ML se arquivo selecionado
+                              if (shippingLabelFile) {
+                                const fd = new FormData()
+                                fd.append('file', shippingLabelFile)
+                                const token = localStorage.getItem('kapsu_token')
+                                const res = await fetch(`${(adminService as any).baseUrl}/orders/${order.id}/shipping-label`, {
+                                  method: 'PATCH',
+                                  headers: { 'Authorization': `Bearer ${token}` },
+                                  body: fd,
+                                })
+                                const data = await res.json()
+                                if (!res.ok) throw new Error(data.message || 'Erro ao salvar etiqueta')
+                                setOrder(prev => prev ? { ...prev, shipping_label_url: data.shipping_label_url } : prev)
+                                setShippingLabelFile(null)
+                              }
+                              // Salvar NFe (arquivo e/ou número)
+                              if (invoiceFile || invoiceNumberInput.trim()) {
+                                const fd = new FormData()
+                                if (invoiceFile) fd.append('file', invoiceFile)
+                                if (invoiceNumberInput.trim()) fd.append('invoice_number', invoiceNumberInput.trim())
+                                const token = localStorage.getItem('kapsu_token')
+                                const res = await fetch(`${(adminService as any).baseUrl}/orders/${order.id}/invoice`, {
+                                  method: 'PATCH',
+                                  headers: { 'Authorization': `Bearer ${token}` },
+                                  body: fd,
+                                })
+                                const data = await res.json()
+                                if (!res.ok) throw new Error(data.message || 'Erro ao salvar NFe')
+                                setOrder(prev => prev ? { ...prev, invoice_url: data.invoice_url ?? null, invoice_number: data.invoice_number ?? null } : prev)
+                                setInvoiceFile(null)
+                              }
+                              setShowInvoiceForm(false)
+                              toast.success('Documentos salvos com sucesso!')
+                            } catch (err: any) {
+                              toast.error(err.message || 'Erro ao salvar documentos')
+                            } finally {
+                              setSavingInvoice(false)
+                            }
+                          }}
+                          className="ml-auto px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-[11px] font-semibold disabled:opacity-50 transition"
+                        >
+                          {savingInvoice ? 'Salvando...' : 'Salvar'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : order.invoice_url || order.invoice_number ? (
+                    <div className="space-y-2 text-sm">
+                      {order.invoice_number && (
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase font-semibold">Número / Chave</p>
+                            <p className="text-gray-900 dark:text-white font-mono text-xs mt-0.5 break-all">{order.invoice_number}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => navigator.clipboard.writeText(order.invoice_number!).then(() => toast.success('Copiado!'))}
+                            className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            title="Copiar chave NFe"
+                          >
+                            <Copy size={14} />
+                          </button>
+                        </div>
+                      )}
+                      {order.shipping_label_url && (
+                        <a
+                          href={order.shipping_label_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition"
+                        >
+                          <FileText size={13} />
+                          Abrir Etiqueta (PDF)
+                        </a>
+                      )}
+                      {order.invoice_url && (
+                        <a
+                          href={order.invoice_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/50 text-xs font-semibold transition"
+                        >
+                          <ExternalLink size={13} />
+                          Abrir Nota Fiscal
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400 dark:text-gray-500 italic">Nenhuma Nota Fiscal vinculada.</p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Informações de Data */}
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">

@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Search, Eye, Package, Plus, Trash2, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Loader2, Search, Eye, Package, Plus, Trash2, ChevronDown, CalendarClock, X } from 'lucide-react'
 import { adminService, Supplier } from '../services/admin.service'
 import CreateOrderModal from '../components/CreateOrderModal'
 import { useAuth } from '../context/AuthContext'
@@ -16,6 +16,7 @@ interface Order {
   payment_method: string | null
   shipping_address: string | null
   shipping_method?: string | null
+  ml_pickup_deadline?: string | null
   created_at: string
   updated_at: string
   user: {
@@ -65,6 +66,12 @@ export default function ManageOrders() {
     direction: 'desc',
   })
 
+  // ML Deadline popup state
+  const [mlPopupOrderId, setMlPopupOrderId] = useState<string | null>(null)
+  const [mlPopupValue, setMlPopupValue] = useState('')
+  const [savingMlDeadline, setSavingMlDeadline] = useState(false)
+  const mlPopupRef = useRef<HTMLDivElement>(null)
+
   const handleDeleteOrder = (orderId: string) => {
     confirm.show(
       'Tem certeza de que deseja excluir este pedido de teste? Esta ação não pode ser desfeita e removerá permanentemente os itens e registros relacionados.',
@@ -85,6 +92,32 @@ export default function ManageOrders() {
       'Excluir',
       'Cancelar'
     )
+  }
+
+  const handleOpenMlPopup = (order: Order) => {
+    setMlPopupOrderId(order.id)
+    // Convert stored ISO to local datetime-local input format (YYYY-MM-DDTHH:mm)
+    if (order.ml_pickup_deadline) {
+      const d = new Date(order.ml_pickup_deadline)
+      const pad = (n: number) => String(n).padStart(2, '0')
+      setMlPopupValue(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`)
+    } else {
+      setMlPopupValue('')
+    }
+  }
+
+  const handleSaveMlDeadline = async (orderId: string) => {
+    try {
+      setSavingMlDeadline(true)
+      await adminService.updateOrderMlDeadline(orderId, mlPopupValue || null)
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ml_pickup_deadline: mlPopupValue || null } : o))
+      toast.success('Prazo de coleta ML atualizado!')
+      setMlPopupOrderId(null)
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao atualizar prazo ML')
+    } finally {
+      setSavingMlDeadline(false)
+    }
   }
 
   const handleDeleteAllTestOrders = () => {
@@ -515,7 +548,86 @@ export default function ManageOrders() {
                                 : order.payment_method || 'Não informado'}
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200">{order.shipping_method || 'Não informado'}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-200">
+                            <div className="flex items-center gap-1.5">
+                              <span>{order.shipping_method || 'Não informado'}</span>
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={() => mlPopupOrderId === order.id ? setMlPopupOrderId(null) : handleOpenMlPopup(order)}
+                                  title={order.ml_pickup_deadline ? 'Editar prazo de coleta ML' : 'Definir prazo de coleta ML'}
+                                  className={`p-1 rounded-md transition shrink-0 ${
+                                    order.ml_pickup_deadline
+                                      ? 'text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/40'
+                                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                  }`}
+                                >
+                                  <CalendarClock size={14} />
+                                </button>
+                                {mlPopupOrderId === order.id && (
+                                  <div
+                                    ref={mlPopupRef}
+                                    className="absolute z-50 top-8 left-0 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-3 space-y-2"
+                                  >
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                                        <CalendarClock size={12} className="text-orange-500" />
+                                        Prazo Coleta Mercado Livre
+                                      </span>
+                                      <button type="button" onClick={() => setMlPopupOrderId(null)} className="p-0.5 text-gray-400 hover:text-gray-600">
+                                        <X size={13} />
+                                      </button>
+                                    </div>
+                                    <input
+                                      type="datetime-local"
+                                      value={mlPopupValue}
+                                      onChange={e => setMlPopupValue(e.target.value)}
+                                      className="w-full px-2.5 py-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    />
+                                    <div className="flex items-center justify-between gap-2 pt-1">
+                                      <button
+                                        type="button"
+                                        onClick={() => { setMlPopupValue(''); handleSaveMlDeadline(order.id) }}
+                                        className="text-[11px] text-rose-500 hover:underline"
+                                      >
+                                        Remover prazo
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={savingMlDeadline}
+                                        onClick={() => handleSaveMlDeadline(order.id)}
+                                        className="px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-[11px] font-semibold disabled:opacity-50 transition"
+                                      >
+                                        {savingMlDeadline ? 'Salvando...' : 'Salvar'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            {order.ml_pickup_deadline && (() => {
+                              const dl = new Date(order.ml_pickup_deadline)
+                              const now = new Date()
+                              const diffMs = dl.getTime() - now.getTime()
+                              const diffH = diffMs / (1000 * 60 * 60)
+                              const isToday = dl.toDateString() === now.toDateString()
+                              const isOverdue = diffMs < 0
+                              const style = isOverdue
+                                ? 'bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300'
+                                : isToday || diffH <= 3
+                                ? 'bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300'
+                                : diffH <= 48
+                                ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300'
+                                : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
+                              return (
+                                <div className={`mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${style}`}>
+                                  <CalendarClock size={10} />
+                                  {isOverdue ? '⚠ Vencido ' : 'Coleta até '}
+                                  {dl.toLocaleDateString('pt-BR')} {dl.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                              )
+                            })()}
+                          </td>
                           <td className="px-6 py-4 max-w-[280px]">
                             <div className="truncate text-sm text-gray-700 dark:text-gray-200" title={order.shipping_address || ''}>{order.shipping_address || 'Não informado'}</div>
                           </td>

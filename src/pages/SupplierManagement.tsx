@@ -23,7 +23,19 @@ export default function SupplierManagement() {
   const [teamLoading, setTeamLoading] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
-  // Modal de Criação / Edição
+  const [showTeamUserModal, setShowTeamUserModal] = useState(false);
+  const [editingTeamUser, setEditingTeamUser] = useState<SupplierTeamUser | null>(null);
+  const [teamUserForm, setTeamUserForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'supplier_employee' as 'supplier_admin' | 'supplier_employee',
+    phone: '',
+    active: true,
+  });
+  const [submittingTeamUser, setSubmittingTeamUser] = useState(false);
+
+  // Modal de Criação / Edição do Fornecedor
   const [showModal, setShowModal] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [formState, setFormState] = useState({
@@ -90,8 +102,95 @@ export default function SupplierManagement() {
     }
   };
 
+  const handleOpenCreateTeamUser = () => {
+    setEditingTeamUser(null);
+    setTeamUserForm({
+      name: '',
+      email: '',
+      password: '',
+      role: 'supplier_employee',
+      phone: '',
+      active: true,
+    });
+    setShowTeamUserModal(true);
+  };
+
+  const handleOpenEditTeamUser = (user: SupplierTeamUser) => {
+    setEditingTeamUser(user);
+    setTeamUserForm({
+      name: user.name,
+      email: user.email,
+      password: '',
+      role: user.role,
+      phone: '',
+      active: user.active !== false,
+    });
+    setShowTeamUserModal(true);
+  };
+
+  const handleSaveTeamUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!teamSupplier) return;
+    if (!teamUserForm.name.trim()) {
+      toast.error('O nome do integrante é obrigatório.');
+      return;
+    }
+
+    try {
+      setSubmittingTeamUser(true);
+      if (editingTeamUser) {
+        await adminService.updateSupplierUser(teamSupplier.id, editingTeamUser.id, {
+          name: teamUserForm.name,
+          email: teamUserForm.email || undefined,
+          password: teamUserForm.password || undefined,
+          role: teamUserForm.role,
+          phone: teamUserForm.phone || undefined,
+          active: teamUserForm.active,
+        });
+        toast.success('Integrante da equipe atualizado!');
+        setTeamUsers(current => current.map(u => u.id === editingTeamUser.id ? {
+          ...u,
+          name: teamUserForm.name,
+          email: teamUserForm.email || u.email,
+          role: teamUserForm.role,
+          active: teamUserForm.active,
+        } : u));
+      } else {
+        const res = await adminService.createSupplierUser(teamSupplier.id, {
+          name: teamUserForm.name,
+          email: teamUserForm.email || undefined,
+          password: teamUserForm.password || undefined,
+          role: teamUserForm.role,
+          phone: teamUserForm.phone || undefined,
+          active: teamUserForm.active,
+        });
+        toast.success('Integrante da equipe criado com sucesso!');
+        if (res.user) {
+          setTeamUsers(current => [...current, res.user]);
+          setSuppliers(current => current.map(s => s.id === teamSupplier.id ? {
+            ...s,
+            totalUsers: (s.totalUsers || 0) + 1,
+          } : s));
+        }
+        if (res.credentials) {
+          setCreatedCredentials({
+            supplierName: teamSupplier.name,
+            loginCode: res.credentials.loginCode,
+            tempPassword: res.credentials.tempPassword,
+            email: teamUserForm.email || null,
+          });
+        }
+      }
+      setShowTeamUserModal(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao salvar integrante da equipe.');
+    } finally {
+      setSubmittingTeamUser(false);
+    }
+  };
+
   const handleDeleteTeamUser = async (user: SupplierTeamUser) => {
-    if (!teamSupplier || user.role !== 'supplier_employee') return;
+    if (!teamSupplier) return;
     if (!window.confirm(`Excluir permanentemente o perfil de ${user.name}? O histórico de pedidos será preservado.`)) return;
 
     try {
@@ -103,9 +202,9 @@ export default function SupplierManagement() {
           ? { ...supplier, totalUsers: Math.max(0, (supplier.totalUsers || 1) - 1) }
           : supplier
       )));
-      toast.success('Funcionário excluído com sucesso.');
+      toast.success('Usuário excluído com sucesso.');
     } catch (err: any) {
-      toast.error(err.message || 'Erro ao excluir funcionário.');
+      toast.error(err.message || 'Erro ao excluir usuário.');
     } finally {
       setDeletingUserId(null);
     }
@@ -593,48 +692,180 @@ export default function SupplierManagement() {
         onClose={() => setTeamSupplier(null)}
         title={`Equipe: ${teamSupplier?.name || ''}`}
       >
-        <div className="space-y-3 text-sm">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Administradores são protegidos. Funcionários de teste podem ser excluídos sem apagar o histórico dos pedidos.
-          </p>
+        <div className="space-y-4 text-sm">
+          <div className="flex items-center justify-between gap-2 border-b border-gray-200 dark:border-gray-700 pb-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Gerencie a equipe de colaboradores e administradores vinculados a esta empresa.
+            </p>
+            <button
+              type="button"
+              onClick={handleOpenCreateTeamUser}
+              className="px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white font-medium text-xs transition shadow-sm flex items-center gap-1.5 shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Novo Integrante</span>
+            </button>
+          </div>
+
           {teamLoading ? (
             <div className="flex items-center justify-center gap-2 py-10 text-gray-500">
               <Loader2 className="h-5 w-5 animate-spin" /> Carregando equipe...
             </div>
           ) : teamUsers.length === 0 ? (
             <div className="rounded-xl border border-dashed border-gray-300 py-8 text-center text-gray-500 dark:border-gray-700">
-              Nenhum usuário vinculado.
+              Nenhum usuário vinculado a este fornecedor.
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
               {teamUsers.map(user => (
-                <div key={user.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
-                  <div className="min-w-0">
+                <div key={user.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 transition">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="truncate font-semibold text-gray-900 dark:text-white">{user.name}</span>
-                      {user.role === 'supplier_admin' && <Shield className="h-3.5 w-3.5 shrink-0 text-indigo-500" />}
+                      {user.role === 'supplier_admin' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-[10px] font-semibold">
+                          <Shield className="h-3 w-3 text-indigo-500" /> Admin
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-[10px] font-semibold">
+                          Operador
+                        </span>
+                      )}
+                      {user.active === false && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-semibold">
+                          Inativo
+                        </span>
+                      )}
                     </div>
-                    <div className="truncate text-xs text-gray-500">{user.email}</div>
-                    <div className="mt-1 text-[10px] uppercase tracking-wide text-gray-400">
-                      {user.role === 'supplier_admin' ? 'Administrador protegido' : 'Funcionário'}
-                    </div>
+                    <div className="truncate text-xs text-gray-500 dark:text-gray-400 mt-0.5">{user.email}</div>
                   </div>
-                  {user.role === 'supplier_employee' && (
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEditTeamUser(user)}
+                      className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition"
+                      title="Editar Integrante"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleDeleteTeamUser(user)}
                       disabled={deletingUserId === user.id}
-                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-rose-200 px-2.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900 dark:text-rose-400 dark:hover:bg-rose-950/30"
+                      className="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 transition disabled:opacity-50"
+                      title="Excluir Integrante"
                     >
-                      {deletingUserId === user.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-                      Excluir
+                      {deletingUserId === user.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                     </button>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </div>
+      </AdminModal>
+
+      {/* Modal Criar/Editar Usuário da Equipe */}
+      <AdminModal
+        isOpen={showTeamUserModal}
+        onClose={() => setShowTeamUserModal(false)}
+        title={editingTeamUser ? `Editar: ${editingTeamUser.name}` : `Novo Integrante - ${teamSupplier?.name || ''}`}
+      >
+        <form onSubmit={handleSaveTeamUser} className="space-y-4 text-sm">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Nome Completo *</label>
+            <input
+              type="text"
+              required
+              value={teamUserForm.name}
+              onChange={e => setTeamUserForm({ ...teamUserForm, name: e.target.value })}
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-xs"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                E-mail de Acesso <span className="text-primary-500 font-normal">(Opcional)</span>
+              </label>
+              <input
+                type="email"
+                placeholder="Deixe em branco p/ gerar código"
+                value={teamUserForm.email}
+                onChange={e => setTeamUserForm({ ...teamUserForm, email: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-xs"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Senha {editingTeamUser ? '(Deixe em branco p/ não alterar)' : '(Opcional)'}
+              </label>
+              <input
+                type="password"
+                placeholder={editingTeamUser ? '••••••••' : 'Deixe em branco p/ gerar'}
+                value={teamUserForm.password}
+                onChange={e => setTeamUserForm({ ...teamUserForm, password: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Cargo / Função *</label>
+              <select
+                value={teamUserForm.role}
+                onChange={e => setTeamUserForm({ ...teamUserForm, role: e.target.value as 'supplier_admin' | 'supplier_employee' })}
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-xs"
+              >
+                <option value="supplier_employee">Operador / Funcionário</option>
+                <option value="supplier_admin">Administrador do Fornecedor</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Telefone / WhatsApp</label>
+              <input
+                type="text"
+                placeholder="(00) 00000-0000"
+                value={teamUserForm.phone}
+                onChange={e => setTeamUserForm({ ...teamUserForm, phone: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+            <label className="flex items-center gap-2 text-xs text-gray-700 dark:text-gray-300 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={teamUserForm.active}
+                onChange={e => setTeamUserForm({ ...teamUserForm, active: e.target.checked })}
+                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              />
+              <span>Usuário Ativo</span>
+            </label>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowTeamUserModal(false)}
+                className="px-3.5 py-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition font-medium text-xs"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={submittingTeamUser}
+                className="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-700 text-white font-medium transition disabled:opacity-50 text-xs shadow-sm"
+              >
+                {submittingTeamUser ? 'Salvando...' : 'Salvar Integrante'}
+              </button>
+            </div>
+          </div>
+        </form>
       </AdminModal>
 
       {/* Modal Exibir Credenciais Geradas */}

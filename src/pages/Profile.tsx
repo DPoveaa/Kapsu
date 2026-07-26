@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { authService } from '../services/auth.service'
@@ -16,6 +16,7 @@ import { env } from '../config/env'
 import { ensureGoogleIdentityScript } from '../utils/googleIdentity'
 import { confirm, toast } from '../utils/toast'
 import { getOrderStatusLabel, getOrderStatusBadgeClass, isInvoiceEligibleStatus } from '../utils/orderStatus'
+import logoMercadoLivre from '../images/ml_logo.webp'
 
 type ProfileSection = 'info' | 'password' | 'image' | 'addresses' | 'orders' | 'favorites' | 'reviews' | 'notifications' | 'help' | 'connected-accounts' | null
 
@@ -58,16 +59,31 @@ interface Order {
   status: string;
   payment_method: string | null;
   shipping_address: string | null;
+  shipping_method?: string | null;
   created_at: Date | string;
   updated_at: Date | string;
   items?: OrderItem[];
   boleto_url?: string;
   payment_url?: string;
+  invoice_url?: string | null;
+  invoice_number?: string | null;
+  shipping_label_url?: string | null;
 }
+
+const isMercadoLivreOrder = (order: Order): boolean => {
+  const method = (order.shipping_method || '').toLowerCase();
+  const payMethod = (order.payment_method || '').toLowerCase();
+  return (
+    method.includes('mercado livre') || method.includes('mercado_livre') ||
+    method.includes('mercadolivre') || method === 'ml' ||
+    payMethod.includes('mercado livre') || payMethod.includes('mercado_livre') ||
+    payMethod.includes('mercadolivre')
+  );
+};
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg className={className} fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
-    <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232"/>
+    <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232" />
   </svg>
 )
 
@@ -860,8 +876,8 @@ export default function Profile() {
     const steps = [
       { key: 'PENDING', label: 'Confirmado' },
       { key: 'CONFIRMED', label: 'Pago' },
-      { key: 'PROCESSING', label: 'Preparação' },
-      { key: 'SHIPPED', label: 'Enviado' },
+      { key: 'PROCESSING', label: 'Em produção' },
+      { key: 'SHIPPED', label: 'A caminho' },
       { key: 'DELIVERED', label: 'Entregue' }
     ];
 
@@ -1361,14 +1377,18 @@ export default function Profile() {
                               setExpandedOrder(newExpanded);
 
                               if (newExpanded && !invoices[newExpanded] && !loadingInvoices[newExpanded]) {
-                                setLoadingInvoices(prev => ({ ...prev, [newExpanded]: true }));
-                                orderService.getOrderInvoice(newExpanded).then(invoice => {
-                                  if (invoice) {
-                                    setInvoices(prev => ({ ...prev, [newExpanded]: invoice }));
-                                  }
-                                }).finally(() => {
-                                  setLoadingInvoices(prev => ({ ...prev, [newExpanded]: false }));
-                                });
+                                // Skip NFe API fetch for orders with a manually attached invoice
+                                const expandedOrderData = orders.find(o => o.id === newExpanded);
+                                if (!expandedOrderData?.invoice_url) {
+                                  setLoadingInvoices(prev => ({ ...prev, [newExpanded]: true }));
+                                  orderService.getOrderInvoice(newExpanded).then(invoice => {
+                                    if (invoice) {
+                                      setInvoices(prev => ({ ...prev, [newExpanded]: invoice }));
+                                    }
+                                  }).finally(() => {
+                                    setLoadingInvoices(prev => ({ ...prev, [newExpanded]: false }));
+                                  });
+                                }
                               }
                             }}
                           >
@@ -1423,9 +1443,14 @@ export default function Profile() {
                                   <div className="space-y-2 text-xs">
                                     <div className="flex justify-between items-center">
                                       <span className="text-gray-500 dark:text-gray-400">Método:</span>
-                                      <span className="font-semibold text-gray-700 dark:text-gray-300">
-                                        {order.payment_method === 'credit_card' ? 'Cartão de Crédito' : order.payment_method === 'pix' ? 'PIX' : order.payment_method === 'boleto' ? 'Boleto' : 'Não informado'}
-                                      </span>
+                                      <span className="font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                                         {isMercadoLivreOrder(order)
+                                           ? (<><img src={logoMercadoLivre} alt="Mercado Livre" className="w-4 h-4 object-contain rounded-full" /> Via Mercado Livre</>)
+                                           : order.payment_method === 'credit_card' ? 'Cartão de Crédito'
+                                           : order.payment_method === 'pix' ? 'PIX'
+                                           : order.payment_method === 'boleto' ? 'Boleto'
+                                           : 'Não informado'}
+                                       </span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                       <span className="text-gray-500 dark:text-gray-400">Status Financeiro:</span>
@@ -1546,6 +1571,22 @@ export default function Profile() {
                                         </a>
                                       </div>
                                     )}
+                                    {order.invoice_url && (
+                                        <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
+                                          <span className="text-gray-500 dark:text-gray-400">
+                                            Nota Fiscal:
+                                          </span>
+                                          <a
+                                            href={order.invoice_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1 px-2.5 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded-lg font-bold transition-colors text-xs"
+                                          >
+                                            <Download className="w-3.5 h-3.5" /> Baixar PDF
+                                          </a>
+                                        </div>
+                                      )
+                                    }
                                     {isInvoiceEligibleStatus(order.status) && loadingInvoices[order.id] && (
                                       <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
                                         <span className="text-gray-500 dark:text-gray-400">Nota Fiscal:</span>
@@ -1810,17 +1851,15 @@ export default function Profile() {
                                     type="button"
                                     onClick={() => updatePreference('whatsapp_order_confirmation_enabled', !preferences.whatsapp_order_confirmation_enabled)}
                                     disabled={savingPrefs['whatsapp_order_confirmation_enabled']}
-                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${
-                                      preferences.whatsapp_order_confirmation_enabled
-                                        ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 hover:bg-green-100/70'
-                                        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
-                                    }`}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${preferences.whatsapp_order_confirmation_enabled
+                                      ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 hover:bg-green-100/70'
+                                      : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                                      }`}
                                   >
-                                    <WhatsAppIcon className={`w-3.5 h-3.5 ${
-                                      preferences.whatsapp_order_confirmation_enabled
-                                        ? 'text-green-600 dark:text-green-400'
-                                        : 'text-gray-400 dark:text-gray-500'
-                                    }`} />
+                                    <WhatsAppIcon className={`w-3.5 h-3.5 ${preferences.whatsapp_order_confirmation_enabled
+                                      ? 'text-green-600 dark:text-green-400'
+                                      : 'text-gray-400 dark:text-gray-500'
+                                      }`} />
                                     WhatsApp
                                   </button>
 
@@ -1829,17 +1868,15 @@ export default function Profile() {
                                     type="button"
                                     onClick={() => updatePreference('email_order_status_notifications_enabled', !preferences.email_order_status_notifications_enabled)}
                                     disabled={savingPrefs['email_order_status_notifications_enabled']}
-                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${
-                                      preferences.email_order_status_notifications_enabled
-                                        ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 hover:bg-blue-100/70'
-                                        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
-                                    }`}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${preferences.email_order_status_notifications_enabled
+                                      ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 hover:bg-blue-100/70'
+                                      : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                                      }`}
                                   >
-                                    <Mail className={`w-3.5 h-3.5 ${
-                                      preferences.email_order_status_notifications_enabled
-                                        ? 'text-blue-500 dark:text-blue-400'
-                                        : 'text-gray-400 dark:text-gray-500'
-                                    }`} />
+                                    <Mail className={`w-3.5 h-3.5 ${preferences.email_order_status_notifications_enabled
+                                      ? 'text-blue-500 dark:text-blue-400'
+                                      : 'text-gray-400 dark:text-gray-500'
+                                      }`} />
                                     E-mail
                                   </button>
                                 </div>
@@ -1887,17 +1924,15 @@ export default function Profile() {
                                     type="button"
                                     onClick={() => updatePreference('whatsapp_promotions_notifications_enabled', !preferences.whatsapp_promotions_notifications_enabled)}
                                     disabled={savingPrefs['whatsapp_promotions_notifications_enabled']}
-                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${
-                                      preferences.whatsapp_promotions_notifications_enabled
-                                        ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 hover:bg-green-100/70'
-                                        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
-                                    }`}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${preferences.whatsapp_promotions_notifications_enabled
+                                      ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 hover:bg-green-100/70'
+                                      : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                                      }`}
                                   >
-                                    <WhatsAppIcon className={`w-3.5 h-3.5 ${
-                                      preferences.whatsapp_promotions_notifications_enabled
-                                        ? 'text-green-600 dark:text-green-400'
-                                        : 'text-gray-400 dark:text-gray-500'
-                                    }`} />
+                                    <WhatsAppIcon className={`w-3.5 h-3.5 ${preferences.whatsapp_promotions_notifications_enabled
+                                      ? 'text-green-600 dark:text-green-400'
+                                      : 'text-gray-400 dark:text-gray-500'
+                                      }`} />
                                     WhatsApp
                                   </button>
 
@@ -1906,17 +1941,15 @@ export default function Profile() {
                                     type="button"
                                     onClick={() => updatePreference('email_promotions_notifications_enabled', !preferences.email_promotions_notifications_enabled)}
                                     disabled={savingPrefs['email_promotions_notifications_enabled']}
-                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${
-                                      preferences.email_promotions_notifications_enabled
-                                        ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 hover:bg-blue-100/70'
-                                        : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
-                                    }`}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${preferences.email_promotions_notifications_enabled
+                                      ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 hover:bg-blue-100/70'
+                                      : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                                      }`}
                                   >
-                                    <Mail className={`w-3.5 h-3.5 ${
-                                      preferences.email_promotions_notifications_enabled
-                                        ? 'text-blue-500 dark:text-blue-400'
-                                        : 'text-gray-400 dark:text-gray-500'
-                                    }`} />
+                                    <Mail className={`w-3.5 h-3.5 ${preferences.email_promotions_notifications_enabled
+                                      ? 'text-blue-500 dark:text-blue-400'
+                                      : 'text-gray-400 dark:text-gray-500'
+                                      }`} />
                                     E-mail
                                   </button>
                                 </div>
