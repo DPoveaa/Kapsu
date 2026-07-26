@@ -46,10 +46,19 @@ export interface ShippingMethodDiagnostic {
   reason: string | null
 }
 
+export interface DiscardedShippingQuote {
+  carrier: string
+  service: string
+  shippingFee: number
+  deliveryTime?: number | null
+  reason: string
+}
+
 export interface ShippingCalculationDiagnostics {
   cartTotal: number
   package: ShippingPackageDiagnostics
   methods: ShippingMethodDiagnostic[]
+  discardedProviderQuotes?: DiscardedShippingQuote[]
   rules: {
     localFreeShippingEnabled: boolean
     localFreeShippingThreshold: number
@@ -330,18 +339,32 @@ class ShippingService {
   }
 
   /**
-   * Testar cotação de frete diretamente do painel de admin
+   * Testar cotação de frete diretamente do painel de admin.
+   * @param includeDeclaredValue  When true, sends extra_declared_value to Conect Envios.
+   *                              Omit (false) for the base quote without insurance.
+   * @param declaredValue         The declared value amount to insure. Only used when includeDeclaredValue=true.
    */
   async testShippingQuote(
     cep: string,
     cartTotal = 0,
     cartItems?: Array<any>,
-    promoCode?: string
+    promoCode?: string,
+    originCep?: string,
+    includeDeclaredValue = false,
+    declaredValue?: number
   ): Promise<ShippingCalculation> {
     const response = await fetch(`${API_URL}/shipping/test-quote`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
-      body: JSON.stringify({ cep, cartTotal, cartItems, promoCode }),
+      body: JSON.stringify({
+        cep,
+        cartTotal,
+        cartItems,
+        promoCode,
+        sedex_origin_cep: originCep,
+        includeDeclaredValue,
+        declaredValue: includeDeclaredValue ? declaredValue : undefined,
+      }),
     })
 
     if (!response.ok) {

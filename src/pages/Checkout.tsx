@@ -802,12 +802,18 @@ export default function Checkout() {
 
       const shippingAddress = buildShippingAddress(formData)
 
+      const selectedOpt = shippingOptions.find(option => option.method === selectedShippingMethod) || shippingOptions[0]
+      const carrierCost = (selectedOpt as any)?.pricing?.quotedFee ?? (selectedOpt as any)?.originalFee ?? selectedOpt?.shippingFee ?? (shippingCost || 0)
+      const subsidyAmt = (selectedOpt as any)?.pricing?.discountApplied ?? (carrierCost > (shippingCost || 0) ? carrierCost - (shippingCost || 0) : 0)
+
       // Cria pedido sem pagamento
       const order = await orderService.createOrderWithoutPayment(
         shippingAddress,
         isSubscription ? subscriptionPlan : undefined,
-        shippingCost > 0 ? shippingCost : undefined,
-        selectedShippingMethod ? shippingOptions.find(option => option.method === selectedShippingMethod)?.name || selectedShippingMethod : undefined
+        shippingCost ?? 0,
+        selectedShippingMethod ? selectedOpt?.name || selectedShippingMethod : undefined,
+        carrierCost,
+        subsidyAmt
       )
 
       console.log('✅ Pedido criado sem pagamento:', order)

@@ -235,7 +235,12 @@ export default function SupplierPayments() {
           ) : settlement ? (
             <>
               <SupplierSettlementCards overview={settlement} />
-              <SupplierSettlementBreakdown overview={settlement} onPayCycle={openCyclePayment} />
+              <SupplierSettlementBreakdown
+                overview={settlement}
+                onPayCycle={openCyclePayment}
+                onRefresh={() => loadSettlement(true)}
+                isAdmin={true}
+              />
             </>
           ) : null}
         </div>

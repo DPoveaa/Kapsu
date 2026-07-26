@@ -73,7 +73,11 @@ export default function SupplierPaymentHistory() {
         <div className="space-y-6">
           <SupplierSettlementCards overview={overview} moneyFormatter={money} />
           <SupplierFinancialChart />
-          <SupplierSettlementBreakdown overview={overview} />
+          <SupplierSettlementBreakdown
+            overview={overview}
+            onRefresh={() => loadData(true)}
+            isAdmin={false}
+          />
         </div>
       ) : null}
 

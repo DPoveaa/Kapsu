@@ -610,10 +610,10 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   const promoCodeDiscount = promoCodesValidation?.totalDiscount || 0
   const totalAfterPromotions = subtotalAfterPromotions - promoCodeDiscount
 
-  // Verifica se há frete grátis (por cupom ou valor mínimo)
+  // Verifica se há frete grátis (por cupom, valor mínimo ou opção zerada por subsídio/regra)
   const hasFreeShippingByCoupon = promoCodesValidation?.freeShipping || false
   const hasFreeShippingByThreshold = freeShippingThreshold > 0 && totalAfterPromotions >= freeShippingThreshold
-  const hasFreeShipping = hasFreeShippingByCoupon || hasFreeShippingByThreshold || isFreeShipping
+  const hasFreeShipping = hasFreeShippingByCoupon || hasFreeShippingByThreshold || isFreeShipping || shippingFee === 0
 
   const shippingCost = hasFreeShipping ? 0 : (shippingFee || 0)
   const currentTotal = totalAfterPromotions + shippingCost
@@ -719,6 +719,14 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     loadDefaultAddress()
   }, [isAuthenticated, authLoading])
 
+  // Chave estável para identificar alterações reais nos itens do carrinho
+  const cartItemsKey = useMemo(() => {
+    return items
+      .filter(item => item.product)
+      .map(item => `${item.product!.id}:${item.quantity}`)
+      .join(',')
+  }, [items])
+
   // Calcula frete quando o CEP está preenchido
   useEffect(() => {
     const calculateShippingFee = async () => {
@@ -726,7 +734,10 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
       if (cleanCep.length === 8) {
         try {
-          setCalculatingShipping(true)
+          // Apenas ativa spinner de bloco se ainda não houver opções carregadas
+          if (shippingOptions.length === 0) {
+            setCalculatingShipping(true)
+          }
           setShippingCalculationFailed(false)
 
           const cartItems = items
@@ -757,7 +768,14 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
             setIsFreeShippingApplicable(false)
           } else {
             const availableOptions = result.options?.length ? result.options : []
-            const selectedOption = availableOptions.find(option => option.method === selectedShippingMethod) || availableOptions[0]
+            const alreadyPicked = availableOptions.find(option => option.method === selectedShippingMethod)
+            const fastestOption = availableOptions.reduce<ShippingOption | null>((fastest, option) => {
+              if (!fastest) return option
+              const a = fastest.deliveryTime ?? Infinity
+              const b = option.deliveryTime ?? Infinity
+              return b < a ? option : fastest
+            }, null)
+            const selectedOption = alreadyPicked || fastestOption || availableOptions[0]
             setShippingOptions(availableOptions)
             setSelectedShippingMethod(selectedOption?.method || null)
             setShippingFee(selectedOption?.shippingFee ?? result.shippingFee)
@@ -803,7 +821,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     // Debounce de 500ms
     const timeoutId = setTimeout(calculateShippingFee, 500)
     return () => clearTimeout(timeoutId)
-  }, [shippingCep, totalAfterPromotions, items])
+  }, [shippingCep, totalAfterPromotions, cartItemsKey])
 
   const selectShippingOption = (option: ShippingOption) => {
     setSelectedShippingMethod(option.method)
@@ -1786,11 +1804,17 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
       const shippingAddress = buildShippingAddress(formData)
 
+      const selectedOpt = shippingOptions.find(option => option.method === selectedShippingMethod) || shippingOptions[0]
+      const carrierCost = (selectedOpt as any)?.pricing?.quotedFee ?? (selectedOpt as any)?.originalFee ?? selectedOpt?.shippingFee ?? (shippingCost || 0)
+      const subsidyAmt = (selectedOpt as any)?.pricing?.discountApplied ?? (carrierCost > (shippingCost || 0) ? carrierCost - (shippingCost || 0) : 0)
+
       const order = await orderService.createOrderWithoutPayment(
         shippingAddress,
         isSubscription ? subscriptionPlan : undefined,
-        shippingCost > 0 ? shippingCost : undefined,
-        selectedShippingMethod ? shippingOptions.find(option => option.method === selectedShippingMethod)?.name || selectedShippingMethod : undefined
+        shippingCost ?? 0,
+        selectedShippingMethod ? selectedOpt?.name || selectedShippingMethod : undefined,
+        carrierCost,
+        subsidyAmt
       )
 
       await clearCart()
@@ -3058,130 +3082,131 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     const isCardProcessing = selectedPaymentMethod === 'credit_card' && paymentProcessingState && paymentProcessingState !== 'awaiting_payment'
 
     return (
-    <>
-      <div className="mb-4">
-        <PaymentSelector
-          selectedMethod={selectedPaymentMethod}
-          onSelectMethod={handlePaymentMethodChange}
-          disabled={creatingOrder}
-        />
-      </div>
-
-      <div className="mt-4">
-        {pendingCheckoutConfirmation && paymentProcessingState === 'confirmed' ? (
-          <PaymentProcessingState
-            state="confirmed"
-            onConfirmedTransitionEnd={finishConfirmationTransition}
-          />
-        ) : selectedPaymentMethod === 'pix' && (
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
-            <PixPayment
-              pixQrCode={hasPendingPix ? pendingPix?.pixQrCode : undefined}
-              pixPayload={hasPendingPix ? pendingPix?.pixPayload : undefined}
-              timeLeft={hasPendingPix ? timeLeft : undefined}
-              copied={copiedPix}
-              onCopy={handleCopyPix}
-              isGenerating={creatingOrder && selectedPaymentMethod === 'pix' && !hasPendingPix}
-              awaitingPayment={hasPendingPix}
-            />
-          </div>
-        )}
-        {!pendingCheckoutConfirmation && selectedPaymentMethod === 'boleto' && (
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
-            <BoletoPayment
-              bankSlipUrl={hasPendingBoleto ? pendingBoleto?.bankSlipUrl : undefined}
-              identificationField={hasPendingBoleto ? pendingBoleto?.identificationField : undefined}
-              dueDate={hasPendingBoleto ? pendingBoleto?.dueDate : undefined}
-              copied={copiedBoleto}
-              onCopy={handleCopyBoleto}
-              isGenerating={creatingOrder && selectedPaymentMethod === 'boleto' && !hasPendingBoleto}
-              onBoletoOpen={handleBoletoOpened}
-            />
-          </div>
-        )}
-        {!pendingCheckoutConfirmation && isCardProcessing ? (
-          <PaymentProcessingState
-            state={paymentProcessingState}
-            onRetry={() => {
-              setPaymentProcessingState(null)
-              setCheckoutError(null)
-              setActivePaymentAttemptKey(null)
-            }}
-          />
-        ) : !pendingCheckoutConfirmation && selectedPaymentMethod === 'credit_card' && (
-          <CreditCardPayment
-            formData={cardFormData}
-            onChange={(data) => {
-              setCardFormData(data)
-              if (Object.keys(cardFormErrors).length > 0) setCardFormErrors({})
-            }}
-            errors={cardFormErrors}
-            installmentOptions={installmentOptions}
-            loadingOptions={loadingInstallments}
-            maxInterestFree={maxInterestFree}
+      <>
+        <div className="mb-4">
+          <PaymentSelector
+            selectedMethod={selectedPaymentMethod}
+            onSelectMethod={handlePaymentMethodChange}
             disabled={creatingOrder}
           />
-        )}
-      </div>
-
-      {checkoutError && (
-        <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-300">
-          {checkoutError}
         </div>
-      )}
 
-      {getPaymentBlockReason() && !creatingOrder && !calculatingShipping && (
-        <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">
-          {getPaymentBlockReason()}
-        </p>
-      )}
+        <div className="mt-4">
+          {pendingCheckoutConfirmation && paymentProcessingState === 'confirmed' ? (
+            <PaymentProcessingState
+              state="confirmed"
+              onConfirmedTransitionEnd={finishConfirmationTransition}
+            />
+          ) : selectedPaymentMethod === 'pix' && (
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
+              <PixPayment
+                pixQrCode={hasPendingPix ? pendingPix?.pixQrCode : undefined}
+                pixPayload={hasPendingPix ? pendingPix?.pixPayload : undefined}
+                timeLeft={hasPendingPix ? timeLeft : undefined}
+                copied={copiedPix}
+                onCopy={handleCopyPix}
+                isGenerating={creatingOrder && selectedPaymentMethod === 'pix' && !hasPendingPix}
+                awaitingPayment={hasPendingPix}
+              />
+            </div>
+          )}
+          {!pendingCheckoutConfirmation && selectedPaymentMethod === 'boleto' && (
+            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 sm:p-5">
+              <BoletoPayment
+                bankSlipUrl={hasPendingBoleto ? pendingBoleto?.bankSlipUrl : undefined}
+                identificationField={hasPendingBoleto ? pendingBoleto?.identificationField : undefined}
+                dueDate={hasPendingBoleto ? pendingBoleto?.dueDate : undefined}
+                copied={copiedBoleto}
+                onCopy={handleCopyBoleto}
+                isGenerating={creatingOrder && selectedPaymentMethod === 'boleto' && !hasPendingBoleto}
+                onBoletoOpen={handleBoletoOpened}
+              />
+            </div>
+          )}
+          {!pendingCheckoutConfirmation && isCardProcessing ? (
+            <PaymentProcessingState
+              state={paymentProcessingState}
+              onRetry={() => {
+                setPaymentProcessingState(null)
+                setCheckoutError(null)
+                setActivePaymentAttemptKey(null)
+              }}
+            />
+          ) : !pendingCheckoutConfirmation && selectedPaymentMethod === 'credit_card' && (
+            <CreditCardPayment
+              formData={cardFormData}
+              onChange={(data) => {
+                setCardFormData(data)
+                if (Object.keys(cardFormErrors).length > 0) setCardFormErrors({})
+              }}
+              errors={cardFormErrors}
+              installmentOptions={installmentOptions}
+              loadingOptions={loadingInstallments}
+              maxInterestFree={maxInterestFree}
+              disabled={creatingOrder}
+            />
+          )}
+        </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-6 sm:mt-8 gap-2 sm:gap-3 border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6">
-        {isAdmin && (
-          <button
-            type="button"
-            onClick={handleCreateOrderWithoutPayment}
-            className="text-xs px-2.5 sm:px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer font-black shadow-sm"
-            disabled={!canProceedToPayment() || creatingOrderWithoutPayment || creatingOrder}
-            title="Criar pedido sem pagamento (apenas para testes)"
-          >
-            {creatingOrderWithoutPayment ? (
-              <>
-                <Loader2 className="animate-spin" size={12} /> Criando...
-              </>
-            ) : (
-              <>
-                <TestTube size={12} /> Teste (sem pagamento)
-              </>
-            )}
-          </button>
+        {checkoutError && (
+          <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-300">
+            {checkoutError}
+          </div>
         )}
-        {!pendingCheckoutConfirmation && !selectedAsyncPayment && (!isCardProcessing || paymentProcessingState === 'failed') && (
-          <button
-            type="button"
-            onClick={handlePaymentSubmit}
-            className="btn-primary flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3 px-6 sm:ml-auto font-bold disabled:opacity-50 disabled:cursor-not-allowed min-w-[200px]"
-            disabled={creatingOrder || creatingOrderWithoutPayment || !canProceedToPayment()}
-          >
-            {creatingOrder ? (
-              <>
-                <Loader2 className="animate-spin mr-2" size={18} />
-                <span>Processando...</span>
-              </>
-            ) : (
-              <span>
-                {selectedPaymentMethod === 'credit_card'
-                  ? 'Pagar com Cartão'
-                  : selectedPaymentMethod === 'pix'
-                    ? 'Continuar'
-                    : 'Continuar'}
-              </span>
-            )}
-          </button>
+
+        {getPaymentBlockReason() && !creatingOrder && !calculatingShipping && (
+          <p className="mt-3 text-sm text-amber-600 dark:text-amber-400">
+            {getPaymentBlockReason()}
+          </p>
         )}
-      </div>
-    </>
-  )}
+
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-6 sm:mt-8 gap-2 sm:gap-3 border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6">
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={handleCreateOrderWithoutPayment}
+              className="text-xs px-2.5 sm:px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer font-black shadow-sm"
+              disabled={!canProceedToPayment() || creatingOrderWithoutPayment || creatingOrder}
+              title="Criar pedido sem pagamento (apenas para testes)"
+            >
+              {creatingOrderWithoutPayment ? (
+                <>
+                  <Loader2 className="animate-spin" size={12} /> Criando...
+                </>
+              ) : (
+                <>
+                  <TestTube size={12} /> Teste (sem pagamento)
+                </>
+              )}
+            </button>
+          )}
+          {!pendingCheckoutConfirmation && !selectedAsyncPayment && (!isCardProcessing || paymentProcessingState === 'failed') && (
+            <button
+              type="button"
+              onClick={handlePaymentSubmit}
+              className="btn-primary flex items-center justify-center cursor-pointer text-sm sm:text-base py-2.5 sm:py-3 px-6 sm:ml-auto font-bold disabled:opacity-50 disabled:cursor-not-allowed min-w-[200px]"
+              disabled={creatingOrder || creatingOrderWithoutPayment || !canProceedToPayment()}
+            >
+              {creatingOrder ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={18} />
+                  <span>Processando...</span>
+                </>
+              ) : (
+                <span>
+                  {selectedPaymentMethod === 'credit_card'
+                    ? 'Pagar com Cartão'
+                    : selectedPaymentMethod === 'pix'
+                      ? 'Continuar'
+                      : 'Continuar'}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
+      </>
+    )
+  }
 
 
 

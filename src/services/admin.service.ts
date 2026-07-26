@@ -1727,6 +1727,21 @@ class AdminService {
     return data
   }
 
+  async updateOrderShippingFee(orderId: string, newValue: number, reason?: string): Promise<{ success: boolean; oldValue: number; newValue: number; history: any[] }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/orders/${encodeURIComponent(orderId)}/shipping-fee`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ newValue, reason }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao atualizar valor do frete')
+    return data
+  }
+
   async listSupplierUsers(supplierId: string): Promise<{ success: boolean; users: any[] }> {
     const token = localStorage.getItem('kapsu_token')
     const response = await fetch(`${this.baseUrl}/suppliers/${supplierId}/users`, {

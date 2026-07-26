@@ -142,6 +142,17 @@ export interface SupplierSettlementOrderItem {
   totalCost: number;
 }
 
+export interface ShippingFeeOverride {
+  id: string;
+  oldValue: number;
+  newValue: number;
+  changedByUserId?: string | null;
+  changedByName: string;
+  changedByRole: string;
+  reason?: string | null;
+  createdAt: string;
+}
+
 export interface SupplierSettlementOrder {
   id: string;
   status: string;
@@ -149,6 +160,15 @@ export interface SupplierSettlementOrder {
   paymentMethod?: string | null;
   customerName: string;
   customerEmail?: string | null;
+  /** Cost of product items only (excluding shipping) */
+  itemsCost?: number;
+  /** Customer shipping fee to be reimbursed to supplier */
+  shippingFee?: number;
+  /** Whether the shipping fee was manually overridden */
+  shippingFeeOverridden?: boolean;
+  /** History of shipping fee overrides (newest last) */
+  shippingFeeHistory?: ShippingFeeOverride[];
+  /** Total order payout = itemsCost + shippingFee */
   amount: number;
   items: SupplierSettlementOrderItem[];
 }
@@ -159,6 +179,11 @@ export interface SupplierSettlementCycle {
   periodEnd: string;
   dueDate: string;
   isCurrent: boolean;
+  /** Sum of product costs for all orders in cycle */
+  itemsAmount?: number;
+  /** Sum of shipping fees for all orders in cycle */
+  shippingAmount?: number;
+  /** Total payout for cycle = itemsAmount + shippingAmount */
   amount: number;
   paidAmount: number;
   balance: number;
@@ -177,6 +202,11 @@ export interface SupplierSettlementOverview {
     ruleDescription: string;
   };
   summary: {
+    /** Total product cost across all orders */
+    totalItemsAmount?: number;
+    /** Total shipping fees across all orders */
+    totalShippingAmount?: number;
+    /** Total payout = totalItemsAmount + totalShippingAmount */
     totalSalesAmount: number;
     totalPaid: number;
     outstandingAmount: number;
@@ -367,6 +397,17 @@ class SupplierService {
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || 'Erro ao calcular repasses');
+    return data;
+  }
+
+  async updateOrderShippingFee(orderId: string, newValue: number, reason?: string): Promise<{ success: boolean; oldValue: number; newValue: number; history: any[] }> {
+    const response = await fetch(`${this.baseUrl}/orders/${encodeURIComponent(orderId)}/shipping-fee`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ newValue, reason }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Erro ao atualizar valor do frete');
     return data;
   }
 

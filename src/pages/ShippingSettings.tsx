@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { Save, Plus, Trash2, Truck, Gift, Search, AlertTriangle, MapPin, TrendingUp, Percent, ShieldCheck, LayoutDashboard, ChevronLeft, ChevronRight, Settings2, ArrowRight, CheckCircle2, Package, Scale, Calculator, Tag, ChevronDown, X } from 'lucide-react'
+import { Save, Plus, Trash2, Truck, Gift, Search, AlertTriangle, MapPin, TrendingUp, Percent, ShieldCheck, LayoutDashboard, ChevronLeft, ChevronRight, Settings2, ArrowRight, CheckCircle2, Package, Scale, Calculator, Tag, ChevronDown, X, Shuffle, DollarSign, TrendingDown } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { shippingService, ShippingRegion, ShippingSettings as ShippingSettingsType, ShippingCalculation, ShippingMethod } from '../services/shipping.service'
 import { productsService } from '../services/products.service'
@@ -56,8 +56,12 @@ export default function ShippingSettings() {
   const [testCustomPackage, setTestCustomPackage] = useState(false)
   const [testPackageWeight, setTestPackageWeight] = useState('250')
   const [testPackageLength, setTestPackageLength] = useState('16')
-  const [testPackageWidth, setTestPackageWidth] = useState('11')
+  const [testPackageWidth, setTestPackageWidth] = useState('10')  // 10 cm = provider minimum for box
   const [testPackageHeight, setTestPackageHeight] = useState('13')
+  // Declared value (seguro de valor declarado) — optional; omitted by default
+  const [testUseDeclaredValue, setTestUseDeclaredValue] = useState(false)
+  const [testDeclaredValue, setTestDeclaredValue] = useState('150')
+  const [testResultWithDeclared, setTestResultWithDeclared] = useState<ShippingCalculation | null>(null)
   const [testLoading, setTestLoading] = useState(false)
   const [testResult, setTestResult] = useState<ShippingCalculation | null>(null)
   const [testError, setTestError] = useState<string | null>(null)
@@ -72,6 +76,83 @@ export default function ShippingSettings() {
   const [productSearchLoading, setProductSearchLoading] = useState(false)
   const [productSearchOpen, setProductSearchOpen] = useState(false)
   const productSearchRef = useRef<HTMLDivElement>(null)
+
+  // Cache de produtos para montagem de carrinho aleatório
+  const [storeProducts, setStoreProducts] = useState<Product[]>([])
+  const [loadingStoreProducts, setLoadingStoreProducts] = useState(false)
+
+  const ensureStoreProductsLoaded = async (): Promise<Product[]> => {
+    if (storeProducts.length > 0) return storeProducts
+    setLoadingStoreProducts(true)
+    try {
+      const prods = await productsService.getAllForAdmin()
+      const activeProds = prods.filter(p => p.active && !p.archived)
+      setStoreProducts(activeProds)
+      return activeProds
+    } catch (err) {
+      console.error('Erro ao carregar produtos para o simulador', err)
+      return []
+    } finally {
+      setLoadingStoreProducts(false)
+    }
+  }
+
+  const selectRandomProductsForTarget = (products: Product[], target: number): Array<{ product: Product; qty: number }> => {
+    if (products.length === 0) return []
+
+    let bestCombination: Array<{ product: Product; qty: number }> = []
+    let bestDiff = Infinity
+
+    for (let attempt = 0; attempt < 80; attempt++) {
+      const shuffled = [...products].sort(() => Math.random() - 0.5)
+      const count = Math.min(shuffled.length, Math.floor(Math.random() * 3) + 1)
+      const currentItems: Array<{ product: Product; qty: number }> = []
+      let currentSum = 0
+
+      for (let i = 0; i < count; i++) {
+        const prod = shuffled[i]
+        const price = prod.promo_price ?? prod.price
+        if (price <= 0) continue
+
+        const remaining = target - currentSum
+        if (remaining <= 0 && currentItems.length > 0) break
+
+        const maxPossibleQty = Math.max(1, Math.floor(remaining / price))
+        const qty = Math.min(4, Math.max(1, Math.floor(Math.random() * maxPossibleQty) || 1))
+
+        currentItems.push({ product: prod, qty })
+        currentSum += price * qty
+      }
+
+      const diff = Math.abs(currentSum - target)
+      if (diff < bestDiff && currentItems.length > 0) {
+        bestDiff = diff
+        bestCombination = currentItems
+        if (diff < 0.5) break
+      }
+    }
+
+    return bestCombination
+  }
+
+  const handleRandomizeCart = async (targetVal?: number): Promise<Array<{ product: Product; qty: number }>> => {
+    const prods = await ensureStoreProductsLoaded()
+    const target = targetVal !== undefined && targetVal > 0 ? targetVal : (Number(testCartTotal) > 0 ? Number(testCartTotal) : 150)
+    setTestCartTotal(String(target))
+    if (prods.length > 0) {
+      const selection = selectRandomProductsForTarget(prods, target)
+      setTestProducts(selection)
+      return selection
+    }
+    return []
+  }
+
+  const handleShortcutClick = async (presetCep: string) => {
+    setTestCep(presetCep)
+    const target = Number(testCartTotal) > 0 ? Number(testCartTotal) : 150
+    const selectedProducts = await handleRandomizeCart(target)
+    void handleRunTestQuote(presetCep, String(target), selectedProducts)
+  }
 
   useEffect(() => {
     loadData()
@@ -260,9 +341,15 @@ export default function ShippingSettings() {
     setTestProducts(prev => prev.map(p => p.product.id === productId ? { ...p, qty } : p))
   }
 
-  const handleRunTestQuote = async (overrideCep?: string, overrideCart?: string) => {
+  const handleRunTestQuote = async (
+    overrideCep?: string,
+    overrideCart?: string,
+    overrideProducts?: Array<{ product: Product; qty: number }>
+  ) => {
     const targetCep = overrideCep !== undefined ? overrideCep : testCep
     const targetCart = overrideCart !== undefined ? overrideCart : testCartTotal
+    const effectiveProducts = overrideProducts !== undefined ? overrideProducts : testProducts
+
     if (!targetCep) {
       setTestError('Informe um CEP para testar a cotação')
       return
@@ -277,18 +364,19 @@ export default function ShippingSettings() {
       setTestLoading(true)
       setTestError(null)
       setTestResult(null)
+      setTestResultWithDeclared(null)
 
       // Se há produtos selecionados, manda os IDs reais para o backend calcular subsídio por margem
       let cartItems: object[] | undefined = undefined
-      if (testProducts.length > 0) {
-        cartItems = testProducts.map(({ product, qty }) => ({
+      if (effectiveProducts.length > 0) {
+        cartItems = effectiveProducts.map(({ product, qty }) => ({
           product_id: product.id,
           quantity: qty,
           unit_price: product.promo_price ?? product.price,
           ...(testCustomPackage ? {
             weightGrams: Math.max(1, Number(testPackageWeight) || 250),
             lengthCm: Math.max(1, Number(testPackageLength) || 16),
-            widthCm: Math.max(1, Number(testPackageWidth) || 11),
+            widthCm: Math.max(1, Number(testPackageWidth) || 10),
             heightCm: Math.max(1, Number(testPackageHeight) || 13),
           } : {}),
         }))
@@ -298,19 +386,37 @@ export default function ShippingSettings() {
           quantity: 1,
           weightGrams: Math.max(1, Number(testPackageWeight) || 250),
           lengthCm: Math.max(1, Number(testPackageLength) || 16),
-          widthCm: Math.max(1, Number(testPackageWidth) || 11),
+          widthCm: Math.max(1, Number(testPackageWidth) || 10),
           heightCm: Math.max(1, Number(testPackageHeight) || 13),
           unit_price: Number(targetCart) || 0,
         }]
       }
 
+      // Quote A: without declared value (base shipping cost)
       const res = await shippingService.testShippingQuote(
         targetCep,
         Number(targetCart) || 0,
         cartItems,
-        testPromoCode.trim() || undefined
+        testPromoCode.trim() || undefined,
+        settings.sedex_origin_cep,
+        false  // no declared value
       )
       setTestResult(res)
+
+      // Quote B: with declared value (if toggle is on)
+      if (testUseDeclaredValue) {
+        const declaredVal = Number(testDeclaredValue) || Number(targetCart) || 150
+        const resInsured = await shippingService.testShippingQuote(
+          targetCep,
+          Number(targetCart) || 0,
+          cartItems,
+          testPromoCode.trim() || undefined,
+          settings.sedex_origin_cep,
+          true,
+          declaredVal
+        )
+        setTestResultWithDeclared(resInsured)
+      }
     } catch (err: unknown) {
       setTestError(getErrorMessage(err, 'Erro ao simular cotação'))
     } finally {
@@ -824,9 +930,9 @@ export default function ShippingSettings() {
                 </div>
               </div>
 
-              {/* Atalhos Rápidos de CEPs */}
-              <div className="mt-4 flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500">Atalhos:</span>
+              {/* Atalhos Rápidos de CEPs + Carrinho Aleatório */}
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500">Atalhos de Destino:</span>
                 {[
                   { name: 'SP', cep: '01001-000' },
                   { name: 'RJ', cep: '22041-001' },
@@ -837,16 +943,32 @@ export default function ShippingSettings() {
                   <button
                     key={preset.cep}
                     type="button"
-                    onClick={() => {
-                      setTestCep(preset.cep)
-                      void handleRunTestQuote(preset.cep, testCartTotal)
-                    }}
-                    className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-700 transition hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
+                    onClick={() => void handleShortcutClick(preset.cep)}
+                    disabled={testLoading || loadingStoreProducts}
+                    title="Clique para testar este CEP com produtos aleatórios (~R$ 150)"
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1 text-xs font-medium text-gray-700 transition hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
                   >
                     <MapPin className="h-3 w-3 text-blue-500" aria-hidden="true" />
                     {preset.name}
                   </button>
                 ))}
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const target = Number(testCartTotal) > 0 ? Number(testCartTotal) : 150
+                    const selected = await handleRandomizeCart(target)
+                    if (testCep) {
+                      void handleRunTestQuote(testCep, String(target), selected)
+                    }
+                  }}
+                  disabled={testLoading || loadingStoreProducts}
+                  title="Sorteia produtos aleatórios mantendo o valor próximo ao total do carrinho"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1 text-xs font-semibold text-purple-700 transition hover:bg-purple-100 hover:border-purple-300 disabled:opacity-50 dark:border-purple-900/50 dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-purple-900/50"
+                >
+                  <Shuffle className={`h-3 w-3 text-purple-600 dark:text-purple-400 ${loadingStoreProducts ? 'animate-spin' : ''}`} aria-hidden="true" />
+                  🎲 Carrinho aleatório (~R$ {testCartTotal && Number(testCartTotal) > 0 ? Number(testCartTotal) : 150})
+                </button>
               </div>
 
               <form className="mt-4 space-y-4" onSubmit={(event) => { event.preventDefault(); void handleRunTestQuote() }}>
@@ -956,7 +1078,7 @@ export default function ShippingSettings() {
                         {[
                           { label: 'Peso (g)', val: testPackageWeight, set: setTestPackageWeight, ph: '250' },
                           { label: 'Comp. (cm)', val: testPackageLength, set: setTestPackageLength, ph: '16' },
-                          { label: 'Larg. (cm)', val: testPackageWidth, set: setTestPackageWidth, ph: '11' },
+                          { label: 'Larg. (cm)', val: testPackageWidth, set: setTestPackageWidth, ph: '10' },
                           { label: 'Alt. (cm)', val: testPackageHeight, set: setTestPackageHeight, ph: '13' },
                         ].map(({ label, val, set, ph }) => (
                           <label key={label} className="block">
@@ -967,6 +1089,42 @@ export default function ShippingSettings() {
                       </div>
                     )}
                   </div>
+                </div>
+
+                {/* Comparação de Valor Declarado (Seguro Opcional de Frete) */}
+                <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={testUseDeclaredValue}
+                      onChange={(e) => setTestUseDeclaredValue(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800"
+                    />
+                    <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                      Comparar seguro por Valor Declarado (extra_declared_value)
+                    </span>
+                  </label>
+                  <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                    Por padrão, a cotação não envia valor declarado (frete base sem seguro adicional). Marque para comparar o frete com e sem seguro.
+                  </p>
+                  {testUseDeclaredValue && (
+                    <div className="mt-2.5 flex items-center gap-3">
+                      <label className="block flex-1">
+                        <span className="mb-1 block text-[11px] font-medium text-gray-600 dark:text-gray-300">
+                          Valor Declarado para Seguro (R$)
+                        </span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={testDeclaredValue}
+                          onChange={(e) => setTestDeclaredValue(e.target.value)}
+                          placeholder="150.00"
+                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-mono text-xs text-gray-900 outline-none focus:border-blue-500 dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                        />
+                      </label>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex justify-end pt-1">
@@ -991,7 +1149,7 @@ export default function ShippingSettings() {
                 {/* Resumo */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 dark:bg-emerald-950/30 dark:border-emerald-900/40">
-                    <p className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Menor Valor</p>
+                    <p className="text-xs font-medium text-emerald-800 dark:text-emerald-300">Menor Valor (Sem Seguro)</p>
                     <p className="mt-1 text-xl font-black text-emerald-700 dark:text-emerald-300">{cheapestOption ? (cheapestOption.isFreeShipping ? 'Grátis' : formatMoney(cheapestOption.shippingFee)) : '—'}</p>
                     {cheapestOption && <p className="text-[11px] text-emerald-700/60 dark:text-emerald-400">{cheapestOption.name}</p>}
                   </div>
@@ -1001,6 +1159,74 @@ export default function ShippingSettings() {
                     {fastestOption && <p className="text-[11px] text-blue-700/60 dark:text-blue-400">{fastestOption.name}</p>}
                   </div>
                 </div>
+
+                {/* Comparativo de Valor Declarado (Se ativado na simulação) */}
+                {testResultWithDeclared && (
+                  <div className="rounded-2xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/60 dark:bg-gray-800 space-y-3">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white">
+                          Comparativo de Valor Declarado (Seguro de Frete)
+                        </h3>
+                      </div>
+                      <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                        Seguro: {formatMoney(Number(testDeclaredValue) || Number(testCartTotal) || 150)}
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="border-b border-gray-100 text-gray-400 dark:border-gray-700">
+                            <th className="py-2 font-medium">Opção de Entrega</th>
+                            <th className="py-2 font-medium">Sem Seguro (Base)</th>
+                            <th className="py-2 font-medium">Com Seguro</th>
+                            <th className="py-2 font-medium text-right">Custo do Seguro</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                          {(testResult.options || []).map((optA) => {
+                            const optB = (testResultWithDeclared.options || []).find(
+                              (b) => b.method === optA.method || (b.carrier === optA.carrier && b.service === optA.service)
+                            )
+                            const feeA = optA.shippingFee
+                            const feeB = optB ? optB.shippingFee : null
+                            const diff = feeB != null ? feeB - feeA : null
+
+                            return (
+                              <tr key={optA.method}>
+                                <td className="py-2.5 font-medium text-gray-900 dark:text-white">
+                                  {optA.name}
+                                  <span className="ml-1.5 text-[10px] text-gray-400">({optA.carrier || 'Tabela Local'})</span>
+                                </td>
+                                <td className="py-2.5 text-gray-700 dark:text-gray-300 font-mono">
+                                  {formatMoney(feeA)}
+                                </td>
+                                <td className="py-2.5 text-gray-700 dark:text-gray-300 font-mono">
+                                  {feeB != null ? formatMoney(feeB) : '—'}
+                                </td>
+                                <td className="py-2.5 text-right font-mono font-semibold">
+                                  {diff != null ? (
+                                    diff === 0 ? (
+                                      <span className="text-gray-400">Incluso / Sem taxa</span>
+                                    ) : (
+                                      <span className="text-blue-600 dark:text-blue-400">
+                                        +{formatMoney(diff)}
+                                      </span>
+                                    )
+                                  ) : (
+                                    '—'
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
                 {/* Análise de Margem e Lucro — apenas com produtos selecionados */}
                 {testProducts.length > 0 && (() => {
@@ -1040,8 +1266,8 @@ export default function ShippingSettings() {
                   const cheapestAdjusted = cheapestOption?.pricing
                   const actualSubsidyUsed = cheapestAdjusted
                     ? cheapestAdjusted.adjustments
-                        .filter(a => a.type === 'profit_margin_subsidy')
-                        .reduce((s, a) => s + Math.abs(a.amount), 0)
+                      .filter(a => a.type === 'profit_margin_subsidy')
+                      .reduce((s, a) => s + Math.abs(a.amount), 0)
                     : 0
 
                   const leftoverSubsidy = Math.max(0, totalSubsidyBudget - actualSubsidyUsed)
@@ -1221,84 +1447,300 @@ export default function ShippingSettings() {
 
                 {/* Opções elegíveis */}
                 <section>
-                  <h3 className="mb-3 text-sm font-bold text-gray-900 dark:text-white">Opções de Envio</h3>
-
                   {options.length > 0 ? (
-                    <div className="space-y-2">
-                      {options.map((option, index) => {
-                        const pricing = option.pricing
-                        const wasAdjusted = Boolean(pricing && Math.abs(pricing.quotedFee - pricing.finalFee) >= 0.01)
-                        return (
-                          <details
-                            key={`${option.method}-${index}`}
-                            className="group overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 transition-all open:border-blue-300 dark:open:border-blue-700"
-                            open={index === 0}
-                          >
-                            <summary className="flex cursor-pointer list-none items-center gap-3 p-4 [&::-webkit-details-marker]:hidden">
-                              <Truck className="h-5 w-5 shrink-0 text-blue-500" />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="font-semibold text-gray-900 dark:text-white">{option.name}</span>
-                                  {option.isFreeShipping && <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase text-green-700 dark:bg-green-950 dark:text-green-300">Grátis</span>}
-                                </div>
-                                <p className="mt-0.5 text-xs text-gray-400">{option.deliveryTime != null ? `${option.deliveryTime} ${option.deliveryTimeType === 'calendar' ? 'dias corridos' : 'dias úteis'}` : 'Prazo não informado'}{option.estimatedDate && ` · ${new Date(option.estimatedDate + 'T12:00:00').toLocaleDateString('pt-BR')}`}</p>
-                              </div>
-                              <div className="text-right">
-                                {wasAdjusted && <p className="text-xs text-gray-400 line-through">{formatMoney(pricing?.quotedFee)}</p>}
-                                <p className={`text-lg font-black ${option.isFreeShipping ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
-                                  {option.isFreeShipping ? 'Grátis' : formatMoney(option.shippingFee)}
-                                </p>
-                              </div>
-                              <ChevronDown className="h-4 w-4 shrink-0 text-gray-400 transition-transform group-open:rotate-180" />
-                            </summary>
+                    <div className="space-y-4">
+                      {(() => {
+                        const optionsWithMetrics = options.map(option => {
+                          const customerFee = option.isFreeShipping ? 0 : option.shippingFee
+                          const realCarrierFee = option.pricing?.quotedFee ?? option.shippingFee
+                          const storeShippingSubsidy = Math.max(0, realCarrierFee - customerFee)
 
-                            {pricing && (
-                              <div className="border-t border-gray-100 bg-gray-50/40 p-4 dark:border-gray-700 dark:bg-gray-900/30">
-                                <dl className="overflow-hidden rounded-xl border border-gray-200 bg-white text-xs dark:border-gray-700 dark:bg-gray-900">
-                                  {option.externalShipping && pricing.referenceBaseFee != null && (
-                                    <div className="flex justify-between gap-4 border-b border-gray-100 px-4 py-2 dark:border-gray-800">
-                                      <dt className="flex items-center gap-1.5 text-gray-500"><Truck className="h-3 w-3" />Base do provedor</dt>
-                                      <dd className="font-semibold text-gray-800 dark:text-gray-200">{formatMoney(pricing.referenceBaseFee)}</dd>
-                                    </div>
-                                  )}
-                                  {option.externalShipping && !!pricing.cartValueImpact && (
-                                    <div className="flex justify-between gap-4 border-b border-gray-100 px-4 py-2 dark:border-gray-800">
-                                      <dt className="flex items-center gap-1.5 text-gray-500"><ShieldCheck className="h-3 w-3" />Seguro / valor declarado</dt>
-                                      <dd className={`font-semibold ${pricing.cartValueImpact > 0 ? 'text-amber-600' : 'text-green-600'}`}>{formatSignedMoney(pricing.cartValueImpact)}</dd>
-                                    </div>
-                                  )}
-                                  {option.externalShipping && !!pricing.packageImpact && (
-                                    <div className="flex justify-between gap-4 border-b border-gray-100 px-4 py-2 dark:border-gray-800">
-                                      <dt className="flex items-center gap-1.5 text-gray-500"><Scale className="h-3 w-3" />Impacto peso/dimensões</dt>
-                                      <dd className={`font-semibold ${pricing.packageImpact > 0 ? 'text-amber-600' : 'text-green-600'}`}>{formatSignedMoney(pricing.packageImpact)}</dd>
-                                    </div>
-                                  )}
-                                  <div className="flex justify-between gap-4 border-b border-gray-100 bg-gray-50/60 px-4 py-2 dark:bg-gray-800/40 dark:border-gray-800">
-                                    <dt className="font-semibold text-gray-600 dark:text-gray-300">Valor cotado bruto</dt>
-                                    <dd className="font-bold text-gray-900 dark:text-white">{formatMoney(pricing.quotedFee)}</dd>
+                          let revenue = 0
+                          let totalCost: number | null = null
+                          let grossProfit: number | null = null
+                          let netProfit: number | null = null
+                          let netMarginPct: number | null = null
+                          let hasMissingCost = false
+
+                          if (testProducts.length > 0) {
+                            revenue = testProducts.reduce((sum, item) => sum + (item.product.promo_price ?? item.product.price) * item.qty, 0)
+                            const costsValid = testProducts.every(item => item.product.purchase_price != null)
+                            if (costsValid) {
+                              totalCost = testProducts.reduce((sum, item) => sum + (item.product.purchase_price! * item.qty), 0)
+                              grossProfit = revenue - totalCost
+                              netProfit = grossProfit - storeShippingSubsidy
+                              netMarginPct = revenue > 0 ? (netProfit / revenue) * 100 : 0
+                            } else {
+                              hasMissingCost = true
+                            }
+                          } else {
+                            revenue = Number(testCartTotal) || 0
+                          }
+
+                          return {
+                            option,
+                            customerFee,
+                            realCarrierFee,
+                            storeShippingSubsidy,
+                            revenue,
+                            totalCost,
+                            grossProfit,
+                            netProfit,
+                            netMarginPct,
+                            hasMissingCost,
+                          }
+                        })
+
+                        return (
+                          <>
+                            {/* Simulador Comparativo de Rentabilidade das Entregas */}
+                            <div className="rounded-2xl border border-blue-200 bg-white p-4 shadow-sm dark:border-blue-900/40 dark:bg-gray-800">
+                              <div className="flex items-center justify-between border-b border-gray-100 pb-3 dark:border-gray-700">
+                                <div className="flex items-center gap-2">
+                                  <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                  <div>
+                                    <h3 className="font-bold text-sm text-gray-900 dark:text-white">Simulador de Rentabilidade por Opção de Entrega</h3>
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400">Lucro ou prejuízo líquido final estimado da venda para cada modalidade</p>
                                   </div>
-                                  {pricing.adjustments.map((adj, i) => (
-                                    <div key={i} className="border-b border-gray-100 px-4 py-2 last:border-b-0 dark:border-gray-800">
-                                      <div className="flex justify-between gap-4">
-                                        <dt className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300"><Tag className="h-3 w-3 text-green-500" />{adj.label}</dt>
-                                        <dd className="font-bold text-green-600 dark:text-green-400">{formatSignedMoney(adj.amount)}</dd>
-                                      </div>
-                                      {adj.source && <p className="mt-0.5 pl-4 text-[10px] text-gray-400">{adj.source}</p>}
-                                    </div>
-                                  ))}
-                                  {pricing.adjustments.length === 0 && (
-                                    <div className="border-b border-gray-100 px-4 py-2 text-[11px] italic text-gray-400 dark:border-gray-800">Sem descontos ou subsídios aplicados.</div>
-                                  )}
-                                  <div className="flex justify-between gap-4 bg-emerald-50/80 px-4 py-3 dark:bg-emerald-950/40">
-                                    <dt className="font-black text-emerald-900 dark:text-emerald-200">Valor Final</dt>
-                                    <dd className="text-base font-black text-emerald-700 dark:text-emerald-300">{option.isFreeShipping ? 'Grátis' : formatMoney(pricing.finalFee)}</dd>
-                                  </div>
-                                </dl>
+                                </div>
+                                {optionsWithMetrics[0]?.revenue > 0 && (
+                                  <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                                    Receita do pedido: <strong className="text-gray-900 dark:text-white">{formatMoney(optionsWithMetrics[0].revenue)}</strong>
+                                  </span>
+                                )}
                               </div>
-                            )}
-                          </details>
+
+                              <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                                {optionsWithMetrics.map(({ option, customerFee, realCarrierFee, storeShippingSubsidy, netProfit, netMarginPct, hasMissingCost }) => {
+                                  const isProfitable = netProfit != null && netProfit >= 0
+                                  const isLoss = netProfit != null && netProfit < 0
+
+                                  return (
+                                    <div
+                                      key={option.method}
+                                      className={`rounded-xl border p-3 flex flex-col justify-between transition-all ${isLoss
+                                          ? 'border-red-300 bg-red-50/60 dark:border-red-900/60 dark:bg-red-950/30'
+                                          : isProfitable
+                                            ? 'border-emerald-300 bg-emerald-50/60 dark:border-emerald-900/60 dark:bg-emerald-950/30'
+                                            : 'border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-900/40'
+                                        }`}
+                                    >
+                                      <div>
+                                        <div className="flex items-center justify-between gap-1.5">
+                                          <span className="font-bold text-xs text-gray-900 dark:text-white truncate">{option.name}</span>
+                                          <span className="text-[10px] text-gray-500 font-medium shrink-0">
+                                            {option.deliveryTime != null ? `${option.deliveryTime} dias` : ''}
+                                          </span>
+                                        </div>
+
+                                        <div className="mt-2 space-y-1 text-[11px]">
+                                          <div className="flex justify-between text-gray-500 dark:text-gray-400">
+                                            <span>Preço para o Cliente:</span>
+                                            <span className="font-semibold text-gray-800 dark:text-gray-200">
+                                              {option.isFreeShipping ? 'Grátis' : formatMoney(customerFee)}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between text-gray-500 dark:text-gray-400">
+                                            <span>Custo no Provedor:</span>
+                                            <span className="font-semibold text-gray-800 dark:text-gray-200">{formatMoney(realCarrierFee)}</span>
+                                          </div>
+                                          {storeShippingSubsidy > 0 && (
+                                            <div className="flex justify-between text-purple-600 dark:text-purple-400">
+                                              <span>Subsídio/Desconto Loja:</span>
+                                              <span className="font-semibold">−{formatMoney(storeShippingSubsidy)}</span>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700/60 flex items-center justify-between">
+                                        <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-300">Resultado:</span>
+                                        {netProfit != null ? (
+                                          <div className="text-right">
+                                            <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-black ${isProfitable
+                                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                                : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
+                                              }`}>
+                                              {isProfitable ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                                              {isProfitable ? `+${formatMoney(netProfit)}` : `−${formatMoney(Math.abs(netProfit))}`}
+                                            </span>
+                                            <div className={`text-[10px] font-bold ${isProfitable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                                              {isProfitable ? `+${netMarginPct?.toFixed(1)}% líquido` : `${netMarginPct?.toFixed(1)}% prejuízo`}
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                                            {hasMissingCost ? 'Cadastre custo' : 'Selecione produtos'}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+
+                            <h3 className="pt-2 text-sm font-bold text-gray-900 dark:text-white">Opções de Envio Detalhadas</h3>
+
+                            {/* Lista de Opções Detalhadas */}
+                            <div className="space-y-2">
+                              {optionsWithMetrics.map(({ option, customerFee, realCarrierFee, storeShippingSubsidy, revenue, totalCost, grossProfit, netProfit, netMarginPct, hasMissingCost }, index) => {
+                                const pricing = option.pricing
+                                const wasAdjusted = Boolean(pricing && Math.abs(pricing.quotedFee - pricing.finalFee) >= 0.01)
+                                const isProfitable = netProfit != null && netProfit >= 0
+                                const isLoss = netProfit != null && netProfit < 0
+
+                                return (
+                                  <details
+                                    key={`${option.method}-${index}`}
+                                    className="group overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 transition-all open:border-blue-300 dark:open:border-blue-700"
+                                    open={index === 0}
+                                  >
+                                    <summary className="flex cursor-pointer list-none items-center gap-3 p-4 [&::-webkit-details-marker]:hidden">
+                                      <Truck className="h-5 w-5 shrink-0 text-blue-500" />
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <span className="font-semibold text-gray-900 dark:text-white">{option.name}</span>
+                                          {option.isFreeShipping && <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase text-green-700 dark:bg-green-950 dark:text-green-300">Grátis</span>}
+                                        </div>
+                                        <p className="mt-0.5 text-xs text-gray-400">{option.deliveryTime != null ? `${option.deliveryTime} ${option.deliveryTimeType === 'calendar' ? 'dias corridos' : 'dias úteis'}` : 'Prazo não informado'}{option.estimatedDate && ` · ${new Date(option.estimatedDate + 'T12:00:00').toLocaleDateString('pt-BR')}`}</p>
+                                      </div>
+
+                                      {/* Badge de Lucro / Prejuízo na Entrega */}
+                                      {netProfit != null && (
+                                        <div className="hidden sm:block text-right mr-2">
+                                          <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold ${isProfitable
+                                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                                              : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border border-red-300 dark:border-red-800'
+                                            }`}>
+                                            {isProfitable ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                                            {isProfitable ? `Lucro: +${formatMoney(netProfit)}` : `Prejuízo: −${formatMoney(Math.abs(netProfit))}`}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      <div className="text-right">
+                                        {wasAdjusted && <p className="text-xs text-gray-400 line-through">{formatMoney(pricing?.quotedFee)}</p>}
+                                        <p className={`text-lg font-black ${option.isFreeShipping ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+                                          {option.isFreeShipping ? 'Grátis' : formatMoney(option.shippingFee)}
+                                        </p>
+                                      </div>
+                                      <ChevronDown className="h-4 w-4 shrink-0 text-gray-400 transition-transform group-open:rotate-180" />
+                                    </summary>
+
+                                    {pricing && (
+                                      <div className="border-t border-gray-100 bg-gray-50/40 p-4 dark:border-gray-700 dark:bg-gray-900/30 space-y-3">
+                                        {/* Painel de Rentabilidade da Entrega */}
+                                        <div className={`rounded-xl border p-3.5 text-xs ${isLoss
+                                            ? 'border-red-200 bg-red-50/80 dark:border-red-900/50 dark:bg-red-950/30'
+                                            : isProfitable
+                                              ? 'border-emerald-200 bg-emerald-50/80 dark:border-emerald-900/50 dark:bg-emerald-950/30'
+                                              : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900'
+                                          }`}>
+                                          <div className="flex items-center justify-between border-b border-gray-200/60 dark:border-gray-700/60 pb-2 mb-2">
+                                            <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                                              <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                              Simulação Financeira desta Entrega ({option.name})
+                                            </span>
+                                            {netProfit != null && (
+                                              <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${isProfitable
+                                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                                                  : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
+                                                }`}>
+                                                {isProfitable ? `+${netMarginPct?.toFixed(1)}% de Lucro Líquido` : `${netMarginPct?.toFixed(1)}% de Prejuízo`}
+                                              </span>
+                                            )}
+                                          </div>
+
+                                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                            <div>
+                                              <span className="text-[10px] text-gray-500 dark:text-gray-400 block">Receita dos Produtos</span>
+                                              <span className="font-semibold text-gray-800 dark:text-gray-200">{formatMoney(revenue)}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-[10px] text-gray-500 dark:text-gray-400 block">Custo dos Produtos</span>
+                                              <span className="font-semibold text-gray-800 dark:text-gray-200">{totalCost != null ? formatMoney(totalCost) : (hasMissingCost ? 'Sem custo' : '—')}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-[10px] text-gray-500 dark:text-gray-400 block">Lucro Bruto Produtos</span>
+                                              <span className="font-semibold text-emerald-600 dark:text-emerald-400">{grossProfit != null ? formatMoney(grossProfit) : '—'}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-[10px] text-gray-500 dark:text-gray-400 block">Custo Frete (Provedor)</span>
+                                              <span className="font-semibold text-gray-800 dark:text-gray-200">{formatMoney(realCarrierFee)}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-[10px] text-gray-500 dark:text-gray-400 block">Frete Pago p/ Cliente</span>
+                                              <span className="font-semibold text-gray-800 dark:text-gray-200">{option.isFreeShipping ? 'Grátis' : formatMoney(customerFee)}</span>
+                                            </div>
+                                            <div>
+                                              <span className="text-[10px] text-gray-500 dark:text-gray-400 block">Subsídio da Loja</span>
+                                              <span className="font-semibold text-purple-600 dark:text-purple-400">{storeShippingSubsidy > 0 ? `−${formatMoney(storeShippingSubsidy)}` : 'R$ 0,00'}</span>
+                                            </div>
+                                          </div>
+
+                                          <div className="mt-3 pt-2 border-t border-gray-200/60 dark:border-gray-700/60 flex justify-between items-center">
+                                            <span className="text-gray-700 dark:text-gray-300 font-semibold">Lucro Líquido Final da Venda:</span>
+                                            <span className={`text-base font-black ${netProfit == null
+                                                ? 'text-gray-400'
+                                                : isProfitable
+                                                  ? 'text-emerald-600 dark:text-emerald-400'
+                                                  : 'text-red-600 dark:text-red-400'
+                                              }`}>
+                                              {netProfit != null ? (isProfitable ? `+${formatMoney(netProfit)}` : `−${formatMoney(Math.abs(netProfit))}`) : '—'}
+                                            </span>
+                                          </div>
+                                        </div>
+
+                                        <dl className="overflow-hidden rounded-xl border border-gray-200 bg-white text-xs dark:border-gray-700 dark:bg-gray-900">
+                                          {option.externalShipping && pricing.referenceBaseFee != null && (
+                                            <div className="flex justify-between gap-4 border-b border-gray-100 px-4 py-2 dark:border-gray-800">
+                                              <dt className="flex items-center gap-1.5 text-gray-500"><Truck className="h-3 w-3" />Base do provedor</dt>
+                                              <dd className="font-semibold text-gray-800 dark:text-gray-200">{formatMoney(pricing.referenceBaseFee)}</dd>
+                                            </div>
+                                          )}
+                                          {option.externalShipping && !!pricing.cartValueImpact && (
+                                            <div className="flex justify-between gap-4 border-b border-gray-100 px-4 py-2 dark:border-gray-800">
+                                              <dt className="flex items-center gap-1.5 text-gray-500"><ShieldCheck className="h-3 w-3" />Seguro / valor declarado</dt>
+                                              <dd className={`font-semibold ${pricing.cartValueImpact > 0 ? 'text-amber-600' : 'text-green-600'}`}>{formatSignedMoney(pricing.cartValueImpact)}</dd>
+                                            </div>
+                                          )}
+                                          {option.externalShipping && !!pricing.packageImpact && (
+                                            <div className="flex justify-between gap-4 border-b border-gray-100 px-4 py-2 dark:border-gray-800">
+                                              <dt className="flex items-center gap-1.5 text-gray-500"><Scale className="h-3 w-3" />Impacto peso/dimensões</dt>
+                                              <dd className={`font-semibold ${pricing.packageImpact > 0 ? 'text-amber-600' : 'text-green-600'}`}>{formatSignedMoney(pricing.packageImpact)}</dd>
+                                            </div>
+                                          )}
+                                          <div className="flex justify-between gap-4 border-b border-gray-100 bg-gray-50/60 px-4 py-2 dark:bg-gray-800/40 dark:border-gray-800">
+                                            <dt className="font-semibold text-gray-600 dark:text-gray-300">Valor cotado bruto</dt>
+                                            <dd className="font-bold text-gray-900 dark:text-white">{formatMoney(pricing.quotedFee)}</dd>
+                                          </div>
+                                          {pricing.adjustments.map((adj, i) => (
+                                            <div key={i} className="border-b border-gray-100 px-4 py-2 last:border-b-0 dark:border-gray-800">
+                                              <div className="flex justify-between gap-4">
+                                                <dt className="flex items-center gap-1.5 text-gray-600 dark:text-gray-300"><Tag className="h-3 w-3 text-green-500" />{adj.label}</dt>
+                                                <dd className="font-bold text-green-600 dark:text-green-400">{formatSignedMoney(adj.amount)}</dd>
+                                              </div>
+                                              {adj.source && <p className="mt-0.5 pl-4 text-[10px] text-gray-400">{adj.source}</p>}
+                                            </div>
+                                          ))}
+                                          {pricing.adjustments.length === 0 && (
+                                            <div className="border-b border-gray-100 px-4 py-2 text-[11px] italic text-gray-400 dark:border-gray-800">Sem descontos ou subsídios aplicados.</div>
+                                          )}
+                                          <div className="flex justify-between gap-4 bg-emerald-50/80 px-4 py-3 dark:bg-emerald-950/40">
+                                            <dt className="font-black text-emerald-900 dark:text-emerald-200">Valor Final pro Cliente</dt>
+                                            <dd className="text-base font-black text-emerald-700 dark:text-emerald-300">{option.isFreeShipping ? 'Grátis' : formatMoney(pricing.finalFee)}</dd>
+                                          </div>
+                                        </dl>
+                                      </div>
+                                    )}
+                                  </details>
+                                )
+                              })}
+                            </div>
+                          </>
                         )
-                      })}
+                      })()}
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900/50 dark:bg-amber-950/30">

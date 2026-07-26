@@ -1,4 +1,4 @@
-﻿import { env } from '../config/env'
+import { env } from '../config/env'
 import type { ShippingAddress } from './payment.service'
 import type { NormalizedPaymentResult } from '../types/payment'
 import { unwrapNormalizedPaymentResult } from '../types/payment'
@@ -230,13 +230,15 @@ class OrderService {
     shippingAddress: ShippingAddress,
     subscriptionPlan?: 'monthly' | 'quarterly',
     shippingFee?: number,
-    shippingMethod?: string
+    shippingMethod?: string,
+    carrierShippingCost?: number,
+    shippingSubsidyAmount?: number,
   ): Promise<Order> {
     try {
       const response = await fetch(`${this.baseUrl}/create-without-payment`, {
         method: 'POST',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify({ shippingAddress, subscriptionPlan, shippingFee, shippingMethod }),
+        body: JSON.stringify({ shippingAddress, subscriptionPlan, shippingFee, shippingMethod, carrierShippingCost, shippingSubsidyAmount }),
       })
 
       const text = await response.text()

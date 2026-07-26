@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Package, User, MapPin, CreditCard, Calendar, FileText, Truck, ExternalLink, Copy } from 'lucide-react'
+import { ArrowLeft, Loader2, Package, MapPin, CreditCard, Calendar, FileText, Truck, ExternalLink, Copy } from 'lucide-react'
 import { adminService } from '../services/admin.service'
 import { Building2 } from 'lucide-react'
 import type { Supplier } from '../services/admin.service'
@@ -49,6 +49,19 @@ interface OrderDetail {
   invoice_url?: string | null
   invoice_number?: string | null
   shipping_label_url?: string | null
+  shipping_fee?: number | null
+  carrier_shipping_cost?: number | null
+  shipping_subsidy_amount?: number | null
+  financials?: {
+    itemsSaleTotal: number
+    itemsPurchaseTotal: number
+    customerShippingFee: number
+    carrierShippingCost: number
+    shippingSubsidyAmount: number
+    totalChargedCustomer: number
+    totalSupplierPayout: number
+    netProfit: number
+  }
   user: {
     id: string
     name: string
@@ -439,57 +452,92 @@ export default function OrderDetail() {
                   Resumo
                 </h2>
               </div>
-              <div className="px-6 py-4 space-y-4">
+              <div className="px-6 py-4 space-y-3.5">
+                {/* Subtotal dos Produtos */}
                 <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">Subtotal ({order.items.length} {order.items.length === 1 ? 'item' : 'itens'})</span>
+                  <span className="text-gray-600 dark:text-gray-400">Produtos ({order.items.length} {order.items.length === 1 ? 'item' : 'itens'})</span>
                   <span className="text-gray-900 dark:text-white font-medium">
-                    R$ {order.items.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0).toFixed(2).replace('.', ',')}
+                    R$ {(order.financials?.itemsSaleTotal ?? order.items.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0)).toFixed(2).replace('.', ',')}
                   </span>
                 </div>
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+
+                {/* Frete do Cliente */}
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                    <Truck size={15} className="text-gray-400" />
+                    Frete do Cliente
+                  </span>
+                  <span className="text-gray-900 dark:text-white font-medium">
+                    {(order.financials?.customerShippingFee ?? order.shipping_fee ?? 0) === 0 ? (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">Grátis</span>
+                    ) : (
+                      `R$ ${(order.financials?.customerShippingFee ?? order.shipping_fee ?? 0).toFixed(2).replace('.', ',')}`
+                    )}
+                  </span>
+                </div>
+
+                {/* Detalhamento de Frete e Subsídio para o Admin */}
+                {isAdmin && (
+                  <div className="rounded-xl border border-gray-200 dark:border-gray-700/70 bg-gray-50/80 dark:bg-gray-900/60 p-3 space-y-2 text-xs">
+                    <div className="font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 pb-1.5">
+                      <span>Detalhamento de Frete</span>
+                      <span className="text-[10px] text-gray-400 font-normal">{order.shipping_method || 'Correios'}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-gray-600 dark:text-gray-400">
+                      <span>Custo na Transportadora:</span>
+                      <span className="font-mono font-medium text-gray-900 dark:text-white">
+                        R$ {(order.financials?.carrierShippingCost ?? order.carrier_shipping_cost ?? order.shipping_fee ?? 0).toFixed(2).replace('.', ',')}
+                      </span>
+                    </div>
+
+                    {(order.financials?.shippingSubsidyAmount ?? order.shipping_subsidy_amount ?? 0) > 0 && (
+                      <div className="flex justify-between items-center text-emerald-700 dark:text-emerald-400">
+                        <span>Subsídio Absorvido (Kapsu):</span>
+                        <span className="font-mono font-semibold">
+                          - R$ {(order.financials?.shippingSubsidyAmount ?? order.shipping_subsidy_amount ?? 0).toFixed(2).replace('.', ',')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Total Cobrado do Cliente */}
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold text-gray-900 dark:text-white">Total</span>
-                    <span className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+                    <span className="text-base font-semibold text-gray-900 dark:text-white">Total Cobrado</span>
+                    <span className="text-xl font-bold text-primary-600 dark:text-primary-400">
                       R$ {Number(order.total).toFixed(2).replace('.', ',')}
                     </span>
                   </div>
                 </div>
+
+                {/* Lucro Líquido & Repasse Fornecedor (Visível para Admin) */}
+                {isAdmin && (
+                  <div className="mt-3 pt-3 border-t border-dashed border-gray-200 dark:border-gray-700 space-y-2">
+                    <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                      <span>Custo de Compra (Fornecedor):</span>
+                      <span className="font-mono">R$ {(order.financials?.itemsPurchaseTotal ?? 0).toFixed(2).replace('.', ',')}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                      <span>Repasse Total (Produtos + Frete):</span>
+                      <span className="font-mono">R$ {(order.financials?.totalSupplierPayout ?? 0).toFixed(2).replace('.', ',')}</span>
+                    </div>
+
+                    <div className={`mt-2 flex justify-between items-center p-2.5 rounded-xl border font-semibold ${
+                      (order.financials?.netProfit ?? 0) >= 0
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                        : 'bg-rose-50 text-rose-800 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
+                    }`}>
+                      <span className="text-xs font-bold uppercase tracking-wider">Lucro Líquido Kapsu</span>
+                      <span className="text-base font-mono font-black">
+                        {(order.financials?.netProfit ?? 0) >= 0 ? '+' : ''} R$ {(order.financials?.netProfit ?? 0).toFixed(2).replace('.', ',')}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* Informações do Cliente */}
-            {order.user && (
-              <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                    <User className="mr-2 text-gray-500 dark:text-gray-400" size={20} />
-                    Cliente
-                  </h2>
-                </div>
-                <div className="px-6 py-4 space-y-3 text-sm">
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase font-semibold">Nome</p>
-                    <p className="text-gray-900 dark:text-white font-medium mt-0.5">{order.user.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase font-semibold">Email</p>
-                    <p className="text-gray-900 dark:text-gray-300 mt-0.5 break-all">{order.user.email}</p>
-                  </div>
-                  {order.user.phone && (
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase font-semibold">Telefone</p>
-                      <p className="text-gray-900 dark:text-gray-300 mt-0.5">{order.user.phone}</p>
-                    </div>
-                  )}
-                  {order.user.cpf && (
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase font-semibold">CPF</p>
-                      <p className="text-gray-900 dark:text-gray-300 mt-0.5">{order.user.cpf}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Informações de Pagamento */}
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">

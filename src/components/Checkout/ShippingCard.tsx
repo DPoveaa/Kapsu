@@ -60,6 +60,8 @@ export default function ShippingCard({
       <div className="space-y-2">
         {options.map(option => {
           const selected = option.method === selectedMethod
+          const isOptionFree = hasFreeShipping || option.isFreeShipping || option.shippingFee === 0
+
           return (
             <button
               key={option.method}
@@ -72,10 +74,23 @@ export default function ShippingCard({
                   <span className={`mt-1 h-4 w-4 shrink-0 rounded-full border-2 ${selected ? 'border-primary-600 bg-primary-600 shadow-[inset_0_0_0_3px_white]' : 'border-gray-400'}`} />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{option.name}</p>
-                    {option.deliveryTime != null && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{option.deliveryTime} {option.deliveryTimeType === 'business' ? 'dias úteis' : 'dias corridos'}</p>}
+                    {option.deliveryTime != null && (
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {option.deliveryTime} {option.deliveryTimeType === 'business' ? 'dias úteis' : 'dias corridos'}
+                      </p>
+                    )}
                   </div>
                 </div>
-                <span className={`shrink-0 text-sm font-black ${option.isFreeShipping ? 'text-green-600' : 'text-gray-900 dark:text-white'}`}>{option.isFreeShipping ? 'Grátis' : `R$ ${option.shippingFee.toFixed(2).replace('.', ',')}`}</span>
+
+                <div className="text-right shrink-0">
+                  {isOptionFree ? (
+                    <span className="text-sm font-black text-green-600 dark:text-green-400">Grátis</span>
+                  ) : (
+                    <span className="text-sm font-black text-gray-900 dark:text-white">
+                      R$ {option.shippingFee.toFixed(2).replace('.', ',')}
+                    </span>
+                  )}
+                </div>
               </div>
             </button>
           )

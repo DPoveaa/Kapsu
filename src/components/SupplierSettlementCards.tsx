@@ -26,10 +26,13 @@ export default function SupplierSettlementCards({
   const summary = overview.summary;
   const nextDueDate = formatCycleDate(overview);
 
-  // Card 1: Vendas Válidas
+  // Card 1: Vendas Válidas (inclui produtos + frete)
+  const hasShippingAmount = (summary.totalShippingAmount ?? 0) > 0;
   const card1Tooltip =
     summary.totalSalesAmount === 0
       ? 'Nenhuma venda faturada ou válida no sistema até o momento.'
+      : hasShippingAmount
+      ? `Inclui repasse de produtos (${moneyFormatter(summary.totalItemsAmount ?? 0)}) + reembolso de frete ao fornecedor (${moneyFormatter(summary.totalShippingAmount ?? 0)}).`
       : `Soma acumulada de vendas em pedidos válidos e pagos.`;
 
   // Card 2: Já Recebido / Total Pago
@@ -50,10 +53,19 @@ export default function SupplierSettlementCards({
     ? `Valor de ciclos encerrados pendente de pagamento ao fornecedor.`
     : 'Nenhum valor pendente de pagamento. Todas as contas estão em dia.';
 
-  // Card 4: Próximo Ciclo
+  // Card 4: Próximo Ciclo (com detalhamento de produtos + frete)
+  const currentCycle = overview.cycles.find((c) => c.isCurrent);
+  const currentShippingAmount = currentCycle?.shippingAmount ?? 0;
+  const currentItemsAmount = currentCycle?.itemsAmount ?? (summary.currentAccruedAmount - currentShippingAmount);
+  const hasCurrentShipping = currentShippingAmount > 0;
+
   const card4Tooltip =
     summary.currentOrderCount === 0
       ? 'Nenhum pedido acumulado no ciclo atual em aberto.'
+      : hasCurrentShipping
+      ? `Acumulado de ${summary.currentOrderCount} pedido(s) no ciclo em aberto: Produtos (${moneyFormatter(currentItemsAmount)}) + Frete (${moneyFormatter(currentShippingAmount)}).${
+          nextDueDate ? ` Fechamento previsto em ${nextDueDate}.` : ''
+        }`
       : `Acumulado de ${summary.currentOrderCount} pedido(s) no ciclo em aberto.${
           nextDueDate ? ` Fechamento previsto em ${nextDueDate}.` : ''
         }`;
@@ -61,15 +73,15 @@ export default function SupplierSettlementCards({
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {/* Card 1: Vendas válidas */}
-      <div className="group relative flex flex-col justify-between h-[115px] rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700">
+      <div className="group relative flex flex-col min-h-[115px] rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
             <TrendingUp className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-            <span>Vendas Válidas</span>
+            <span>Repasse Total</span>
           </div>
           <Info className="h-3.5 w-3.5 text-gray-400 opacity-60 transition-opacity group-hover:opacity-100 dark:text-gray-500" />
         </div>
-        <div className="mt-auto">
+        <div className="mt-3">
           <div className="text-2xl font-bold font-mono tracking-tight text-gray-900 dark:text-white">
             {moneyFormatter(summary.totalSalesAmount)}
           </div>
@@ -82,7 +94,7 @@ export default function SupplierSettlementCards({
       </div>
 
       {/* Card 2: Total Pago / Já recebido */}
-      <div className="group relative flex flex-col justify-between h-[115px] rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm transition-all duration-200 hover:border-emerald-300 hover:shadow-md dark:border-emerald-900/60 dark:bg-emerald-950/20">
+      <div className="group relative flex flex-col min-h-[115px] rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm transition-all duration-200 hover:border-emerald-300 hover:shadow-md dark:border-emerald-900/60 dark:bg-emerald-950/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
             <WalletCards className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -90,7 +102,7 @@ export default function SupplierSettlementCards({
           </div>
           <Info className="h-3.5 w-3.5 text-emerald-600 opacity-60 transition-opacity group-hover:opacity-100 dark:text-emerald-400" />
         </div>
-        <div className="mt-auto">
+        <div className="mt-3">
           <div className="text-2xl font-bold font-mono tracking-tight text-emerald-700 dark:text-emerald-300">
             {moneyFormatter(summary.totalPaid)}
           </div>
@@ -104,7 +116,7 @@ export default function SupplierSettlementCards({
 
       {/* Card 3: Situação do repasse */}
       <div
-        className={`group relative flex flex-col justify-between h-[115px] rounded-2xl border p-5 shadow-sm transition-all duration-200 hover:shadow-md ${
+        className={`group relative flex flex-col min-h-[115px] rounded-2xl border p-5 shadow-sm transition-all duration-200 hover:shadow-md ${
           hasCredit
             ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/60 dark:bg-emerald-950/20'
             : hasDue
@@ -135,7 +147,7 @@ export default function SupplierSettlementCards({
             }`}
           />
         </div>
-        <div className="mt-auto">
+        <div className="mt-3">
           <div
             className={`text-2xl font-bold font-mono tracking-tight ${
               hasCredit
@@ -156,7 +168,7 @@ export default function SupplierSettlementCards({
       </div>
 
       {/* Card 4: Próximo ciclo */}
-      <div className="group relative flex flex-col justify-between h-[115px] rounded-2xl border border-blue-200 bg-blue-50/50 p-5 shadow-sm transition-all duration-200 hover:border-blue-300 hover:shadow-md dark:border-blue-900/60 dark:bg-blue-950/20">
+      <div className="group relative flex flex-col min-h-[115px] rounded-2xl border border-blue-200 bg-blue-50/50 p-5 shadow-sm transition-all duration-200 hover:border-blue-300 hover:shadow-md dark:border-blue-900/60 dark:bg-blue-950/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300">
             <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -171,10 +183,15 @@ export default function SupplierSettlementCards({
             <Info className="h-3.5 w-3.5 text-blue-600 opacity-60 transition-opacity group-hover:opacity-100 dark:text-blue-400" />
           </div>
         </div>
-        <div className="mt-auto">
+        <div className="mt-1">
           <div className="text-2xl font-bold font-mono tracking-tight text-blue-700 dark:text-blue-300">
             {moneyFormatter(summary.currentAccruedAmount)}
           </div>
+          {hasCurrentShipping && (
+            <div className="mt-0.5 text-[11px] font-semibold text-blue-600/90 dark:text-blue-300/90">
+              Prod. {moneyFormatter(currentItemsAmount)} + Frete {moneyFormatter(currentShippingAmount)}
+            </div>
+          )}
         </div>
 
         {/* Hover Tooltip */}
