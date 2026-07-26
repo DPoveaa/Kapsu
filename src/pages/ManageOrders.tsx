@@ -100,7 +100,7 @@ export default function ManageOrders() {
     if (order.ml_pickup_deadline) {
       const d = new Date(order.ml_pickup_deadline)
       const pad = (n: number) => String(n).padStart(2, '0')
-      setMlPopupValue(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`)
+      setMlPopupValue(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`)
     } else {
       setMlPopupValue('')
     }
@@ -572,14 +572,14 @@ export default function ManageOrders() {
                                     <div className="flex items-center justify-between mb-1">
                                       <span className="text-xs font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-1">
                                         <CalendarClock size={12} className="text-orange-500" />
-                                        Prazo Coleta Mercado Livre
+                                        Prazo de Envio
                                       </span>
                                       <button type="button" onClick={() => setMlPopupOrderId(null)} className="p-0.5 text-gray-400 hover:text-gray-600">
                                         <X size={13} />
                                       </button>
                                     </div>
                                     <input
-                                      type="datetime-local"
+                                      type="date"
                                       value={mlPopupValue}
                                       onChange={e => setMlPopupValue(e.target.value)}
                                       className="w-full px-2.5 py-2 text-xs bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -605,28 +605,30 @@ export default function ManageOrders() {
                                 )}
                               </div>
                             </div>
-                            {order.ml_pickup_deadline && (() => {
-                              const dl = new Date(order.ml_pickup_deadline)
-                              const now = new Date()
-                              const diffMs = dl.getTime() - now.getTime()
-                              const diffH = diffMs / (1000 * 60 * 60)
-                              const isToday = dl.toDateString() === now.toDateString()
-                              const isOverdue = diffMs < 0
-                              const style = isOverdue
-                                ? 'bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300'
-                                : isToday || diffH <= 3
-                                ? 'bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300'
-                                : diffH <= 48
-                                ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300'
-                                : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
-                              return (
-                                <div className={`mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${style}`}>
-                                  <CalendarClock size={10} />
-                                  {isOverdue ? '⚠ Vencido ' : 'Coleta até '}
-                                  {dl.toLocaleDateString('pt-BR')} {dl.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                </div>
-                              )
-                            })()}
+                             <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                               {order.ml_pickup_deadline && (() => {
+                                 const dl = new Date(order.ml_pickup_deadline)
+                                 const now = new Date()
+                                 const isOverdue = dl.getTime() < now.getTime()
+                                 const isToday = dl.toDateString() === now.toDateString()
+                                 const diffMs = dl.getTime() - now.getTime()
+                                 const diffH = diffMs / (1000 * 60 * 60)
+                                 const style = isOverdue
+                                   ? 'bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300'
+                                   : isToday || diffH <= 3
+                                   ? 'bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300'
+                                   : diffH <= 48
+                                   ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300'
+                                   : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
+                                 return (
+                                   <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${style}`}>
+                                     <CalendarClock size={10} />
+                                     {isOverdue ? '⚠ Vencido ' : 'Envio até '}
+                                     {dl.toLocaleDateString('pt-BR')}
+                                   </div>
+                                 )
+                               })()}
+                             </div>
                           </td>
                           <td className="px-6 py-4 max-w-[280px]">
                             <div className="truncate text-sm text-gray-700 dark:text-gray-200" title={order.shipping_address || ''}>{order.shipping_address || 'Não informado'}</div>

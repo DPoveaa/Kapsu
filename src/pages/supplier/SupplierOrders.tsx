@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { Search, Truck, Eye, RefreshCw, Copy, ExternalLink, ChevronDown, Check, SlidersHorizontal, X, MapPin, Package, CalendarClock, FileText } from 'lucide-react';
 import { supplierService, SupplierOrder } from '../../services/supplier.service';
+import { adminService } from '../../services/admin.service';
 import { toast } from '../../utils/toast';
 import AdminModal from '../../components/AdminModal';
 import { formatStoredShippingAddress } from '../../utils/shippingAddress';
@@ -46,12 +47,13 @@ type MlUrgency = 'ok' | 'warning' | 'urgent' | 'overdue' | null;
 
 const getMlDeadlineUrgency = (deadline: string | null | undefined): MlUrgency => {
   if (!deadline) return null;
-  const diffMs = new Date(deadline).getTime() - Date.now();
-  const diffH = diffMs / (1000 * 60 * 60);
-  if (diffMs < 0) return 'overdue';
   const dl = new Date(deadline);
-  const isToday = dl.toDateString() === new Date().toDateString();
-  if (isToday || diffH <= 3) return 'urgent';
+  const now = new Date();
+  if (dl.getTime() < now.getTime()) return 'overdue';
+  const isToday = dl.toDateString() === now.toDateString();
+  if (isToday) return 'urgent';
+  const diffMs = dl.getTime() - now.getTime();
+  const diffH = diffMs / (1000 * 60 * 60);
   if (diffH <= 48) return 'warning';
   return 'ok';
 };
@@ -490,19 +492,21 @@ export default function SupplierOrders() {
                           <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Entrega</span>
                           <button type="button" onClick={() => copyText(getShippingAddressLabel(order), 'Endereço')} className="p-1 rounded-md text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-950/50" title="Copiar endereço"><Copy size={14} /></button>
                         </div>
-                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">{order.shipping_method || 'Método não informado'}</div>
-                        {order.ml_pickup_deadline && (() => {
-                          const urgency = getMlDeadlineUrgency(order.ml_pickup_deadline);
-                          const dl = new Date(order.ml_pickup_deadline);
-                          const isOverdue = urgency === 'overdue';
-                          return (
-                            <div className={`mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${urgency ? ML_URGENCY_BADGE[urgency] : ''}`}>
-                              <CalendarClock size={10} />
-                              {isOverdue ? '⚠ Vencido ' : 'Coleta até '}
-                              {dl.toLocaleDateString('pt-BR')} {dl.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                          );
-                        })()}
+                        <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                          <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{order.shipping_method || 'Método não informado'}</span>
+                          {order.ml_pickup_deadline && (() => {
+                            const urgency = getMlDeadlineUrgency(order.ml_pickup_deadline);
+                            const dl = new Date(order.ml_pickup_deadline);
+                            const isOverdue = urgency === 'overdue';
+                            return (
+                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${urgency ? ML_URGENCY_BADGE[urgency] : ''}`}>
+                                <CalendarClock size={10} />
+                                {isOverdue ? '⚠ Vencido ' : 'Envio até '}
+                                {dl.toLocaleDateString('pt-BR')}
+                              </span>
+                            );
+                          })()}
+                        </div>
                         <div className="truncate text-[11px] text-gray-500 dark:text-gray-400" title={getShippingAddressLabel(order)}>{getShippingAddressLabel(order)}</div>
                       </div>
                     </div>
@@ -598,19 +602,21 @@ export default function SupplierOrders() {
                         <td className="py-3.5 px-3 align-top min-w-0">
                           <div className="flex items-center gap-2">
                             <div className="min-w-0 flex-1">
-                              <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">{order.shipping_method || 'Método não informado'}</div>
-                              {order.ml_pickup_deadline && (() => {
-                                const urgency = getMlDeadlineUrgency(order.ml_pickup_deadline);
-                                const dl = new Date(order.ml_pickup_deadline);
-                                const isOverdue = urgency === 'overdue';
-                                return (
-                                  <div className={`mt-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${urgency ? ML_URGENCY_BADGE[urgency] : ''}`}>
-                                    <CalendarClock size={10} />
-                                    {isOverdue ? '⚠ Vencido ' : 'Coleta até '}
-                                    {dl.toLocaleDateString('pt-BR')} {dl.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                  </div>
-                                );
-                              })()}
+                              <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                                <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{order.shipping_method || 'Método não informado'}</span>
+                                {order.ml_pickup_deadline && (() => {
+                                  const urgency = getMlDeadlineUrgency(order.ml_pickup_deadline);
+                                  const dl = new Date(order.ml_pickup_deadline);
+                                  const isOverdue = urgency === 'overdue';
+                                  return (
+                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${urgency ? ML_URGENCY_BADGE[urgency] : ''}`}>
+                                      <CalendarClock size={10} />
+                                      {isOverdue ? '⚠ Vencido ' : 'Envio até '}
+                                      {dl.toLocaleDateString('pt-BR')}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400 truncate" title={getShippingAddressLabel(order)}>{getShippingAddressLabel(order)}</div>
                             </div>
                             <button type="button" onClick={() => copyText(getShippingAddressLabel(order), 'Endereço')} className="shrink-0 p-1.5 rounded-lg text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-950/40" title="Copiar endereço"><Copy size={15} /></button>
@@ -763,11 +769,42 @@ export default function SupplierOrders() {
                   </div>
                   <div>
                     <h3 className="font-bold text-gray-900 dark:text-white text-sm">Dados de Entrega do Cliente</h3>
-                    <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5 mt-0.5">
-                      <span>Envio:</span>
-                      <span className="font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-100/70 dark:bg-indigo-900/50 px-2 py-0.5 rounded-md">
-                        {selectedOrder.shipping_method || 'Não informado'}
-                      </span>
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-3 mt-1">
+                      <div className="flex items-center gap-1.5">
+                        <span>Envio:</span>
+                        <span className="font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-100/70 dark:bg-indigo-900/50 px-2 py-0.5 rounded-md">
+                          {selectedOrder.shipping_method || 'Não informado'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-gray-700 dark:text-gray-300">Prazo de Envio:</span>
+                        <input
+                          type="date"
+                          value={
+                            selectedOrder.ml_pickup_deadline
+                              ? (() => {
+                                  const d = new Date(selectedOrder.ml_pickup_deadline);
+                                  const pad = (n: number) => String(n).padStart(2, '0');
+                                  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+                                })()
+                              : ''
+                          }
+                          onChange={async (e) => {
+                            const val = e.target.value;
+                            const deadlineVal = val ? val : null;
+                            try {
+                              const res = await adminService.updateOrderMlDeadline(selectedOrder.id, deadlineVal);
+                              const updatedDeadline = res.ml_pickup_deadline;
+                              setSelectedOrder(prev => prev ? { ...prev, ml_pickup_deadline: updatedDeadline } : null);
+                              setOrders(prev => prev.map(o => o.id === selectedOrder.id ? { ...o, ml_pickup_deadline: updatedDeadline } : o));
+                              toast.success('Prazo de envio atualizado!');
+                            } catch (err: any) {
+                              toast.error(err.message || 'Erro ao atualizar prazo');
+                            }
+                          }}
+                          className="border border-gray-300 dark:border-gray-600 rounded-lg px-2 py-0.5 text-xs dark:bg-gray-800 dark:text-white font-semibold cursor-pointer"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

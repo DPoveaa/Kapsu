@@ -62,6 +62,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
   const [invoiceUrl, setInvoiceUrl] = useState('')
   const [invoiceNumber, setInvoiceNumber] = useState('')
   const [shippingLabelUrl, setShippingLabelUrl] = useState('')
+  const [mlPickupDeadline, setMlPickupDeadline] = useState('')
 
   // Upload de arquivos
   const [uploadingInvoice, setUploadingInvoice] = useState(false)
@@ -332,6 +333,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
         invoiceUrl: invoiceUrl.trim() || undefined,
         invoiceNumber: invoiceNumber.trim() || undefined,
         shippingLabelUrl: shippingLabelUrl.trim() || undefined,
+        mlPickupDeadline: mlPickupDeadline ? mlPickupDeadline : undefined,
       })
 
       if (response.success) {
@@ -357,6 +359,7 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
     setInvoiceUrl('')
     setInvoiceNumber('')
     setShippingLabelUrl('')
+    setMlPickupDeadline('')
     setInvoiceFileName('')
     setShippingLabelFileName('')
     setUserSearch('')
@@ -765,34 +768,48 @@ export default function CreateOrderModal({ isOpen, onClose, onSuccess }: CreateO
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Método de Envio
-            </label>
-            <select
-              value={shippingMethod}
-              onChange={(e) => setShippingMethod(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-3 py-2 text-xs sm:text-sm dark:bg-gray-900 dark:text-white"
-            >
-              <option value="">Selecione</option>
-              {shippingMethods.map((sm) => (
-                <option key={sm} value={sm}>
-                  {sm}
-                </option>
-              ))}
-              <option value="Outro">Outro...</option>
-            </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Método de Envio
+                </label>
+                <select
+                  value={shippingMethod}
+                  onChange={(e) => setShippingMethod(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-3 py-2 text-xs sm:text-sm dark:bg-gray-900 dark:text-white"
+                >
+                  <option value="">Selecione</option>
+                  {shippingMethods.map((sm) => (
+                    <option key={sm} value={sm}>
+                      {sm}
+                    </option>
+                  ))}
+                  <option value="Outro">Outro...</option>
+                </select>
 
-            {shippingMethod === 'Outro' && (
-              <input
-                type="text"
-                placeholder="Informe o método de envio personalizado"
-                value={customShippingMethod}
-                onChange={(e) => setCustomShippingMethod(e.target.value)}
-                className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-3 py-2 text-xs sm:text-sm mt-2 dark:bg-gray-900 dark:text-white"
-              />
-            )}
-          </div>
+                {shippingMethod === 'Outro' && (
+                  <input
+                    type="text"
+                    placeholder="Informe o método de envio personalizado"
+                    value={customShippingMethod}
+                    onChange={(e) => setCustomShippingMethod(e.target.value)}
+                    className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-3 py-2 text-xs sm:text-sm mt-2 dark:bg-gray-900 dark:text-white"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Prazo de Envio (Opcional)
+                </label>
+                <input
+                  type="date"
+                  value={mlPickupDeadline}
+                  onChange={(e) => setMlPickupDeadline(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-400 rounded-lg px-3 py-2 text-xs sm:text-sm dark:bg-gray-900 dark:text-white"
+                />
+              </div>
+            </div>
 
           {/* Endereço de Entrega */}
           <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">

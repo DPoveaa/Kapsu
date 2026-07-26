@@ -906,6 +906,8 @@ class AdminService {
     invoice_number?: string
     shippingLabelUrl?: string
     shipping_label_url?: string
+    mlPickupDeadline?: string
+    ml_pickup_deadline?: string
   }): Promise<{ success: boolean; message: string; data: any }> {
     try {
       const token = localStorage.getItem('kapsu_token')
