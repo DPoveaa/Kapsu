@@ -1643,6 +1643,23 @@ class AdminService {
     return data
   }
 
+  async listPendingMercadoLivreReceipts(): Promise<{ success: boolean; orders: Array<{ id: string; supplierId: string; supplierName: string; customerName: string; status: string; createdAt: string; expectedPaymentDate: string; amount: number }> }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/mercado-livre/pending-receipts`, { headers: { 'Authorization': `Bearer ${token}` } })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao listar pendências do Mercado Livre')
+    return data
+  }
+
+  async confirmMercadoLivreReceipts(orderIds: string[]): Promise<{ success: boolean; confirmed: number; message: string }> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/mercado-livre/confirm-receipts`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ order_ids: orderIds }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao confirmar recebimentos')
+    return data
+  }
   /**
    * Cadastra pagamento efetuado ao fornecedor com upload de comprovante
    */

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, DollarSign, Plus, FileText, Trash2, Loader2, Settings } from 'lucide-react';
+import { ArrowLeft, DollarSign, Plus, FileText, Trash2, Loader2, Settings, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { adminService, Supplier, SupplierPayment } from '../services/admin.service';
 import { supplierService, SupplierSettlementCycle, SupplierSettlementOverview } from '../services/supplier.service';
 import { toast, confirm } from '../utils/toast';
@@ -20,6 +20,10 @@ export default function SupplierPayments() {
   const [settlementLoading, setSettlementLoading] = useState(false);
   const [selectedCycle, setSelectedCycle] = useState<SupplierSettlementCycle | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showMercadoLivreModal, setShowMercadoLivreModal] = useState(false);
+  const [mercadoLivreOrders, setMercadoLivreOrders] = useState<Array<{ id: string; supplierId: string; supplierName: string; customerName: string; status: string; createdAt: string; expectedPaymentDate: string; amount: number }>>([]);
+  const [mercadoLivreLoading, setMercadoLivreLoading] = useState(false);
+  const [confirmingMercadoLivre, setConfirmingMercadoLivre] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [payoutConfig, setPayoutConfig] = useState({ payout_frequency: 'WEEKLY' as 'WEEKLY' | 'MONTHLY', payout_weekday: 1, payout_month_day: 1 });
 
@@ -40,6 +44,8 @@ export default function SupplierPayments() {
   useEffect(() => {
     loadSuppliers();
   }, []);
+
+  useEffect(() => { void loadMercadoLivrePending(); }, []);
 
   useEffect(() => {
     loadPayments();
@@ -85,6 +91,30 @@ export default function SupplierPayments() {
     }
   };
 
+  const loadMercadoLivrePending = async () => {
+    try {
+      setMercadoLivreLoading(true);
+      const data = await adminService.listPendingMercadoLivreReceipts();
+      setMercadoLivreOrders(data.orders || []);
+    } catch (err: any) { toast.error(err.message || 'Erro ao buscar pendências do Mercado Livre.'); }
+    finally { setMercadoLivreLoading(false); }
+  };
+
+  const openMercadoLivrePending = async () => {
+    setShowMercadoLivreModal(true);
+    await loadMercadoLivrePending();
+  };
+
+  const confirmMercadoLivreOrders = async (orderIds: string[]) => {
+    if (!orderIds.length) return;
+    try {
+      setConfirmingMercadoLivre(true);
+      const result = await adminService.confirmMercadoLivreReceipts(orderIds);
+      toast.success(result.message);
+      await Promise.all([loadMercadoLivrePending(), loadSettlement(true)]);
+    } catch (err: any) { toast.error(err.message || 'Erro ao confirmar recebimento.'); }
+    finally { setConfirmingMercadoLivre(false); }
+  };
   const openManualPayment = () => {
     setSelectedCycle(null);
     setFormState(current => ({ ...current, supplier_id: supplierFilter || current.supplier_id, amount: '', period_start: '', period_end: '' }));
@@ -217,6 +247,7 @@ export default function SupplierPayments() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button onClick={openMercadoLivrePending} className="px-3 py-2.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-800 font-medium transition hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200 flex items-center gap-2 text-sm"><AlertCircle className="h-4 w-4" /><span>Mercado Livre {mercadoLivreOrders.length ? `(${mercadoLivreOrders.length})` : ''}</span></button>
           <button onClick={openPayoutSettings} disabled={!supplierFilter} className="px-3 py-2.5 rounded-xl border border-gray-300 bg-white text-gray-700 font-medium transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 flex items-center gap-2 text-sm"><Settings className="h-4 w-4" /><span>Configurar repasse</span></button>
           <button
             onClick={openManualPayment}
@@ -374,6 +405,13 @@ export default function SupplierPayments() {
         )}
       </div>
 
+      <AdminModal isOpen={showMercadoLivreModal} onClose={() => setShowMercadoLivreModal(false)} title={`Recebimentos pendentes do Mercado Livre (${mercadoLivreOrders.length})`}>
+        <div className="space-y-3 text-sm">
+          <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">Os valores só entram no próximo ciclo de repasse após a confirmação. Previsão padrão do Mercado Livre: 12 dias após a compra.</p>
+          {mercadoLivreLoading ? <div className="py-8 text-center text-gray-500"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></div> : mercadoLivreOrders.length === 0 ? <div className="py-8 text-center text-gray-500">Nenhum pedido pendente.</div> : <div className="max-h-96 space-y-2 overflow-y-auto">{mercadoLivreOrders.map(order => <div key={order.id} className="rounded-xl border border-gray-200 p-3 dark:border-gray-700"><div className="flex items-start justify-between gap-3"><div><div className="font-semibold text-gray-900 dark:text-white">#{order.id.slice(-8).toUpperCase()} · {order.supplierName}</div><div className="mt-1 text-xs text-gray-500">Compra: {new Date(order.createdAt).toLocaleDateString('pt-BR')} · Previsto: {new Date(order.expectedPaymentDate + 'T12:00:00').toLocaleDateString('pt-BR')}</div><div className="mt-1 text-xs text-gray-500">Cliente: {order.customerName}</div></div><div className="text-right"><div className="font-bold text-emerald-600">{Number(order.amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div><button type="button" disabled={confirmingMercadoLivre} onClick={() => confirmMercadoLivreOrders([order.id])} className="mt-2 inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white disabled:opacity-50"><CheckCircle2 className="h-3.5 w-3.5" /> Confirmar</button></div></div></div>)}</div>}
+          {mercadoLivreOrders.length > 1 && <div className="flex justify-end border-t border-gray-200 pt-3 dark:border-gray-700"><button type="button" disabled={confirmingMercadoLivre} onClick={() => confirmMercadoLivreOrders(mercadoLivreOrders.map(order => order.id))} className="rounded-xl bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">Confirmar todos ({mercadoLivreOrders.length})</button></div>}
+        </div>
+      </AdminModal>
       {/* Modal Cadastro de Pagamento */}
       <AdminModal isOpen={showSettingsModal} onClose={() => setShowSettingsModal(false)} title="ConfiguraÃ§Ã£o do repasse">
         <form onSubmit={savePayoutSettings} className="space-y-4 text-sm">
