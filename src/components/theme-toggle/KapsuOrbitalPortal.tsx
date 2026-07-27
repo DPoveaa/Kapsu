@@ -37,44 +37,25 @@ export const KapsuOrbitalPortal: React.FC<KapsuOrbitalPortalProps> = ({ visible 
     toggleThemeRef.current = toggleTheme;
   }, [isDark, toggleTheme]);
 
-  // Carrega fase da lua salva no localStorage
   useEffect(() => {
-    try {
-      const savedPhase = localStorage.getItem('kapsu_moon_phase');
-      if (savedPhase !== null) {
-        setMoonPhase(parseInt(savedPhase, 10));
-      }
-    } catch {
-      // Ignora falhas de localStorage
-    }
-
-    const handlePhaseChange = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      if (detail && typeof detail.phase === 'number') {
-        setMoonPhase(detail.phase);
-      }
+    const handlePhaseChange = (event: Event) => {
+      const phase = (event as CustomEvent<{ phase?: unknown }>).detail?.phase;
+      if (typeof phase === 'number') setMoonPhase(phase);
     };
-
-    const handleForceSingleMeteor = () => {
-      spawnSingleMeteor();
-    };
-
-    const handleForceMeteorShower = () => {
-      spawnMeteorShower();
-    };
+    const handleSingleMeteor = () => spawnSingleMeteor();
+    const handleMeteorShower = () => spawnMeteorShower();
 
     window.addEventListener('kapsu-moon-phase-changed', handlePhaseChange);
-    window.addEventListener('kapsu-trigger-shooting-star', handleForceSingleMeteor);
-    window.addEventListener('kapsu-trigger-meteor-shower', handleForceMeteorShower);
+    window.addEventListener('kapsu-trigger-shooting-star', handleSingleMeteor);
+    window.addEventListener('kapsu-trigger-meteor-shower', handleMeteorShower);
 
     return () => {
       window.removeEventListener('kapsu-moon-phase-changed', handlePhaseChange);
-      window.removeEventListener('kapsu-trigger-shooting-star', handleForceSingleMeteor);
-      window.removeEventListener('kapsu-trigger-meteor-shower', handleForceMeteorShower);
+      window.removeEventListener('kapsu-trigger-shooting-star', handleSingleMeteor);
+      window.removeEventListener('kapsu-trigger-meteor-shower', handleMeteorShower);
     };
   }, []);
-
-  // GERADOR DIVERSIFICADO DE METEOROS COM VÔO FLUIDO E DESMONTAGEM SÍNCRONA
+  // GERADOR DIVERSIFICADO DE METEOROS COM VÃ”O FLUIDO E DESMONTAGEM SÃNCRONA
   const spawnSingleMeteor = (delay = 0, forcedDirection?: boolean) => {
     setTimeout(() => {
       updateCoordinates();
@@ -93,14 +74,14 @@ export const KapsuOrbitalPortal: React.FC<KapsuOrbitalPortalProps> = ({ visible 
       const containerLeft = containerRect ? containerRect.left : 0;
       const startX = minX + Math.random() * rangeX - containerLeft;
 
-      // startY relativo ao container: estrela começa 45px acima do topo do header
+      // startY relativo ao container: estrela comeÃ§a 45px acima do topo do header
       const relStartY = containerRect ? -45 : -45;
       const containerHeight = containerRect ? containerRect.height : (headerBounds ? headerBounds.bottom - headerBounds.top : 80);
 
       // endY calculado para que opacity=0 coincida com a borda inferior do container:
-      // Na animação, opacity chega a 0 em 100%, e o star já está invisível em ~72%.
-      // Para o clipping ser imperceptível, endY deve ser tal que em 72% a estrela
-      // ainda esteja dentro do container, e em 100% (já opacity=0) passe da borda.
+      // Na animaÃ§Ã£o, opacity chega a 0 em 100%, e o star jÃ¡ estÃ¡ invisÃ­vel em ~72%.
+      // Para o clipping ser imperceptÃ­vel, endY deve ser tal que em 72% a estrela
+      // ainda esteja dentro do container, e em 100% (jÃ¡ opacity=0) passe da borda.
       // endY = relStartY + (containerHeight - relStartY) / 0.72
       const totalTravel = (containerHeight - relStartY) / 0.72;
       const relEndY = relStartY + totalTravel;
@@ -138,7 +119,7 @@ export const KapsuOrbitalPortal: React.FC<KapsuOrbitalPortalProps> = ({ visible 
 
       setMeteors((prev) => [...prev, newMeteor]);
 
-      // Desmontagem síncrona exatamente no término da duração da animação (sem congelamentos)
+      // Desmontagem sÃ­ncrona exatamente no tÃ©rmino da duraÃ§Ã£o da animaÃ§Ã£o (sem congelamentos)
       setTimeout(() => {
         setMeteors((prev) => prev.filter((m) => m.id !== newMeteor.id));
       }, duration);
@@ -253,7 +234,7 @@ export const KapsuOrbitalPortal: React.FC<KapsuOrbitalPortalProps> = ({ visible 
     };
   }, []);
 
-  // Ouve o evento de disparo da animação orbital
+  // Ouve o evento de disparo da animaÃ§Ã£o orbital
   useEffect(() => {
     const handleTrigger = () => {
       if (isAnimatingRef.current) return;
@@ -280,7 +261,7 @@ export const KapsuOrbitalPortal: React.FC<KapsuOrbitalPortalProps> = ({ visible 
         setAnimStage('orbiting');
         let startTime: number | null = null;
         const duration = orbitDuration;
-        // O tema já começou a interpolar junto com a abertura da cápsula.
+        // O tema jÃ¡ comeÃ§ou a interpolar junto com a abertura da cÃ¡psula.
         let themeSwitched = true;
         let closingTriggered = false;
 
@@ -292,12 +273,12 @@ export const KapsuOrbitalPortal: React.FC<KapsuOrbitalPortalProps> = ({ visible 
 
           if (p >= 0.68 && !themeSwitched) {
             themeSwitched = true;
-            // Tempo restante até o fim do orbiting + closing settle ≈ (1-p)*duration + 300ms
+            // Tempo restante atÃ© o fim do orbiting + closing settle â‰ˆ (1-p)*duration + 300ms
             const remainingMs = Math.round((1 - p) * duration + 300);
             const goingDark = nextTheme === 'dark';
             toggleThemeRef.current(remainingMs);
             if (goingDark) {
-              // Sinaliza que o escuro acabou de ser ativado — StarSparkles faz fade-in
+              // Sinaliza que o escuro acabou de ser ativado â€” StarSparkles faz fade-in
               window.dispatchEvent(new CustomEvent('kapsu-dark-just-activated'));
             }
           }
@@ -338,14 +319,14 @@ export const KapsuOrbitalPortal: React.FC<KapsuOrbitalPortalProps> = ({ visible 
 
   const isSwitchingToDark = targetTheme === 'dark';
 
-  // ---- POSICIONAMENTO E ÓRBITA DO SOL ----
+  // ---- POSICIONAMENTO E Ã“RBITA DO SOL ----
   let sunX = horizonPos.x;
   let sunY = horizonPos.y;
   let sunScale = 1;
   let sunOpacity = 1;
   let sunZIndex = 999999;
 
-  // ---- POSICIONAMENTO E ÓRBITA DA LUA ----
+  // ---- POSICIONAMENTO E Ã“RBITA DA LUA ----
   let moonX = horizonPos.x;
   let moonY = horizonPos.y;
   let moonScale = 1;
@@ -491,10 +472,10 @@ export const KapsuOrbitalPortal: React.FC<KapsuOrbitalPortalProps> = ({ visible 
       }}
       data-kapsu-theme-animation="true"
     >
-      {/* ── 0. CAMADA DE ESTRELAS CADENTES ── */}
+      {/* â”€â”€ 0. CAMADA DE ESTRELAS CADENTES â”€â”€ */}
       {isDark && <ShootingStarCanvas meteors={meteors} />}
 
-      {/* ── 1. ELEMENTO CELESTIAL ÚNICO: SOL HD COM ANIMAÇÃO IDLE SOLAR ── */}
+      {/* â”€â”€ 1. ELEMENTO CELESTIAL ÃšNICO: SOL HD COM ANIMAÃ‡ÃƒO IDLE SOLAR â”€â”€ */}
       <div
         className="absolute left-0 top-0 flex items-center justify-center transition-opacity duration-300 pointer-events-none"
         style={{
@@ -507,7 +488,7 @@ export const KapsuOrbitalPortal: React.FC<KapsuOrbitalPortalProps> = ({ visible 
         <SunIcon size={28} />
       </div>
 
-      {/* ── 2. ELEMENTO CELESTIAL ÚNICO: LUA SÓLIDA HD COM FASES E ESTRELAS PASSANTES ── */}
+      {/* â”€â”€ 2. ELEMENTO CELESTIAL ÃšNICO: LUA SÃ“LIDA HD COM FASES E ESTRELAS PASSANTES â”€â”€ */}
       <div
         className="absolute left-0 top-0 flex items-center justify-center transition-opacity duration-300 pointer-events-none"
         style={{
