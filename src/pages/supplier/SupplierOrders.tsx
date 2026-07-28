@@ -10,6 +10,7 @@ import { formatStoredShippingAddress } from '../../utils/shippingAddress';
 import { playNewOrderSound } from '../../utils/sound';
 import logoMercadoLivre from '../../images/ml_logo.webp';
 import { useVisibilityPolling } from '../../hooks/useVisibilityPolling';
+import { getMlDeadlineLabel, getMlDeadlineState, MlDeadlineState, parseMlDeadline } from '../../utils/mlDeadline';
 
 const isMercadoLivreOrder = (order: SupplierOrder): boolean => {
   const method = (order.shipping_method || '').toLowerCase();
@@ -44,33 +45,21 @@ const formatTotalDoses = (totalDoses: number | null | undefined): string | null 
     : null
 );
 
-type MlUrgency = 'ok' | 'warning' | 'urgent' | 'overdue' | null;
 
-const getMlDeadlineUrgency = (deadline: string | null | undefined): MlUrgency => {
-  if (!deadline) return null;
-  const dl = new Date(deadline);
-  const now = new Date();
-  if (dl.getTime() < now.getTime()) return 'overdue';
-  const isToday = dl.toDateString() === now.toDateString();
-  if (isToday) return 'urgent';
-  const diffMs = dl.getTime() - now.getTime();
-  const diffH = diffMs / (1000 * 60 * 60);
-  if (diffH <= 48) return 'warning';
-  return 'ok';
-};
-
-const ML_URGENCY_ROW: Record<NonNullable<MlUrgency>, string> = {
+const ML_URGENCY_ROW: Record<NonNullable<MlDeadlineState>, string> = {
   ok: '',
   warning: 'bg-amber-50/70 dark:bg-amber-950/20',
   urgent: 'bg-orange-50/80 dark:bg-orange-950/25',
   overdue: 'bg-rose-50/80 dark:bg-rose-950/20',
+  fulfilled: '',
 };
 
-const ML_URGENCY_BADGE: Record<NonNullable<MlUrgency>, string> = {
+const ML_URGENCY_BADGE: Record<NonNullable<MlDeadlineState>, string> = {
   ok: 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300',
   warning: 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300',
   urgent: 'bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300',
   overdue: 'bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300',
+  fulfilled: 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300',
 };
 
 export default function SupplierOrders() {
@@ -472,8 +461,8 @@ export default function SupplierOrders() {
                 const statusBadge = ORDER_STATUS_MAP[order.status] || { label: order.status, color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700' };
                 const hasTracking = Boolean(order.tracking_code || order.tracking_url);
                 return (
-                  <article key={order.id} className={`p-4 space-y-3 transition-colors hover:bg-gray-50/70 dark:hover:bg-gray-800/30 ${getMlDeadlineUrgency(order.ml_pickup_deadline)
-                      ? ML_URGENCY_ROW[getMlDeadlineUrgency(order.ml_pickup_deadline)!]
+                  <article key={order.id} className={`p-4 space-y-3 transition-colors hover:bg-gray-50/70 dark:hover:bg-gray-800/30 ${getMlDeadlineState(order.ml_pickup_deadline, order.status)
+                      ? ML_URGENCY_ROW[getMlDeadlineState(order.ml_pickup_deadline, order.status)!]
                       : ''
                     }`}>
                     <div className="flex items-start justify-between gap-3">
@@ -508,13 +497,13 @@ export default function SupplierOrders() {
                         <div className="flex flex-wrap items-center gap-1.5 mb-1">
                           <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{order.shipping_method || 'Método não informado'}</span>
                           {order.ml_pickup_deadline && (() => {
-                            const urgency = getMlDeadlineUrgency(order.ml_pickup_deadline);
-                            const dl = new Date(order.ml_pickup_deadline);
-                            const isOverdue = urgency === 'overdue';
+                            const urgency = getMlDeadlineState(order.ml_pickup_deadline, order.status);
+                            const dl = parseMlDeadline(order.ml_pickup_deadline);
+                            if (!urgency || !dl) return null;
                             return (
-                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${urgency ? ML_URGENCY_BADGE[urgency] : ''}`}>
+                              <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${ML_URGENCY_BADGE[urgency]}`}>
                                 <CalendarClock size={10} />
-                                {isOverdue ? '⚠ Vencido ' : 'Envio até '}
+                                {getMlDeadlineLabel(urgency, order.status)}
                                 {dl.toLocaleDateString('pt-BR')}
                               </span>
                             );
@@ -589,8 +578,8 @@ export default function SupplierOrders() {
                     const statusBadge = ORDER_STATUS_MAP[order.status] || { label: order.status, color: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700' };
 
                     return (
-                      <tr key={order.id} className={`transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/50 ${getMlDeadlineUrgency(order.ml_pickup_deadline)
-                          ? ML_URGENCY_ROW[getMlDeadlineUrgency(order.ml_pickup_deadline)!]
+                      <tr key={order.id} className={`transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/50 ${getMlDeadlineState(order.ml_pickup_deadline, order.status)
+                          ? ML_URGENCY_ROW[getMlDeadlineState(order.ml_pickup_deadline, order.status)!]
                           : ''
                         }`}>
                         <td className="py-3.5 px-3 align-top">
@@ -619,13 +608,13 @@ export default function SupplierOrders() {
                               <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
                                 <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{order.shipping_method || 'Método não informado'}</span>
                                 {order.ml_pickup_deadline && (() => {
-                                  const urgency = getMlDeadlineUrgency(order.ml_pickup_deadline);
-                                  const dl = new Date(order.ml_pickup_deadline);
-                                  const isOverdue = urgency === 'overdue';
+                                  const urgency = getMlDeadlineState(order.ml_pickup_deadline, order.status);
+                                  const dl = parseMlDeadline(order.ml_pickup_deadline);
+                                  if (!urgency || !dl) return null;
                                   return (
-                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${urgency ? ML_URGENCY_BADGE[urgency] : ''}`}>
+                                    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${ML_URGENCY_BADGE[urgency]}`}>
                                       <CalendarClock size={10} />
-                                      {isOverdue ? '⚠ Vencido ' : 'Envio até '}
+                                      {getMlDeadlineLabel(urgency, order.status)}
                                       {dl.toLocaleDateString('pt-BR')}
                                     </span>
                                   );
@@ -825,7 +814,8 @@ export default function SupplierOrders() {
                           value={
                             selectedOrder.ml_pickup_deadline
                               ? (() => {
-                                  const d = new Date(selectedOrder.ml_pickup_deadline);
+                                  const d = parseMlDeadline(selectedOrder.ml_pickup_deadline);
+                                  if (!d) return '';
                                   const pad = (n: number) => String(n).padStart(2, '0');
                                   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
                                 })()

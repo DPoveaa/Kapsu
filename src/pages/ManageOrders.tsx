@@ -6,6 +6,7 @@ import CreateOrderModal from '../components/CreateOrderModal'
 import { useAuth } from '../context/AuthContext'
 import { confirm, toast } from '../utils/toast'
 import { getOrderStatusLabel, getOrderStatusBadgeClass } from '../utils/orderStatus'
+import { getMlDeadlineLabel, getMlDeadlineState, parseMlDeadline } from '../utils/mlDeadline'
 
 interface Order {
   id: string
@@ -96,11 +97,10 @@ export default function ManageOrders() {
 
   const handleOpenMlPopup = (order: Order) => {
     setMlPopupOrderId(order.id)
-    // Convert stored ISO to local datetime-local input format (YYYY-MM-DDTHH:mm)
     if (order.ml_pickup_deadline) {
-      const d = new Date(order.ml_pickup_deadline)
+      const d = parseMlDeadline(order.ml_pickup_deadline)
       const pad = (n: number) => String(n).padStart(2, '0')
-      setMlPopupValue(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`)
+      setMlPopupValue(d ? `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` : '')
     } else {
       setMlPopupValue('')
     }
@@ -109,8 +109,8 @@ export default function ManageOrders() {
   const handleSaveMlDeadline = async (orderId: string) => {
     try {
       setSavingMlDeadline(true)
-      await adminService.updateOrderMlDeadline(orderId, mlPopupValue || null)
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ml_pickup_deadline: mlPopupValue || null } : o))
+      const result = await adminService.updateOrderMlDeadline(orderId, mlPopupValue || null)
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ml_pickup_deadline: result.ml_pickup_deadline } : o))
       toast.success('Prazo de coleta ML atualizado!')
       setMlPopupOrderId(null)
     } catch (err: any) {
@@ -607,23 +607,22 @@ export default function ManageOrders() {
                             </div>
                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
                                {order.ml_pickup_deadline && (() => {
-                                 const dl = new Date(order.ml_pickup_deadline)
-                                 const now = new Date()
-                                 const isOverdue = dl.getTime() < now.getTime()
-                                 const isToday = dl.toDateString() === now.toDateString()
-                                 const diffMs = dl.getTime() - now.getTime()
-                                 const diffH = diffMs / (1000 * 60 * 60)
-                                 const style = isOverdue
+                                 const dl = parseMlDeadline(order.ml_pickup_deadline)
+                                 const deadlineState = getMlDeadlineState(order.ml_pickup_deadline, order.status)
+                                 if (!dl || !deadlineState) return null
+                                 const style = deadlineState === 'overdue'
                                    ? 'bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300'
-                                   : isToday || diffH <= 3
+                                   : deadlineState === 'urgent'
                                    ? 'bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300'
-                                   : diffH <= 48
+                                   : deadlineState === 'warning'
                                    ? 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300'
+                                   : deadlineState === 'fulfilled'
+                                   ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
                                    : 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300'
                                  return (
                                    <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${style}`}>
                                      <CalendarClock size={10} />
-                                     {isOverdue ? '⚠ Vencido ' : 'Envio até '}
+                                     {getMlDeadlineLabel(deadlineState, order.status)}
                                      {dl.toLocaleDateString('pt-BR')}
                                    </div>
                                  )
