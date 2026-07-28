@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, FileText, HelpCircle, Loader2, WalletCards } from 'lucide-react';
 import { supplierService, SupplierPayment, SupplierSettlementOverview } from '../../services/supplier.service';
 import SupplierSettlementCards from '../../components/SupplierSettlementCards';
@@ -6,6 +6,7 @@ import SupplierFinancialChart from '../../components/SupplierFinancialChart';
 import SupplierSettlementBreakdown from '../../components/SupplierSettlementBreakdown';
 import AdminModal from '../../components/AdminModal';
 import { toast } from '../../utils/toast';
+import { useVisibilityPolling } from '../../hooks/useVisibilityPolling';
 
 const money = (value: number) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const date = (value?: string | null) => value ? new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString('pt-BR') : 'Não informado';
@@ -18,32 +19,35 @@ export default function SupplierPaymentHistory() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalPayments, setTotalPayments] = useState(0);
   const [showRuleModal, setShowRuleModal] = useState(false);
+  const activeRequestsRef = useRef(0);
+  const latestRequestRef = useRef(0);
 
   useEffect(() => { loadData(); }, [page]);
-
-  useEffect(() => {
-    const refresh = () => loadData(true);
-    const interval = window.setInterval(refresh, 15000);
-    const handleVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => { window.clearInterval(interval); document.removeEventListener('visibilitychange', handleVisibility); };
-  }, [page]);
+  useVisibilityPolling(() => loadData(true), 15000);
 
   const loadData = async (background = false) => {
+    if (background && activeRequestsRef.current > 0) return;
+
+    const requestId = ++latestRequestRef.current;
+    activeRequestsRef.current += 1;
     try {
       if (!background) setLoading(true);
       const [paymentResult, settlementResult] = await Promise.all([
         supplierService.getPaymentHistory(page, 10),
         supplierService.getSettlementOverview(),
       ]);
+      if (requestId !== latestRequestRef.current) return;
       setPayments(paymentResult.data || []);
       setTotalPayments(Number(paymentResult.pagination?.total) || 0);
       setTotalPages(Math.max(1, Number(paymentResult.pagination?.totalPages) || 1));
       setOverview(settlementResult.data);
     } catch (err: any) {
-      if (!background) toast.error('Erro ao carregar os repasses: ' + err.message);
+      if (!background && requestId === latestRequestRef.current) {
+        toast.error('Erro ao carregar os repasses: ' + err.message);
+      }
     } finally {
-      if (!background) setLoading(false);
+      activeRequestsRef.current = Math.max(0, activeRequestsRef.current - 1);
+      if (!background && requestId === latestRequestRef.current) setLoading(false);
     }
   };
 
@@ -72,7 +76,7 @@ export default function SupplierPaymentHistory() {
       ) : overview ? (
         <div className="space-y-6">
           <SupplierSettlementCards overview={overview} moneyFormatter={money} />
-          <SupplierFinancialChart />
+          <SupplierFinancialChart refreshIntervalMs={15000} />
           <SupplierSettlementBreakdown
             overview={overview}
             onRefresh={() => loadData(true)}
@@ -116,6 +120,7 @@ export default function SupplierPaymentHistory() {
           <div className="space-y-3 text-sm text-gray-700 dark:text-gray-300">
             <p className="font-semibold text-gray-900 dark:text-white">{overview.configuration.ruleDescription}</p>
             <p>Somente pedidos com pagamento confirmado entram no cálculo. Pedidos cancelados ou aguardando pagamento não entram.</p>
+            <p>Vendas do Mercado Livre ainda não recebidas aparecem separadamente como “ML a confirmar”. Elas não entram no saldo disponível nem no ciclo de repasse até a confirmação do recebimento pela Kapsu.</p>
             <p>Os pedidos do ciclo atual aparecem como valor em formação; após o fechamento, passam para o saldo devido.</p>
           </div>
         </AdminModal>

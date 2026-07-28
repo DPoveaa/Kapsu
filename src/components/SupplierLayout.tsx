@@ -19,6 +19,7 @@ import {
 import { supplierService, SupplierProfileResponse } from '../services/supplier.service';
 import AnimatedLogo from './AnimatedLogo';
 import KapsuThemeControl from './theme-toggle/KapsuThemeControl';
+import { useAuth } from '../context/AuthContext';
 
 // ---- Toast helpers ----
 type ToastType = 'success' | 'error' | 'info';
@@ -65,6 +66,7 @@ const NAV = [
 export default function SupplierLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
@@ -165,14 +167,24 @@ export default function SupplierLayout() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('kapsu_token');
-    localStorage.removeItem('kapsu_user');
-    navigate('/login');
+    logout();
+    navigate('/login', { replace: true });
   };
 
   const isAdmin = profile?.user?.role === 'supplier_admin' || profile?.user?.role === 'admin';
   const perms = profile?.user?.permissions ?? [];
   const visibleNav = NAV.filter(n => !n.perm || isAdmin || perms.includes(n.perm));
+  const currentNav = NAV.find(n => location.pathname === n.path);
+  const lacksPagePermission = Boolean(
+    profile && currentNav?.perm && !isAdmin && !perms.includes(currentNav.perm),
+  );
+
+  useEffect(() => {
+    if (lacksPagePermission) {
+      logout();
+      navigate('/login', { replace: true });
+    }
+  }, [lacksPagePermission, logout, navigate]);
 
   const supplierName = profile?.supplier?.trade_name || profile?.supplier?.name || 'Fornecedor';
   const userName = profile?.user?.name || 'Operador';
@@ -382,7 +394,7 @@ export default function SupplierLayout() {
 
         {/* Conteúdo da Página */}
         <main className="flex-1 p-4 md:p-8">
-          {pageLoading ? (
+          {pageLoading || lacksPagePermission ? (
             <div className="flex items-center justify-center min-h-[50vh] gap-3 text-gray-500 dark:text-gray-400">
               <Loader2 className="w-6 h-6 animate-spin text-primary-500" />
               <span className="text-sm">Carregando portal do fornecedor...</span>

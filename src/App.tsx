@@ -430,7 +430,7 @@ function AppContent() {
         <Route
           path="/supplier"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requireSupplier>
               <SupplierLayout />
             </ProtectedRoute>
           }

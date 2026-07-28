@@ -9,6 +9,7 @@ import AdminModal from '../../components/AdminModal';
 import { formatStoredShippingAddress } from '../../utils/shippingAddress';
 import { playNewOrderSound } from '../../utils/sound';
 import logoMercadoLivre from '../../images/ml_logo.webp';
+import { useVisibilityPolling } from '../../hooks/useVisibilityPolling';
 
 const isMercadoLivreOrder = (order: SupplierOrder): boolean => {
   const method = (order.shipping_method || '').toLowerCase();
@@ -84,6 +85,8 @@ export default function SupplierOrders() {
   // Referência para armazenar o número e lista de pedidos anteriores e detectar novos pedidos em tempo real
   const previousOrderIdsRef = useRef<Set<string>>(new Set());
   const isFirstLoadRef = useRef(true);
+  const activeRequestsRef = useRef(0);
+  const latestRequestRef = useRef(0);
 
   // Filtros
   const [searchTerm, setSearchTerm] = useState('');
@@ -137,15 +140,14 @@ export default function SupplierOrders() {
     }).catch(() => setCanCancelOrders(false));
   }, []);
 
-  // Polling automático em tempo real a cada 10 segundos
-  useEffect(() => {
-    const interval = setInterval(() => {
-      loadOrders(true);
-    }, 10000);
-    return () => clearInterval(interval);
-  }, [page, searchTerm, statusFilter, trackingFilter, dateStart, dateEnd, shippingMethodFilter, sortOrder]);
+  // Atualiza enquanto a tela estiver visível, sem sobrepor requisições.
+  useVisibilityPolling(() => loadOrders(true), 10000);
 
   const loadOrders = async (isBackgroundPoll = false) => {
+    if (isBackgroundPoll && activeRequestsRef.current > 0) return;
+
+    const requestId = ++latestRequestRef.current;
+    activeRequestsRef.current += 1;
     try {
       if (!isBackgroundPoll) setLoading(true);
       const res = await supplierService.getOrders({
@@ -159,6 +161,8 @@ export default function SupplierOrders() {
         shipping_method: shippingMethodFilter,
         sort: sortOrder,
       });
+
+      if (requestId !== latestRequestRef.current) return;
 
       if (res.success && res.data) {
         // Detectar novos pedidos para tocar aviso sonoro e toast
@@ -178,13 +182,21 @@ export default function SupplierOrders() {
         setOrders(res.data);
         setTotalPages(res.pagination.totalPages);
         setTotalOrders(res.pagination.total);
+
+        if (showDetailModal && selectedOrder?.id) {
+          const detail = await supplierService.getOrderById(selectedOrder.id);
+          if (requestId === latestRequestRef.current && detail.success) {
+            setSelectedOrder(detail.data);
+          }
+        }
       }
     } catch (err: any) {
-      if (!isBackgroundPoll) {
+      if (!isBackgroundPoll && requestId === latestRequestRef.current) {
         toast.error('Erro ao carregar pedidos de produção: ' + err.message);
       }
     } finally {
-      if (!isBackgroundPoll) setLoading(false);
+      activeRequestsRef.current = Math.max(0, activeRequestsRef.current - 1);
+      if (!isBackgroundPoll && requestId === latestRequestRef.current) setLoading(false);
     }
   };
 

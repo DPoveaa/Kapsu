@@ -126,12 +126,16 @@ export interface SupplierFinancialMetrics {
   totalRevenue: number;
   paidAmount: number;
   pendingAmount: number;
+  mercadoLivrePendingRevenue?: number;
+  mercadoLivrePendingOrders?: number;
   totalOrders: number;
   totalItemsSold: number;
   dailyChart: Array<{
     date: string;
     revenue: number;
     orders: number;
+    pendingRevenue?: number;
+    pendingOrders?: number;
   }>;
 }
 
@@ -209,6 +213,10 @@ export interface SupplierSettlementOverview {
     totalShippingAmount?: number;
     /** Total payout = totalItemsAmount + totalShippingAmount */
     totalSalesAmount: number;
+    mercadoLivrePendingItemsAmount?: number;
+    mercadoLivrePendingShippingAmount?: number;
+    mercadoLivrePendingAmount?: number;
+    mercadoLivrePendingOrderCount?: number;
     totalPaid: number;
     outstandingAmount: number;
     dueAmount: number;
@@ -305,6 +313,7 @@ class SupplierService {
     if (params.sort) query.append('sort', params.sort);
 
     const response = await fetch(`${this.baseUrl}/orders?${query.toString()}`, {
+      cache: 'no-store',
       headers: this.getAuthHeaders(),
     });
     const data = await response.json();
@@ -385,6 +394,7 @@ class SupplierService {
       if (params.endDate) query.set('endDate', params.endDate);
     }
     const response = await fetch(`${this.baseUrl}/financial/dashboard?${query.toString()}`, {
+      cache: 'no-store',
       headers: this.getAuthHeaders(),
     });
     const data = await response.json();
@@ -394,6 +404,7 @@ class SupplierService {
 
   async getSettlementOverview(): Promise<{ success: boolean; data: SupplierSettlementOverview }> {
     const response = await fetch(`${this.baseUrl}/financial/settlements`, {
+      cache: 'no-store',
       headers: this.getAuthHeaders(),
     });
     const data = await response.json();
@@ -420,6 +431,7 @@ class SupplierService {
     if (status) query.append('status', status);
 
     const response = await fetch(`${this.baseUrl}/payments?${query.toString()}`, {
+      cache: 'no-store',
       headers: this.getAuthHeaders(),
     });
     const data = await response.json();

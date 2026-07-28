@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BarChart3, Loader2 } from 'lucide-react';
 import { supplierService, SupplierFinancialMetrics } from '../services/supplier.service';
 import { toast } from '../utils/toast';
+import { useVisibilityPolling } from '../hooks/useVisibilityPolling';
 
 type FilterType = '7d' | '30d' | '365d';
 
@@ -10,6 +11,8 @@ interface ProcessedChartPoint {
   tooltipTitle: string;
   revenue: number;
   orders: number;
+  pendingRevenue: number;
+  pendingOrders: number;
 }
 
 const formatDateLabel = (dateStr: string) => {
@@ -31,7 +34,7 @@ const formatDateFull = (dateStr: string) => {
 };
 
 function processChartPoints(
-  rawChart: { date: string; revenue: number; orders: number }[],
+  rawChart: { date: string; revenue: number; orders: number; pendingRevenue?: number; pendingOrders?: number }[],
   filterType: FilterType
 ): ProcessedChartPoint[] {
   if (!rawChart || rawChart.length === 0) return [];
@@ -43,6 +46,8 @@ function processChartPoints(
       tooltipTitle: formatDateFull(d.date),
       revenue: d.revenue,
       orders: d.orders,
+      pendingRevenue: d.pendingRevenue ?? 0,
+      pendingOrders: d.pendingOrders ?? 0,
     }));
   }
 
@@ -52,9 +57,14 @@ function processChartPoints(
     const startDateObj = new Date(endDateObj);
     startDateObj.setDate(startDateObj.getDate() - 29);
 
-    const rawMap: Record<string, { revenue: number; orders: number }> = {};
+    const rawMap: Record<string, { revenue: number; orders: number; pendingRevenue: number; pendingOrders: number }> = {};
     rawChart.forEach((d) => {
-      rawMap[d.date.slice(0, 10)] = { revenue: d.revenue, orders: d.orders };
+      rawMap[d.date.slice(0, 10)] = {
+        revenue: d.revenue,
+        orders: d.orders,
+        pendingRevenue: d.pendingRevenue ?? 0,
+        pendingOrders: d.pendingOrders ?? 0,
+      };
     });
 
     const weeks: ProcessedChartPoint[] = [];
@@ -78,6 +88,8 @@ function processChartPoints(
 
       let revSum = 0;
       let ordSum = 0;
+      let pendingRevSum = 0;
+      let pendingOrdSum = 0;
 
       const curr = new Date(wStart);
       while (curr <= wEnd) {
@@ -89,6 +101,8 @@ function processChartPoints(
         if (rawMap[isoKey]) {
           revSum += rawMap[isoKey].revenue;
           ordSum += rawMap[isoKey].orders;
+          pendingRevSum += rawMap[isoKey].pendingRevenue;
+          pendingOrdSum += rawMap[isoKey].pendingOrders;
         }
         curr.setDate(curr.getDate() + 1);
       }
@@ -101,6 +115,8 @@ function processChartPoints(
         tooltipTitle: `Semana de ${startStr} a ${endStr}`,
         revenue: revSum,
         orders: ordSum,
+        pendingRevenue: pendingRevSum,
+        pendingOrders: pendingOrdSum,
       });
     }
     return weeks;
@@ -108,15 +124,17 @@ function processChartPoints(
 
   if (filterType === '365d') {
     // Ano (365 Dias): agrupar por mês (YYYY-MM)
-    const monthMap: Record<string, { revenue: number; orders: number; monthKey: string }> = {};
+    const monthMap: Record<string, { revenue: number; orders: number; pendingRevenue: number; pendingOrders: number; monthKey: string }> = {};
 
     rawChart.forEach((d) => {
       const monthKey = d.date.slice(0, 7); // 'YYYY-MM'
       if (!monthMap[monthKey]) {
-        monthMap[monthKey] = { revenue: 0, orders: 0, monthKey };
+        monthMap[monthKey] = { revenue: 0, orders: 0, pendingRevenue: 0, pendingOrders: 0, monthKey };
       }
       monthMap[monthKey].revenue += d.revenue;
       monthMap[monthKey].orders += d.orders;
+      monthMap[monthKey].pendingRevenue += d.pendingRevenue ?? 0;
+      monthMap[monthKey].pendingOrders += d.pendingOrders ?? 0;
     });
 
     const monthsShort = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -134,6 +152,8 @@ function processChartPoints(
         tooltipTitle: `${monthsFull[monthIdx] || parts[1]} de ${year}`,
         revenue: m.revenue,
         orders: m.orders,
+        pendingRevenue: m.pendingRevenue,
+        pendingOrders: m.pendingOrders,
       };
     });
   }
@@ -141,38 +161,54 @@ function processChartPoints(
   return [];
 }
 
-export default function SupplierFinancialChart() {
+export default function SupplierFinancialChart({ refreshIntervalMs = 0 }: { refreshIntervalMs?: number }) {
   const [filterType, setFilterType] = useState<FilterType>('30d');
   const [metrics, setMetrics] = useState<SupplierFinancialMetrics | null>(null);
   const [loading, setLoading] = useState(true);
+  const activeRequestsRef = useRef(0);
+  const latestRequestRef = useRef(0);
 
   useEffect(() => {
     loadChartData();
   }, [filterType]);
 
+  useVisibilityPolling(
+    () => loadChartData(true),
+    refreshIntervalMs || 15000,
+    refreshIntervalMs > 0,
+  );
+
   const loadChartData = async (background = false) => {
+    if (background && activeRequestsRef.current > 0) return;
+
+    const requestId = ++latestRequestRef.current;
+    activeRequestsRef.current += 1;
     try {
       if (!background) setLoading(true);
       const days = filterType === '7d' ? 7 : filterType === '30d' ? 30 : 365;
       const res = await supplierService.getDashboardMetrics(days);
-      if (res.success && res.data) {
+      if (requestId === latestRequestRef.current && res.success && res.data) {
         setMetrics(res.data);
       }
     } catch (err: any) {
-      if (!background) toast.error('Erro ao carregar gráfico financeiro: ' + err.message);
+      if (!background && requestId === latestRequestRef.current) {
+        toast.error('Erro ao carregar gráfico financeiro: ' + err.message);
+      }
     } finally {
-      if (!background) setLoading(false);
+      activeRequestsRef.current = Math.max(0, activeRequestsRef.current - 1);
+      if (!background && requestId === latestRequestRef.current) setLoading(false);
     }
   };
 
   const rawChart = metrics?.dailyChart || [];
   const processedPoints = processChartPoints(rawChart, filterType);
 
-  const maxRevenue = Math.max(...processedPoints.map((d) => d.revenue), 1);
-  const maxOrders = Math.max(...processedPoints.map((d) => d.orders), 1);
+  const maxRevenue = Math.max(...processedPoints.flatMap((d) => [d.revenue, d.pendingRevenue]), 1);
+  const maxOrders = Math.max(...processedPoints.map((d) => d.orders + d.pendingOrders), 1);
   const totalRevenue = processedPoints.reduce((acc, curr) => acc + curr.revenue, 0);
-  const totalOrders = processedPoints.reduce((acc, curr) => acc + curr.orders, 0);
-  const activeCount = processedPoints.filter((d) => d.revenue > 0 || d.orders > 0).length;
+  const totalPendingRevenue = processedPoints.reduce((acc, curr) => acc + curr.pendingRevenue, 0);
+  const totalOrders = processedPoints.reduce((acc, curr) => acc + curr.orders + curr.pendingOrders, 0);
+  const activeCount = processedPoints.filter((d) => d.revenue > 0 || d.pendingRevenue > 0 || d.orders > 0 || d.pendingOrders > 0).length;
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 space-y-4">
@@ -187,7 +223,10 @@ export default function SupplierFinancialChart() {
           
           <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400">
             <span className="rounded-lg bg-emerald-50 px-2.5 py-1 text-emerald-700 font-semibold dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-900/60">
-              Total Faturado: {totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              Repasse confirmado: {totalRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </span>
+            <span className="rounded-lg border border-amber-200/60 bg-amber-50 px-2.5 py-1 font-semibold text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300">
+              ML a confirmar: {totalPendingRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </span>
             <span className="rounded-lg bg-indigo-50 px-2.5 py-1 text-indigo-700 font-semibold dark:bg-indigo-950/40 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-900/60">
               Pedidos Válidos: {totalOrders} pedido(s)
@@ -204,7 +243,11 @@ export default function SupplierFinancialChart() {
           <div className="flex items-center gap-3 text-xs font-medium text-gray-500 dark:text-gray-400 mr-1">
             <div className="flex items-center gap-1.5">
               <span className="h-3 w-3 rounded-sm bg-teal-500" />
-              <span>Faturamento</span>
+              <span>Confirmado</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-sm bg-amber-400" />
+              <span>ML a confirmar</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="h-3 w-3 rounded-sm bg-indigo-500" />
@@ -267,7 +310,9 @@ export default function SupplierFinancialChart() {
           <div className="flex h-52 items-end justify-between gap-1.5 sm:gap-3 border-b border-gray-200 px-2 pb-2 pt-8 dark:border-gray-800">
             {processedPoints.map((d, i) => {
               const revenuePct = d.revenue > 0 ? Math.max(10, Math.round((d.revenue / maxRevenue) * 100)) : 4;
-              const ordersPct = d.orders > 0 ? Math.max(10, Math.round((d.orders / maxOrders) * 100)) : 4;
+              const pendingRevenuePct = d.pendingRevenue > 0 ? Math.max(10, Math.round((d.pendingRevenue / maxRevenue) * 100)) : 4;
+              const pointOrders = d.orders + d.pendingOrders;
+              const ordersPct = pointOrders > 0 ? Math.max(10, Math.round((pointOrders / maxOrders) * 100)) : 4;
 
               return (
                 <div key={i} className="group relative flex h-full flex-1 items-end justify-center gap-1">
@@ -276,10 +321,15 @@ export default function SupplierFinancialChart() {
                     <div className="font-sans font-semibold text-gray-300">{d.tooltipTitle}</div>
                     <div className="flex items-center gap-3 mt-0.5">
                       <span className="text-teal-400 font-bold">
-                        {d.revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        Confirmado: {d.revenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                       </span>
+                      {d.pendingRevenue > 0 && (
+                        <span className="text-amber-300 font-bold">
+                          ML pendente: {d.pendingRevenue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </span>
+                      )}
                       <span className="text-indigo-300 font-bold">
-                        {d.orders} pedido(s)
+                        {pointOrders} pedido(s)
                       </span>
                     </div>
                   </div>
@@ -290,7 +340,15 @@ export default function SupplierFinancialChart() {
                     className="w-full max-w-[16px] rounded-t-sm bg-gradient-to-t from-emerald-600 to-teal-400 transition-all duration-300 group-hover:from-emerald-500 group-hover:to-teal-300 dark:from-emerald-700 dark:to-teal-500"
                   />
 
-                  {/* Column 2: Pedidos (Primary/Indigo Gradient) */}
+                  {/* Column 2: Mercado Livre ainda não recebido */}
+                  <div
+                    style={{ height: `${pendingRevenuePct}%` }}
+                    className={`w-full max-w-[16px] rounded-t-sm transition-all duration-300 ${d.pendingRevenue > 0
+                      ? 'bg-gradient-to-t from-amber-600 to-amber-300 group-hover:from-amber-500 group-hover:to-amber-200 dark:from-amber-700 dark:to-amber-500'
+                      : 'bg-amber-100/40 dark:bg-amber-950/30'}`}
+                  />
+
+                  {/* Column 3: Pedidos (Primary/Indigo Gradient) */}
                   <div
                     style={{ height: `${ordersPct}%` }}
                     className="w-full max-w-[16px] rounded-t-sm bg-gradient-to-t from-primary-600 to-indigo-500 transition-all duration-300 group-hover:from-primary-500 group-hover:to-indigo-400 dark:from-primary-700 dark:to-indigo-600"

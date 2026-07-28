@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { toast } from './utils/toast'
+import { installAuthResponseInterceptor } from './utils/authResponseInterceptor'
+
+installAuthResponseInterceptor()
 
 // Sobrescreve alert nativo por toats animados e modernos
 window.alert = (message: any) => {

@@ -84,6 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               console.log('Token inválido confirmado pelo servidor')
               localStorage.removeItem('kapsu_user')
               localStorage.removeItem('kapsu_token')
+
+              localStorage.removeItem('token')
               setUser(null)
             }
             // Se for erro de rede (isNetworkError === true), mantém o usuário logado
@@ -99,6 +101,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error('Erro ao carregar usuário:', error)
           localStorage.removeItem('kapsu_user')
           localStorage.removeItem('kapsu_token')
+
+          localStorage.removeItem('token')
           setUser(null)
         }
       }
@@ -150,6 +154,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(null)
             localStorage.removeItem('kapsu_user')
             localStorage.removeItem('kapsu_token')
+
+            localStorage.removeItem('token')
           }
         } else if (isValid && isValid.isNetworkError) {
           // Erro de rede - NÃO incrementa contador de falhas
@@ -196,6 +202,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUser(newUser)
       localStorage.setItem('kapsu_user', JSON.stringify(newUser))
+      localStorage.removeItem('token')
+
       localStorage.setItem('kapsu_token', response.token)
 
       // Tenta vincular o carrinho do WhatsApp pendente (se houver)
@@ -222,6 +230,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
     localStorage.removeItem('kapsu_user')
     localStorage.removeItem('kapsu_token')
+
+    localStorage.removeItem('token')
   }
 
   const updateUser = (userData: Partial<User>) => {
@@ -235,6 +245,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginWithToken = (userData: User, token: string) => {
     setUser(userData)
     localStorage.setItem('kapsu_user', JSON.stringify(userData))
+    localStorage.removeItem('token')
+
     localStorage.setItem('kapsu_token', token)
   }
 

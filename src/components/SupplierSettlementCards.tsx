@@ -1,4 +1,4 @@
-import { DollarSign, WalletCards, Clock, TrendingUp, Info } from 'lucide-react';
+import { AlertCircle, DollarSign, WalletCards, Clock, TrendingUp, Info } from 'lucide-react';
 import { SupplierSettlementOverview } from '../services/supplier.service';
 
 interface SupplierSettlementCardsProps {
@@ -25,8 +25,10 @@ export default function SupplierSettlementCards({
 }: SupplierSettlementCardsProps) {
   const summary = overview.summary;
   const nextDueDate = formatCycleDate(overview);
+  const mercadoLivrePendingAmount = summary.mercadoLivrePendingAmount ?? 0;
+  const mercadoLivrePendingOrderCount = summary.mercadoLivrePendingOrderCount ?? 0;
 
-  // Card 1: Vendas Válidas (inclui produtos + frete)
+  // Visão geral dos repasses confirmados
   const hasShippingAmount = (summary.totalShippingAmount ?? 0) > 0;
   const card1Tooltip =
     summary.totalSalesAmount === 0
@@ -35,13 +37,13 @@ export default function SupplierSettlementCards({
       ? `Inclui repasse de produtos (${moneyFormatter(summary.totalItemsAmount ?? 0)}) + reembolso de frete ao fornecedor (${moneyFormatter(summary.totalShippingAmount ?? 0)}).`
       : `Soma acumulada de vendas em pedidos válidos e pagos.`;
 
-  // Card 2: Já Recebido / Total Pago
+  // Histórico acumulado de pagamentos
   const card2Tooltip =
     summary.totalPaid === 0
       ? 'Nenhum repasse financeiro foi realizado até o momento.'
       : `Total de repasses e transferências efetuados pela Kapsu.`;
 
-  // Card 3: Situação do Repasse
+  // Valor de ciclos encerrados
   const hasCredit = summary.unallocatedCredit > 0;
   const hasDue = summary.dueAmount > 0;
   const card3Value = hasCredit
@@ -53,7 +55,7 @@ export default function SupplierSettlementCards({
     ? `Valor de ciclos encerrados pendente de pagamento ao fornecedor.`
     : 'Nenhum valor pendente de pagamento. Todas as contas estão em dia.';
 
-  // Card 4: Próximo Ciclo (com detalhamento de produtos + frete)
+  // Acumulado do ciclo em aberto
   const currentCycle = overview.cycles.find((c) => c.isCurrent);
   const currentShippingAmount = currentCycle?.shippingAmount ?? 0;
   const currentItemsAmount = currentCycle?.itemsAmount ?? (summary.currentAccruedAmount - currentShippingAmount);
@@ -71,8 +73,8 @@ export default function SupplierSettlementCards({
         }`;
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {/* Card 1: Vendas válidas */}
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      {/* Visão geral */}
       <div className="group relative flex flex-col min-h-[115px] rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -93,28 +95,61 @@ export default function SupplierSettlementCards({
         </div>
       </div>
 
-      {/* Card 2: Total Pago / Já recebido */}
-      <div className="group relative flex flex-col min-h-[115px] rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm transition-all duration-200 hover:border-emerald-300 hover:shadow-md dark:border-emerald-900/60 dark:bg-emerald-950/20">
+      {/* Valor vendido no Mercado Livre, ainda não recebido pela Kapsu */}
+      <div className="group relative flex min-h-[115px] flex-col rounded-2xl border border-amber-200 bg-amber-50/60 p-5 shadow-sm transition-all duration-200 hover:border-amber-300 hover:shadow-md dark:border-amber-900/60 dark:bg-amber-950/20">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
-            <WalletCards className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            <span>Já Recebido</span>
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">
+            <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <span>ML a confirmar</span>
           </div>
-          <Info className="h-3.5 w-3.5 text-emerald-600 opacity-60 transition-opacity group-hover:opacity-100 dark:text-emerald-400" />
+          <Info className="h-3.5 w-3.5 text-amber-600 opacity-60 transition-opacity group-hover:opacity-100 dark:text-amber-400" />
         </div>
         <div className="mt-3">
-          <div className="text-2xl font-bold font-mono tracking-tight text-emerald-700 dark:text-emerald-300">
-            {moneyFormatter(summary.totalPaid)}
+          <div className="font-mono text-2xl font-bold tracking-tight text-amber-700 dark:text-amber-300">
+            {moneyFormatter(mercadoLivrePendingAmount)}
           </div>
+          <div className="mt-0.5 text-[11px] font-semibold text-amber-700/80 dark:text-amber-300/80">
+            {mercadoLivrePendingOrderCount} pedido(s) aguardando recebimento
+          </div>
+        </div>
+        <div className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-30 w-72 -translate-x-1/2 rounded-xl border border-gray-700/60 bg-gray-900 p-3 text-center text-xs font-medium text-white opacity-0 shadow-xl transition-all duration-200 group-hover:opacity-100 dark:bg-gray-800 after:absolute after:left-1/2 after:top-full after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-gray-900 dark:after:border-t-gray-800">
+          Valor dos produtos já vendidos pelo Mercado Livre, mas ainda não recebidos pela Kapsu. Não entra no saldo disponível nem no próximo ciclo de repasse até a confirmação.
+        </div>
+      </div>
+
+      {/* Fluxo: próximo ciclo */}
+      <div className="group relative flex flex-col min-h-[115px] rounded-2xl border border-blue-200 bg-blue-50/50 p-5 shadow-sm transition-all duration-200 hover:border-blue-300 hover:shadow-md dark:border-blue-900/60 dark:bg-blue-950/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+            <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <span>Próximo Ciclo</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {nextDueDate && (
+              <span className="rounded-md bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-800 tabular-nums dark:bg-blue-900/80 dark:text-blue-200">
+                {nextDueDate}
+              </span>
+            )}
+            <Info className="h-3.5 w-3.5 text-blue-600 opacity-60 transition-opacity group-hover:opacity-100 dark:text-blue-400" />
+          </div>
+        </div>
+        <div className="mt-1">
+          <div className="text-2xl font-bold font-mono tracking-tight text-blue-700 dark:text-blue-300">
+            {moneyFormatter(summary.currentAccruedAmount)}
+          </div>
+          {hasCurrentShipping && (
+            <div className="mt-0.5 text-[11px] font-semibold text-blue-600/90 dark:text-blue-300/90">
+              Prod. {moneyFormatter(currentItemsAmount)} + Frete {moneyFormatter(currentShippingAmount)}
+            </div>
+          )}
         </div>
 
         {/* Hover Tooltip */}
         <div className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-30 w-64 -translate-x-1/2 rounded-xl bg-gray-900 p-3 text-center text-xs font-medium text-white shadow-xl opacity-0 transition-all duration-200 group-hover:opacity-100 dark:bg-gray-800 border border-gray-700/60 after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-gray-900 dark:after:border-t-gray-800">
-          {card2Tooltip}
+          {card4Tooltip}
         </div>
       </div>
-
-      {/* Card 3: Situação do repasse */}
+      {/* Fluxo: ciclos encerrados */}
       <div
         className={`group relative flex flex-col min-h-[115px] rounded-2xl border p-5 shadow-sm transition-all duration-200 hover:shadow-md ${
           hasCredit
@@ -167,36 +202,24 @@ export default function SupplierSettlementCards({
         </div>
       </div>
 
-      {/* Card 4: Próximo ciclo */}
-      <div className="group relative flex flex-col min-h-[115px] rounded-2xl border border-blue-200 bg-blue-50/50 p-5 shadow-sm transition-all duration-200 hover:border-blue-300 hover:shadow-md dark:border-blue-900/60 dark:bg-blue-950/20">
+      {/* Fluxo: pagamentos concluídos */}
+      <div className="group relative flex flex-col min-h-[115px] rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 shadow-sm transition-all duration-200 hover:border-emerald-300 hover:shadow-md dark:border-emerald-900/60 dark:bg-emerald-950/20">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300">
-            <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <span>Próximo Ciclo</span>
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+            <WalletCards className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Já Recebido</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            {nextDueDate && (
-              <span className="rounded-md bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-800 tabular-nums dark:bg-blue-900/80 dark:text-blue-200">
-                {nextDueDate}
-              </span>
-            )}
-            <Info className="h-3.5 w-3.5 text-blue-600 opacity-60 transition-opacity group-hover:opacity-100 dark:text-blue-400" />
-          </div>
+          <Info className="h-3.5 w-3.5 text-emerald-600 opacity-60 transition-opacity group-hover:opacity-100 dark:text-emerald-400" />
         </div>
-        <div className="mt-1">
-          <div className="text-2xl font-bold font-mono tracking-tight text-blue-700 dark:text-blue-300">
-            {moneyFormatter(summary.currentAccruedAmount)}
+        <div className="mt-3">
+          <div className="text-2xl font-bold font-mono tracking-tight text-emerald-700 dark:text-emerald-300">
+            {moneyFormatter(summary.totalPaid)}
           </div>
-          {hasCurrentShipping && (
-            <div className="mt-0.5 text-[11px] font-semibold text-blue-600/90 dark:text-blue-300/90">
-              Prod. {moneyFormatter(currentItemsAmount)} + Frete {moneyFormatter(currentShippingAmount)}
-            </div>
-          )}
         </div>
 
         {/* Hover Tooltip */}
         <div className="pointer-events-none absolute bottom-[calc(100%+8px)] left-1/2 z-30 w-64 -translate-x-1/2 rounded-xl bg-gray-900 p-3 text-center text-xs font-medium text-white shadow-xl opacity-0 transition-all duration-200 group-hover:opacity-100 dark:bg-gray-800 border border-gray-700/60 after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-gray-900 dark:after:border-t-gray-800">
-          {card4Tooltip}
+          {card2Tooltip}
         </div>
       </div>
     </div>
