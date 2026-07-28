@@ -300,6 +300,7 @@ export default function ProductDetail() {
       return
     }
 
+    let uploadedReviewImage: string | null = null
     try {
       setSubmittingReview(true)
       setSubmitError(null)
@@ -309,6 +310,7 @@ export default function ProductDetail() {
       if (newImageFile) {
         const uploadRes = await uploadService.uploadReviewImage(newImageFile)
         imageUrl = uploadRes.data.path
+        uploadedReviewImage = imageUrl
       }
 
       if (hasReviewed && isEditingReview) {
@@ -346,6 +348,12 @@ export default function ProductDetail() {
       }, 5000)
 
     } catch (err: any) {
+      if (uploadedReviewImage) {
+        const filename = uploadedReviewImage.split(/[?#]/)[0].split('/').pop()
+        if (filename) {
+          try { await uploadService.deleteReviewImage(filename) } catch { /* já vinculado ou removido */ }
+        }
+      }
       console.error('Erro ao enviar avaliação:', err)
       setSubmitError(err.message || 'Erro ao enviar sua avaliação. Tente novamente.')
     } finally {

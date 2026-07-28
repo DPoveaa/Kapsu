@@ -4,6 +4,8 @@ export interface Product {
   id: string;
   supplier_id?: string | null;
   supplier_name?: string | null;
+  label_url?: string | null;
+  label_original_name?: string | null;
   name: string;
   description: string;
   price: number;

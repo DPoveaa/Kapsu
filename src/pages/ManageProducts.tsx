@@ -7,6 +7,7 @@ import {
   Sparkles, Check, AlertCircle, Save, Download, FileText
 } from 'lucide-react'
 import { productsService } from '../services/products.service'
+import { uploadService } from '../services/upload.service'
 import { adminService, Supplier } from '../services/admin.service'
 import { siteSettingsService } from '../services/site-settings.service'
 import { Product, ProductPriceHistory, ProductTargetAudience } from '../types'
@@ -283,6 +284,9 @@ export default function ManageProducts() {
   const [loadingProductDetails, setLoadingProductDetails] = useState(false)
   const [productFormError, setProductFormError] = useState<string | null>(null)
   const [productImageError, setProductImageError] = useState<string | null>(null)
+  const [labelFile, setLabelFile] = useState<File | null>(null)
+  const [labelSaving, setLabelSaving] = useState(false)
+  const originalProductImageRef = useRef('')
 
   const initialProductFormState = {
     name: '',
@@ -424,6 +428,8 @@ export default function ManageProducts() {
       const product = await productsService.getByIdForAdmin(productId)
       priceEditSourceRef.current = 'price'
       setEditingProduct(product)
+      originalProductImageRef.current = productRaw.image || ''
+      setLabelFile(null)
 
       const cost = productRaw.purchase_price != null ? roundCurrency(Number(productRaw.purchase_price)) : null
       const salePrice = roundCurrency(product.price)
@@ -468,6 +474,8 @@ export default function ManageProducts() {
   const openCreateProductModal = () => {
     priceEditSourceRef.current = 'price'
     setEditingProduct(null)
+    originalProductImageRef.current = ''
+    setLabelFile(null)
     setProductFormData(initialProductFormState)
     setLocalAddedCategories([])
     setProductFormError(null)
@@ -475,7 +483,37 @@ export default function ManageProducts() {
     setIsProductModalOpen(true)
   }
 
+  const getUploadFilename = (value: string) => {
+    try {
+      const pathname = value.startsWith('http') ? new URL(value).pathname : value
+      return decodeURIComponent(pathname.split(/[?#]/)[0].split('/').pop() || '')
+    } catch {
+      return ''
+    }
+  }
+
+  const deletePendingProductImage = async (value: string) => {
+    if (!value || !value.includes('/uploads/products/')) return
+    const filename = getUploadFilename(value)
+    if (!filename) return
+    try { await uploadService.deleteProductImage(filename) } catch { /* arquivo em uso ou já removido */ }
+  }
+
+  const handleProductImageChange = (url: string) => {
+    const normalized = url ? normalizeImagePath(url) : ''
+    const current = productFormData.image
+    if (current && current !== originalProductImageRef.current && current !== normalized) {
+      void deletePendingProductImage(current)
+    }
+    setProductFormData(prev => ({ ...prev, image: normalized }))
+  }
+
   const closeProductModal = () => {
+    const pendingImage = productFormData.image
+    if (pendingImage && pendingImage !== originalProductImageRef.current) {
+      void deletePendingProductImage(pendingImage)
+    }
+    setLabelFile(null)
     setIsProductModalOpen(false)
     setEditingProduct(null)
     navigate('/admin/products')
@@ -562,7 +600,7 @@ export default function ManageProducts() {
         promo_price: productFormData.promo_price ? roundCurrency(Number(productFormData.promo_price)) : null,
         purchase_price: cost,
         markup: finalMarkup,
-        image: productFormData.image.trim() ? normalizeImagePath(productFormData.image) : undefined,
+        image: productFormData.image.trim() ? normalizeImagePath(productFormData.image) : null,
         category: productFormData.category || undefined,
         active: productFormData.active,
         compositions: productFormData.compositions.trim() || undefined,
@@ -595,6 +633,42 @@ export default function ManageProducts() {
       setProductFormError(err.message || 'Erro ao salvar produto')
     } finally {
       setProductFormLoading(false)
+    }
+  }
+
+  const uploadProductLabel = async (file: File | null) => {
+    if (!editingProduct || !file || editingProduct.label_url || labelSaving) return
+    setLabelFile(file)
+    try {
+      setLabelSaving(true)
+      const result = await productsService.updateLabel(editingProduct.id, file)
+      const labelUpdate = { label_url: result.label_url, label_original_name: result.label_original_name }
+      setProducts(current => current.map(product => product.id === editingProduct.id ? { ...product, ...labelUpdate } : product))
+      setEditingProduct(current => current ? { ...current, ...labelUpdate } : null)
+      setLabelFile(null)
+      toast.success('Rótulo vinculado com sucesso!')
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao vincular rótulo')
+    } finally {
+      setLabelFile(null)
+      setLabelSaving(false)
+    }
+  }
+
+  const removeProductLabel = async () => {
+    if (!editingProduct || !window.confirm('Remover o rótulo deste produto?')) return
+    try {
+      setLabelSaving(true)
+      await productsService.updateLabel(editingProduct.id, undefined, true)
+      const labelUpdate = { label_url: null, label_original_name: null }
+      setProducts(current => current.map(product => product.id === editingProduct.id ? { ...product, ...labelUpdate } : product))
+      setEditingProduct(current => current ? { ...current, ...labelUpdate } : null)
+      setLabelFile(null)
+      toast.success('Rótulo removido com sucesso!')
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao remover rótulo')
+    } finally {
+      setLabelSaving(false)
     }
   }
 
@@ -2818,6 +2892,7 @@ export default function ManageProducts() {
       )}
 
       {/* ═══════════════ PRODUCT CREATE/EDIT MODAL ═════════════════════════ */}
+
       <ProductPdfExportModal
         isOpen={isPdfExportModalOpen}
         isExporting={isExportingPdf}
@@ -3051,7 +3126,7 @@ export default function ManageProducts() {
                       <div className="p-3 bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200/80 dark:border-gray-800 rounded-xl">
                         <ImageUpload
                           value={productFormData.image}
-                          onChange={(url) => setProductFormData(prev => ({ ...prev, image: url }))}
+                          onChange={handleProductImageChange}
                           onError={(err) => setProductImageError(err || null)}
                           disabled={productFormLoading}
                         />
@@ -3274,6 +3349,51 @@ export default function ManageProducts() {
                       <AlertCircle size={12} />
                       As informações abaixo são exibidas no PDF de exportação técnica e sincronizadas com a planilha.
                     </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50/60 p-4 dark:border-gray-700 dark:bg-gray-900/50">
+                    <div className="mb-3 flex items-center gap-2">
+                      <FileText size={16} className="text-primary-600 dark:text-primary-400" />
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-white">Rótulo do produto</h4>
+                    </div>
+                    {!editingProduct ? (
+                      <p className="text-xs text-amber-700 dark:text-amber-300">Cadastre o produto primeiro para depois vincular o arquivo do rótulo.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {editingProduct.label_url && (
+                          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Arquivo anexado</p>
+                              <p className="truncate text-xs text-emerald-600 dark:text-emerald-400">{editingProduct.label_original_name || 'Rótulo vinculado ao produto'}</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <a href={editingProduct.label_url} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm dark:bg-gray-900 dark:text-emerald-300">Abrir arquivo</a>
+                              <button type="button" disabled={labelSaving} onClick={removeProductLabel} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 dark:text-red-400">Remover</button>
+                            </div>
+                          </div>
+                        )}
+                        {!editingProduct.label_url && (
+                          <label className={`flex min-w-0 items-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white px-3 py-2.5 dark:border-gray-700 dark:bg-gray-800 ${labelSaving ? 'cursor-wait opacity-70' : 'cursor-pointer'}`}>
+                            {labelSaving ? <Loader2 size={16} className="shrink-0 animate-spin text-primary-500" /> : <Upload size={16} className="shrink-0 text-gray-400" />}
+                            <span className="truncate text-xs font-medium text-gray-700 dark:text-gray-200">
+                              {labelSaving ? `Enviando ${labelFile?.name || 'arquivo'}...` : 'Selecionar PDF ou imagem do rótulo'}
+                            </span>
+                            <input
+                              type="file"
+                              accept=".pdf,image/jpeg,image/png,image/webp"
+                              className="hidden"
+                              disabled={labelSaving}
+                              onChange={event => {
+                                const file = event.target.files?.[0] || null
+                                event.target.value = ''
+                                void uploadProductLabel(file)
+                              }}
+                            />
+                          </label>
+                        )}
+                        <p className="text-[10px] text-gray-400">PDF, JPG, PNG ou WEBP, até 20 MB.</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* 3 Intended columns row */}

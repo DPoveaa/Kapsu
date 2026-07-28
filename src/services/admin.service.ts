@@ -1647,7 +1647,7 @@ class AdminService {
     const token = localStorage.getItem('kapsu_token')
     const response = await fetch(`${this.baseUrl}/mercado-livre/pending-receipts`, { headers: { 'Authorization': `Bearer ${token}` } })
     const data = await response.json()
-    if (!response.ok) throw new Error(data.message || 'Erro ao listar pendências do Mercado Livre')
+    if (!response.ok) throw new Error(data.message || 'Erro ao listar pendÃªncias do Mercado Livre')
     return data
   }
 

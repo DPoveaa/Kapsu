@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Plus, Edit, Trash2, Loader2, Image as ImageIcon, Save, ArrowUp, ArrowDown } from 'lucide-react'
 import { bannersService, Banner, CreateBannerData } from '../services/banners.service'
@@ -103,6 +103,7 @@ export default function ManageBanners() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null)
   const [uploading, setUploading] = useState(false)
+  const originalBannerImagesRef = useRef({ desktop: '', mobile: '' })
   const [formData, setFormData] = useState<CreateBannerData>({
     image_url: '',
     mobile_image_url: '',
@@ -134,11 +135,20 @@ export default function ManageBanners() {
     }
   }
 
-  const handleImageChange = (url: string) => {
-    // Usa função utilitária para garantir que sempre salvamos o caminho relativo normalizado
-    const imagePath = normalizeImagePath(url)
-    setFormData(prev => ({ ...prev, image_url: imagePath }))
+  const cleanupPendingBannerImage = async (value: string, original: string) => {
+    if (!value || value === original || !value.includes('/uploads/banners/')) return
+    try { await bannersService.deleteImage(value) } catch { /* arquivo em uso ou já removido */ }
   }
+
+  const handleBannerImageChange = (field: 'image_url' | 'mobile_image_url', url: string) => {
+    const imagePath = url ? normalizeImagePath(url) : ''
+    const current = String(formData[field] || '')
+    const original = field === 'image_url' ? originalBannerImagesRef.current.desktop : originalBannerImagesRef.current.mobile
+    if (current && current !== original && current !== imagePath) void cleanupPendingBannerImage(current, original)
+    setFormData(prev => ({ ...prev, [field]: imagePath }))
+  }
+
+  const handleImageChange = (url: string) => handleBannerImageChange('image_url', url)
 
   const handleCreate = async () => {
     if (!formData.image_url) {
@@ -213,6 +223,7 @@ export default function ManageBanners() {
     // Normaliza o caminho relativo (pode vir como URL completa do getImageUrl)
     const imagePath = normalizeImagePath(banner.image_url)
     const mobileImagePath = banner.mobile_image_url ? normalizeImagePath(banner.mobile_image_url) : ''
+    originalBannerImagesRef.current = { desktop: imagePath, mobile: mobileImagePath }
     setFormData({
       image_url: imagePath,
       mobile_image_url: mobileImagePath,
@@ -264,6 +275,9 @@ export default function ManageBanners() {
   }
 
   const handleCancel = () => {
+    void cleanupPendingBannerImage(formData.image_url, originalBannerImagesRef.current.desktop)
+    void cleanupPendingBannerImage(String(formData.mobile_image_url || ''), originalBannerImagesRef.current.mobile)
+    originalBannerImagesRef.current = { desktop: '', mobile: '' }
     resetForm()
     setShowCreateForm(false)
     setEditingBanner(null)
@@ -295,6 +309,7 @@ export default function ManageBanners() {
           <button
             onClick={() => {
               resetForm()
+              originalBannerImagesRef.current = { desktop: '', mobile: '' }
               setShowCreateForm(true)
               setEditingBanner(null)
             }}
@@ -365,10 +380,7 @@ export default function ManageBanners() {
               </label>
               <BannerImageUpload
                 value={formData.mobile_image_url || ''}
-                onChange={(url) => {
-                  const imagePath = normalizeImagePath(url)
-                  setFormData(prev => ({ ...prev, mobile_image_url: imagePath }))
-                }}
+                onChange={(url) => handleBannerImageChange('mobile_image_url', url)}
                 onError={(err) => { if (err) alert(err) }}
                 onUploadingChange={setUploading}
                 disabled={uploading}

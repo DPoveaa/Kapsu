@@ -225,6 +225,21 @@ class BannersService {
     return normalizeImagePath(imagePath)
   }
 
+  async deleteImage(imagePath: string): Promise<void> {
+    const pathname = imagePath.startsWith('http') ? new URL(imagePath).pathname : imagePath
+    const filename = decodeURIComponent(pathname.split(/[?#]/)[0].split('/').pop() || '')
+    if (!filename) return
+    const token = localStorage.getItem('token') || localStorage.getItem('kapsu_token')
+    const response = await fetch(`${API_URL}/upload/banner-image/${encodeURIComponent(filename)}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    })
+    if (!response.ok && response.status !== 404) {
+      const data = await response.json().catch(() => null)
+      throw new Error(data?.message || 'Erro ao remover imagem temporária')
+    }
+  }
+
   /**
    * Reordena banners (apenas admin)
    */

@@ -11,6 +11,8 @@ export interface BackendProduct {
   id: string
   supplier_id?: string | null
   supplier_name?: string | null
+  label_url?: string | null
+  label_original_name?: string | null
   name: string
   description: string | null
   price: number
@@ -64,6 +66,21 @@ class ProductsService {
     }
   }
 
+  async updateLabel(id: string, file?: File, remove = false): Promise<{ label_url: string | null; label_original_name: string | null }> {
+    const formData = new FormData()
+    if (file) formData.append('file', file)
+    if (remove) formData.append('remove', 'true')
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/admin/${id}/label`, {
+      method: 'PATCH',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao atualizar rótulo')
+    return { label_url: data.label_url || null, label_original_name: data.label_original_name || null }
+  }
+
   /**
    * Converte URL de imagem relativa para URL completa
    */
@@ -98,6 +115,8 @@ class ProductsService {
       id: product.id,
       supplier_id: product.supplier_id || null,
       supplier_name: product.supplier_name || null,
+      label_url: product.label_url || null,
+      label_original_name: product.label_original_name || null,
       name: product.name,
       description: product.description || '',
       price: Number(product.price),
@@ -267,7 +286,7 @@ class ProductsService {
     price: number
     promo_price?: number | null
     purchase_price?: number | null
-    image?: string
+    image?: string | null
     category?: string
     active?: boolean
     compositions?: string
@@ -478,7 +497,7 @@ class ProductsService {
     price?: number
     promo_price?: number | null
     purchase_price?: number | null
-    image?: string
+    image?: string | null
     category?: string
     active?: boolean
     archived?: boolean

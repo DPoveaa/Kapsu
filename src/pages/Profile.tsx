@@ -624,6 +624,7 @@ export default function Profile() {
 
 
   const handleSaveImage = async () => {
+    let uploadedProfilePath: string | null = null
     try {
       setLoading(true)
       setMessage(null)
@@ -635,6 +636,7 @@ export default function Profile() {
       }
 
       const uploadResult = await uploadService.uploadProfileImage(imageFile)
+      uploadedProfilePath = uploadResult.data.path
       const result = await authService.updateProfileImage(uploadResult.data.path)
 
       if (result.success && result.user) {
@@ -651,6 +653,12 @@ export default function Profile() {
         setMessage({ type: 'success', text: 'Imagem de perfil atualizada com sucesso!' })
       }
     } catch (error: any) {
+      if (uploadedProfilePath) {
+        const filename = uploadedProfilePath.split(/[?#]/)[0].split('/').pop()
+        if (filename) {
+          try { await uploadService.deleteProfileImage(filename) } catch { /* já vinculado ou removido */ }
+        }
+      }
       setMessage({ type: 'error', text: error.message || 'Erro ao atualizar imagem de perfil' })
     } finally {
       setLoading(false)
