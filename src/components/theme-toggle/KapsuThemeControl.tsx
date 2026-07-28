@@ -46,7 +46,7 @@ export const KapsuThemeControl: React.FC<KapsuThemeControlProps> = ({
   }, [realMoonMode]);
 
   useEffect(() => () => {
-    if (clickTimeoutRef.current !== null) window.clearTimeout(clickTimeoutRef.current);
+    if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
   }, []);
 
   const handleClick = (event: React.MouseEvent | React.KeyboardEvent) => {
@@ -55,7 +55,7 @@ export const KapsuThemeControl: React.FC<KapsuThemeControlProps> = ({
     if (!interactive || isAnimating) return;
 
     clickCountRef.current += 1;
-    if (clickTimeoutRef.current !== null) window.clearTimeout(clickTimeoutRef.current);
+    if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
     clickTimeoutRef.current = window.setTimeout(() => {
       const clicks = clickCountRef.current;
       clickCountRef.current = 0;
