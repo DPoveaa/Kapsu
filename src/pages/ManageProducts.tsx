@@ -222,7 +222,9 @@ export default function ManageProducts() {
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [bulkSupplierId, setBulkSupplierId] = useState('')
+  const [bulkCategory, setBulkCategory] = useState('')
   const [assigningSupplier, setAssigningSupplier] = useState(false)
+  const [isExecutingBulk, setIsExecutingBulk] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('active')
@@ -1556,23 +1558,97 @@ export default function ManageProducts() {
     }
   }
 
-  const handleBulkUnarchive = () => {
+  const handleBulkActivate = async () => {
     if (!selectedIds.length) return
-    confirm.show(`Desarquivar ${selectedIds.length} produto(s)?`, async () => {
+    confirm.show(`Ativar ${selectedIds.length} produto(s) selecionado(s)?`, async () => {
       try {
-        setLoading(true)
-        for (const id of selectedIds) {
-          await productsService.update(id, { archived: false, active: false })
-        }
+        setIsExecutingBulk(true)
+        const result = await productsService.bulkUpdateStatus(selectedIds, { active: true, archived: false })
+        toast.success(result.message)
         setSelectedIds([])
         await loadProducts()
-        toast.success('Produtos desarquivados com sucesso.')
       } catch (e: any) {
-        toast.error(e.message || 'Erro ao desarquivar produtos')
+        toast.error(e.message || 'Erro ao ativar produtos em massa')
       } finally {
-        setLoading(false)
+        setIsExecutingBulk(false)
       }
     })
+  }
+
+  const handleBulkDeactivate = async () => {
+    if (!selectedIds.length) return
+    confirm.show(`Desativar ${selectedIds.length} produto(s) selecionado(s)?`, async () => {
+      try {
+        setIsExecutingBulk(true)
+        const result = await productsService.bulkUpdateStatus(selectedIds, { active: false, archived: false })
+        toast.success(result.message)
+        setSelectedIds([])
+        await loadProducts()
+      } catch (e: any) {
+        toast.error(e.message || 'Erro ao desativar produtos em massa')
+      } finally {
+        setIsExecutingBulk(false)
+      }
+    })
+  }
+
+  const handleBulkArchive = async () => {
+    if (!selectedIds.length) return
+    confirm.show(
+      `Arquivar ${selectedIds.length} produto(s) selecionado(s)?\nEles serão movidos para a aba Arquivados.`,
+      async () => {
+        try {
+          setIsExecutingBulk(true)
+          const result = await productsService.bulkUpdateStatus(selectedIds, { active: false, archived: true })
+          toast.success(result.message)
+          setSelectedIds([])
+          await loadProducts()
+        } catch (e: any) {
+          toast.error(e.message || 'Erro ao arquivar produtos em massa')
+        } finally {
+          setIsExecutingBulk(false)
+        }
+      }
+    )
+  }
+
+  const handleBulkUnarchive = (activateImmediately = false) => {
+    if (!selectedIds.length) return
+    const msg = activateImmediately
+      ? `Desarquivar e ativar ${selectedIds.length} produto(s) selecionado(s)?`
+      : `Desarquivar ${selectedIds.length} produto(s) selecionado(s)? (Voltará(ão) como Inativo(s))`
+    confirm.show(msg, async () => {
+      try {
+        setIsExecutingBulk(true)
+        const result = await productsService.bulkUpdateStatus(selectedIds, {
+          archived: false,
+          active: activateImmediately,
+        })
+        toast.success(result.message)
+        setSelectedIds([])
+        await loadProducts()
+      } catch (e: any) {
+        toast.error(e.message || 'Erro ao desarquivar produtos em massa')
+      } finally {
+        setIsExecutingBulk(false)
+      }
+    })
+  }
+
+  const handleBulkAssignCategory = async () => {
+    if (!selectedIds.length || !bulkCategory.trim()) return
+    try {
+      setIsExecutingBulk(true)
+      const result = await productsService.bulkUpdateStatus(selectedIds, { category: bulkCategory.trim() })
+      toast.success(result.message)
+      setSelectedIds([])
+      setBulkCategory('')
+      await loadProducts()
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao alterar categoria dos produtos em massa')
+    } finally {
+      setIsExecutingBulk(false)
+    }
   }
 
   const handleToggleActive = async (product: Product) => {
@@ -1805,7 +1881,11 @@ export default function ManageProducts() {
         <div className="mb-4 border-b border-gray-200 dark:border-gray-700">
           <nav className="flex gap-0 -mb-px overflow-x-auto">
             {TABS.map(t => (
-              <button key={t.key} onClick={() => setActiveTab(t.key)} className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === t.key ? t.active + ' border-current' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}>
+              <button
+                key={t.key}
+                onClick={() => { setActiveTab(t.key); setSelectedIds([]) }}
+                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${activeTab === t.key ? t.active + ' border-current' : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}
+              >
                 {t.label}
                 {t.count > 0 && <span className={`text-xs font-semibold px-1.5 py-0.5 rounded-full ${activeTab === t.key ? t.badge : 'bg-gray-100 dark:bg-gray-700 text-gray-500'}`}>{t.count}</span>}
               </button>
@@ -1817,7 +1897,7 @@ export default function ManageProducts() {
         {activeTab === 'archived' && (
           <div className="mb-4 flex items-start gap-3 p-3 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300">
             <Archive size={15} className="mt-0.5 flex-shrink-0 text-gray-400" />
-            <span>Produtos arquivados possuem pedidos vinculados. Você pode <strong>desarquivá-los</strong> para movê-los para <em>Inativos</em>.</span>
+            <span>Produtos arquivados possuem pedidos vinculados. Você pode <strong>desarquivá-los</strong> para movê-los para <em>Inativos</em> ou <em>Ativos</em>.</span>
           </div>
         )}
 
@@ -1843,22 +1923,151 @@ export default function ManageProducts() {
           <>
             {/* Bulk actions */}
             {selectedIds.length > 0 && (
-              <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-between gap-3 flex-wrap">
-                <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{selectedIds.length} produto(s) selecionado(s)</span>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <select value={bulkSupplierId} onChange={e => setBulkSupplierId(e.target.value)} className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-900 text-sm">
-                    <option value="">Escolher fornecedor...</option>
-                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.trade_name || s.name}</option>)}
-                    <option value="__none__">Sem fornecedor</option>
-                  </select>
-                  <button onClick={handleBulkAssignSupplier} disabled={!bulkSupplierId || assigningSupplier} className="bg-indigo-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm">
-                    {assigningSupplier ? 'Vinculando...' : 'Vincular fornecedor'}
-                  </button>
+              <div className="mb-4 p-4 bg-blue-50/80 dark:bg-gray-800/90 border border-blue-200 dark:border-gray-700 rounded-xl shadow-sm space-y-3">
+                <div className="flex items-center justify-between gap-3 flex-wrap border-b border-blue-100 dark:border-gray-700/60 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200">
+                      {selectedIds.length} produto(s) selecionado(s)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedIds([])}
+                      className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline"
+                    >
+                      Limpar seleção
+                    </button>
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                    Aba atual: <strong className="capitalize">{TABS.find(t => t.key === activeTab)?.label}</strong>
+                  </div>
                 </div>
-                {activeTab === 'archived'
-                  ? <button onClick={handleBulkUnarchive} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"><ArchiveRestore size={15} />Desarquivar Selecionados</button>
-                  : <button onClick={handleBulkDelete} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex items-center gap-2"><Trash2 size={15} />Excluir Selecionados</button>
-                }
+
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  {/* 1. Vincular Fornecedor */}
+                  <div className="flex items-center gap-1.5 flex-1 min-w-[200px]">
+                    <select
+                      value={bulkSupplierId}
+                      onChange={e => setBulkSupplierId(e.target.value)}
+                      className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs text-gray-800 dark:text-gray-200 w-full focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">Vincular Fornecedor...</option>
+                      {suppliers.map(s => (
+                        <option key={s.id} value={s.id}>{s.trade_name || s.name}</option>
+                      ))}
+                      <option value="__none__">Sem fornecedor</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleBulkAssignSupplier}
+                      disabled={!bulkSupplierId || assigningSupplier || isExecutingBulk}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors"
+                    >
+                      {assigningSupplier ? 'Vinculando...' : 'Aplicar'}
+                    </button>
+                  </div>
+
+                  {/* 2. Alterar Categoria */}
+                  <div className="flex items-center gap-1.5 flex-1 min-w-[180px]">
+                    <input
+                      type="text"
+                      placeholder="Alterar Categoria..."
+                      value={bulkCategory}
+                      onChange={e => setBulkCategory(e.target.value)}
+                      className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs text-gray-800 dark:text-gray-200 w-full focus:ring-2 focus:ring-primary-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleBulkAssignCategory}
+                      disabled={!bulkCategory.trim() || isExecutingBulk}
+                      className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors"
+                    >
+                      Aplicar
+                    </button>
+                  </div>
+
+                  {/* 3. Ações Adaptadas por Aba */}
+                  <div className="flex items-center gap-2 flex-wrap ml-auto">
+                    {activeTab === 'active' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={handleBulkDeactivate}
+                          disabled={isExecutingBulk}
+                          className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 shadow-sm"
+                          title="Desativar produtos selecionados"
+                        >
+                          <Minus size={14} /> Desativar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleBulkArchive}
+                          disabled={isExecutingBulk}
+                          className="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 shadow-sm"
+                          title="Arquivar produtos selecionados"
+                        >
+                          <Archive size={14} /> Arquivar
+                        </button>
+                      </>
+                    )}
+
+                    {activeTab === 'inactive' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={handleBulkActivate}
+                          disabled={isExecutingBulk}
+                          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 shadow-sm"
+                          title="Ativar produtos selecionados"
+                        >
+                          <Check size={14} /> Ativar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleBulkArchive}
+                          disabled={isExecutingBulk}
+                          className="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 shadow-sm"
+                          title="Arquivar produtos selecionados"
+                        >
+                          <Archive size={14} /> Arquivar
+                        </button>
+                      </>
+                    )}
+
+                    {activeTab === 'archived' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleBulkUnarchive(false)}
+                          disabled={isExecutingBulk}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 shadow-sm"
+                          title="Desarquivar para Inativos"
+                        >
+                          <ArchiveRestore size={14} /> Desarquivar (Inativo)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleBulkUnarchive(true)}
+                          disabled={isExecutingBulk}
+                          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 shadow-sm"
+                          title="Desarquivar e Ativar"
+                        >
+                          <Check size={14} /> Desarquivar e Ativar
+                        </button>
+                      </>
+                    )}
+
+                    {/* 4. Excluir */}
+                    <button
+                      type="button"
+                      onClick={handleBulkDelete}
+                      disabled={isExecutingBulk}
+                      className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 shadow-sm"
+                      title="Excluir produtos selecionados"
+                    >
+                      <Trash2 size={14} /> Excluir
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 

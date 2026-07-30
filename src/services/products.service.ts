@@ -606,6 +606,20 @@ class ProductsService {
     return data
   }
 
+  async bulkUpdateStatus(
+    ids: string[],
+    updates: { active?: boolean; archived?: boolean; category?: string }
+  ): Promise<{ success: boolean; message: string; updated: number }> {
+    const response = await fetch(`${this.baseUrl}/admin/bulk-status`, {
+      method: 'PATCH',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ ids, ...updates }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao atualizar produtos em massa')
+    return data
+  }
+
   /**
    * Busca o histórico de preços de um produto específico
    */

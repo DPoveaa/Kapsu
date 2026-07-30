@@ -54,6 +54,7 @@ const Profile = lazy(() => import('./pages/Profile'))
 const RecoverPassword = lazy(() => import('./pages/RecoverPassword'))
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'))
+const PharmaceuticalInfoPage = lazy(() => import('./pages/PharmaceuticalInfoPage'))
 const FloatingChat = lazy(() => import('./components/FloatingChat'))
 
 function RouteFallback() {
@@ -152,6 +153,7 @@ function AppContent() {
         <Route path="/recuperar-senha" element={<RecoverPassword />} />
         <Route path="/politica-de-privacidade" element={<PrivacyPolicyPage />} />
         <Route path="/termos-de-servico" element={<TermsOfServicePage />} />
+        <Route path="/informacoes-farmaceuticas" element={<PharmaceuticalInfoPage />} />
         <Route path="/fornecedor/pedidos/:id" element={<SupplierOrderDetail />} />
         <Route
           path="/perfil"

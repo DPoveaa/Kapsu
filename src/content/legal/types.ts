@@ -6,7 +6,7 @@ export interface LegalDocumentSection {
 }
 
 export interface LegalDocument {
-  id: 'terms-of-service' | 'privacy-policy'
+  id: 'terms-of-service' | 'privacy-policy' | 'pharmaceutical-info'
   title: string
   shortTitle: string
   version: string

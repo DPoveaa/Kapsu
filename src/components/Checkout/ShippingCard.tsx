@@ -83,13 +83,26 @@ export default function ShippingCard({
                 </div>
 
                 <div className="text-right shrink-0">
-                  {isOptionFree ? (
-                    <span className="text-sm font-black text-green-600 dark:text-green-400">Grátis</span>
-                  ) : (
-                    <span className="text-sm font-black text-gray-900 dark:text-white">
-                      R$ {option.shippingFee.toFixed(2).replace('.', ',')}
-                    </span>
-                  )}
+                  {(() => {
+                    const quoted = option.quotedFee ?? option.pricing?.quotedFee ?? option.originalFee
+                    const showOriginal = quoted != null && quoted > (isOptionFree ? 0 : option.shippingFee)
+                    return (
+                      <div className="flex flex-col items-end">
+                        {showOriginal && (
+                          <span className="text-xs text-gray-400 dark:text-gray-500 line-through font-normal">
+                            R$ {quoted.toFixed(2).replace('.', ',')}
+                          </span>
+                        )}
+                        {isOptionFree ? (
+                          <span className="text-sm font-black text-green-600 dark:text-green-400">Grátis</span>
+                        ) : (
+                          <span className="text-sm font-black text-gray-900 dark:text-white">
+                            R$ {option.shippingFee.toFixed(2).replace('.', ',')}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </div>
               </div>
             </button>
@@ -140,13 +153,27 @@ export default function ShippingCard({
         </div>
 
         <div className="text-right flex-shrink-0">
-          {hasFreeShipping ? (
-            <span className="text-sm font-black text-green-600 dark:text-green-400">Grátis</span>
-          ) : shippingFee != null ? (
-            <span className="text-sm font-black text-gray-900 dark:text-white">
-              R$ {shippingFee.toFixed(2).replace('.', ',')}
-            </span>
-          ) : null}
+          {(() => {
+            const selectedOpt = options.find(o => o.name === service) || options[0]
+            const quoted = selectedOpt?.quotedFee ?? selectedOpt?.pricing?.quotedFee ?? selectedOpt?.originalFee
+            const showOriginal = quoted != null && quoted > (hasFreeShipping ? 0 : (shippingFee || 0))
+            return (
+              <div className="flex flex-col items-end">
+                {showOriginal && (
+                  <span className="text-xs text-gray-400 dark:text-gray-500 line-through font-normal">
+                    R$ {quoted.toFixed(2).replace('.', ',')}
+                  </span>
+                )}
+                {hasFreeShipping ? (
+                  <span className="text-sm font-black text-green-600 dark:text-green-400">Grátis</span>
+                ) : shippingFee != null ? (
+                  <span className="text-sm font-black text-gray-900 dark:text-white">
+                    R$ {shippingFee.toFixed(2).replace('.', ',')}
+                  </span>
+                ) : null}
+              </div>
+            )
+          })()}
         </div>
       </div>
     </div>

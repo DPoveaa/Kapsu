@@ -6,6 +6,7 @@ import {
   ShieldCheck, Bot, CreditCard, Globe
 } from 'lucide-react'
 import { ADMIN_AI_CENTER_PATH } from '../constants/adminRoutes'
+import { recordAdminAccess } from '../utils/recentAdminAccess'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -64,6 +65,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     setMobileMenuOpen(false)
+    recordAdminAccess(location.pathname)
   }, [location.pathname])
 
   useEffect(() => {

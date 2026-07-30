@@ -14,7 +14,7 @@ export default function Layout({ children }: LayoutProps) {
   const isSupplierRoute = location.pathname.startsWith('/supplier')
   
   // Rotas que não devem mostrar Header e Footer
-  const legalRoutes = ['/termos-de-servico', '/politica-de-privacidade']
+  const legalRoutes = ['/termos-de-servico', '/politica-de-privacidade', '/informacoes-farmaceuticas']
   const hideHeaderFooter = ['/login', '/cadastro', '/recuperar-senha', ...legalRoutes].includes(location.pathname) || isSupplierRoute
   const showFooter = !hideHeaderFooter && !isAdminRoute
 

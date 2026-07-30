@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react'
-import { Plus, Trash2, Tag, Percent, DollarSign, Truck, Edit2, Copy, CheckCircle, Calendar, Users } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import {
+  Plus, Trash2, Tag, Percent, DollarSign, Truck, Edit2, Copy,
+  CheckCircle, Calendar, Users, TrendingUp
+} from 'lucide-react'
 import { promoCodesService, PromoCode } from '../services/promo-codes.service'
 import { productsService } from '../services/products.service'
+import { shippingService } from '../services/shipping.service'
 import { Product } from '../types'
 import { confirm } from '../utils/toast'
 import AdminModal from '../components/AdminModal'
@@ -14,7 +18,11 @@ export default function ManagePromoCodes() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
-  
+
+  // Análise de margem & frete
+  const [estimatedFreightSubsidy, setEstimatedFreightSubsidy] = useState<string>('15.00')
+  const [allowDeficitOverride, setAllowDeficitOverride] = useState<boolean>(false)
+
   // Estado para formulário de nova/edição de código
   const [editingCode, setEditingCode] = useState<PromoCode | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -50,16 +58,127 @@ export default function ManagePromoCodes() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [codesData, productsData] = await Promise.all([
+      const [codesData, productsData, regionsData] = await Promise.all([
         promoCodesService.getPromoCodes(),
         productsService.getAll(),
+        shippingService.getShippingRegions().catch(() => []),
       ])
       setCodes(codesData)
       setProducts(productsData)
+
+      // Calcula valor do subsídio de frete com base nas regras cadastradas em Frete
+      if (regionsData && regionsData.length > 0) {
+        const activeFees = regionsData
+          .filter(r => r.active !== false && Number(r.shipping_fee) > 0)
+          .map(r => Number(r.shipping_fee))
+        if (activeFees.length > 0) {
+          const avgFee = activeFees.reduce((a, b) => a + b, 0) / activeFees.length
+          setEstimatedFreightSubsidy(String(Math.round(avgFee * 100) / 100))
+        }
+      }
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar dados')
     } finally {
       setLoading(false)
+    }
+  }
+
+  // ─── Análise de Margem e Lucratividade em Tempo Real ─────────────────────────
+  const marginAnalysis = useMemo(() => {
+    const discountVal = parseFloat(formData.discount_value) || 0
+    const isPercent = formData.discount_type === 'percentage'
+    const isFreeShipping = formData.free_shipping
+    const freightSubsidy = parseFloat(estimatedFreightSubsidy) || 0
+
+    // Analisa sempre todos os produtos ativos do catálogo para exibição na lista completa
+    const activeProducts = products.filter(p => p.active && !p.archived)
+
+    if (activeProducts.length === 0) {
+      return {
+        analyzedProducts: [],
+        deficitProducts: [],
+        warningProducts: [],
+        maxSafeDiscountPct: 100,
+        maxSafeDiscountFixed: 0,
+        hasDeficit: false,
+        overallStatus: 'safe',
+      }
+    }
+
+    const analyzed = activeProducts.map((p) => {
+      const isApplicable = formData.applicable_product_ids.length === 0 || formData.applicable_product_ids.includes(p.id)
+      const salePrice = p.promo_price && Number(p.promo_price) > 0 ? Number(p.promo_price) : Number(p.price)
+      const purchaseCost = p.purchase_price != null ? Number(p.purchase_price) : 0
+      const freightCost = isFreeShipping && isApplicable ? freightSubsidy : 0
+      const totalUnitCost = purchaseCost + freightCost
+
+      const discountAmount = isApplicable
+        ? (isPercent ? salePrice * (discountVal / 100) : Math.min(salePrice, discountVal))
+        : 0
+
+      const finalPrice = Math.max(0, salePrice - discountAmount)
+      const netProfit = finalPrice - totalUnitCost
+      const netMarginPct = finalPrice > 0 ? (netProfit / finalPrice) * 100 : 0
+
+      // Preço mínimo para manter ao menos 7% de margem líquida de lucro
+      const minPriceFor7PctMargin = totalUnitCost > 0 ? totalUnitCost / 0.93 : 0
+      const maxSafeDiscountValue = Math.max(0, salePrice - minPriceFor7PctMargin)
+      const maxSafeDiscountPct = salePrice > 0 ? (maxSafeDiscountValue / salePrice) * 100 : 0
+
+      // Não lucrativo: Prejuízo ou margem menor que 7% (somente se o cupom for aplicado ao produto)
+      const isDeficit = isApplicable && (netProfit < 0 || netMarginPct < 7)
+      // Baixo lucro: Margem entre 7% e 20% (somente se o cupom for aplicado ao produto)
+      const isWarning = isApplicable && !isDeficit && netMarginPct < 20
+
+      return {
+        product: p,
+        isApplicable,
+        salePrice,
+        purchaseCost,
+        freightCost,
+        totalUnitCost,
+        discountAmount,
+        finalPrice,
+        netProfit,
+        netMarginPct,
+        maxSafeDiscountValue,
+        maxSafeDiscountPct,
+        isDeficit,
+        isWarning,
+      }
+    })
+
+    const deficitProducts = analyzed.filter(item => item.isDeficit)
+    const warningProducts = analyzed.filter(item => item.isWarning)
+    const applicableProducts = analyzed.filter(item => item.isApplicable)
+
+    const minMaxSafePct = applicableProducts.length > 0 ? Math.min(...applicableProducts.map(item => item.maxSafeDiscountPct)) : 100
+    const minMaxSafeFixed = applicableProducts.length > 0 ? Math.min(...applicableProducts.map(item => item.maxSafeDiscountValue)) : 0
+
+    const hasDeficit = deficitProducts.length > 0
+
+    return {
+      analyzedProducts: analyzed,
+      deficitProducts,
+      warningProducts,
+      maxSafeDiscountPct: Math.max(0, Math.floor(minMaxSafePct * 10) / 10),
+      maxSafeDiscountFixed: Math.max(0, Math.floor(minMaxSafeFixed * 100) / 100),
+      hasDeficit,
+      overallStatus: hasDeficit ? 'deficit' : warningProducts.length > 0 ? 'warning' : 'safe',
+    }
+  }, [formData.discount_value, formData.discount_type, formData.free_shipping, formData.applicable_product_ids, products, estimatedFreightSubsidy])
+
+  const autoAdjustToSafeDiscount = () => {
+    if (formData.discount_type === 'percentage') {
+      setFormData(prev => ({
+        ...prev,
+        discount_value: String(marginAnalysis.maxSafeDiscountPct),
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        discount_value: String(marginAnalysis.maxSafeDiscountFixed),
+      }))
     }
   }
 
@@ -74,19 +193,20 @@ export default function ManagePromoCodes() {
 
   const handleSaveCode = async () => {
     try {
+      setError(null)
+      setSuccess(null)
+
       if (!formData.code || !formData.name) {
         setError('Código e nome são obrigatórios')
         return
       }
 
-      // Se não for frete grátis, exige valor de desconto maior que zero
       if (!formData.free_shipping) {
         if (!formData.discount_value || Number(formData.discount_value) <= 0) {
           setError('Valor do desconto é obrigatório e deve ser maior que zero')
           return
         }
       } else {
-        // Para frete grátis, permite valor 0 ou qualquer valor válido
         if (formData.discount_value !== undefined && formData.discount_value !== null && formData.discount_value !== '') {
           const discountValue = Number(formData.discount_value)
           if (discountValue < 0) {
@@ -101,105 +221,106 @@ export default function ManagePromoCodes() {
         return
       }
 
+      // Validação de Prejuízo (No Vermelho)
+      if (marginAnalysis.hasDeficit && !allowDeficitOverride) {
+        setError(`Atenção: Este cupom coloca ${marginAnalysis.deficitProducts.length} produto(s) no vermelho (prejuízo). Reduza o desconto para no máximo ${marginAnalysis.maxSafeDiscountPct}% ou marque a opção de autorização de prejuízo para continuar.`)
+        return
+      }
+
       setSaving(true)
-      setError(null)
 
-      // Monta datas conforme o tipo de expiração
-      let startDate: string | undefined = undefined
-      let endDate: string | undefined = undefined
+      // Monta as datas baseadas nas escolhas do usuário
+      let start_date: string | null = null
+      let end_date: string | null = null
 
-      if (formData.expiration_type === 'date_time') {
-        // Data e hora específicas
+      if (formData.expiration_type !== 'none') {
         if (formData.start_date) {
-          startDate = formData.start_time 
-            ? `${formData.start_date}T${formData.start_time}:00`
-            : `${formData.start_date}T00:00:00`
+          if (formData.expiration_type === 'date_time' && formData.start_time) {
+            start_date = `${formData.start_date}T${formData.start_time}:00`
+          } else {
+            start_date = `${formData.start_date}T00:00:00`
+          }
         }
+
         if (formData.end_date) {
-          endDate = formData.end_time 
-            ? `${formData.end_date}T${formData.end_time}:00`
-            : `${formData.end_date}T23:59:59`
-        }
-      } else if (formData.expiration_type === 'date_only') {
-        // Apenas data (início do dia até fim do dia)
-        if (formData.start_date) {
-          startDate = `${formData.start_date}T00:00:00`
-        }
-        if (formData.end_date) {
-          endDate = `${formData.end_date}T23:59:59`
+          if (formData.expiration_type === 'date_time' && formData.end_time) {
+            end_date = `${formData.end_date}T${formData.end_time}:59`
+          } else {
+            end_date = `${formData.end_date}T23:59:59`
+          }
         }
       }
-      // Se expiration_type === 'none', startDate e endDate ficam undefined
 
-      const codeData: any = {
-        code: formData.code.toUpperCase().trim(),
-        name: formData.name,
-        description: formData.description || undefined,
+      // Monta os limites baseados nas escolhas do usuário
+      let usage_limit: number | null = null
+      let user_usage_limit: number | null = null
+
+      if (formData.usage_limit_type === 'global' || formData.usage_limit_type === 'both') {
+        if (formData.usage_limit && Number(formData.usage_limit) > 0) {
+          usage_limit = Number(formData.usage_limit)
+        }
+      }
+
+      if (formData.usage_limit_type === 'per_user' || formData.usage_limit_type === 'both') {
+        if (formData.user_usage_limit && Number(formData.user_usage_limit) > 0) {
+          user_usage_limit = Number(formData.user_usage_limit)
+        }
+      }
+
+      const payload = {
+        code: formData.code.trim().toUpperCase(),
+        name: formData.name.trim(),
+        description: formData.description.trim() || undefined,
         discount_type: formData.discount_type,
-        discount_value: Number(formData.discount_value),
-        active: formData.active,
-        priority: Number(formData.priority) || 0,
+        discount_value: Number(formData.discount_value || 0),
+        min_order_value: formData.min_order_value ? Number(formData.min_order_value) : undefined,
+        min_product_quantity: formData.min_product_quantity ? Number(formData.min_product_quantity) : undefined,
+        applicable_product_ids: formData.applicable_product_ids.length > 0 ? formData.applicable_product_ids : undefined,
         free_shipping: formData.free_shipping,
+        start_date: start_date || undefined,
+        end_date: end_date || undefined,
+        usage_limit: usage_limit || undefined,
+        user_usage_limit: user_usage_limit || undefined,
+        priority: Number(formData.priority) || 0,
+        active: formData.active,
         can_combine_with_others: formData.can_combine_with_others,
-        start_date: startDate,
-        end_date: endDate,
-        // Aplica limites conforme o tipo selecionado
-        usage_limit: formData.usage_limit_type === 'global' || formData.usage_limit_type === 'both'
-          ? (formData.usage_limit ? Number(formData.usage_limit) : undefined)
-          : undefined,
-        user_usage_limit: formData.usage_limit_type === 'per_user' || formData.usage_limit_type === 'both'
-          ? (formData.user_usage_limit ? Number(formData.user_usage_limit) : undefined)
-          : undefined,
-      }
-
-      if (formData.min_order_value) {
-        codeData.min_order_value = Number(formData.min_order_value)
-      }
-      if (formData.min_product_quantity) {
-        codeData.min_product_quantity = Number(formData.min_product_quantity)
-      }
-      if (formData.applicable_product_ids.length > 0) {
-        codeData.applicable_product_ids = formData.applicable_product_ids
       }
 
       if (editingCode) {
-        await promoCodesService.updatePromoCode(editingCode.id, codeData)
-        setSuccess('Código promocional atualizado com sucesso!')
+        await promoCodesService.updatePromoCode(editingCode.id, payload)
+        setSuccess('Código atualizado com sucesso!')
       } else {
-        await promoCodesService.createPromoCode(codeData)
-        setSuccess('Código promocional criado com sucesso!')
+        await promoCodesService.createPromoCode(payload)
+        setSuccess('Código criado com sucesso!')
       }
 
-      setTimeout(() => setSuccess(null), 3000)
-      
-      // Limpa formulário e recarrega dados
       resetForm()
-      await loadData()
+      loadData()
     } catch (err: any) {
-      setError(err.message || 'Erro ao salvar código promocional')
+      setError(err.message || 'Erro ao salvar código')
     } finally {
       setSaving(false)
     }
   }
 
   const handleDeleteCode = (id: string) => {
-    confirm.show('Tem certeza que deseja remover este código promocional?', async () => {
+    confirm.show('Deseja realmente excluir este código promocional?', async () => {
       try {
-        setError(null)
+        setLoading(true)
         await promoCodesService.deletePromoCode(id)
-        setSuccess('Código promocional removido com sucesso!')
-        setTimeout(() => setSuccess(null), 3000)
-        await loadData()
+        setSuccess('Código excluído com sucesso!')
+        loadData()
       } catch (err: any) {
-        setError(err.message || 'Erro ao remover código promocional')
+        setError(err.message || 'Erro ao excluir código')
+      } finally {
+        setLoading(false)
       }
     })
   }
 
   const handleEditCode = (code: PromoCode) => {
     setEditingCode(code)
-    
-    // Separa data e hora
+
     let startDate = ''
     let startTime = ''
     let endDate = ''
@@ -217,15 +338,13 @@ export default function ManagePromoCodes() {
       endTime = end.toTimeString().split(' ')[0].substring(0, 5)
     }
 
-    // Determina o tipo de expiração baseado nas datas
     let expirationType: 'none' | 'date_only' | 'date_time' = 'none'
     if (code.start_date || code.end_date) {
       const hasTime = (code.start_date && code.start_date.includes('T') && code.start_date.split('T')[1] !== '00:00:00') ||
-                      (code.end_date && code.end_date.includes('T') && code.end_date.split('T')[1] !== '23:59:59')
+        (code.end_date && code.end_date.includes('T') && code.end_date.split('T')[1] !== '23:59:59')
       expirationType = hasTime ? 'date_time' : 'date_only'
     }
 
-    // Determina o tipo de limite
     let usageLimitType: 'none' | 'global' | 'per_user' | 'both' = 'none'
     if (code.usage_limit && code.user_usage_limit) {
       usageLimitType = 'both'
@@ -255,14 +374,16 @@ export default function ManagePromoCodes() {
       user_usage_limit: code.user_usage_limit ? String(code.user_usage_limit) : '',
       priority: code.priority,
       active: code.active,
-      can_combine_with_others: code.can_combine_with_others !== false, // Default true se não definido
+      can_combine_with_others: code.can_combine_with_others !== false,
     })
+    setAllowDeficitOverride(false)
     setShowForm(true)
   }
 
   const resetForm = () => {
     setEditingCode(null)
     setShowForm(false)
+    setAllowDeficitOverride(false)
     setFormData({
       code: '',
       name: '',
@@ -326,11 +447,13 @@ export default function ManagePromoCodes() {
     return { label: 'Ativo', color: 'bg-green-100 text-green-800' }
   }
 
+  const inputClass = "w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+
   if (loading) {
     return (
       <div className="w-full flex items-center justify-center py-12">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-primary-600 dark:border-primary-400 mx-auto"></div>
           <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300">Carregando códigos promocionais...</p>
         </div>
       </div>
@@ -383,7 +506,7 @@ export default function ManagePromoCodes() {
                 isOpen={showForm}
                 onClose={resetForm}
                 title={editingCode ? 'Editar Código Promocional' : 'Novo Código Promocional'}
-                widthClass="max-w-2xl"
+                widthClass="max-w-3xl"
                 footer={
                   <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                     <button
@@ -394,8 +517,11 @@ export default function ManagePromoCodes() {
                     </button>
                     <button
                       onClick={handleSaveCode}
-                      disabled={saving}
-                      className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={saving || (marginAnalysis.hasDeficit && !allowDeficitOverride)}
+                      className={`px-4 py-2 text-sm text-white rounded-lg transition-colors font-medium ${marginAnalysis.hasDeficit && !allowDeficitOverride
+                          ? 'bg-gray-400 cursor-not-allowed opacity-60'
+                          : 'bg-green-600 hover:bg-green-700'
+                        }`}
                     >
                       {saving ? 'Salvando...' : editingCode ? 'Salvar alterações' : 'Criar código'}
                     </button>
@@ -414,14 +540,14 @@ export default function ManagePromoCodes() {
                           type="text"
                           value={formData.code}
                           onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                          className="flex-1 px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                          className={`flex-1 ${inputClass}`}
                           placeholder="BLACKFRIDAY2024"
                           maxLength={50}
                         />
                         {!editingCode && (
                           <button
                             onClick={generateRandomCode}
-                            className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                            className="px-3 sm:px-4 py-2 text-sm sm:text-base bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shrink-0"
                           >
                             Gerar
                           </button>
@@ -440,7 +566,7 @@ export default function ManagePromoCodes() {
                         type="text"
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                        className={inputClass}
                         placeholder="Black Friday 2024"
                       />
                     </div>
@@ -453,7 +579,7 @@ export default function ManagePromoCodes() {
                         value={formData.description}
                         onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         rows={2}
-                        className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black resize-none"
+                        className={`${inputClass} resize-none`}
                         placeholder="Descrição da promoção..."
                       />
                     </div>
@@ -466,7 +592,7 @@ export default function ManagePromoCodes() {
                         <select
                           value={formData.discount_type}
                           onChange={(e) => setFormData({ ...formData, discount_type: e.target.value as 'percentage' | 'fixed' })}
-                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                          className={inputClass}
                         >
                           <option value="percentage">Percentual (%)</option>
                           <option value="fixed">Fixo (R$)</option>
@@ -484,44 +610,180 @@ export default function ManagePromoCodes() {
                           step={formData.discount_type === 'percentage' ? '1' : '0.01'}
                           value={formData.discount_value}
                           onChange={(e) => setFormData({ ...formData, discount_value: e.target.value })}
-                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                          className={inputClass}
                           placeholder={formData.discount_type === 'percentage' ? '10' : '50.00'}
                         />
                       </div>
                     </div>
 
-                    {/* Produtos que recebem o desconto */}
-                    <div>
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
-                        Produtos que Recebem o Desconto (deixe vazio para todos)
-                      </label>
-                      <div className="max-h-32 sm:max-h-40 overflow-y-auto border border-gray-300 dark:border-gray-700 rounded-lg p-2 sm:p-3 dark:bg-gray-800">
+                    {/* Frete Grátis */}
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4">
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id="free_shipping"
+                          checked={formData.free_shipping}
+                          onChange={(e) => setFormData({ ...formData, free_shipping: e.target.checked })}
+                          className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 flex-shrink-0"
+                        />
+                        <label htmlFor="free_shipping" className="ml-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                          <Truck className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
+                          <span>Oferecer frete grátis neste cupom</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* ─── PRODUTOS QUE RECEBEM O DESCONTO & ANÁLISE DE MARGEM EM TEMPO REAL ─────────── */}
+                    <div className="border border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/40 dark:bg-indigo-950/20 rounded-2xl p-4 space-y-3.5">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 pb-3 border-b border-indigo-100 dark:border-indigo-900/40">
+                        <div>
+                          <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                            <TrendingUp size={16} className="text-indigo-600 dark:text-indigo-400" />
+                            <span>Produtos Aplicáveis & Margem em Tempo Real</span>
+                          </h4>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            Marque os produtos elegíveis ou deixe nenhum selecionado para aplicar a todos os produtos ativos.
+                          </p>
+                        </div>
+
+                        {/* Badges de informação financeira */}
+                        <div className="flex items-center gap-2 flex-wrap text-xs">
+                          {/* Subsídio de frete (somente leitura das regras ativas) */}
+                          <span
+                            className="px-2.5 py-1 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 font-medium"
+                            title="Média das taxas de frete cadastradas nas regras de frete do sistema"
+                          >
+                            Subsídio Médio Frete: <strong className="text-gray-900 dark:text-white">R$ {Number(estimatedFreightSubsidy || 0).toFixed(2).replace('.', ',')}</strong>
+                          </span>
+
+                          {/* Saúde do Cupom */}
+                          <span
+                            className={`px-2.5 py-1 rounded-lg font-bold border ${
+                              marginAnalysis.hasDeficit
+                                ? 'bg-red-100 dark:bg-red-950/60 border-red-300 dark:border-red-800 text-red-800 dark:text-red-200'
+                                : marginAnalysis.overallStatus === 'warning'
+                                  ? 'bg-amber-100 dark:bg-amber-950/60 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200'
+                                  : 'bg-green-100 dark:bg-green-950/60 border-green-300 dark:border-green-800 text-green-800 dark:text-green-200'
+                            }`}
+                          >
+                            {marginAnalysis.hasDeficit
+                              ? `🔴 Não Lucrativo (<7%)`
+                              : marginAnalysis.overallStatus === 'warning'
+                                ? `🟡 Baixo Lucro (7%-20%)`
+                                : `🟢 Lucrativo (≥20%)`}
+                          </span>
+
+                          {/* Botão de ajuste rápido se houver margem crítica */}
+                          {marginAnalysis.hasDeficit && (
+                            <button
+                              type="button"
+                              onClick={autoAdjustToSafeDiscount}
+                              className="px-2.5 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition-colors shadow-xs cursor-pointer"
+                              title="Ajustar desconto para garantir margem de 7%"
+                            >
+                              Ajustar para {marginAnalysis.maxSafeDiscountPct}%
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {marginAnalysis.hasDeficit && (
+                        <div className="flex items-center justify-between text-xs text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/30 p-2.5 rounded-xl border border-red-200 dark:border-red-900/40">
+                          <span className="font-medium">
+                            Atenção: {marginAnalysis.deficitProducts.length} produto(s) ficarão com margem líquida abaixo de 7%.
+                          </span>
+                          <label className="flex items-center gap-1.5 cursor-pointer font-bold shrink-0">
+                            <input
+                              type="checkbox"
+                              checked={allowDeficitOverride}
+                              onChange={(e) => setAllowDeficitOverride(e.target.checked)}
+                              className="w-3.5 h-3.5 text-red-600 rounded focus:ring-red-500"
+                            />
+                            <span>Permitir salvar assim mesmo</span>
+                          </label>
+                        </div>
+                      )}
+
+                      {/* Lista mesclada de Produtos com Seleção + Margem no próprio item */}
+                      <div className="max-h-64 overflow-y-auto border border-indigo-100 dark:border-gray-800 rounded-xl bg-white dark:bg-gray-900 p-2 space-y-1.5">
                         {products.length === 0 ? (
-                          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Nenhum produto disponível</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 p-2">Nenhum produto cadastrado no sistema</p>
                         ) : (
-                          <div className="space-y-1.5 sm:space-y-2">
-                            {products.map((product) => (
-                              <label
-                                key={product.id}
-                                className="flex items-center space-x-2 p-1.5 sm:p-2 hover:bg-gray-50 dark:hover:bg-[#065084] rounded cursor-pointer"
+                          marginAnalysis.analyzedProducts.map((item) => {
+                            const isSelected = formData.applicable_product_ids.includes(item.product.id)
+
+                            return (
+                              <div
+                                key={item.product.id}
+                                onClick={() => toggleProductSelection(item.product.id)}
+                                className={`p-2.5 rounded-xl border cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+                                  isSelected
+                                    ? 'border-indigo-400 bg-indigo-50/50 dark:bg-indigo-950/40 dark:border-indigo-700 shadow-xs'
+                                    : item.isDeficit
+                                      ? 'border-red-200 bg-red-50/30 dark:bg-red-950/10 hover:border-red-300'
+                                      : item.isWarning
+                                        ? 'border-amber-200 bg-amber-50/30 dark:bg-amber-950/10 hover:border-amber-300'
+                                        : 'border-gray-150 dark:border-gray-800 bg-white dark:bg-gray-800/60 hover:border-gray-300'
+                                }`}
                               >
-                                <input
-                                  type="checkbox"
-                                  checked={formData.applicable_product_ids.includes(product.id)}
-                                  onChange={() => toggleProductSelection(product.id)}
-                                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
-                                />
-                                <span className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 break-words">{product.name}</span>
-                              </label>
-                            ))}
-                          </div>
+                                <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => {}}
+                                    className="w-4 h-4 mt-0.5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 flex-shrink-0 cursor-pointer"
+                                  />
+                                  <div className="min-w-0">
+                                    <span className="text-xs font-bold text-gray-900 dark:text-white truncate block">
+                                      {item.product.name}
+                                    </span>
+                                    <div className="text-[11px] text-gray-500 dark:text-gray-400 flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
+                                      <span>Venda: R$ {item.salePrice.toFixed(2).replace('.', ',')}</span>
+                                      <span>•</span>
+                                      <span>Custo: R$ {item.purchaseCost.toFixed(2).replace('.', ',')}</span>
+                                      {item.discountAmount > 0 && (
+                                        <>
+                                          <span>•</span>
+                                          <span className="text-pink-600 dark:text-pink-400 font-semibold">Desc: -R$ {item.discountAmount.toFixed(2).replace('.', ',')}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="text-right shrink-0 flex items-center sm:flex-col sm:items-end justify-between sm:justify-center gap-1 border-t sm:border-t-0 border-gray-100 dark:border-gray-800 pt-1.5 sm:pt-0">
+                                  <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                                    Final: <strong className="text-gray-900 dark:text-white">R$ {item.finalPrice.toFixed(2).replace('.', ',')}</strong>
+                                  </span>
+                                  <span
+                                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                      item.isDeficit
+                                        ? 'bg-red-600 text-white'
+                                        : item.isWarning
+                                          ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300'
+                                          : 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300'
+                                    }`}
+                                  >
+                                    {item.isDeficit
+                                      ? `🔴 Prejuízo: -R$ ${Math.abs(item.netProfit).toFixed(2).replace('.', ',')} (${item.netMarginPct.toFixed(1).replace('.', ',')}%)`
+                                      : item.isWarning
+                                        ? `🟡 Margem Estreita: R$ ${item.netProfit.toFixed(2).replace('.', ',')} (${item.netMarginPct.toFixed(1).replace('.', ',')}%)`
+                                        : `🟢 Lucro: R$ ${item.netProfit.toFixed(2).replace('.', ',')} (${item.netMarginPct.toFixed(1).replace('.', ',')}%)`}
+                                  </span>
+                                </div>
+                              </div>
+                            )
+                          })
                         )}
                       </div>
-                      {formData.applicable_product_ids.length > 0 && (
-                        <p className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
-                          {formData.applicable_product_ids.length} produto(s) selecionado(s)
-                        </p>
-                      )}
+
+                      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 px-1 pt-1">
+                        <span>
+                          {formData.applicable_product_ids.length === 0
+                            ? 'Aplicado a todos os produtos ativos'
+                            : `${formData.applicable_product_ids.length} produto(s) selecionado(s)`}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Condições */}
@@ -538,7 +800,7 @@ export default function ManagePromoCodes() {
                             step="0.01"
                             value={formData.min_order_value}
                             onChange={(e) => setFormData({ ...formData, min_order_value: e.target.value })}
-                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                            className={inputClass}
                             placeholder="200.00"
                           />
                         </div>
@@ -552,27 +814,10 @@ export default function ManagePromoCodes() {
                             min="1"
                             value={formData.min_product_quantity}
                             onChange={(e) => setFormData({ ...formData, min_product_quantity: e.target.value })}
-                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                            className={inputClass}
                             placeholder="5"
                           />
                         </div>
-                      </div>
-                    </div>
-
-                    {/* Frete Grátis */}
-                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4">
-                      <div className="flex items-center">
-                        <input
-                          type="checkbox"
-                          id="free_shipping"
-                          checked={formData.free_shipping}
-                          onChange={(e) => setFormData({ ...formData, free_shipping: e.target.checked })}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
-                        />
-                        <label htmlFor="free_shipping" className="ml-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 flex items-center">
-                          <Truck className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
-                          <span>Oferecer frete grátis</span>
-                        </label>
                       </div>
                     </div>
 
@@ -584,25 +829,21 @@ export default function ManagePromoCodes() {
                           id="can_combine_with_others"
                           checked={formData.can_combine_with_others}
                           onChange={(e) => setFormData({ ...formData, can_combine_with_others: e.target.checked })}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0 mt-0.5"
+                          className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 flex-shrink-0 mt-0.5"
                         />
                         <label htmlFor="can_combine_with_others" className="ml-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300 flex items-start">
                           <Tag className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0 mt-0.5" />
-                          <span className="break-words">Permitir uso junto com outros cupons</span>
+                          <span className="break-words font-medium">Permitir uso junto com outros cupons</span>
                         </label>
                       </div>
                       <p className="mt-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 ml-6 break-words">
-                        Se desmarcado, este cupom só poderá ser usado sozinho, não poderá ser combinado com outros cupons.
+                        Se desmarcado, este cupom só poderá ser usado sozinho.
                       </p>
                     </div>
 
                     {/* Expiração por Tempo */}
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4">
                       <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">Expiração por Tempo (Opcional)</h4>
-                      <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2 sm:mb-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-2 break-words">
-                        <strong>Escolha o tipo de expiração:</strong> Você pode definir quando o código expira (por data/hora ou apenas data) 
-                        ou deixar sem expiração. Isso pode ser combinado com os limites de uso abaixo.
-                      </p>
 
                       <div className="mb-3 sm:mb-4">
                         <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
@@ -611,7 +852,7 @@ export default function ManagePromoCodes() {
                         <select
                           value={formData.expiration_type}
                           onChange={(e) => setFormData({ ...formData, expiration_type: e.target.value as any })}
-                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                          className={inputClass}
                         >
                           <option value="none">Sem expiração (sempre válido)</option>
                           <option value="date_only">Apenas data (início e fim do dia)</option>
@@ -630,19 +871,16 @@ export default function ManagePromoCodes() {
                               type="date"
                               value={formData.start_date}
                               onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                              className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black mb-2"
+                              className={`${inputClass} mb-2`}
                             />
                             {formData.expiration_type === 'date_time' && (
                               <input
                                 type="time"
                                 value={formData.start_time}
                                 onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                                className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                                className={inputClass}
                                 placeholder="Hora de início"
                               />
-                            )}
-                            {formData.expiration_type === 'date_only' && (
-                              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1">Válido a partir das 00:00:00</p>
                             )}
                           </div>
 
@@ -655,19 +893,16 @@ export default function ManagePromoCodes() {
                               type="date"
                               value={formData.end_date}
                               onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                              className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black mb-2"
+                              className={`${inputClass} mb-2`}
                             />
                             {formData.expiration_type === 'date_time' && (
                               <input
                                 type="time"
                                 value={formData.end_time}
                                 onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                                className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                                className={inputClass}
                                 placeholder="Hora de término"
                               />
-                            )}
-                            {formData.expiration_type === 'date_only' && (
-                              <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1">Válido até as 23:59:59</p>
                             )}
                           </div>
                         </div>
@@ -677,11 +912,6 @@ export default function ManagePromoCodes() {
                     {/* Limites de Uso */}
                     <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4">
                       <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">Limites de Uso (Opcional)</h4>
-                      <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2 sm:mb-3 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-2 break-words">
-                        <strong>Você pode combinar:</strong> Limite global (total de usos entre todos os clientes), 
-                        limite por cliente (quantas vezes cada cliente pode usar), ou ambos. 
-                        Isso funciona independente da expiração por tempo acima.
-                      </p>
 
                       <div className="mb-3 sm:mb-4">
                         <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
@@ -690,7 +920,7 @@ export default function ManagePromoCodes() {
                         <select
                           value={formData.usage_limit_type}
                           onChange={(e) => setFormData({ ...formData, usage_limit_type: e.target.value as any })}
-                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                          className={inputClass}
                         >
                           <option value="none">Sem limite (uso ilimitado)</option>
                           <option value="global">Limite global (X usos no total entre todos os clientes)</option>
@@ -710,15 +940,10 @@ export default function ManagePromoCodes() {
                             min="1"
                             value={formData.usage_limit}
                             onChange={(e) => setFormData({ ...formData, usage_limit: e.target.value })}
-                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                            className={inputClass}
                             placeholder="Ex: 100"
                             required={formData.usage_limit_type === 'global' || formData.usage_limit_type === 'both'}
                           />
-                          <p className="mt-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 break-words">
-                            Quantas vezes este código pode ser usado no total entre todos os clientes.
-                            <br />
-                            <strong>Exemplo:</strong> Se definir 100, após 100 usos (por qualquer cliente), o código não poderá mais ser usado.
-                          </p>
                         </div>
                       )}
 
@@ -733,28 +958,10 @@ export default function ManagePromoCodes() {
                             min="1"
                             value={formData.user_usage_limit}
                             onChange={(e) => setFormData({ ...formData, user_usage_limit: e.target.value })}
-                            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                            className={inputClass}
                             placeholder="Ex: 2"
                             required={formData.usage_limit_type === 'per_user' || formData.usage_limit_type === 'both'}
                           />
-                          <p className="mt-1 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 break-words">
-                            Quantas vezes cada cliente pode usar este código.
-                            <br />
-                            <strong>Exemplo:</strong> Se definir 2, cada cliente poderá usar no máximo 2 vezes.
-                            {formData.expiration_type !== 'none' && ' O limite se aplica dentro do período de validade configurado acima.'}
-                            {formData.expiration_type === 'none' && ' O limite se aplica enquanto o código estiver ativo.'}
-                          </p>
-                        </div>
-                      )}
-
-                      {formData.usage_limit_type === 'both' && (
-                        <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-2 sm:p-3 mb-3 sm:mb-4">
-                          <p className="text-[10px] sm:text-xs text-yellow-800 dark:text-yellow-300 break-words">
-                            <strong>⚠️ Ambos os limites ativos:</strong> O código será bloqueado quando qualquer um dos limites for atingido.
-                            Por exemplo: se o limite global for 100 e o limite por cliente for 2, o código será bloqueado quando:
-                            <br />• 100 usos totais forem atingidos, OU
-                            <br />• Um cliente tentar usar pela 3ª vez
-                          </p>
                         </div>
                       )}
 
@@ -767,7 +974,7 @@ export default function ManagePromoCodes() {
                           min="0"
                           value={formData.priority}
                           onChange={(e) => setFormData({ ...formData, priority: Number(e.target.value) })}
-                          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border border-gray-300 dark:border-gray-400 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-200 dark:text-black"
+                          className={inputClass}
                           placeholder="0"
                         />
                       </div>
@@ -779,15 +986,15 @@ export default function ManagePromoCodes() {
                         id="active"
                         checked={formData.active}
                         onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 flex-shrink-0"
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 flex-shrink-0"
                       />
-                      <label htmlFor="active" className="ml-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
+                      <label htmlFor="active" className="ml-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                         Código ativo
                       </label>
                     </div>
                   </div>
 
-                </div>{/* end space-y-4 */}
+                </div>
               </AdminModal>
 
               {/* Lista de Códigos */}
@@ -802,11 +1009,10 @@ export default function ManagePromoCodes() {
                     return (
                       <div
                         key={code.id}
-                        className={`p-3 sm:p-4 border-2 rounded-lg ${
-                          isCodeActive(code)
+                        className={`p-3 sm:p-4 border-2 rounded-lg ${isCodeActive(code)
                             ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30'
                             : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-start justify-between gap-2 sm:gap-3">
                           <div className="flex-1 min-w-0">
@@ -825,13 +1031,12 @@ export default function ManagePromoCodes() {
                                     <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
                                   )}
                                 </button>
-                                <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-semibold whitespace-nowrap ${status.color} ${
-                                  status.color.includes('bg-blue-100') ? 'dark:bg-blue-900/30 dark:text-blue-300' :
-                                  status.color.includes('bg-green-100') ? 'dark:bg-green-900/30 dark:text-green-300' :
-                                  status.color.includes('bg-red-100') ? 'dark:bg-red-900/30 dark:text-red-300' :
-                                  status.color.includes('bg-gray-100') ? 'dark:bg-gray-900/30 dark:text-gray-300' :
-                                  status.color.includes('bg-orange-100') ? 'dark:bg-orange-900/30 dark:text-orange-300' : ''
-                                }`}>
+                                <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full font-semibold whitespace-nowrap ${status.color} ${status.color.includes('bg-blue-100') ? 'dark:bg-blue-900/30 dark:text-blue-300' :
+                                    status.color.includes('bg-green-100') ? 'dark:bg-green-900/30 dark:text-green-300' :
+                                      status.color.includes('bg-red-100') ? 'dark:bg-red-900/30 dark:text-red-300' :
+                                        status.color.includes('bg-gray-100') ? 'dark:bg-gray-900/30 dark:text-gray-300' :
+                                          status.color.includes('bg-orange-100') ? 'dark:bg-orange-900/30 dark:text-orange-300' : ''
+                                  }`}>
                                   {status.label}
                                 </span>
                               </div>
@@ -889,14 +1094,14 @@ export default function ManagePromoCodes() {
                           <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                             <button
                               onClick={() => handleEditCode(code)}
-                              className="p-1.5 sm:p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+                              className="p-1.5 sm:p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                               title="Editar código"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDeleteCode(code.id)}
-                              className="p-1.5 sm:p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+                              className="p-1.5 sm:p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                               title="Remover código"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -915,7 +1120,7 @@ export default function ManagePromoCodes() {
           <div className="lg:col-span-1">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 border border-gray-200 dark:border-gray-700">
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">Sobre os Códigos</h2>
-              
+
               <div className="space-y-3 sm:space-y-4 text-xs sm:text-sm text-gray-600 dark:text-gray-300">
                 <div>
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1.5 sm:mb-2 text-sm sm:text-base">Como Funciona</h3>
@@ -923,23 +1128,13 @@ export default function ManagePromoCodes() {
                 </div>
 
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1.5 sm:mb-2 text-sm sm:text-base">Limite por Cliente</h3>
-                  <p className="break-words">Defina quantas vezes cada cliente pode usar o código dentro do período de validade. Por exemplo: 2 vezes por cliente entre 01/12 e 31/12.</p>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1.5 sm:mb-2 text-sm sm:text-base">Análise de Lucratividade</h3>
+                  <p className="break-words">Ao criar ou editar um cupom, o simulador em tempo real analisa se a margem de lucro de cada produto permanecerá positiva após a aplicação do desconto e subsídio de frete.</p>
                 </div>
 
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1.5 sm:mb-2 text-sm sm:text-base">Período de Validade</h3>
-                  <p className="break-words">Defina data e hora de início e término. O código só será válido dentro desse período. O limite por cliente se aplica apenas durante esse período.</p>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1.5 sm:mb-2 text-sm sm:text-base">Limite Total (Opcional)</h3>
-                  <p className="break-words">Você também pode definir um limite total de usos entre todos os clientes. Isso funciona junto com o limite por cliente.</p>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1.5 sm:mb-2 text-sm sm:text-base">Mensagens Automáticas</h3>
-                  <p className="break-words">O sistema informa automaticamente se o código expirou, foi esgotado, ou se o cliente já usou o máximo de vezes permitido.</p>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1.5 sm:mb-2 text-sm sm:text-base">Proteção Contra Prejuízo</h3>
+                  <p className="break-words">O sistema indica o teto máximo de desconto recomendável sem zerar o lucro e exibe um alerta vermelho proeminente caso o desconto configurado coloque algum produto no vermelho.</p>
                 </div>
               </div>
             </div>
@@ -949,4 +1144,3 @@ export default function ManagePromoCodes() {
     </div>
   )
 }
-

@@ -415,7 +415,10 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   })
   const [shippingFee, setShippingFee] = useState<number | null>(null)
   const [isFreeShipping, setIsFreeShipping] = useState(false)
-  const [calculatingShipping, setCalculatingShipping] = useState(false)
+  const [calculatingShipping, setCalculatingShipping] = useState<boolean>(() => {
+    const savedCep = localStorage.getItem('simulated_cep')
+    return savedCep ? savedCep.replace(/\D/g, '').length === 8 : false
+  })
   const [shippingCalculationFailed, setShippingCalculationFailed] = useState(false)
   const [deliveryTime, setDeliveryTime] = useState<number | null>(null)
   const [deliveryTimeType, setDeliveryTimeType] = useState<'business' | 'calendar' | null>(null)
@@ -424,11 +427,14 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   const [service, setService] = useState<string | null>(null)
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([])
   const [selectedShippingMethod, setSelectedShippingMethod] = useState<string | null>(null)
-  const [defaultDeliveryTime, setDefaultDeliveryTime] = useState<number | null>(null)
-  const [defaultDeliveryTimeType, setDefaultDeliveryTimeType] = useState<'business' | 'calendar'>('business')
+  const [defaultDeliveryTime] = useState<number | null>(null)
+  const [defaultDeliveryTimeType] = useState<'business' | 'calendar'>('business')
   const [cepWarning, setCepWarning] = useState<string | null>(null)
   const [showCepWarning, setShowCepWarning] = useState(false)
-  const [isFreeShippingApplicable, setIsFreeShippingApplicable] = useState<boolean>(true)
+  const [isFreeShippingApplicable, setIsFreeShippingApplicable] = useState<boolean>(false)
+  const [isNationalFreeShipping] = useState<boolean>(false)
+  const shippingAbortControllerRef = useRef<AbortController | null>(null)
+  const prevCartItemsKeyRef = useRef<string>('')
 
   // Oculta aviso de CEP automaticamente após 5 segundos
   useEffect(() => {
@@ -543,25 +549,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   const shippingCep = formData.cep
   const setShippingCep = (cep: string) => setFormData(prev => ({ ...prev, cep }))
 
-  // Verifica elegibilidade da região de forma rápida assim que o CEP atinge 8 dígitos
-  useEffect(() => {
-    const checkRegionEligibility = async () => {
-      const cleanCep = shippingCep.replace(/\D/g, '')
-      if (cleanCep.length === 8) {
-        try {
-          const res = await shippingService.checkRegion(cleanCep)
-          setIsFreeShippingApplicable(res.isLocal)
-        } catch (err) {
-          console.error('Erro ao verificar elegibilidade da região:', err)
-          setIsFreeShippingApplicable(false)
-        }
-      } else {
-        setIsFreeShippingApplicable(true)
-      }
-    }
 
-    checkRegionEligibility()
-  }, [shippingCep])
 
   // Tipo de compra global do carrinho (assinaturas desativadas)
   const isSubscription = false
@@ -613,7 +601,19 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
   // Verifica se há frete grátis (por cupom, valor mínimo ou opção zerada por subsídio/regra)
   const hasFreeShippingByCoupon = promoCodesValidation?.freeShipping || false
   const hasFreeShippingByThreshold = freeShippingThreshold > 0 && totalAfterPromotions >= freeShippingThreshold
-  const hasFreeShipping = hasFreeShippingByCoupon || hasFreeShippingByThreshold || isFreeShipping || shippingFee === 0
+
+  // Elegibilidade estrita para exibição da régua/card de frete grátis
+  const isEligibleForFreeShipping = useMemo(() => {
+    if (hasFreeShippingByCoupon) return true
+    if (isNationalFreeShipping) return true
+    const cleanCep = shippingCep.replace(/\D/g, '')
+    if (cleanCep.length === 8) {
+      return !calculatingShipping && !shippingCalculationFailed && isFreeShippingApplicable
+    }
+    return false
+  }, [hasFreeShippingByCoupon, isNationalFreeShipping, shippingCep, calculatingShipping, shippingCalculationFailed, isFreeShippingApplicable])
+
+  const hasFreeShipping = hasFreeShippingByCoupon || (!calculatingShipping && shippingFee !== null && ((isEligibleForFreeShipping && hasFreeShippingByThreshold) || isFreeShipping || shippingFee === 0))
 
   const shippingCost = hasFreeShipping ? 0 : (shippingFee || 0)
   const currentTotal = totalAfterPromotions + shippingCost
@@ -635,7 +635,10 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
         }
       }
     }
-    return date.toISOString().split('T')[0]
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
   }, [displayedDeliveryTime, displayedDeliveryTimeType])
 
   const displayedEstimatedDate = estimatedDateFormatted || (estimatedDate ? formatEstimatedDateFriendly(estimatedDate) : (calculatedEstimatedDateStr ? formatEstimatedDateFriendly(calculatedEstimatedDateStr) : ''))
@@ -679,9 +682,8 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
     const loadShippingSettings = async () => {
       try {
         const settings = await shippingService.getShippingSettings()
-        setFreeShippingThreshold(settings.free_shipping_threshold || 0)
-        setDefaultDeliveryTime(settings.general_delivery_time || null)
-        setDefaultDeliveryTimeType(settings.general_delivery_time_type || 'business')
+        const threshold = Number(settings.sedex_free_shipping_threshold) || Number(settings.custom_free_shipping_threshold) || Number(settings.free_shipping_threshold) || 0
+        setFreeShippingThreshold(threshold)
       } catch (error) {
         console.error('Erro ao carregar configurações de frete:', error)
       }
@@ -727,17 +729,34 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
       .join(',')
   }, [items])
 
+  // Ativa spinner de recalculando frete imediatamente quando os itens do carrinho mudarem
+  useEffect(() => {
+    if (prevCartItemsKeyRef.current && prevCartItemsKeyRef.current !== cartItemsKey) {
+      const cleanCep = shippingCep.replace(/\D/g, '')
+      if (cleanCep.length === 8) {
+        setCalculatingShipping(true)
+      }
+    }
+  }, [cartItemsKey, shippingCep])
+
   // Calcula frete quando o CEP está preenchido
   useEffect(() => {
+    const isItemsChanged = prevCartItemsKeyRef.current !== '' && prevCartItemsKeyRef.current !== cartItemsKey
+
     const calculateShippingFee = async () => {
       const cleanCep = shippingCep.replace(/\D/g, '')
 
       if (cleanCep.length === 8) {
+        if (shippingAbortControllerRef.current) {
+          shippingAbortControllerRef.current.abort()
+        }
+        const controller = new AbortController()
+        shippingAbortControllerRef.current = controller
+
+        let wasAborted = false
+
         try {
-          // Apenas ativa spinner de bloco se ainda não houver opções carregadas
-          if (shippingOptions.length === 0) {
-            setCalculatingShipping(true)
-          }
+          setCalculatingShipping(true)
           setShippingCalculationFailed(false)
 
           const cartItems = items
@@ -745,12 +764,17 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
             .map(item => ({
               product_id: item.product!.id,
               quantity: item.quantity,
+              weight_grams: (item.product as any).weight_grams ?? (item.product as any).weight ?? null,
+              length_cm: (item.product as any).length_cm ?? (item.product as any).length ?? null,
+              width_cm: (item.product as any).width_cm ?? (item.product as any).width ?? null,
+              height_cm: (item.product as any).height_cm ?? (item.product as any).height ?? null,
             }))
 
           const result = await shippingService.calculateShipping(
             cleanCep,
             totalAfterPromotions,
-            cartItems
+            cartItems,
+            controller.signal
           )
 
           if (result.shippingFee === null) {
@@ -789,6 +813,10 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
             setIsFreeShippingApplicable(!(selectedOption?.externalShipping ?? result.externalShipping))
           }
         } catch (error: any) {
+          if (error.name === 'AbortError') {
+            wasAborted = true
+            return
+          }
           console.error('Erro ao calcular frete no carrinho:', error)
           setShippingFee(null)
           setShippingCalculationFailed(true)
@@ -801,7 +829,10 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
           setShowCepWarning(true)
           setIsFreeShippingApplicable(false)
         } finally {
-          setCalculatingShipping(false)
+          if (!wasAborted) {
+            setCalculatingShipping(false)
+            prevCartItemsKeyRef.current = cartItemsKey
+          }
         }
       } else {
         setShippingFee(null)
@@ -815,11 +846,14 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
         setShippingOptions([])
         setSelectedShippingMethod(null)
         setIsFreeShippingApplicable(true)
+        setCalculatingShipping(false)
+        prevCartItemsKeyRef.current = cartItemsKey
       }
     }
 
-    // Debounce de 500ms
-    const timeoutId = setTimeout(calculateShippingFee, 500)
+    // Debounce mais veloz (150ms) se for mudança de itens do carrinho ou 400ms para digitação de CEP
+    const delay = isItemsChanged ? 150 : 400
+    const timeoutId = setTimeout(calculateShippingFee, delay)
     return () => clearTimeout(timeoutId)
   }, [shippingCep, totalAfterPromotions, cartItemsKey])
 
@@ -2151,72 +2185,74 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
   const renderCartSidebar = () => (
     <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg border border-gray-200 dark:border-gray-700 p-5 sm:p-6 sticky top-24 animate-fade-in">
-      {freeShippingThreshold > 0 && isFreeShippingApplicable && (
-        <div className="mb-6 p-4 bg-gray-50/50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl">
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <div className={`h-11 w-11 rounded-xl flex flex-col items-center justify-center flex-shrink-0 relative overflow-hidden ${hasFreeShipping
-                ? 'bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-400'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
-                }`}>
-                <div className="flex flex-col items-center justify-center translate-y-[2px]">
-                  <span className="relative inline-block animate-truck-start">
-                    <Truck className="w-4 h-4" />
+        {freeShippingThreshold > 0 && (
+          <div className="mb-6 bg-gradient-to-br from-green-500/10 via-emerald-500/5 to-transparent border border-green-500/20 dark:border-green-500/30 rounded-2xl p-4 sm:p-4.5 shadow-xs relative overflow-hidden">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2.5">
+                {/* Truck icon container com animação de partida */}
+                <div className={`h-9 w-9 rounded-xl flex items-center justify-center relative overflow-hidden shadow-2xs ${
+                  hasFreeShipping || totalAfterPromotions >= freeShippingThreshold
+                    ? 'bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-400'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+                  }`}>
+                  <div className="flex flex-col items-center justify-center translate-y-[2px]">
+                    <span className="relative inline-block animate-truck-start">
+                      <Truck className="w-4 h-4" />
 
-                    {/* Fumaça da partida (atrás do caminhão na esquerda) */}
-                    <span className="absolute left-[-5px] bottom-[2px] flex gap-[2px] pointer-events-none z-10 animate-smoke-puff">
-                      <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 opacity-60"></span>
-                      <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 opacity-40"></span>
+                      {/* Fumaça da partida */}
+                      <span className="absolute left-[-5px] bottom-[2px] flex gap-[2px] pointer-events-none z-10 animate-smoke-puff">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400 dark:bg-gray-500 opacity-60"></span>
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600 opacity-40"></span>
+                      </span>
+
+                      {/* Sparkles */}
+                      <div className="absolute left-[4.5px] bottom-[2.5px] pointer-events-none overflow-visible">
+                        <span className={`absolute left-0 bottom-0 w-1.5 h-1.5 rounded-full bg-green-400 dark:bg-green-300 opacity-0 ${hasFreeShipping || totalAfterPromotions >= freeShippingThreshold ? 'animate-free-shipping-sparkle' : ''}`} style={{ animationDelay: '1.5s' }}></span>
+                        <span className={`absolute left-0 bottom-0 w-1 h-1 rounded-full bg-yellow-400 dark:bg-yellow-300 opacity-0 ${hasFreeShipping || totalAfterPromotions >= freeShippingThreshold ? 'animate-free-shipping-sparkle' : ''}`} style={{ animationDelay: '2.3s' }}></span>
+                      </div>
                     </span>
-
-                    {/* Partículas saindo do contato da roda traseira com a estrada ao conquistar frete grátis */}
-                    <div className="absolute left-[4.5px] bottom-[2.5px] pointer-events-none overflow-visible">
-                      <span className={`absolute left-0 bottom-0 w-1.5 h-1.5 rounded-full bg-green-400 dark:bg-green-300 opacity-0 ${hasFreeShipping ? 'animate-free-shipping-sparkle' : ''}`} style={{ animationDelay: '1.5s' }}></span>
-                      <span className={`absolute left-0 bottom-0 w-1 h-1 rounded-full bg-yellow-400 dark:bg-yellow-300 opacity-0 ${hasFreeShipping ? 'animate-free-shipping-sparkle' : ''}`} style={{ animationDelay: '2.3s' }}></span>
-                    </div>
-                  </span>
-                  <div className={`w-6 h-[1.5px] mt-[-2px] opacity-85 animate-road-move-delayed ${hasFreeShipping
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-gray-400 dark:text-gray-500'
-                    }`} />
+                    <div className={`w-6 h-[1.5px] mt-[-2px] opacity-85 animate-road-move-delayed ${hasFreeShipping || totalAfterPromotions >= freeShippingThreshold
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-gray-400 dark:text-gray-500'
+                      }`} />
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex-1">
-                <span className="text-xs font-black text-gray-800 dark:text-gray-200 leading-snug block">
-                  {hasFreeShipping ? (
-                    <span className="text-green-600 dark:text-green-400">Você ganhou Frete Grátis!</span>
-                  ) : (
-                    <span>
-                      Adicione mais <strong className="text-primary-600 dark:text-primary-400">R$ {(freeShippingThreshold - totalAfterPromotions).toFixed(2).replace('.', ',')}</strong> para ter Frete Grátis{shippingCep.replace(/\D/g, '').length !== 8 ? '*' : ''}
-                    </span>
+                <div className="flex-1">
+                  <span className="text-xs font-black text-gray-800 dark:text-gray-200 leading-snug block">
+                    {hasFreeShipping || totalAfterPromotions >= freeShippingThreshold ? (
+                      <span className="text-green-600 dark:text-green-400">Você ganhou Frete Grátis!</span>
+                    ) : (
+                      <span>
+                        Adicione mais <strong className="text-primary-600 dark:text-primary-400">R$ {Math.max(0, freeShippingThreshold - totalAfterPromotions).toFixed(2).replace('.', ',')}</strong> para ter Frete Grátis{shippingCep.replace(/\D/g, '').length !== 8 ? '*' : ''}
+                      </span>
+                    )}
+                  </span>
+                  {!(hasFreeShipping || totalAfterPromotions >= freeShippingThreshold) && (
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 font-semibold">
+                      {shippingCep.replace(/\D/g, '').length === 8
+                        ? '* Válido para o seu CEP.'
+                        : '* Consulte seu CEP para verificar as opções de frete.'}
+                    </p>
                   )}
-                </span>
-                {!hasFreeShipping && (
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 font-semibold">
-                    {shippingCep.replace(/\D/g, '').length === 8
-                      ? '* Válido para São Paulo e cidades proximas.'
-                      : '* Consulte seu CEP para verificar as opções de frete.'}
-                  </p>
-                )}
+                </div>
               </div>
             </div>
 
             <div className="w-full bg-gray-200 dark:bg-gray-800 h-2.5 rounded-full overflow-hidden relative shadow-inner">
               <div
-                className={`h-full rounded-full transition-all ease-out ${hasFreeShipping
+                className={`h-full rounded-full transition-all ease-out ${hasFreeShipping || totalAfterPromotions >= freeShippingThreshold
                   ? 'bg-green-500 shadow-[0_0_12px_rgba(34,197,94,0.3)]'
                   : 'bg-gradient-to-r from-primary-500 to-primary-600'
                   }`}
                 style={{
-                  width: `${hasFreeShipping ? 100 : Math.min(100, (totalAfterPromotions / freeShippingThreshold) * 100)}%`,
+                  width: `${hasFreeShipping || totalAfterPromotions >= freeShippingThreshold ? 100 : Math.min(100, (totalAfterPromotions / freeShippingThreshold) * 100)}%`,
                   transition: 'width 400ms cubic-bezier(0.4, 0, 0.2, 1)'
                 }}
               ></div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white mb-3 flex items-center uppercase tracking-wider">
@@ -2239,6 +2275,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
                     handleValidatePromoCode()
                   }
                 }}
+                disabled={validatingPromoCode}
               />
               <button
                 onClick={handleValidatePromoCode}
@@ -2252,25 +2289,26 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
                 )}
               </button>
             </div>
+            {promoCodeError && (
+              <p className="text-[11px] text-red-500 dark:text-red-400 font-bold">{promoCodeError}</p>
+            )}
           </div>
         ) : (
-          <div className="space-y-3.5">
+          <div className="space-y-2">
             {appliedPromoCodes.length > 1 && promoCodesValidation ? (
-              <div className="relative bg-green-50/50 dark:bg-green-950/10 border border-green-200/50 dark:border-green-900/30 rounded-2xl p-3">
-                <div className="overflow-hidden">
-                  <div
-                    className="flex transition-transform duration-300 ease-in-out"
-                    style={{ transform: `translateX(-${currentCouponIndex * 100}%)` }}
-                  >
-                    {promoCodesValidation.promoCodes.map((pc) => {
+              <div className="bg-green-50/50 dark:bg-green-950/20 border border-green-200/50 dark:border-green-900/30 rounded-2xl p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    {promoCodesValidation.promoCodes.map((pc, index) => {
+                      if (index !== currentCouponIndex) return null
                       const appliedDiscount = promoCodesValidation.appliedDiscounts.percentage?.code === pc.code
                         ? promoCodesValidation.appliedDiscounts.percentage
                         : promoCodesValidation.appliedDiscounts.fixed.find(f => f.code === pc.code)
 
                       return (
-                        <div key={pc.id} className="min-w-full flex-shrink-0">
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div key={pc.id} className="animate-fade-in">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
                               <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
                               <div className="flex-1 min-w-0">
                                 <p className="text-xs font-extrabold text-green-900 dark:text-green-300 truncate">
@@ -2472,86 +2510,121 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
                   return (
                     <div key={promo.id} className="bg-pink-50/30 dark:bg-pink-955 border border-pink-100 dark:border-pink-900/30 rounded-xl p-2.5">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-extrabold text-pink-900 dark:text-pink-300 truncate">{promo.name}</p>
-                          {discountText && (
-                            <p className="text-[10px] text-pink-700 dark:text-pink-400 font-bold mt-0.5">{discountText}</p>
+                        <div>
+                          <p className="text-xs font-bold text-gray-900 dark:text-white">{promo.name}</p>
+                          {promo.description && (
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{promo.description}</p>
                           )}
                         </div>
+                        {discountText && (
+                          <span className="text-xs font-black text-pink-600 dark:text-pink-400 bg-pink-100/60 dark:bg-pink-900/40 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                            {discountText}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )
                 })}
-                {promotionDiscount > 0 && (
-                  <div className="flex justify-between items-center text-xs text-pink-600 dark:text-pink-400 font-bold pt-2 border-t border-pink-100/50 dark:border-pink-950/20">
-                    <span>Desconto Ofertas</span>
-                    <span>
-                      - R$ {promotionDiscount.toFixed(2).replace('.', ',')}
-                    </span>
-                  </div>
-                )}
               </div>
             )}
           </div>
         )}
 
         <div className="flex justify-between items-center text-xs sm:text-sm pt-3 border-t border-gray-200 dark:border-gray-700">
-          <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1">
+          <span className="text-gray-500 dark:text-gray-400">
             Frete
           </span>
-          <div className="text-right font-extrabold text-xs sm:text-sm">
-            {isSubscription ? (
-              <span className="text-green-600 dark:text-green-400 font-extrabold">
-                Grátis (Assinatura)
-              </span>
-            ) : hasFreeShipping ? (
-              <span className="text-green-600 dark:text-green-400 font-extrabold">
-                Grátis
-              </span>
-            ) : hasInvalidCep() ? (
-              <span className="text-red-655 dark:text-red-400 text-xs font-black">CEP inválido</span>
-            ) : shippingFee !== null ? (
-              <span className="text-gray-900 dark:text-white font-extrabold">
-                R$ {shippingFee.toFixed(2).replace('.', ',')}
-              </span>
-            ) : calculatingShipping ? (
-              <span className="text-gray-400 dark:text-gray-500 text-xs flex items-center gap-1 font-semibold animate-pulse">
-                <Loader2 className="animate-spin w-3 h-3" /> Calculando...
+          <div className="font-extrabold text-right">
+            {calculatingShipping ? (
+              <span className="text-gray-500 dark:text-gray-400 text-xs flex items-center justify-end gap-1">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                calculando...
               </span>
             ) : (
-              <span className="text-gray-900 dark:text-white font-extrabold text-xs">
-                a calcular na próxima etapa
-              </span>
+              <>
+                {(() => {
+                  const selectedOpt = shippingOptions.find(o => o.method === selectedShippingMethod) || shippingOptions[0]
+                  const quotedFee = selectedOpt?.quotedFee ?? selectedOpt?.pricing?.quotedFee ?? selectedOpt?.originalFee ?? null
+                  const showOriginal = quotedFee != null && quotedFee > (hasFreeShipping ? 0 : (shippingFee || 0))
+                  return showOriginal ? (
+                    <span className="text-xs font-normal text-gray-400 dark:text-gray-500 line-through mr-1.5">
+                      R$ {quotedFee.toFixed(2).replace('.', ',')}
+                    </span>
+                  ) : null
+                })()}
+                {hasFreeShipping ? (
+                  <span className="text-green-600 dark:text-green-400 font-extrabold">Grátis</span>
+                ) : hasInvalidCep() ? (
+                  <span className="text-red-500 dark:text-red-400 font-black">CEP inválido</span>
+                ) : shippingFee !== null ? (
+                  <span className="text-gray-900 dark:text-white font-extrabold">R$ {shippingFee.toFixed(2).replace('.', ',')}</span>
+                ) : (
+                  <span className="text-gray-400 dark:text-gray-500 font-medium">a calcular</span>
+                )}
+              </>
             )}
           </div>
         </div>
 
         {shippingFee !== null && displayedDeliveryTime && displayedDeliveryTimeType && !hasInvalidCep() && (
-          <div className="text-[11px] text-gray-550 dark:text-gray-455 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800/60 animate-fade-in text-left">
-            <span className="text-gray-455 flex items-center gap-1">
-              Previsão:
+          <div className="text-[11px] text-gray-500 dark:text-gray-400 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800/60 animate-fade-in text-left">
+            <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1.5 font-bold">
+              {(checkoutStep === 'cart' || effectiveStep === 'cart') && freeShippingThreshold <= 0 ? (
+                <div className="h-6 w-6 rounded-lg flex flex-col items-center justify-center flex-shrink-0 relative overflow-hidden bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400">
+                  <div className="flex flex-col items-center justify-center translate-y-[1px]">
+                    <span className="relative inline-block animate-truck-start">
+                      <Truck className="w-3.5 h-3.5" />
+                      <span className="absolute left-[-4px] bottom-[1px] flex gap-[1px] pointer-events-none z-10 animate-smoke-puff">
+                        <span className="w-1 h-1 rounded-full bg-gray-400 opacity-60"></span>
+                        <span className="w-1 h-1 rounded-full bg-gray-300 opacity-40"></span>
+                      </span>
+                    </span>
+                    <div className="w-4 h-[1px] mt-[-1px] opacity-85 animate-road-move-delayed text-primary-600 dark:text-primary-400" />
+                  </div>
+                </div>
+              ) : (
+                <Truck className="w-3.5 h-3.5 text-gray-500" />
+              )}
+              <span>Previsão:</span>
             </span>
-            <span className="font-semibold text-gray-750 dark:text-gray-305 text-right ml-2">
+            <span className="font-semibold text-gray-700 dark:text-gray-300 text-right ml-2">
               {displayedDeliveryTime} {displayedDeliveryTimeType === 'business' ? (Number(displayedDeliveryTime) === 1 ? 'dia útil' : 'dias úteis') : (Number(displayedDeliveryTime) === 1 ? 'dia corrido' : 'dias corridos')}{displayedEstimatedDate ? ` (${displayedEstimatedDate})` : ''}{service ? ` via ${service.toLowerCase()}` : ''}
             </span>
           </div>
         )}
+      </div>
 
-
-
-        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4 pb-2 mb-4 sm:mb-6">
           <div className="flex justify-between items-center">
             <span className="text-base font-extrabold text-gray-900 dark:text-white">Total Geral</span>
-            <span className="text-2xl font-black text-primary-600 dark:text-primary-400">
-              R$ {currentTotal.toFixed(2).replace('.', ',')}
-            </span>
+            {calculatingShipping && shippingFee !== null ? (
+              <span className="flex items-center gap-1.5 text-sm text-gray-400 dark:text-gray-500 font-semibold animate-pulse">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                calculando...
+              </span>
+            ) : (
+              <div className="text-right flex items-baseline justify-end gap-2">
+                {(() => {
+                  const selectedOpt = shippingOptions.find(o => o.method === selectedShippingMethod) || shippingOptions[0]
+                  const quotedFee = selectedOpt?.quotedFee ?? selectedOpt?.pricing?.quotedFee ?? selectedOpt?.originalFee ?? null
+                  const originalTotal = baseTotal + (quotedFee != null ? quotedFee : (shippingFee || 0))
+                  return originalTotal > currentTotal ? (
+                    <span className="text-xs sm:text-sm font-normal text-gray-400 dark:text-gray-500 line-through">
+                      R$ {originalTotal.toFixed(2).replace('.', ',')}
+                    </span>
+                  ) : null
+                })()}
+                <span className="text-2xl font-black text-primary-600 dark:text-primary-400">
+                  R$ {currentTotal.toFixed(2).replace('.', ',')}
+                </span>
+              </div>
+            )}
           </div>
         </div>
-      </div>
 
       <button
         onClick={handleContinueToDelivery}
-        className="w-full bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-black py-4 px-6 rounded-2xl transition-all duration-200 mb-4 flex items-center justify-center gap-2 text-sm shadow-md hover:shadow-lg active:scale-98 group cursor-pointer"
+        className="w-full mt-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white font-black py-4 px-6 rounded-2xl transition-all duration-200 mb-4 flex items-center justify-center gap-2 text-sm shadow-md hover:shadow-lg active:scale-98 group cursor-pointer"
       >
         <span>Continuar</span>
         <ArrowRight size={16} className="transition-transform duration-200 group-hover:translate-x-1" />
@@ -3211,9 +3284,46 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
 
   const renderCheckoutSidebar = () => {
+    const selectedOpt = shippingOptions.find(o => o.method === selectedShippingMethod) || shippingOptions[0]
+    const quotedFee = selectedOpt?.quotedFee ?? selectedOpt?.pricing?.quotedFee ?? selectedOpt?.originalFee ?? null
+    const showOriginalShipping = quotedFee != null && quotedFee > (hasFreeShipping ? 0 : (shippingFee || 0))
+
+    const originalTotal = baseTotal + (quotedFee != null ? quotedFee : (shippingFee || 0))
+    const showOriginalTotal = originalTotal > currentTotal
+
     return (
       <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-lg border border-gray-200 dark:border-gray-700 p-5 sm:p-6 sticky top-24 animate-fade-in">
-        <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white mb-3 sm:mb-4 uppercase tracking-wider text-xs">Resumo do Pedido</h2>
+        <h2 className="text-sm sm:text-base font-black text-gray-900 dark:text-white mb-3 sm:mb-4 uppercase tracking-wider">
+          Resumo do Pedido
+        </h2>
+
+        {/* Lista de itens no checkout */}
+        <div className="space-y-2 mb-4 max-h-[200px] overflow-y-auto pr-1">
+          {items.map((item) => {
+            const hasDiscount = item.product && item.product.promo_price && item.product.promo_price < item.product.price
+            const originalUnitPrice = item.product?.price ?? 0
+            const currentUnitPrice = item.product?.promo_price ?? item.product?.price ?? 0
+
+            return (
+              <div key={item.id} className="text-xs pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                <p className="font-semibold text-gray-800 dark:text-gray-200 line-clamp-2">{item.product?.name}</p>
+                <div className="flex justify-between text-gray-500 mt-1">
+                  <span>Qtd: {item.quantity}</span>
+                  <div className="flex items-center gap-1.5 font-bold">
+                    {hasDiscount && (
+                      <span className="line-through text-gray-400 font-normal">
+                        R$ {(originalUnitPrice * item.quantity).toFixed(2).replace('.', ',')}
+                      </span>
+                    )}
+                    <span className={hasDiscount ? 'text-green-600 dark:text-green-400 font-extrabold' : 'text-gray-900 dark:text-white'}>
+                      R$ {(currentUnitPrice * item.quantity).toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
 
         <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4 space-y-2.5 sm:space-y-3">
           <div className="flex justify-between items-center text-xs sm:text-sm">
@@ -3224,7 +3334,9 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
           {promoCodesValidation && promoCodesValidation.totalDiscount > 0 && (
             <div className="flex justify-between items-center text-xs sm:text-sm">
               <span className="text-gray-500 dark:text-gray-400">
-                {promoCodesValidation.promoCodes.length > 1 ? `Cupons (${promoCodesValidation.promoCodes.length})` : 'Cupom'}
+                {promoCodesValidation.promoCodes.length > 1
+                  ? `Cupons (${promoCodesValidation.promoCodes.map(p => p.code).join(', ')})`
+                  : `Cupom (${promoCodesValidation.promoCodes[0]?.code})`}
               </span>
               <span className="text-green-600 dark:text-green-400 font-extrabold">
                 - R$ {promoCodesValidation.totalDiscount.toFixed(2).replace('.', ',')}
@@ -3233,7 +3345,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
           )}
 
           {applicablePromotions.length > 0 && (
-            <div className="space-y-1">
+            <div className="space-y-1 bg-pink-50/30 dark:bg-pink-955/20 border border-pink-100 dark:border-pink-900/30 rounded-xl p-2.5">
               {applicablePromotions.map((promo) => {
                 let discountText = ''
                 if (promo.type === 'discount_percentage') {
@@ -3252,7 +3364,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
                 )
               })}
               {promotionDiscount > 0 && (
-                <div className="flex justify-between items-center text-xs text-pink-600 dark:text-pink-400 font-bold pt-1">
+                <div className="flex justify-between items-center text-xs text-pink-600 dark:text-pink-400 font-bold pt-1 border-t border-pink-100/50">
                   <span>Desconto Ofertas</span>
                   <span>- R$ {promotionDiscount.toFixed(2).replace('.', ',')}</span>
                 </div>
@@ -3261,43 +3373,51 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
           )}
 
           <div className="flex justify-between items-center text-xs sm:text-sm pt-2 border-t border-gray-150 dark:border-gray-700">
-            <span className="text-gray-500 dark:text-gray-400">Frete</span>
-            <div className="text-right">
+            <span className="text-gray-500 dark:text-gray-400 font-bold">Frete</span>
+            <div className="text-right flex items-center justify-end gap-1.5">
               {calculatingShipping ? (
-                <span className="text-gray-400 dark:text-gray-500 text-xs flex items-center gap-1 font-semibold">
+                <span className="text-gray-400 dark:text-gray-500 text-xs flex items-center gap-1 font-semibold animate-pulse">
                   <Loader2 className="animate-spin w-3 h-3" /> Calculando...
                 </span>
-              ) : hasInvalidCep() ? (
-                <span className="text-red-655 dark:text-red-400 text-xs font-black">Inválido</span>
-              ) : hasFreeShipping ? (
-                <span className="text-green-600 dark:text-green-400 font-extrabold text-xs sm:text-sm">Grátis</span>
-              ) : shippingFee !== null ? (
-                <span className="text-gray-900 dark:text-white font-extrabold">R$ {shippingFee.toFixed(2).replace('.', ',')}</span>
+              ) : isSubscription ? (
+                <span className="text-green-600 dark:text-green-400 font-extrabold">Grátis (Assinatura)</span>
               ) : (
-                <span className="text-gray-400 dark:text-gray-500 font-semibold">-</span>
+                <>
+                  {showOriginalShipping && (
+                    <span className="text-xs font-normal text-gray-400 dark:text-gray-500 line-through">
+                      R$ {quotedFee.toFixed(2).replace('.', ',')}
+                    </span>
+                  )}
+                  {hasFreeShipping ? (
+                    <span className="text-green-600 dark:text-green-400 font-extrabold">Grátis</span>
+                  ) : hasInvalidCep() ? (
+                    <span className="text-red-500 dark:text-red-400 text-xs font-black">CEP inválido</span>
+                  ) : shippingFee !== null ? (
+                    <span className="text-gray-900 dark:text-white font-extrabold">
+                      R$ {shippingFee.toFixed(2).replace('.', ',')}
+                    </span>
+                  ) : (
+                    <span className="text-gray-400 dark:text-gray-500 font-semibold">-</span>
+                  )}
+                </>
               )}
             </div>
           </div>
 
           {shippingFee !== null && displayedDeliveryTime && displayedDeliveryTimeType && !hasInvalidCep() && (
-            <div className="text-[11px] text-gray-550 dark:text-gray-455 mt-2 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800/60 animate-fade-in text-left">
-              <span className="text-gray-455 flex items-center gap-1">
-                <div className="h-8 w-8 rounded-lg flex flex-col items-center justify-center flex-shrink-0 relative overflow-hidden bg-green-100 dark:bg-green-950/30 text-green-600 dark:text-green-400">
-                  <div className="flex flex-col items-center justify-center translate-y-[1.5px]">
-                    <Truck className="w-3.5 h-3.5" />
-                    <div className="w-5 h-[1px] mt-[-1.5px] opacity-85 animate-road-move text-green-600 dark:text-green-400" />
-                  </div>
-                </div>
-                Previsão:
+            <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 flex justify-between items-center bg-gray-50/50 dark:bg-gray-900/50 p-2.5 rounded-xl border border-gray-100 dark:border-gray-800/60 animate-fade-in text-left">
+              <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1.5 font-bold">
+                <Truck className="w-3.5 h-3.5 text-gray-500" />
+                <span>Previsão:</span>
               </span>
-              <span className="font-semibold text-gray-750 dark:text-gray-305 text-right ml-2">
+              <span className="font-semibold text-gray-700 dark:text-gray-300 text-right ml-2">
                 {displayedDeliveryTime} {displayedDeliveryTimeType === 'business' ? (Number(displayedDeliveryTime) === 1 ? 'dia útil' : 'dias úteis') : (Number(displayedDeliveryTime) === 1 ? 'dia corrido' : 'dias corridos')}{displayedEstimatedDate ? ` (${displayedEstimatedDate})` : ''}{service ? ` via ${service.toLowerCase()}` : ''}
               </span>
             </div>
           )}
 
           {checkoutStep === 'payment' && (
-            <div className="flex justify-between items-center text-xs sm:text-sm">
+            <div className="flex justify-between items-center text-xs sm:text-sm pt-2 border-t border-gray-150 dark:border-gray-700">
               <span className="text-gray-500 dark:text-gray-400">Pagamento</span>
               <span className="font-semibold text-gray-800 dark:text-gray-200 text-right">
                 {selectedPaymentMethod === 'pix' && 'PIX'}
@@ -3312,11 +3432,18 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
             </div>
           )}
 
-          <div className="flex justify-between items-center border-t border-gray-250 dark:border-gray-700 pt-3">
-            <span className="text-base font-extrabold text-gray-900 dark:text-white">Total</span>
-            <span className="text-2xl font-black text-primary-600 dark:text-primary-400">
-              R$ {currentTotal.toFixed(2).replace('.', ',')}
-            </span>
+          <div className="flex justify-between items-center border-t border-gray-200 dark:border-gray-700 pt-4">
+            <span className="text-base font-extrabold text-gray-900 dark:text-white">Total Geral</span>
+            <div className="text-right flex items-baseline justify-end gap-2">
+              {showOriginalTotal && (
+                <span className="text-xs sm:text-sm font-normal text-gray-400 dark:text-gray-500 line-through">
+                  R$ {originalTotal.toFixed(2).replace('.', ',')}
+                </span>
+              )}
+              <span className="text-2xl font-black text-primary-600 dark:text-primary-400">
+                R$ {currentTotal.toFixed(2).replace('.', ',')}
+              </span>
+            </div>
           </div>
         </div>
       </div>

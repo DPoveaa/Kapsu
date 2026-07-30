@@ -1,8 +1,9 @@
 import { ReactNode } from 'react'
-import { ArrowRight, Calendar, Check, ChevronLeft, ChevronRight, Loader2, Tag, Truck, X } from 'lucide-react'
+import { ArrowRight, Calendar, Check, ChevronLeft, ChevronRight, Loader2, Tag, X } from 'lucide-react'
 import type { PaymentMethod } from '../../types/checkout'
 import type { CartItem } from '../../types'
 import type { MultiplePromoCodesValidation } from '../../services/promo-codes.service'
+import type { ShippingOption } from '../../services/shipping.service'
 
 export interface OrderSummaryProps {
   mode: 'cart' | 'checkout'
@@ -35,6 +36,8 @@ export interface OrderSummaryProps {
   currentTotal: number
   selectedPaymentMethod?: PaymentMethod
   cardInstallmentLabel?: string
+  quotedShippingFee?: number | null
+  options?: ShippingOption[]
   primaryAction?: ReactNode
   secondaryAction?: ReactNode
 }
@@ -55,7 +58,6 @@ export default function OrderSummary({
   currentCouponIndex,
   onCouponIndexChange,
   freeShippingThreshold,
-  isFreeShippingApplicable,
   hasFreeShipping,
   totalAfterPromotions,
   shippingCep,
@@ -70,6 +72,8 @@ export default function OrderSummary({
   currentTotal,
   selectedPaymentMethod,
   cardInstallmentLabel,
+  quotedShippingFee,
+  options = [],
   primaryAction,
   secondaryAction,
 }: OrderSummaryProps) {
@@ -98,16 +102,16 @@ export default function OrderSummary({
         </div>
       )}
 
-      {showCoupons && freeShippingThreshold > 0 && isFreeShippingApplicable && mode === 'cart' && (
+      {showCoupons && freeShippingThreshold > 0 && mode === 'cart' && (
         <div className="mb-5 p-4 bg-gray-50/50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl">
           <span className="text-xs font-black text-gray-800 dark:text-gray-200 block">
-            {hasFreeShipping ? (
+            {hasFreeShipping || totalAfterPromotions >= freeShippingThreshold ? (
               <span className="text-green-600 dark:text-green-400">Você ganhou Frete Grátis!</span>
             ) : (
               <span>
                 Adicione mais{' '}
                 <strong className="text-primary-600">
-                  R$ {(freeShippingThreshold - totalAfterPromotions).toFixed(2).replace('.', ',')}
+                  R$ {Math.max(0, freeShippingThreshold - totalAfterPromotions).toFixed(2).replace('.', ',')}
                 </strong>{' '}
                 para Frete Grátis
               </span>
@@ -115,9 +119,9 @@ export default function OrderSummary({
           </span>
           <div className="w-full bg-gray-200 dark:bg-gray-800 h-2 rounded-full overflow-hidden mt-3">
             <div
-              className={`h-full rounded-full transition-all ${hasFreeShipping ? 'bg-green-500' : 'bg-primary-600'}`}
+              className={`h-full rounded-full transition-all ${hasFreeShipping || totalAfterPromotions >= freeShippingThreshold ? 'bg-green-500' : 'bg-primary-600'}`}
               style={{
-                width: `${hasFreeShipping ? 100 : Math.min(100, (totalAfterPromotions / freeShippingThreshold) * 100)}%`,
+                width: `${hasFreeShipping || totalAfterPromotions >= freeShippingThreshold ? 100 : Math.min(100, (totalAfterPromotions / freeShippingThreshold) * 100)}%`,
               }}
             />
           </div>
@@ -209,22 +213,35 @@ export default function OrderSummary({
 
         {(mode === 'checkout' || shippingCep.replace(/\D/g, '').length === 8) && (
           <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
-            <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-              Frete <Truck className="w-4 h-4" />
+            <span className="text-gray-500 dark:text-gray-400">
+              Frete
             </span>
-            <span className="font-bold">
+            <div className="font-bold flex items-center justify-end gap-1.5">
               {calculatingShipping ? (
                 <Loader2 className="w-4 h-4 animate-spin inline" />
               ) : hasInvalidCep ? (
                 <span className="text-red-500 text-xs">Inválido</span>
-              ) : hasFreeShipping ? (
-                <span className="text-green-600">Grátis</span>
-              ) : shippingFee != null ? (
-                `R$ ${shippingCost.toFixed(2).replace('.', ',')}`
               ) : (
-                '-'
+                <>
+                  {(() => {
+                    const quoted = quotedShippingFee ?? (options && options[0]?.quotedFee) ?? (options && options[0]?.pricing?.quotedFee) ?? (options && options[0]?.originalFee) ?? null
+                    const showOriginal = quoted != null && quoted > (hasFreeShipping ? 0 : shippingCost)
+                    return showOriginal ? (
+                      <span className="text-xs font-normal text-gray-400 dark:text-gray-500 line-through">
+                        R$ {quoted.toFixed(2).replace('.', ',')}
+                      </span>
+                    ) : null
+                  })()}
+                  {hasFreeShipping ? (
+                    <span className="text-green-600">Grátis</span>
+                  ) : shippingFee != null ? (
+                    <span>R$ {shippingCost.toFixed(2).replace('.', ',')}</span>
+                  ) : (
+                    '-'
+                  )}
+                </>
               )}
-            </span>
+            </div>
           </div>
         )}
 
@@ -250,13 +267,25 @@ export default function OrderSummary({
 
         <div className="flex justify-between items-center border-t border-gray-200 dark:border-gray-700 pt-3 mt-2">
           <span className="text-base font-extrabold text-gray-900 dark:text-white">Total</span>
-          <span className="text-xl sm:text-2xl font-black text-primary-600 dark:text-primary-400">
-            R$ {currentTotal.toFixed(2).replace('.', ',')}
-          </span>
+          <div className="text-right flex items-baseline justify-end gap-2">
+            {(() => {
+              const baseTotalOriginal = items.reduce((sum, i) => sum + (i.product ? i.product.price * i.quantity : 0), 0)
+              const quotedShipping = quotedShippingFee ?? (options && options[0]?.quotedFee) ?? (options && options[0]?.pricing?.quotedFee) ?? (options && options[0]?.originalFee) ?? (shippingFee || 0)
+              const originalTotal = baseTotalOriginal + (hasFreeShipping ? 0 : quotedShipping)
+              return originalTotal > currentTotal ? (
+                <span className="text-xs sm:text-sm font-normal text-gray-400 dark:text-gray-500 line-through">
+                  R$ {originalTotal.toFixed(2).replace('.', ',')}
+                </span>
+              ) : null
+            })()}
+            <span className="text-xl sm:text-2xl font-black text-primary-600 dark:text-primary-400">
+              R$ {currentTotal.toFixed(2).replace('.', ',')}
+            </span>
+          </div>
         </div>
       </div>
 
-      {primaryAction && <div className="mt-5">{primaryAction}</div>}
+      {primaryAction && <div className="mt-7 sm:mt-8">{primaryAction}</div>}
       {secondaryAction && <div className="mt-3">{secondaryAction}</div>}
     </div>
   )

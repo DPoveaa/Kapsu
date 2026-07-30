@@ -24,14 +24,19 @@ export default function Footer() {
             <span className="text-sm font-semibold text-white">Kapsu</span>
           </Link>
 
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+          <div className="flex flex-wrap items-center justify-center gap-x-2 md:gap-x-3 gap-y-1">
             <Link to="/termos-de-servico" className="hover:opacity-80 transition-opacity">
               Termos de Serviço
             </Link>
+            <span className="opacity-40">|</span>
             <Link to="/politica-de-privacidade" className="hover:opacity-80 transition-opacity">
               Política de Privacidade
             </Link>
-            <a href={phoneHref} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity">
+            <span className="opacity-40">|</span>
+            <Link to="/informacoes-farmaceuticas" className="hover:opacity-80 transition-opacity">
+              Informações Farmacêuticas
+            </Link>
+            <a href={phoneHref} className="flex items-center gap-1.5 hover:opacity-80 transition-opacity ml-1">
               <Phone size={12} style={{ color: '#ffffff' }} />
               <span>{contactPhone}</span>
             </a>

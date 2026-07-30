@@ -74,6 +74,8 @@ export interface ShippingOption {
   method: string
   name: string
   shippingFee: number
+  quotedFee?: number | null
+  originalFee?: number | null
   isFreeShipping: boolean
   freeShippingThreshold: number | null
   deliveryTime: number | null
@@ -105,6 +107,8 @@ export interface ShippingMethod {
 
 export interface ShippingCalculation {
   shippingFee: number | null
+  quotedFee?: number | null
+  originalFee?: number | null
   isFreeShipping: boolean
   freeShippingThreshold: number | null
   municipality?: string
@@ -188,7 +192,15 @@ class ShippingService {
   async calculateShipping(
     cep: string, 
     cartTotal: number, 
-    cartItems?: Array<{ product_id: string; quantity: number }>
+    cartItems?: Array<{
+      product_id: string
+      quantity: number
+      weight_grams?: number | null
+      length_cm?: number | null
+      width_cm?: number | null
+      height_cm?: number | null
+    }>,
+    signal?: AbortSignal
   ): Promise<ShippingCalculation> {
     const token = localStorage.getItem('kapsu_token')
     const headers: HeadersInit = {
@@ -204,6 +216,7 @@ class ShippingService {
       method: 'POST',
       headers,
       body: JSON.stringify({ cep, cartTotal, cartItems }),
+      signal,
     })
 
     if (!response.ok) {
