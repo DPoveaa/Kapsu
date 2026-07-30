@@ -542,14 +542,14 @@ export default function Header() {
                   {isAdmin && <Shield size={14} className="text-yellow-500" />}
                 </button>
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#17211D] rounded-xl shadow-xl dark:shadow-2xl border border-gray-100 dark:border-gray-700/60 py-2 z-50 overflow-hidden">
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#17211D] rounded-2xl shadow-xl dark:shadow-2xl border border-gray-100 dark:border-gray-800/80 py-1.5 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
                     {isAdmin && (
                       <Link
                         to="/admin"
                         onClick={() => setUserMenuOpen(false)}
-                        className="block px-4 py-2.5 text-sm text-gray-700 dark:text-[#F4F7F5] hover:bg-primary-50 dark:hover:bg-gray-800 hover:text-primary-600 dark:hover:text-primary-300 flex items-center space-x-2 transition-colors"
+                        className="flex items-center space-x-2.5 px-3.5 py-2.5 mx-1 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-primary-950/40 hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
                       >
-                        <Shield size={16} />
+                        <Shield size={16} className="text-amber-500 flex-shrink-0" />
                         <span>Painel Admin</span>
                       </Link>
                     )}
@@ -560,28 +560,29 @@ export default function Header() {
                       <Link
                         to="/supplier/orders"
                         onClick={() => setUserMenuOpen(false)}
-                        className="block px-4 py-2.5 text-sm text-gray-700 dark:text-[#F4F7F5] hover:bg-primary-50 dark:hover:bg-gray-800 hover:text-primary-600 dark:hover:text-primary-300 flex items-center space-x-2 transition-colors"
+                        className="flex items-center space-x-2.5 px-3.5 py-2.5 mx-1 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-primary-950/40 hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
                       >
-                        <Building2 size={16} className="text-primary-500" />
+                        <Building2 size={16} className="text-primary-600 dark:text-primary-400 flex-shrink-0" />
                         <span>Portal do Fornecedor</span>
                       </Link>
                     )}
                     <Link
                       to="/perfil"
                       onClick={() => setUserMenuOpen(false)}
-                      className="block px-4 py-2.5 text-sm text-gray-700 dark:text-[#F4F7F5] hover:bg-primary-50 dark:hover:bg-gray-800 hover:text-primary-600 dark:hover:text-primary-300 flex items-center space-x-2 transition-colors"
+                      className="flex items-center space-x-2.5 px-3.5 py-2.5 mx-1 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-primary-50 dark:hover:bg-primary-950/40 hover:text-primary-600 dark:hover:text-primary-300 transition-colors"
                     >
-                      <UserCircle size={16} />
+                      <UserCircle size={16} className="text-primary-600 dark:text-primary-400 flex-shrink-0" />
                       <span>Meu Perfil</span>
                     </Link>
+                    <div className="my-1 border-t border-gray-100 dark:border-gray-800" />
                     <button
                       onClick={() => {
                         logout();
                         setUserMenuOpen(false);
                       }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-[#F4F7F5] hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 flex items-center space-x-2 transition-colors"
+                      className="w-[calc(100%-8px)] text-left flex items-center space-x-2.5 px-3.5 py-2.5 mx-1 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
                     >
-                      <LogOut size={16} />
+                      <LogOut size={16} className="text-red-500 dark:text-red-400 flex-shrink-0" />
                       <span>Sair</span>
                     </button>
                   </div>
