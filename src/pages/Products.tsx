@@ -115,23 +115,6 @@ export default function Products() {
     setParams(newParams)
   }
 
-  // Extract all categories dynamically from active products
-  const dynamicCategories = useMemo(() => {
-    const catsSet = new Set<string>()
-    for (const p of products) {
-      if (!p.active) continue
-      if (p.category) {
-        p.category.split(',').forEach(c => {
-          const trimmed = c.trim()
-          if (trimmed) {
-            catsSet.add(trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase())
-          }
-        })
-      }
-    }
-    return Array.from(catsSet).sort((a, b) => a.localeCompare(b))
-  }, [products])
-
   // Calculate dynamic product counts for categories (only counting active ones)
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {}
@@ -145,6 +128,30 @@ export default function Products() {
     }
     return counts
   }, [products])
+
+  // Extract all categories dynamically from active products, sorted by count (desc) then alphabetically
+  const dynamicCategories = useMemo(() => {
+    const catsSet = new Set<string>()
+    for (const p of products) {
+      if (!p.active) continue
+      if (p.category) {
+        p.category.split(',').forEach(c => {
+          const trimmed = c.trim()
+          if (trimmed) {
+            catsSet.add(trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase())
+          }
+        })
+      }
+    }
+    return Array.from(catsSet).sort((a, b) => {
+      const countA = categoryCounts[a] || 0
+      const countB = categoryCounts[b] || 0
+      if (countB !== countA) {
+        return countB - countA
+      }
+      return a.localeCompare(b, 'pt-BR')
+    })
+  }, [products, categoryCounts])
 
   // Filtra as categorias da barra de pesquisa de categorias
   const visibleCategories = useMemo(() => {

@@ -49,8 +49,19 @@ export default function Header() {
   const [animatedPlaceholder, setAnimatedPlaceholder] = useState(SEARCH_PLACEHOLDERS[0]);
   const desktopSearchRef = useRef<HTMLDivElement>(null);
   const mobileSearchRef = useRef<HTMLDivElement>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 15);
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const getProfileImageUrl = (profileImage?: string): string | null => {
     if (!profileImage) return null;
@@ -445,7 +456,7 @@ export default function Header() {
 
   return (
     <>
-    <header className="bg-white dark:bg-[#121C18] border-b border-gray-100 dark:border-[#202C26] sticky top-0 z-50 backdrop-blur-sm bg-white/95 dark:bg-[#121C18]/95 transition-colors duration-500 relative">
+    <header className={`bg-white dark:bg-[#121C18] border-b border-gray-100/80 dark:border-[#202C26] sticky top-0 z-50 backdrop-blur-md bg-white/95 dark:bg-[#121C18]/95 transition-all duration-300 relative ${isScrolled ? 'shadow-md shadow-gray-900/10 dark:shadow-black/40 border-gray-200/60 dark:border-gray-800' : ''}`}>
       {/* Barra superior verde */}
       <div className="h-1 bg-primary-500"></div>
 
@@ -457,7 +468,7 @@ export default function Header() {
       />
 
       <nav className="container mx-auto px-6 md:px-8 lg:px-12">
-        <div className="flex items-center justify-between h-16">
+        <div className={`flex items-center justify-between transition-all duration-300 ${isScrolled ? 'h-14 md:h-14' : 'h-16'}`}>
           {/* Logo & Controle de Tema em Formato de Cápsula Posicionado ao lado da Logo */}
           <div className="flex items-center gap-3.5 relative z-10">
             <Link to="/" className="flex items-center space-x-2.5 group relative z-10">

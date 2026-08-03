@@ -4,7 +4,7 @@ import {
   ArrowLeft, Plus, Edit, Trash2, Loader2, Search, Upload,
   Archive, ArchiveRestore, TrendingUp, TrendingDown, Minus,
   ChevronDown, ChevronRight, X, BarChart2, ShoppingCart, Tag,
-  Sparkles, Check, AlertCircle, Save, Download, FileText
+  Sparkles, Check, AlertCircle, Save, Download, FileText, FileSpreadsheet
 } from 'lucide-react'
 import { productsService } from '../services/products.service'
 import { uploadService } from '../services/upload.service'
@@ -29,18 +29,22 @@ import { normalizeImagePath } from '../utils/imageUrl'
 import { generateProductUrl } from '../utils/productUrl'
 import ProductPdfExportModal from '../components/ProductPdfExportModal'
 import { ProductPdfReportOptions } from '../types/productPdfReport'
+import ProductExcelExportModal from '../components/ProductExcelExportModal'
+import ProductImportModal from '../components/ProductImportModal'
 
 type Tab = 'active' | 'inactive' | 'archived'
-type ProductsSortKey = 'name' | 'sku' | 'category' | 'purchase_price' | 'margin' | 'price' | 'status'
+type ProductsSortKey = 'name' | 'sku' | 'category' | 'marketplaces' | 'purchase_price' | 'margin' | 'price' | 'status'
 type SortDirection = 'asc' | 'desc'
 
 // ─── Column fields for import mapping ──────────────────────────────────────
 const IMPORT_FIELDS = [
   { key: 'name', label: 'Nome', required: true },
+  { key: 'sku', label: 'SKU / Código', required: false },
   { key: 'price', label: 'Preço de Venda', required: false },
   { key: 'purchase_price', label: 'Preço de Compra', required: false },
   { key: 'promo_price', label: 'Preço Promocional', required: false },
   { key: 'status', label: 'Status (Ativo / Inativo / Arquivado)', required: false },
+  { key: 'marketplace_tags', label: 'Marketplaces / Canais', required: false },
   { key: 'description', label: 'Descrição', required: false },
   { key: 'category', label: 'Categoria', required: false },
   { key: 'indication', label: 'Indicação', required: false },
@@ -56,21 +60,19 @@ type FieldKey = typeof IMPORT_FIELDS[number]['key']
 
 function autoDetect(headers: string[]): Record<FieldKey, string> {
   const m: Record<FieldKey, string> = {
-    name: '', price: '', purchase_price: '', promo_price: '', status: '', description: '', category: '',
+    name: '', sku: '', price: '', purchase_price: '', promo_price: '', status: '', marketplace_tags: '', description: '', category: '',
     indication: '', contraindication: '', compositions: '', benefits: '',
     intended_form: '', intended_presentation: '', intended_units_per_dose: '',
   }
   for (const h of headers) {
     const low = h.toLowerCase().trim()
     if (!m.name && (low.includes('nome') || low.includes('name') || low.includes('produto') || low.includes('product') || low === 'item' || low === 'titulo' || low === 'title')) m.name = h
-    // promo antes de compra/venda para não confundir
+    else if (!m.sku && (low === 'sku' || low.includes('código') || low.includes('codigo') || low.includes('cod'))) m.sku = h
     else if (!m.promo_price && (low.includes('promo') || low.includes('promoc'))) m.promo_price = h
-    // distribuidora → preço de compra (antes de 'venda' para evitar match errado)
     else if (!m.purchase_price && (low.includes('distribui') || low.includes('compra') || low.includes('custo') || low.includes('cost'))) m.purchase_price = h
-    // preço de venda
     else if (!m.price && (low.includes('venda') || low === 'preço' || low === 'preco' || low === 'price')) m.price = h
-    // status: 'ativo', 'inativo', 'ativa', 'status', 'situação', 'estado'
     else if (!m.status && (low === 'ativo' || low === 'ativa' || low === 'inativo' || low === 'inativa' || low === 'status' || low.includes('situacao') || low.includes('situação') || low.includes('estado'))) m.status = h
+    else if (!m.marketplace_tags && (low.includes('marketplace') || low.includes('canal') || low.includes('shopee') || low.includes('mercado livre'))) m.marketplace_tags = h
     else if (!m.description && (low.includes('desc') || low.includes('about') || low.includes('detalhe'))) m.description = h
     else if (!m.category && (low.includes('cat') || low.includes('grupo'))) m.category = h
     else if (!m.indication && (low.includes('indica') || low.includes('indicação') || low.includes('indicacao'))) m.indication = h
@@ -210,9 +212,12 @@ export default function ManageProducts() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isExporting, setIsExporting] = useState(false)
   const [isExportingPdf, setIsExportingPdf] = useState(false)
   const [isPdfExportModalOpen, setIsPdfExportModalOpen] = useState(false)
+  const [isExcelExportModalOpen, setIsExcelExportModalOpen] = useState(false)
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('')
+  const [selectedMarketplaceFilter, setSelectedMarketplaceFilter] = useState('all')
+  const [bulkMarketplaceTags, setBulkMarketplaceTags] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [productsSort, setProductsSort] = useState<{ key: ProductsSortKey; direction: SortDirection }>({
     key: 'name',
@@ -242,12 +247,12 @@ export default function ManageProducts() {
   const [importHeaders, setImportHeaders] = useState<string[]>([])
   const [importRows, setImportRows] = useState<any[]>([])
   const [columnMapping, setColumnMapping] = useState<Record<FieldKey, string>>({
-    name: '', price: '', purchase_price: '', promo_price: '', status: '', description: '', category: '',
+    name: '', sku: '', price: '', purchase_price: '', promo_price: '', status: '', marketplace_tags: '', description: '', category: '',
     indication: '', contraindication: '', compositions: '', benefits: '',
     intended_form: '', intended_presentation: '', intended_units_per_dose: '',
   })
   const [autoDetected, setAutoDetected] = useState<Record<FieldKey, boolean>>({
-    name: false, price: false, purchase_price: false, promo_price: false, status: false, description: false, category: false,
+    name: false, sku: false, price: false, purchase_price: false, promo_price: false, status: false, marketplace_tags: false, description: false, category: false,
     indication: false, contraindication: false, compositions: false, benefits: false,
     intended_form: false, intended_presentation: false, intended_units_per_dose: false,
   })
@@ -290,6 +295,8 @@ export default function ManageProducts() {
   const [labelSaving, setLabelSaving] = useState(false)
   const originalProductImageRef = useRef('')
 
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false)
+
   const initialProductFormState = {
     name: '',
     description: '',
@@ -311,9 +318,31 @@ export default function ManageProducts() {
     intended_form: '',
     intended_presentation: '',
     intended_units_per_dose: '',
+    marketplace_tags: 'site,mercado_livre,shopee',
+    fiscal_description: '',
+    ncm: '',
+    cest: '',
+    origin: 0,
+    csosn: '102',
+    csosn_st: '',
+    cfop_intra: '5102',
+    cfop_inter: '6108',
+    cfop_intra_st: '',
+    cfop_inter_st: '',
+    pis_cst: '49',
+    cofins_cst: '49',
+    unit: 'UN',
+    tax_unit: '',
+    tax_conversion_factor: 1,
+    gtin: '',
+    tax_gtin: '',
+    cbenef: '',
+    fiscal_validated: 'NAO',
+    fiscal_notes: '',
+    nfe_enabled: 'NAO',
   }
   const [productFormData, setProductFormData] = useState(initialProductFormState)
-  const [activeModalTab, setActiveModalTab] = useState<'basic' | 'pricing' | 'details' | 'technical'>('basic')
+  const [activeModalTab, setActiveModalTab] = useState<'basic' | 'pricing' | 'details' | 'technical' | 'fiscal'>('basic')
   const priceEditSourceRef = useRef<'price' | 'markup' | 'purchase_price'>('price')
   const [newCatInput, setNewCatInput] = useState('')
   const [localAddedCategories, setLocalAddedCategories] = useState<string[]>([])
@@ -461,6 +490,28 @@ export default function ManageProducts() {
         intended_form: productRaw.intended_form || '',
         intended_presentation: productRaw.intended_presentation || '',
         intended_units_per_dose: productRaw.intended_units_per_dose || '',
+        marketplace_tags: productRaw.marketplace_tags || 'site,mercado_livre,shopee',
+        fiscal_description: productRaw.fiscal_description || '',
+        ncm: productRaw.ncm || '',
+        cest: productRaw.cest || '',
+        origin: productRaw.origin ?? 0,
+        csosn: productRaw.csosn || '102',
+        csosn_st: productRaw.csosn_st || '',
+        cfop_intra: productRaw.cfop_intra || '5102',
+        cfop_inter: productRaw.cfop_inter || '6108',
+        cfop_intra_st: productRaw.cfop_intra_st || '',
+        cfop_inter_st: productRaw.cfop_inter_st || '',
+        pis_cst: productRaw.pis_cst || '49',
+        cofins_cst: productRaw.cofins_cst || '49',
+        unit: productRaw.unit || 'UN',
+        tax_unit: productRaw.tax_unit || '',
+        tax_conversion_factor: productRaw.tax_conversion_factor ?? 1,
+        gtin: productRaw.gtin || '',
+        tax_gtin: productRaw.tax_gtin || '',
+        cbenef: productRaw.cbenef || '',
+        fiscal_validated: productRaw.fiscal_validated || 'NAO',
+        fiscal_notes: productRaw.fiscal_notes || '',
+        nfe_enabled: productRaw.nfe_enabled || 'NAO',
       })
       setLocalAddedCategories([])
       setIsProductModalOpen(true)
@@ -616,6 +667,28 @@ export default function ManageProducts() {
         intended_form: productFormData.intended_form.trim() || undefined,
         intended_presentation: productFormData.intended_presentation.trim() || undefined,
         intended_units_per_dose: productFormData.intended_units_per_dose.trim() || undefined,
+        marketplace_tags: productFormData.marketplace_tags || 'site,mercado_livre,shopee',
+        fiscal_description: productFormData.fiscal_description?.trim() || undefined,
+        ncm: productFormData.ncm?.trim() || undefined,
+        cest: productFormData.cest?.trim() || undefined,
+        origin: productFormData.origin != null && String(productFormData.origin) !== '' ? Number(productFormData.origin) : 0,
+        csosn: productFormData.csosn?.trim() || undefined,
+        csosn_st: productFormData.csosn_st?.trim() || undefined,
+        cfop_intra: productFormData.cfop_intra?.trim() || undefined,
+        cfop_inter: productFormData.cfop_inter?.trim() || undefined,
+        cfop_intra_st: productFormData.cfop_intra_st?.trim() || undefined,
+        cfop_inter_st: productFormData.cfop_inter_st?.trim() || undefined,
+        pis_cst: productFormData.pis_cst?.trim() || undefined,
+        cofins_cst: productFormData.cofins_cst?.trim() || undefined,
+        unit: productFormData.unit?.trim() || undefined,
+        tax_unit: productFormData.tax_unit?.trim() || undefined,
+        tax_conversion_factor: productFormData.tax_conversion_factor ? Number(productFormData.tax_conversion_factor) : 1,
+        gtin: productFormData.gtin?.trim() || undefined,
+        tax_gtin: productFormData.tax_gtin?.trim() || undefined,
+        cbenef: productFormData.cbenef?.trim() || undefined,
+        fiscal_validated: productFormData.fiscal_validated || 'NAO',
+        fiscal_notes: productFormData.fiscal_notes?.trim() || undefined,
+        nfe_enabled: productFormData.nfe_enabled || 'NAO',
       }
 
       if (editingProduct) {
@@ -836,75 +909,6 @@ export default function ManageProducts() {
 
   useEffect(() => { loadProducts() }, [loadProducts])
   useEffect(() => { setSelectedIds([]); setSearchTerm('') }, [activeTab])
-
-  const formatExportDate = (value: unknown) => {
-    if (!value) return ''
-    const date = new Date(String(value))
-    if (Number.isNaN(date.getTime())) return String(value)
-    return date.toLocaleString('pt-BR')
-  }
-
-  const handleExportProducts = async () => {
-    try {
-      setIsExporting(true)
-      const productsToExport = await productsService.getAllForAdminRaw()
-      const rows = productsToExport.map(product => {
-        const publicImageUrl = product.image ? productsService.getImageUrl(product.image) : ''
-
-        // Status unificado: Ativo / Inativo / Arquivado
-        const status = product.archived ? 'Arquivado' : product.active ? 'Ativo' : 'Inativo'
-        return {
-          ID: product.id,
-          Nome: product.name,
-          'Descrição': product.description || '',
-          'Preço Distribuidora': product.purchase_price != null ? Number(product.purchase_price) : '',
-          'Preço de Venda': product.price != null ? Number(product.price) : '',
-          'Preço Promocional': product.promo_price != null ? Number(product.promo_price) : '',
-          'Markup (%)': product.markup != null ? Number(product.markup) : '',
-          Categoria: product.category || '',
-          'Status': status,
-          'Frete Grátis': product.free_shipping ? 'Sim' : 'Não',
-          'Link Público da Imagem': publicImageUrl,
-          'Formulação / Composição': product.compositions || '',
-          'Indicação': product.indication || '',
-          'Contraindicação': product.contraindication || '',
-          'Benefícios': product.benefits || '',
-          'Forma Pretendida': product.intended_form || '',
-          'Apresentação Pretendida': product.intended_presentation || '',
-          'Unidades por Dose Pretendida': product.intended_units_per_dose || '',
-          'Criado em': formatExportDate(product.created_at),
-          'Atualizado em': formatExportDate(product.updated_at),
-        }
-      })
-
-      const worksheet = XLSX.utils.json_to_sheet(rows)
-      worksheet['!cols'] = [
-        { wch: 38 }, { wch: 36 }, { wch: 48 }, { wch: 15 }, { wch: 18 },
-        { wch: 16 }, { wch: 12 }, { wch: 24 }, { wch: 14 }, { wch: 13 },
-        { wch: 64 }, { wch: 48 }, { wch: 42 }, { wch: 42 },
-        { wch: 48 }, { wch: 24 }, { wch: 24 }, { wch: 28 }, { wch: 20 }, { wch: 20 },
-      ]
-
-      productsToExport.forEach((product, index) => {
-        if (!product.image) return
-        // Link Público da Imagem agora é coluna K (sem Ativo+Arquivado separados)
-        const cellAddress = `K${index + 2}`
-        const cell = worksheet[cellAddress]
-        if (cell?.v) {
-          cell.l = { Target: String(cell.v), Tooltip: 'Abrir imagem pública' }
-        }
-      })
-
-      const workbook = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Produtos')
-      XLSX.writeFile(workbook, `produtos-kapsu-${new Date().toISOString().slice(0, 10)}.xlsx`)
-      toast.success(`${productsToExport.length} produto(s) exportado(s) com sucesso.`)
-    } catch (e: any) {
-      toast.error(e.message || 'Erro ao exportar produtos.')
-    } finally {
-      setIsExporting(false)
-    }
-  }
 
   const handleDownloadPDF = async (options: ProductPdfReportOptions) => {
     try {
@@ -1378,12 +1382,12 @@ export default function ManageProducts() {
   const resetImport = () => {
     setImportHeaders([]); setImportRows([]); setImportProgress(0)
     setColumnMapping({
-      name: '', price: '', purchase_price: '', promo_price: '', status: '', description: '', category: '',
+      name: '', sku: '', price: '', purchase_price: '', promo_price: '', status: '', marketplace_tags: '', description: '', category: '',
       indication: '', contraindication: '', compositions: '', benefits: '',
       intended_form: '', intended_presentation: '', intended_units_per_dose: '',
     })
     setAutoDetected({
-      name: false, price: false, purchase_price: false, promo_price: false, status: false, description: false, category: false,
+      name: false, sku: false, price: false, purchase_price: false, promo_price: false, status: false, marketplace_tags: false, description: false, category: false,
       indication: false, contraindication: false, compositions: false, benefits: false,
       intended_form: false, intended_presentation: false, intended_units_per_dose: false,
     })
@@ -1675,15 +1679,89 @@ export default function ManageProducts() {
     })
   }
 
+  const handleBulkAssignMarketplaceTags = async () => {
+    if (!bulkMarketplaceTags || selectedIds.length === 0) return
+    try {
+      setIsExecutingBulk(true)
+      let count = 0
+      for (const id of selectedIds) {
+        await productsService.update(id, { marketplace_tags: bulkMarketplaceTags })
+        count++
+      }
+      toast.success(`Marketplaces atualizados em ${count} produto(s).`)
+      setSelectedIds([])
+      setBulkMarketplaceTags('')
+      await loadProducts()
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao atualizar marketplaces em massa.')
+    } finally {
+      setIsExecutingBulk(false)
+    }
+  }
+
+  const renderMarketplaceBadges = (tagsStr?: string | null) => {
+    const tags = (tagsStr || 'site,mercado_livre,shopee').split(',').map(t => t.trim().toLowerCase())
+    return (
+      <div className="flex flex-wrap gap-1 items-center">
+        {tags.includes('site') && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800" title="Disponível no Site">
+            🌐 Site
+          </span>
+        )}
+        {tags.includes('mercado_livre') && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800" title="Disponível no Mercado Livre">
+            💛 Mercado Livre
+          </span>
+        )}
+        {tags.includes('shopee') && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold rounded-full bg-orange-50 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-800" title="Disponível na Shopee">
+            🟠 Shopee
+          </span>
+        )}
+      </div>
+    )
+  }
+
+  const handleMarketplaceTagToggle = (tag: string, checked: boolean) => {
+    const currentTags = (productFormData.marketplace_tags || 'site,mercado_livre,shopee')
+      .split(',')
+      .map(t => t.trim())
+      .filter(Boolean)
+
+    let newTags: string[]
+    if (checked) {
+      newTags = Array.from(new Set([...currentTags, tag]))
+    } else {
+      newTags = currentTags.filter(t => t !== tag)
+    }
+
+    setProductFormData(prev => ({
+      ...prev,
+      marketplace_tags: newTags.join(',')
+    }))
+  }
+
   // ── Derived lists ─────────────────────────────────────────────────────────
   const activeProducts = products.filter(p => p.active && !p.archived)
   const inactiveProducts = products.filter(p => !p.active && !p.archived)
   const archivedProducts = products.filter(p => p.archived)
   const tabProducts: Record<Tab, Product[]> = { active: activeProducts, inactive: inactiveProducts, archived: archivedProducts }
-  const filteredProducts = tabProducts[activeTab].filter(p =>
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (p.description || '').toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  
+  const filteredProducts = tabProducts[activeTab].filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.sku || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.category || '').toLowerCase().includes(searchTerm.toLowerCase())
+
+    const matchesCategory = !selectedCategoryFilter ||
+      (p.category || 'Outros').toLowerCase().includes(selectedCategoryFilter.toLowerCase())
+
+    const prodTags = (p.marketplace_tags || 'site,mercado_livre,shopee').split(',').map(t => t.trim())
+    const matchesMarketplace = selectedMarketplaceFilter === 'all' || prodTags.includes(selectedMarketplaceFilter)
+
+    return matchesSearch && matchesCategory && matchesMarketplace
+  })
+
   const getProductMarginValue = (p: Product): number | null => {
     const cost = p.purchase_price != null ? Number(p.purchase_price) : null
     const sale = Number(p.price)
@@ -1707,6 +1785,8 @@ export default function ManageProducts() {
         return p.sku || ''
       case 'category':
         return p.category || ''
+      case 'marketplaces':
+        return p.marketplace_tags || 'site,mercado_livre,shopee'
       case 'purchase_price':
         return p.purchase_price != null ? Number(p.purchase_price) : null
       case 'margin':
@@ -1817,11 +1897,11 @@ export default function ManageProducts() {
               <button
                 type="button"
                 onClick={() => setIsExportDropdownOpen(v => !v)}
-                disabled={isExporting || isExportingPdf}
+                disabled={isExportingPdf}
                 className="flex items-center gap-1.5 px-3 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
                 title="Exportar produtos"
               >
-                {(isExporting || isExportingPdf) ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
+                {isExportingPdf ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
                 <span className="hidden lg:inline text-sm font-medium">Exportar</span>
                 <ChevronDown size={14} className="hidden lg:block" />
               </button>
@@ -1829,9 +1909,8 @@ export default function ManageProducts() {
                 <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-20">
                   <div className="py-1">
                     <button
-                      onClick={() => { handleExportProducts(); setIsExportDropdownOpen(false) }}
-                      disabled={isExporting}
-                      className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                      onClick={() => { setIsExcelExportModalOpen(true); setIsExportDropdownOpen(false) }}
+                      className="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                     >
                       <Upload size={15} className="mr-2.5 text-gray-500" />
                       Exportar Excel
@@ -1860,7 +1939,7 @@ export default function ManageProducts() {
                     <button onClick={() => { navigate('/admin/products/create'); setIsDropdownOpen(false) }} className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
                       <Plus size={16} className="mr-2" />Novo Produto
                     </button>
-                    <button onClick={() => { setIsImportOpen(true); setIsDropdownOpen(false) }} className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <button onClick={() => { setIsImportModalOpen(true); setIsDropdownOpen(false) }} className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
                       <Download size={16} className="mr-2" />Importar Excel/CSV
                     </button>
                   </div>
@@ -1901,11 +1980,41 @@ export default function ManageProducts() {
           </div>
         )}
 
-        {/* Search */}
-        <div className="mb-4">
-          <div className="relative">
+        {/* Search and Filters */}
+        <div className="mb-4 flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input type="text" placeholder="Buscar produtos..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-400 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent" />
+            <input
+              type="text"
+              placeholder="Buscar por nome, SKU, categoria ou descrição..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <select
+              value={selectedCategoryFilter}
+              onChange={e => setSelectedCategoryFilter(e.target.value)}
+              className="px-3 py-2 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="">Todas as Categorias</option>
+              {categoriesToDisplay.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+
+            <select
+              value={selectedMarketplaceFilter}
+              onChange={e => setSelectedMarketplaceFilter(e.target.value)}
+              className="px-3 py-2 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="all">Todos os Marketplaces</option>
+              <option value="site">🌐 Apenas Site</option>
+              <option value="mercado_livre">💛 Mercado Livre</option>
+              <option value="shopee">🟠 Shopee</option>
+            </select>
           </div>
         </div>
 
@@ -1980,6 +2089,30 @@ export default function ManageProducts() {
                       onClick={handleBulkAssignCategory}
                       disabled={!bulkCategory.trim() || isExecutingBulk}
                       className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors"
+                    >
+                      Aplicar
+                    </button>
+                  </div>
+
+                  {/* 3. Alterar Marketplaces */}
+                  <div className="flex items-center gap-1.5 flex-1 min-w-[200px]">
+                    <select
+                      value={bulkMarketplaceTags}
+                      onChange={e => setBulkMarketplaceTags(e.target.value)}
+                      className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs text-gray-800 dark:text-gray-200 w-full focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">Alterar Marketplaces...</option>
+                      <option value="site,mercado_livre,shopee">Todos (Site + Mercado Livre + Shopee)</option>
+                      <option value="site">Apenas Site Próprio</option>
+                      <option value="site,mercado_livre">Site + Mercado Livre</option>
+                      <option value="site,shopee">Site + Shopee</option>
+                      <option value="mercado_livre,shopee">Mercado Livre + Shopee</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={handleBulkAssignMarketplaceTags}
+                      disabled={!bulkMarketplaceTags || isExecutingBulk}
+                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors"
                     >
                       Aplicar
                     </button>
@@ -2082,10 +2215,10 @@ export default function ManageProducts() {
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('name', 'Produto')}</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('category', 'Categoria')}</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">Fornecedor</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('purchase_price', 'Compra')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('marketplaces', 'Marketplaces')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('purchase_price', 'Custo')}</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('margin', 'Markup / Margem')}</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('price', 'Venda')}</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('price', 'Preço')}</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap">{renderSortableHeader('status', 'Status')}</th>
                       <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase whitespace-nowrap sticky right-0 bg-gray-50 dark:bg-gray-800 z-10 shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.1)] dark:shadow-[-4px_0_6px_-1px_rgba(0,0,0,0.3)]">Ações</th>
                     </tr>
@@ -2141,8 +2274,8 @@ export default function ManageProducts() {
                             })}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-xs text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                          {suppliers.find(s => s.id === p.supplier_id)?.trade_name || suppliers.find(s => s.id === p.supplier_id)?.name || 'Sem vínculo'}
+                        <td className="px-4 py-3 text-xs whitespace-nowrap">
+                          {renderMarketplaceBadges(p.marketplace_tags)}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
                           {p.purchase_price != null ? <span className="text-purple-705 dark:text-purple-400 font-medium">{fmt(p.purchase_price)}</span> : <span className="text-gray-300 dark:text-gray-600">—</span>}
@@ -3109,6 +3242,12 @@ export default function ManageProducts() {
         onExport={handleDownloadPDF}
       />
 
+      <ProductExcelExportModal
+        isOpen={isExcelExportModalOpen}
+        onClose={() => setIsExcelExportModalOpen(false)}
+        activeTab={activeTab}
+      />
+
       <AdminModal
         isOpen={isProductModalOpen}
         onClose={closeProductModal}
@@ -3179,6 +3318,7 @@ export default function ManageProducts() {
                 { id: 'pricing', label: '2. Preços & Regras', icon: <Tag size={14} /> },
                 { id: 'details', label: '3. Apresentação Visual', icon: <FileText size={14} /> },
                 { id: 'technical', label: '4. Ficha Técnica (PDF)', icon: <AlertCircle size={14} /> },
+                { id: 'fiscal', label: '5. Dados Fiscais (NF-e 55)', icon: <FileSpreadsheet size={14} /> },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -3322,6 +3462,42 @@ export default function ManageProducts() {
                         >
                           + Adicionar
                         </button>
+                      </div>
+                    </div>
+
+                    {/* Marketplaces / Canais */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Canais de Venda / Marketplaces
+                      </label>
+                      <div className="p-3 bg-gray-50/50 dark:bg-gray-900/50 rounded-xl border border-gray-200/80 dark:border-gray-800 flex flex-wrap gap-4">
+                        <label className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={(productFormData.marketplace_tags || 'site,mercado_livre,shopee').split(',').map(t => t.trim()).includes('site')}
+                            onChange={e => handleMarketplaceTagToggle('site', e.target.checked)}
+                            className="h-4 w-4 rounded text-blue-600 focus:ring-blue-500"
+                          />
+                          🌐 Site Próprio
+                        </label>
+                        <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={(productFormData.marketplace_tags || 'site,mercado_livre,shopee').split(',').map(t => t.trim()).includes('shopee')}
+                            onChange={e => handleMarketplaceTagToggle('shopee', e.target.checked)}
+                            className="h-4 w-4 rounded text-orange-600 focus:ring-orange-500"
+                          />
+                          🟠 Shopee
+                        </label>
+                        <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-200 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={(productFormData.marketplace_tags || 'site,mercado_livre,shopee').split(',').map(t => t.trim()).includes('mercado_livre')}
+                            onChange={e => handleMarketplaceTagToggle('mercado_livre', e.target.checked)}
+                            className="h-4 w-4 rounded text-yellow-600 focus:ring-yellow-500"
+                          />
+                          💛 Mercado Livre
+                        </label>
                       </div>
                     </div>
                   </div>
@@ -3712,10 +3888,226 @@ export default function ManageProducts() {
                   </div>
                 </div>
               )}
+
+              {/* TAB 5: FISCAL FIELDS (NF-E MODEL 55) */}
+              {activeModalTab === 'fiscal' && (
+                <div className="space-y-5">
+                  <div className="p-3 bg-[#065084]/10 dark:bg-[#065084]/30 border border-[#065084]/20 rounded-xl flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-bold text-gray-900 dark:text-white">Regra de Elegibilidade NF-e:</span>
+                      <span className="text-gray-600 dark:text-gray-300 ml-1.5">
+                        O produto só estará apto para emissão de NF-e quando <strong>fiscal_validated = SIM</strong> e <strong>nfe_enabled = SIM</strong>.
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        Validação Fiscal Realizada? (fiscal_validated)
+                      </label>
+                      <select
+                        name="fiscal_validated"
+                        value={productFormData.fiscal_validated}
+                        onChange={handleProductFormChange}
+                        className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-800 dark:text-white font-medium"
+                      >
+                        <option value="NAO">NÃO — Pendente de validação</option>
+                        <option value="SIM">SIM — Dados validados</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        Habilitado para NF-e? (nfe_enabled)
+                      </label>
+                      <select
+                        name="nfe_enabled"
+                        value={productFormData.nfe_enabled}
+                        onChange={handleProductFormChange}
+                        className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-800 dark:text-white font-medium"
+                      >
+                        <option value="NAO">NÃO — Desabilitado</option>
+                        <option value="SIM">SIM — Habilitado</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                      Descrição Fiscal (max 120 caracteres)
+                    </label>
+                    <input
+                      type="text"
+                      name="fiscal_description"
+                      value={productFormData.fiscal_description}
+                      onChange={handleProductFormChange}
+                      className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-800 dark:text-white"
+                      placeholder="Ex: Medicamento / Suplemento Nutricional..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        NCM (8 dígitos)
+                      </label>
+                      <input
+                        type="text"
+                        name="ncm"
+                        value={productFormData.ncm}
+                        onChange={handleProductFormChange}
+                        maxLength={8}
+                        className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-800 dark:text-white font-mono"
+                        placeholder="30049099"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        CEST (7 dígitos - opcional)
+                      </label>
+                      <input
+                        type="text"
+                        name="cest"
+                        value={productFormData.cest}
+                        onChange={handleProductFormChange}
+                        maxLength={7}
+                        className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-800 dark:text-white font-mono"
+                        placeholder="1300200"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        Origem da Mercadoria (0 a 8)
+                      </label>
+                      <select
+                        name="origin"
+                        value={productFormData.origin}
+                        onChange={handleProductFormChange}
+                        className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-800 dark:text-white"
+                      >
+                        <option value={0}>0 - Nacional</option>
+                        <option value={1}>1 - Estrangeira (Importação direta)</option>
+                        <option value={2}>2 - Estrangeira (Adquirida no mercado interno)</option>
+                        <option value={3}>3 - Nacional com mais de 40% conteúdo estrangeiro</option>
+                        <option value={4}>4 - Nacional produzida conforme processos produtivos básicos</option>
+                        <option value={5}>5 - Nacional com conteúdo estrangeiro menor que 40%</option>
+                        <option value={6}>6 - Estrangeira (Importação direta sem similar nacional)</option>
+                        <option value={7}>7 - Estrangeira (Mercado interno sem similar nacional)</option>
+                        <option value={8}>8 - Nacional (Importação com conteúdo de importação superior a 70%)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        CSOSN (Simples Nacional)
+                      </label>
+                      <input
+                        type="text"
+                        name="csosn"
+                        value={productFormData.csosn}
+                        onChange={handleProductFormChange}
+                        className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-800 dark:text-white font-mono"
+                        placeholder="102"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                        CSOSN ST (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        name="csosn_st"
+                        value={productFormData.csosn_st}
+                        onChange={handleProductFormChange}
+                        className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-gray-800 dark:text-white font-mono"
+                        placeholder="201"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">CFOP Estadual</label>
+                      <input type="text" name="cfop_intra" value={productFormData.cfop_intra} onChange={handleProductFormChange} maxLength={4} className="w-full px-2.5 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white font-mono" placeholder="5102" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">CFOP Interestadual</label>
+                      <input type="text" name="cfop_inter" value={productFormData.cfop_inter} onChange={handleProductFormChange} maxLength={4} className="w-full px-2.5 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white font-mono" placeholder="6108" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">CFOP ST Estadual</label>
+                      <input type="text" name="cfop_intra_st" value={productFormData.cfop_intra_st} onChange={handleProductFormChange} maxLength={4} className="w-full px-2.5 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white font-mono" placeholder="5405" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">CFOP ST Interestadual</label>
+                      <input type="text" name="cfop_inter_st" value={productFormData.cfop_inter_st} onChange={handleProductFormChange} maxLength={4} className="w-full px-2.5 py-1.5 text-xs border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white font-mono" placeholder="6404" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">PIS CST (2 dígitos)</label>
+                      <input type="text" name="pis_cst" value={productFormData.pis_cst} onChange={handleProductFormChange} maxLength={2} className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white font-mono" placeholder="49" />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">COFINS CST (2 dígitos)</label>
+                      <input type="text" name="cofins_cst" value={productFormData.cofins_cst} onChange={handleProductFormChange} maxLength={2} className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white font-mono" placeholder="49" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Unidade Comercial</label>
+                      <input type="text" name="unit" value={productFormData.unit} onChange={handleProductFormChange} maxLength={6} className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white uppercase font-mono" placeholder="UN" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Unidade Tributável</label>
+                      <input type="text" name="tax_unit" value={productFormData.tax_unit} onChange={handleProductFormChange} maxLength={6} className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white uppercase font-mono" placeholder="UN" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Fator Conversão Tributária</label>
+                      <input type="number" step="0.0001" name="tax_conversion_factor" value={productFormData.tax_conversion_factor} onChange={handleProductFormChange} className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white" placeholder="1.0000" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">GTIN / EAN (Código Barras)</label>
+                      <input type="text" name="gtin" value={productFormData.gtin} onChange={handleProductFormChange} className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white font-mono" placeholder="SEM GTIN ou EAN-13" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">GTIN Tributável</label>
+                      <input type="text" name="tax_gtin" value={productFormData.tax_gtin} onChange={handleProductFormChange} className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white font-mono" placeholder="SEM GTIN ou EAN-13" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Código Benefício Fiscal (cBenef)</label>
+                      <input type="text" name="cbenef" value={productFormData.cbenef} onChange={handleProductFormChange} className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white font-mono" placeholder="Ex: PR840000" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Observações Fiscais Internas</label>
+                    <textarea name="fiscal_notes" value={productFormData.fiscal_notes} onChange={handleProductFormChange} rows={2} className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-gray-700 rounded-lg dark:bg-gray-800 dark:text-white" placeholder="Anotações internas sobre enquadramento fiscal deste produto..." />
+                  </div>
+                </div>
+              )}
             </form>
           </div>
         )}
       </AdminModal>
+
+      <ProductImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onSuccess={loadProducts}
+      />
     </div>
   )
 }

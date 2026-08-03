@@ -35,6 +35,7 @@ export interface Product {
   intended_form?: string | null;
   intended_presentation?: string | null;
   intended_units_per_dose?: string | null;
+  marketplace_tags?: string | null;
 }
 
 export type PriceHistoryType = 'purchase' | 'sale' | 'promo';

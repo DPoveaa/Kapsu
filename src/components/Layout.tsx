@@ -23,7 +23,7 @@ export default function Layout({ children }: LayoutProps) {
   usePageTracking()
 
   return (
-    <div className={`min-h-screen w-full overflow-x-hidden flex flex-col bg-palette-light dark:bg-gray-950 transition-colors duration-300 ${isAdminRoute ? 'h-screen overflow-hidden' : ''}`}>
+    <div className={`min-h-screen w-full overflow-x-clip flex flex-col bg-palette-light dark:bg-gray-950 transition-colors duration-300 ${isAdminRoute ? 'h-screen overflow-hidden' : ''}`}>
       {!hideHeaderFooter && <Header />}
       <main className={`flex-grow dark:bg-gray-950 ${isAdminRoute ? 'overflow-hidden flex flex-col min-h-0' : ''}`}>
         {children}

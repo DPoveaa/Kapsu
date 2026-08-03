@@ -41,6 +41,32 @@ export interface BackendProduct {
   intended_form: string | null
   intended_presentation: string | null
   intended_units_per_dose: string | null
+  marketplace_tags?: string | null
+  codigo_produto?: string | null
+  nome_produto?: string | null
+  fiscal_description?: string | null
+  ncm?: string | null
+  cest?: string | null
+  origin?: number | null
+  csosn?: string | null
+  csosn_st?: string | null
+  cfop_intra?: string | null
+  cfop_inter?: string | null
+  cfop_intra_st?: string | null
+  cfop_inter_st?: string | null
+  pis_cst?: string | null
+  cofins_cst?: string | null
+  unit?: string | null
+  tax_unit?: string | null
+  tax_conversion_factor?: number | null
+  gtin?: string | null
+  tax_gtin?: string | null
+  cbenef?: string | null
+  fiscal_validated?: 'SIM' | 'NAO' | string | null
+  fiscal_validated_at?: string | Date | null
+  fiscal_validated_by?: string | null
+  fiscal_notes?: string | null
+  nfe_enabled?: 'SIM' | 'NAO' | string | null
 }
 
 interface ProductsResponse {
@@ -303,6 +329,28 @@ class ProductsService {
     intended_form?: string | null
     intended_presentation?: string | null
     intended_units_per_dose?: string | null
+    marketplace_tags?: string | null
+    fiscal_description?: string | null
+    ncm?: string | null
+    cest?: string | null
+    origin?: number | null
+    csosn?: string | null
+    csosn_st?: string | null
+    cfop_intra?: string | null
+    cfop_inter?: string | null
+    cfop_intra_st?: string | null
+    cfop_inter_st?: string | null
+    pis_cst?: string | null
+    cofins_cst?: string | null
+    unit?: string | null
+    tax_unit?: string | null
+    tax_conversion_factor?: number | null
+    gtin?: string | null
+    tax_gtin?: string | null
+    cbenef?: string | null
+    fiscal_validated?: string | null
+    fiscal_notes?: string | null
+    nfe_enabled?: string | null
   }): Promise<Product> {
     try {
       const response = await fetch(`${this.baseUrl}`, {
@@ -515,6 +563,28 @@ class ProductsService {
     intended_form?: string | null
     intended_presentation?: string | null
     intended_units_per_dose?: string | null
+    marketplace_tags?: string | null
+    fiscal_description?: string | null
+    ncm?: string | null
+    cest?: string | null
+    origin?: number | null
+    csosn?: string | null
+    csosn_st?: string | null
+    cfop_intra?: string | null
+    cfop_inter?: string | null
+    cfop_intra_st?: string | null
+    cfop_inter_st?: string | null
+    pis_cst?: string | null
+    cofins_cst?: string | null
+    unit?: string | null
+    tax_unit?: string | null
+    tax_conversion_factor?: number | null
+    gtin?: string | null
+    tax_gtin?: string | null
+    cbenef?: string | null
+    fiscal_validated?: string | null
+    fiscal_notes?: string | null
+    nfe_enabled?: string | null
   }): Promise<Product> {
     try {
       const response = await fetch(`${this.baseUrl}/${id}`, {
@@ -833,6 +903,52 @@ class ProductsService {
       if (error.message) throw error
       throw new Error('Erro de conexão ao verificar pedidos dos produtos.')
     }
+  }
+
+  async validateImport(rows: any[]): Promise<{
+    totalRows: number
+    validCount: number
+    invalidCount: number
+    errors: Array<{
+      rowNumber: number
+      productCode: string
+      field: string
+      invalidValue: any
+      reason: string
+    }>
+    duplicateCodes: string[]
+  }> {
+    const response = await fetch(`${this.baseUrl}/admin/import/validate`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ rows }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || data.message || 'Erro ao validar importação')
+    return data
+  }
+
+  async applyImport(
+    rows: any[],
+    options: { allowClearEmpty?: boolean; partialImport?: boolean; fileName?: string }
+  ): Promise<{ updatedCount: number; errors: any[] }> {
+    const response = await fetch(`${this.baseUrl}/admin/import/apply`, {
+      method: 'POST',
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify({ rows, ...options }),
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.error || data.message || 'Erro ao aplicar importação')
+    return data
+  }
+
+  async downloadImportTemplate(): Promise<Blob> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/admin/import/template`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (!response.ok) throw new Error('Erro ao baixar modelo XLSX')
+    return await response.blob()
   }
 }
 

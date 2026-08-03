@@ -1712,6 +1712,57 @@ class AdminService {
   }
 
   /**
+   * Busca a Nota Fiscal Notaas de um pedido
+   */
+  async getNotaasInvoiceByOrder(orderId: string): Promise<any> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/admin/fiscal/notaas/order/${orderId}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    if (!response.ok) return null
+    const data = await response.json()
+    return data.data
+  }
+
+  /**
+   * Dispara a emissão manual de NF-e no Notaas
+   */
+  async issueNotaasInvoice(orderId: string): Promise<any> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/admin/fiscal/notaas/order/${orderId}/issue`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao emitir Nota Fiscal')
+    return data.data
+  }
+
+  /**
+   * Reconcilia o status da Nota Fiscal no Notaas
+   */
+  async reconcileNotaasInvoice(orderId: string): Promise<any> {
+    const token = localStorage.getItem('kapsu_token')
+    const response = await fetch(`${this.baseUrl}/admin/fiscal/notaas/order/${orderId}/reconcile`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    const data = await response.json()
+    if (!response.ok) throw new Error(data.message || 'Erro ao reconciliar Nota Fiscal')
+    return data.data
+  }
+
+  /** Retorna a URL autenticada do proxy DANFE */
+  getNotaasDanfeUrl(invoiceId: string): string {
+    return `${this.baseUrl}/admin/fiscal/notaas/${invoiceId}/danfe`
+  }
+
+  /** Retorna a URL autenticada do proxy XML */
+  getNotaasXmlUrl(invoiceId: string): string {
+    return `${this.baseUrl}/admin/fiscal/notaas/${invoiceId}/xml`
+  }
+
+  /**
    * Atualiza a etiqueta de envio (PDF) do Mercado Livre de um pedido
    */
   async updateOrderShippingLabel(orderId: string, payload: { shipping_label_url?: string | null }): Promise<{ success: boolean; message: string; shipping_label_url?: string | null }> {

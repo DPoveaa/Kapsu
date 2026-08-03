@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Package, MapPin, CreditCard, Calendar, FileText, Truck, ExternalLink, Copy } from 'lucide-react'
+import { ArrowLeft, Loader2, Package, MapPin, CreditCard, Calendar, FileText, Truck, ExternalLink } from 'lucide-react'
 import { adminService } from '../services/admin.service'
 import { Building2 } from 'lucide-react'
 import type { Supplier } from '../services/admin.service'
@@ -97,12 +97,10 @@ export default function OrderDetail() {
   const [pendingSupplierId, setPendingSupplierId] = useState('')
   const [updatingSupplier, setUpdatingSupplier] = useState(false)
 
-  // Invoice (NFe) state
-  const [showInvoiceForm, setShowInvoiceForm] = useState(false)
-  const [invoiceFile, setInvoiceFile] = useState<File | null>(null)
-  const [invoiceNumberInput, setInvoiceNumberInput] = useState('')
-  const [shippingLabelFile, setShippingLabelFile] = useState<File | null>(null)
-  const [savingInvoice, setSavingInvoice] = useState(false)
+  // Notaas NF-e State
+  const [notaasInvoice, setNotaasInvoice] = useState<any | null>(null)
+  const [issuingNotaas, setIssuingNotaas] = useState(false)
+  const [reconcilingNotaas, setReconcilingNotaas] = useState(false)
 
   const handleProductImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
     handleImageError(e, PRODUCT_IMAGE_FALLBACK)
@@ -111,8 +109,50 @@ export default function OrderDetail() {
   useEffect(() => {
     if (id) {
       loadOrderDetails()
+      if (isAdmin) {
+        loadNotaasInvoice()
+      }
     }
-  }, [id])
+  }, [id, isAdmin])
+
+  const loadNotaasInvoice = async () => {
+    if (!id) return
+    try {
+      const inv = await adminService.getNotaasInvoiceByOrder(id)
+      setNotaasInvoice(inv)
+    } catch (err) {
+      console.warn('Falha ao carregar NF-e Notaas:', err)
+    }
+  }
+
+  const handleIssueNotaas = async () => {
+    if (!id) return
+    if (!window.confirm('Confirma a solicitação de emissão da NF-e no Notaas para este pedido?')) return
+    try {
+      setIssuingNotaas(true)
+      const data = await adminService.issueNotaasInvoice(id)
+      toast.success('Solicitação de NF-e enviada ao Notaas com sucesso!')
+      setNotaasInvoice(data)
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao emitir NF-e Notaas')
+    } finally {
+      setIssuingNotaas(false)
+    }
+  }
+
+  const handleReconcileNotaas = async () => {
+    if (!id) return
+    try {
+      setReconcilingNotaas(true)
+      const data = await adminService.reconcileNotaasInvoice(id)
+      toast.success('Status da NF-e reconciliado com sucesso!')
+      setNotaasInvoice(data)
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao reconciliar NF-e')
+    } finally {
+      setReconcilingNotaas(false)
+    }
+  }
 
   useEffect(() => {
     if (!isAdmin) return
@@ -135,7 +175,6 @@ export default function OrderDetail() {
         setOrder(response.data)
         setPendingStatus(response.data.status)
         setPendingSupplierId(response.data.supplier_id || '')
-        setInvoiceNumberInput(response.data.invoice_number || '')
       }
     } catch (err: any) {
       console.error('Erro ao carregar detalhes do pedido:', err)
@@ -568,197 +607,132 @@ export default function OrderDetail() {
             </div>
 
             
-            {/* Nota Fiscal / NFe */}
+            {/* Nota Fiscal Eletrônica (Notaas NF-e Modelo 55) */}
             {isAdmin && (
               <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-md overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                    <FileText className="mr-2 text-gray-500 dark:text-gray-400" size={20} />
-                    Nota Fiscal (NFe)
+                    <FileText className="mr-2 text-primary-500" size={20} />
+                    Nota Fiscal Eletrônica (NF-e Modelo 55)
                   </h2>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setInvoiceNumberInput(order.invoice_number || '')
-                      setInvoiceFile(null)
-                      setShippingLabelFile(null)
-                      setShowInvoiceForm(v => !v)
-                    }}
-                    className="text-xs font-semibold text-primary-600 dark:text-primary-400 hover:underline"
-                  >
-                    {showInvoiceForm ? 'Cancelar' : order.invoice_url || order.invoice_number ? 'Editar' : '+ Vincular'}
-                  </button>
+                  {notaasInvoice && (
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                      notaasInvoice.environment === 'producao' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+                    }`}>
+                      {notaasInvoice.environment === 'producao' ? 'PRODUÇÃO' : 'HOMOLOGAÇÃO'}
+                    </span>
+                  )}
                 </div>
-                <div className="px-6 py-4">
-                  {showInvoiceForm ? (
+                <div className="px-6 py-4 space-y-4">
+                  {notaasInvoice ? (
                     <div className="space-y-3">
-                      {/* Upload da NFe (PDF) */}
-                      <div>
-                        <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">
-                          Arquivo da NFe (PDF)
-                          {order.invoice_url && <span className="ml-2 text-green-600 dark:text-green-400 font-normal">✓ PDF vinculado</span>}
-                        </label>
-                        <input
-                          type="file"
-                          accept="application/pdf"
-                          onChange={e => setInvoiceFile(e.target.files?.[0] ?? null)}
-                          className="w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 file:mr-3 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-primary-50 file:text-primary-700 dark:file:bg-primary-900/30 dark:file:text-primary-300"
-                        />
-                        {invoiceFile && <p className="text-[10px] text-gray-500 mt-1">{invoiceFile.name}</p>}
-                      </div>
-                      {/* Número / Chave da NFe */}
-                      <div>
-                        <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">Número / Chave da NFe</label>
-                        <input
-                          type="text"
-                          placeholder="Ex: NF-001234 ou Chave de Acesso"
-                          value={invoiceNumberInput}
-                          onChange={e => setInvoiceNumberInput(e.target.value)}
-                          className="w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        />
-                      </div>
-                      {/* Upload da Etiqueta ML (PDF) */}
-                      {order.shipping_method?.toLowerCase().includes('mercado') && (
+                      <div className="grid grid-cols-2 gap-3 text-xs">
                         <div>
-                          <label className="block text-[11px] font-medium text-gray-600 dark:text-gray-400 mb-1">
-                            Etiqueta de Envio ML (PDF)
-                            {order.shipping_label_url && <span className="ml-2 text-green-600 dark:text-green-400 font-normal">✓ PDF vinculado</span>}
-                          </label>
-                          <input
-                            type="file"
-                            accept="application/pdf"
-                            onChange={e => setShippingLabelFile(e.target.files?.[0] ?? null)}
-                            className="w-full px-3 py-2 text-xs border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 file:mr-3 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-amber-50 file:text-amber-700 dark:file:bg-amber-900/30 dark:file:text-amber-300"
-                          />
-                          {shippingLabelFile && <p className="text-[10px] text-gray-500 mt-1">{shippingLabelFile.name}</p>}
+                          <p className="text-gray-500 font-medium">Provedor Fiscal</p>
+                          <p className="font-semibold text-gray-900 dark:text-white uppercase">{notaasInvoice.provider || 'Notaas'}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500 font-medium">Status da Emissão</p>
+                          <span className={`inline-block px-2 py-0.5 mt-0.5 rounded text-xs font-semibold ${
+                            notaasInvoice.status === 'ISSUED' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' :
+                            notaasInvoice.status === 'ERROR' ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' :
+                            notaasInvoice.status === 'CANCELLED' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' :
+                            'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                          }`}>
+                            {notaasInvoice.status}
+                          </span>
+                        </div>
+                        {notaasInvoice.invoice_number && (
+                          <div>
+                            <p className="text-gray-500 font-medium">Número / Série</p>
+                            <p className="font-semibold text-gray-900 dark:text-white">Nº {notaasInvoice.invoice_number} (Série {notaasInvoice.series || '3'})</p>
+                          </div>
+                        )}
+                        {notaasInvoice.notaas_invoice_id && (
+                          <div>
+                            <p className="text-gray-500 font-medium">Notaas Invoice ID</p>
+                            <p className="font-mono text-gray-700 dark:text-gray-300">{notaasInvoice.notaas_invoice_id}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {notaasInvoice.access_key && (
+                        <div>
+                          <p className="text-xs text-gray-500 font-medium">Chave de Acesso SEFAZ</p>
+                          <p className="font-mono text-xs text-gray-900 dark:text-white bg-gray-50 dark:bg-gray-900 p-2 rounded border border-gray-200 dark:border-gray-700 break-all select-all mt-1">
+                            {notaasInvoice.access_key}
+                          </p>
                         </div>
                       )}
-                      <div className="flex items-center justify-between gap-2 pt-1">
-                        {(order.invoice_url || order.invoice_number) && (
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              try {
-                                setSavingInvoice(true)
-                                const fd = new FormData()
-                                fd.append('remove', 'true')
-                                const token = localStorage.getItem('kapsu_token')
-                                const res = await fetch(`${(adminService as any).baseUrl}/orders/${order.id}/invoice`, {
-                                  method: 'PATCH',
-                                  headers: { 'Authorization': `Bearer ${token}` },
-                                  body: fd,
-                                })
-                                if (!res.ok) throw new Error('Erro ao remover NFe')
-                                setOrder(prev => prev ? { ...prev, invoice_url: null, invoice_number: null } : prev)
-                                setInvoiceNumberInput('')
-                                setInvoiceFile(null)
-                                setShowInvoiceForm(false)
-                                toast.success('Nota Fiscal removida.')
-                              } catch (err: any) {
-                                toast.error(err.message || 'Erro ao remover NFe')
-                              } finally {
-                                setSavingInvoice(false)
-                              }
-                            }}
-                            className="text-[11px] text-rose-500 hover:underline"
+
+                      {notaasInvoice.sefaz_status_message && (
+                        <div className={`p-2.5 rounded text-xs border ${
+                          notaasInvoice.status === 'ERROR' ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800' : 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-900 dark:text-gray-300 dark:border-gray-700'
+                        }`}>
+                          <p className="font-semibold">SEFAZ: {notaasInvoice.sefaz_status_code || ''}</p>
+                          <p>{notaasInvoice.sefaz_status_message}</p>
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2 pt-2">
+                        {notaasInvoice.danfe_available && (
+                          <a
+                            href={adminService.getNotaasDanfeUrl(notaasInvoice.notaas_invoice_id || notaasInvoice.id)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold transition"
                           >
-                            Remover NFe
-                          </button>
+                            <ExternalLink size={13} />
+                            Baixar DANFE (PDF)
+                          </a>
                         )}
+                        {notaasInvoice.xml_available && (
+                          <a
+                            href={adminService.getNotaasXmlUrl(notaasInvoice.notaas_invoice_id || notaasInvoice.id)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-800 text-white text-xs font-semibold transition"
+                          >
+                            <FileText size={13} />
+                            Baixar XML
+                          </a>
+                        )}
+
                         <button
                           type="button"
-                          disabled={savingInvoice || (!invoiceFile && !invoiceNumberInput.trim() && !shippingLabelFile)}
-                          onClick={async () => {
-                            try {
-                              setSavingInvoice(true)
-                              // Salvar Etiqueta ML se arquivo selecionado
-                              if (shippingLabelFile) {
-                                const fd = new FormData()
-                                fd.append('file', shippingLabelFile)
-                                const token = localStorage.getItem('kapsu_token')
-                                const res = await fetch(`${(adminService as any).baseUrl}/orders/${order.id}/shipping-label`, {
-                                  method: 'PATCH',
-                                  headers: { 'Authorization': `Bearer ${token}` },
-                                  body: fd,
-                                })
-                                const data = await res.json()
-                                if (!res.ok) throw new Error(data.message || 'Erro ao salvar etiqueta')
-                                setOrder(prev => prev ? { ...prev, shipping_label_url: data.shipping_label_url } : prev)
-                                setShippingLabelFile(null)
-                              }
-                              // Salvar NFe (arquivo e/ou número)
-                              if (invoiceFile || invoiceNumberInput.trim()) {
-                                const fd = new FormData()
-                                if (invoiceFile) fd.append('file', invoiceFile)
-                                if (invoiceNumberInput.trim()) fd.append('invoice_number', invoiceNumberInput.trim())
-                                const token = localStorage.getItem('kapsu_token')
-                                const res = await fetch(`${(adminService as any).baseUrl}/orders/${order.id}/invoice`, {
-                                  method: 'PATCH',
-                                  headers: { 'Authorization': `Bearer ${token}` },
-                                  body: fd,
-                                })
-                                const data = await res.json()
-                                if (!res.ok) throw new Error(data.message || 'Erro ao salvar NFe')
-                                setOrder(prev => prev ? { ...prev, invoice_url: data.invoice_url ?? null, invoice_number: data.invoice_number ?? null } : prev)
-                                setInvoiceFile(null)
-                              }
-                              setShowInvoiceForm(false)
-                              toast.success('Documentos salvos com sucesso!')
-                            } catch (err: any) {
-                              toast.error(err.message || 'Erro ao salvar documentos')
-                            } finally {
-                              setSavingInvoice(false)
-                            }
-                          }}
-                          className="ml-auto px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-[11px] font-semibold disabled:opacity-50 transition"
+                          disabled={reconcilingNotaas}
+                          onClick={handleReconcileNotaas}
+                          className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-semibold transition"
                         >
-                          {savingInvoice ? 'Salvando...' : 'Salvar'}
+                          {reconcilingNotaas ? 'Consultando...' : 'Reconciliar Status'}
                         </button>
-                      </div>
-                    </div>
-                  ) : order.invoice_url || order.invoice_number ? (
-                    <div className="space-y-2 text-sm">
-                      {order.invoice_number && (
-                        <div className="flex items-center justify-between gap-2">
-                          <div>
-                            <p className="text-xs text-gray-500 uppercase font-semibold">Número / Chave</p>
-                            <p className="text-gray-900 dark:text-white font-mono text-xs mt-0.5 break-all">{order.invoice_number}</p>
-                          </div>
+
+                        {notaasInvoice.status === 'ERROR' && (
                           <button
                             type="button"
-                            onClick={() => navigator.clipboard.writeText(order.invoice_number!).then(() => toast.success('Copiado!'))}
-                            className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            title="Copiar chave NFe"
+                            disabled={issuingNotaas}
+                            onClick={handleIssueNotaas}
+                            className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold transition"
                           >
-                            <Copy size={14} />
+                            {issuingNotaas ? 'Reenviando...' : 'Tentar Reemissão'}
                           </button>
-                        </div>
-                      )}
-                      {order.shipping_label_url && (
-                        <a
-                          href={order.shipping_label_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition"
-                        >
-                          <FileText size={13} />
-                          Abrir Etiqueta (PDF)
-                        </a>
-                      )}
-                      {order.invoice_url && (
-                        <a
-                          href={order.invoice_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-950/40 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/50 text-xs font-semibold transition"
-                        >
-                          <ExternalLink size={13} />
-                          Abrir Nota Fiscal
-                        </a>
-                      )}
+                        )}
+                      </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-400 dark:text-gray-500 italic">Nenhuma Nota Fiscal vinculada.</p>
+                    <div className="space-y-3">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Nenhuma NF-e emitida para este pedido no Notaas.
+                      </p>
+                      <button
+                        type="button"
+                        disabled={issuingNotaas}
+                        onClick={handleIssueNotaas}
+                        className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold transition shadow-sm"
+                      >
+                        {issuingNotaas ? 'Solicitando...' : 'Emitir NF-e Notaas'}
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
