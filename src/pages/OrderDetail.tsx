@@ -8,6 +8,7 @@ import { productsService } from '../services/products.service'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import { getOrderStatusLabel, getOrderStatusBadgeClass } from '../utils/orderStatus'
 import { useAuth } from '../context/AuthContext'
+import { realtimeEventsClient } from '../services/realtime-events.client'
 import { toast } from '../utils/toast'
 
 interface OrderItem {
@@ -163,6 +164,28 @@ export default function OrderDetail() {
         toast.error('Não foi possível carregar a lista de fornecedores.')
       })
   }, [isAdmin])
+
+  useEffect(() => {
+    if (!id) return
+    const unsubscribe = realtimeEventsClient.subscribe((event) => {
+      if (event.orderId === id) {
+        loadNotaasInvoice()
+        loadOrderDetails()
+      }
+    })
+    return () => unsubscribe()
+  }, [id])
+
+  useEffect(() => {
+    if (!id || !notaasInvoice) return
+    const status = String(notaasInvoice.status || '').toUpperCase()
+    if (['QUEUED', 'PROCESSING'].includes(status)) {
+      const interval = setInterval(() => {
+        loadNotaasInvoice()
+      }, 10000)
+      return () => clearInterval(interval)
+    }
+  }, [id, notaasInvoice?.status])
 
   const loadOrderDetails = async () => {
     if (!id) return

@@ -17,6 +17,7 @@ import { ensureGoogleIdentityScript } from '../utils/googleIdentity'
 import { confirm, toast } from '../utils/toast'
 import { getOrderStatusLabel, getOrderStatusBadgeClass, isInvoiceEligibleStatus } from '../utils/orderStatus'
 import logoMercadoLivre from '../images/ml_logo.webp'
+import { realtimeEventsClient } from '../services/realtime-events.client'
 
 type ProfileSection = 'info' | 'password' | 'image' | 'addresses' | 'orders' | 'favorites' | 'reviews' | 'notifications' | 'help' | 'connected-accounts' | null
 
@@ -317,18 +318,74 @@ export default function Profile() {
   }, [user])
 
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
+    const unsubscribe = realtimeEventsClient.subscribe((event) => {
+      if (event.orderId) {
+        loadOrders()
+      }
+    })
+    return () => unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    const hasStuckInvoice = orders.some((o: any) => {
+      const inv = o.fiscal_invoice || o.notaas_invoice
+      const status = String(inv?.status || '').toUpperCase()
+      return ['QUEUED', 'PROCESSING'].includes(status)
+    })
+
+    if (hasStuckInvoice) {
+      const interval = setInterval(() => {
+        loadOrders()
+      }, 10000)
+      return () => clearInterval(interval)
+    }
+  }, [orders])
+
+  const handleDownloadCustomerDanfe = async (orderId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      const apiHost = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+      const res = await fetch(`${apiHost.replace(/\/$/, '')}/api/orders/${orderId}/fiscal/danfe`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Não foi possível carregar o DANFE PDF.')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `danfe-${orderId.substring(0, 8)}.pdf`
+      a.click()
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao baixar DANFE PDF')
+    }
+  }
+
+  const handleDownloadCustomerXml = async (orderId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      const apiHost = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+      const res = await fetch(`${apiHost.replace(/\/$/, '')}/api/orders/${orderId}/fiscal/xml`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Não foi possível carregar o XML da NF-e.')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `nfe-${orderId.substring(0, 8)}.xml`
+      a.click()
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao baixar XML')
+    }
+  }
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout | undefined = undefined;
 
     if (activeSection === 'addresses') {
       loadAddresses()
     } else if (activeSection === 'orders') {
       loadOrders()
-
-      intervalId = setInterval(() => {
-        orderService.getOrders()
-          .then(data => setOrders(data))
-          .catch(err => console.error('Erro ao atualizar pedidos:', err))
-      }, 10000)
     } else if (activeSection === 'favorites') {
       loadFavorites()
     } else if (activeSection === 'reviews') {
@@ -1569,6 +1626,51 @@ export default function Profile() {
                                         </a>
                                       </div>
                                     )}
+                                    {(() => {
+                                       const inv = (order as any).fiscal_invoice || (order as any).notaas_invoice;
+                                       if (!inv && !order.invoice_url) return null;
+                                       const status = String(inv?.status || '').toUpperCase();
+                                       return (
+                                         <div className="flex flex-col gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                                           <div className="flex justify-between items-center text-xs">
+                                             <span className="text-gray-500 dark:text-gray-400">Nota Fiscal (NF-e):</span>
+                                             {inv ? (
+                                               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                                                 status === 'ISSUED' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' :
+                                                 status === 'ERROR' ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' :
+                                                 status === 'CANCELLED' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' :
+                                                 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 animate-pulse'
+                                               }`}>
+                                                 {status === 'ISSUED' ? `Emitida (Nº ${inv.invoice_number || ''})` : status === 'ERROR' ? 'Erro na emissão' : status === 'CANCELLED' ? 'Cancelada' : 'Aguardando autorização SEFAZ...'}
+                                               </span>
+                                             ) : (
+                                               <span className="text-xs text-gray-500 font-semibold">Disponível</span>
+                                             )}
+                                           </div>
+
+                                           <div className="flex items-center gap-2 justify-end mt-1">
+                                             {(inv?.danfe_available || order.invoice_url) && (
+                                               <button
+                                                 type="button"
+                                                 onClick={() => handleDownloadCustomerDanfe(order.id)}
+                                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 rounded-lg font-bold text-xs cursor-pointer transition-colors"
+                                               >
+                                                 <Download className="w-3.5 h-3.5" /> Baixar DANFE (PDF)
+                                               </button>
+                                             )}
+                                             {inv?.xml_available && (
+                                               <button
+                                                 type="button"
+                                                 onClick={() => handleDownloadCustomerXml(order.id)}
+                                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 rounded-lg font-bold text-xs cursor-pointer transition-colors"
+                                               >
+                                                 <FileText className="w-3.5 h-3.5" /> Baixar XML
+                                               </button>
+                                             )}
+                                           </div>
+                                         </div>
+                                       );
+                                     })()}
                                     {order.payment_url && (
                                       <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
                                         <span className="text-gray-500 dark:text-gray-400">
