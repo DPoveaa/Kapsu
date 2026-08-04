@@ -1668,23 +1668,27 @@ export default function Profile() {
 
                                       return (
                                         <div className="flex flex-col gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                                          {/* Status row */}
                                           <div className="flex justify-between items-center text-xs">
                                             <span className="text-gray-500 dark:text-gray-400">Nota Fiscal (NF-e):</span>
                                             {inv ? (
-                                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${isIssued ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' :
-                                                  isError ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' :
-                                                    isCancelled ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' :
-                                                      'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 animate-pulse'
-                                                }`}>
-                                                {isIssued ? `Emitida` : isError ? 'Erro na emissão' : isCancelled ? 'Cancelada' : 'Aguardando autorização SEFAZ...'}
+                                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                                                isIssued ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' :
+                                                isError ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' :
+                                                isCancelled ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' :
+                                                'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 animate-pulse'
+                                              }`}>
+                                                {isIssued ? 'Emitida' : isError ? 'Erro na emissão' : isCancelled ? 'Cancelada' : 'Aguardando autorização SEFAZ...'}
                                               </span>
                                             ) : (
                                               <span className="text-xs text-gray-500 font-semibold">Disponível</span>
                                             )}
                                           </div>
 
-                                          <div className="flex items-center gap-2 justify-end mt-1">
-                                            {(inv?.danfe_available || hasManualPdf || isIssued) && (
+                                          {/* Downloads — only when ISSUED */}
+                                          {(isIssued || hasManualPdf) && (
+                                            <div className="flex flex-col gap-2 mt-1">
+                                              {/* Primary: DANFE */}
                                               <button
                                                 type="button"
                                                 onClick={() => {
@@ -1694,23 +1698,30 @@ export default function Profile() {
                                                     handleDownloadCustomerDanfe(order.id);
                                                   }
                                                 }}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 rounded-lg font-bold text-xs cursor-pointer transition-colors"
+                                                className="flex items-center justify-center gap-1.5 w-full px-3 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-bold text-xs cursor-pointer transition-colors shadow-sm"
                                               >
                                                 <Download className="w-3.5 h-3.5" /> Baixar DANFE (PDF)
                                               </button>
-                                            )}
-                                            {inv?.xml_available && (
-                                              <button
-                                                type="button"
-                                                onClick={() => handleDownloadCustomerXml(order.id)}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 rounded-lg font-bold text-xs cursor-pointer transition-colors"
-                                              >
-                                                <FileText className="w-3.5 h-3.5" /> Baixar XML
-                                              </button>
-                                            )}
-                                          </div>
+
+                                              {/* Secondary: XML */}
+                                              {inv?.xml_available && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleDownloadCustomerXml(order.id)}
+                                                  className="flex items-center justify-center gap-1.5 w-full px-3 py-1.5 bg-transparent text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg font-semibold text-xs cursor-pointer transition-colors"
+                                                >
+                                                  <FileText className="w-3.5 h-3.5" /> Baixar XML da NF-e
+                                                </button>
+                                              )}
+
+                                              {/* Explanatory note */}
+                                              <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center leading-relaxed">
+                                                O DANFE é a versão visual da nota. O XML é o arquivo fiscal eletrônico oficial.
+                                              </p>
+                                            </div>
+                                          )}
                                         </div>
-                                      );
+                                       );
                                     })()}
                                     {order.payment_url && (
                                       <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
