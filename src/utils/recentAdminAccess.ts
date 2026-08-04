@@ -26,6 +26,12 @@ export const ADMIN_PAGES_META: Record<string, { title: string; category: string;
     iconName: 'ShoppingCart',
     description: 'Acompanhe vendas, clientes e status das entregas.',
   },
+  '/admin/notas-fiscais': {
+    title: 'Notas Fiscais',
+    category: 'Vendas',
+    iconName: 'FileText',
+    description: 'Controle e exportação contábil de NF-e autorizadas e canceladas.',
+  },
   '/admin/shipping': {
     title: 'Frete',
     category: 'Vendas',

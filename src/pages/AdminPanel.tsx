@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import {
   Package, Menu, ShoppingCart, Truck, Gift, Tag, CreditCard,
   Image, Layout, Star, Bot, MessageSquare, Users, Globe,
-  ShieldCheck, BarChart3, Settings, ArrowRight, Clock, Compass, LucideIcon
+  ShieldCheck, BarChart3, Settings, ArrowRight, Clock, Compass, LucideIcon,
+  FileText,
 } from 'lucide-react'
 import {
   getRecentAdminAccesses,
@@ -31,6 +32,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   ShieldCheck,
   BarChart3,
   Settings,
+  FileText,
 }
 
 function resolveIcon(name: string) {
@@ -64,7 +66,7 @@ export default function AdminPanel() {
       category: 'Vendas',
       color: 'border-purple-500/20 bg-purple-50/50 dark:bg-purple-950/20 text-purple-600 dark:text-purple-400',
       badge: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300',
-      routes: ['/admin/orders', '/admin/shipping', '/admin/promotions', '/admin/promo-codes', '/admin/installment-rules'],
+      routes: ['/admin/orders', '/admin/notas-fiscais', '/admin/shipping', '/admin/promotions', '/admin/promo-codes', '/admin/installment-rules'],
     },
     {
       category: 'Vitrine',

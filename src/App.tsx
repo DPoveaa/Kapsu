@@ -48,6 +48,7 @@ const ManageHomeSections = lazy(() => import('./pages/ManageHomeSections'))
 const ManageHeaderCategories = lazy(() => import('./pages/ManageHeaderCategories'))
 const KaiaChats = lazyWithRetry(() => import('./pages/KaiaChats'), 'admin-ai-center')
 const OrderDetail = lazy(() => import('./pages/OrderDetail'))
+const FiscalInvoices = lazy(() => import('./pages/FiscalInvoices'))
 const SupplierOrderDetail = lazy(() => import('./pages/SupplierOrderDetail'))
 const PaymentFailure = lazy(() => import('./pages/PaymentFailure'))
 const Profile = lazy(() => import('./pages/Profile'))
@@ -240,6 +241,16 @@ function AppContent() {
             <ProtectedRoute requireAdmin>
               <AdminLayout>
                 <ManageOrders />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/notas-fiscais"
+          element={
+            <ProtectedRoute requireAdmin>
+              <AdminLayout>
+                <FiscalInvoices />
               </AdminLayout>
             </ProtectedRoute>
           }

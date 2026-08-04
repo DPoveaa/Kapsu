@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Loader2, Search, Eye, Package, Plus, Trash2, ChevronDown, CalendarClock, X } from 'lucide-react'
+import { ArrowLeft, Loader2, Search, Eye, Package, Plus, Trash2, ChevronDown, CalendarClock, X, FileText } from 'lucide-react'
 import { adminService, Supplier } from '../services/admin.service'
 import CreateOrderModal from '../components/CreateOrderModal'
 import { useAuth } from '../context/AuthContext'
@@ -646,6 +646,14 @@ export default function ManageOrders() {
                               >
                                 <Eye size={18} className="mr-1" />
                                 Detalhes
+                              </button>
+                              <button
+                                onClick={() => navigate(`/admin/notas-fiscais?order=${order.id}`)}
+                                className="text-violet-600 dark:text-violet-400 hover:text-violet-900 dark:hover:text-violet-300 inline-flex items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 rounded px-1.5 py-0.5"
+                                title="Ver NF-e deste pedido"
+                              >
+                                <FileText size={15} className="mr-1" />
+                                NF-e
                               </button>
                               {isAdmin && order.payment_method && (order.payment_method.toLowerCase() === 'test_payment' || order.payment_method.toLowerCase() === 'test payment') && (
                                 <button
