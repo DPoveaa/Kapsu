@@ -172,6 +172,7 @@ class ProductsService {
       intended_form: product.intended_form || null,
       intended_presentation: product.intended_presentation || null,
       intended_units_per_dose: product.intended_units_per_dose || null,
+      marketplace_tags: product.marketplace_tags ?? null,
     }
   }
 

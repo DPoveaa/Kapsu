@@ -33,16 +33,16 @@ export interface ExportPreset {
 
 const ALL_COLUMNS: ExportColumnDef[] = [
   // --- Category: Identificação & Canais ---
-  { key: 'codigo_produto', label: 'codigo_produto', displayName: 'Código do Produto (SKU / ID)', category: '📌 Identificação & Canais', defaultSelected: true, getValue: p => p.sku || p.id, width: 25 },
-  { key: 'nome_produto', label: 'nome_produto', displayName: 'Nome do Produto', category: '📌 Identificação & Canais', defaultSelected: true, getValue: p => p.name, width: 36 },
+  { key: 'codigo_produto', label: 'Código do Produto / SKU (codigo_produto)', displayName: 'Código do Produto (SKU / ID)', category: '📌 Identificação & Canais', defaultSelected: true, getValue: p => p.sku || p.id, width: 25 },
+  { key: 'nome_produto', label: 'Nome do Produto (nome_produto)', displayName: 'Nome do Produto', category: '📌 Identificação & Canais', defaultSelected: true, getValue: p => p.name, width: 36 },
   {
     key: 'marketplaces',
-    label: 'marketplaces',
+    label: 'Canais / Marketplaces (marketplaces)',
     displayName: 'Canais / Marketplaces',
     category: '📌 Identificação & Canais',
     defaultSelected: true,
     getValue: p => {
-      const tags = (p.marketplace_tags || 'site,mercado_livre,shopee').split(',').map((t: string) => t.trim())
+      const tags = (p.marketplace_tags ?? 'site,mercado_livre,shopee').split(',').map((t: string) => t.trim())
       const names: string[] = []
       if (tags.includes('site')) names.push('Site')
       if (tags.includes('mercado_livre')) names.push('Mercado Livre')
@@ -51,57 +51,57 @@ const ALL_COLUMNS: ExportColumnDef[] = [
     },
     width: 28
   },
-  { key: 'category', label: 'category', displayName: 'Categoria na Loja', category: '📌 Identificação & Canais', defaultSelected: true, getValue: p => p.category || '', width: 24 },
-  { key: 'status', label: 'status', displayName: 'Status (Ativo/Inativo/Arquivado)', category: '📌 Identificação & Canais', defaultSelected: true, getValue: p => p.archived ? 'Arquivado' : p.active ? 'Ativo' : 'Inativo', width: 18 },
-  { key: 'sku', label: 'sku', displayName: 'Código SKU', category: '📌 Identificação & Canais', defaultSelected: true, getValue: p => p.sku || '', width: 20 },
-  { key: 'id', label: 'id', displayName: 'ID Interno (UUID)', category: '📌 Identificação & Canais', defaultSelected: true, getValue: p => p.id, width: 38 },
+  { key: 'category', label: 'Categoria na Loja (category)', displayName: 'Categoria na Loja', category: '📌 Identificação & Canais', defaultSelected: true, getValue: p => p.category || '', width: 24 },
+  { key: 'status', label: 'Status do Produto (status)', displayName: 'Status (Ativo/Inativo/Arquivado)', category: '📌 Identificação & Canais', defaultSelected: true, getValue: p => p.archived ? 'Arquivado' : p.active ? 'Ativo' : 'Inativo', width: 18 },
+  { key: 'sku', label: 'Código SKU (sku)', displayName: 'Código SKU', category: '📌 Identificação & Canais', defaultSelected: true, getValue: p => p.sku || '', width: 20 },
+  { key: 'id', label: 'ID Interno UUID (id)', displayName: 'ID Interno (UUID)', category: '📌 Identificação & Canais', defaultSelected: true, getValue: p => p.id, width: 38 },
 
   // --- Category: Dados Fiscais (NF-e 55) ---
-  { key: 'fiscal_description', label: 'fiscal_description', displayName: 'Descrição Fiscal (max 120 char)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.fiscal_description || '', width: 36 },
-  { key: 'ncm', label: 'ncm', displayName: 'Código NCM (8 dígitos)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.ncm || '', width: 14 },
-  { key: 'cest', label: 'cest', displayName: 'Código CEST (7 dígitos)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.cest || '', width: 14 },
-  { key: 'origin', label: 'origin', displayName: 'Origem da Mercadoria (0 a 8)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.origin ?? 0, width: 14 },
-  { key: 'csosn', label: 'csosn', displayName: 'CSOSN Simples Nacional', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.csosn || '', width: 14 },
-  { key: 'csosn_st', label: 'csosn_st', displayName: 'CSOSN Substituição Tributária', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.csosn_st || '', width: 16 },
-  { key: 'cfop_intra', label: 'cfop_intra', displayName: 'CFOP Estadual (Venda Interna)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.cfop_intra || '', width: 16 },
-  { key: 'cfop_inter', label: 'cfop_inter', displayName: 'CFOP Interestadual (Interestadual)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.cfop_inter || '', width: 16 },
-  { key: 'cfop_intra_st', label: 'cfop_intra_st', displayName: 'CFOP ST Estadual', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.cfop_intra_st || '', width: 16 },
-  { key: 'cfop_inter_st', label: 'cfop_inter_st', displayName: 'CFOP ST Interestadual', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.cfop_inter_st || '', width: 16 },
-  { key: 'pis_cst', label: 'pis_cst', displayName: 'PIS CST (2 dígitos)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.pis_cst || '', width: 12 },
-  { key: 'cofins_cst', label: 'cofins_cst', displayName: 'COFINS CST (2 dígitos)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.cofins_cst || '', width: 12 },
-  { key: 'unit', label: 'unit', displayName: 'Unidade Comercial (Ex: UN)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.unit || 'UN', width: 12 },
-  { key: 'tax_unit', label: 'tax_unit', displayName: 'Unidade Tributável (Ex: UN)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.tax_unit || '', width: 12 },
-  { key: 'tax_conversion_factor', label: 'tax_conversion_factor', displayName: 'Fator Conversão Tributária', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.tax_conversion_factor ?? 1, width: 22 },
-  { key: 'gtin', label: 'gtin', displayName: 'GTIN / EAN Código de Barras', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.gtin || '', width: 18 },
-  { key: 'tax_gtin', label: 'tax_gtin', displayName: 'GTIN Tributável', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.tax_gtin || '', width: 18 },
-  { key: 'cbenef', label: 'cbenef', displayName: 'Código Benefício Fiscal (cBenef)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.cbenef || '', width: 16 },
-  { key: 'fiscal_validated', label: 'fiscal_validated', displayName: 'Validação Fiscal Realizada (SIM/NAO)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.fiscal_validated || 'NAO', width: 20 },
-  { key: 'fiscal_validated_at', label: 'fiscal_validated_at', displayName: 'Data/Hora da Validação Fiscal', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => formatExportDate(p.fiscal_validated_at), width: 22 },
-  { key: 'fiscal_validated_by', label: 'fiscal_validated_by', displayName: 'Admin Responsável pela Validação', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.fiscal_validated_by || '', width: 24 },
-  { key: 'fiscal_notes', label: 'fiscal_notes', displayName: 'Observações Fiscais Internas', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.fiscal_notes || '', width: 36 },
-  { key: 'nfe_enabled', label: 'nfe_enabled', displayName: 'Habilitado Emissão NF-e (SIM/NAO)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.nfe_enabled || 'NAO', width: 18 },
+  { key: 'fiscal_description', label: 'Descrição Fiscal NF-e (fiscal_description)', displayName: 'Descrição Fiscal (max 120 char)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.fiscal_description || '', width: 36 },
+  { key: 'ncm', label: 'Código NCM 8 dígitos (ncm)', displayName: 'Código NCM (8 dígitos)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.ncm || '', width: 14 },
+  { key: 'cest', label: 'Código CEST 7 dígitos (cest)', displayName: 'Código CEST (7 dígitos)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.cest || '', width: 14 },
+  { key: 'origin', label: 'Origem da Mercadoria (origin)', displayName: 'Origem da Mercadoria (0 a 8)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.origin ?? 0, width: 14 },
+  { key: 'csosn', label: 'CSOSN Simples Nacional (csosn)', displayName: 'CSOSN Simples Nacional', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.csosn || '', width: 14 },
+  { key: 'csosn_st', label: 'CSOSN ST (csosn_st)', displayName: 'CSOSN Substituição Tributária', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.csosn_st || '', width: 16 },
+  { key: 'cfop_intra', label: 'CFOP Estadual Venda (cfop_intra)', displayName: 'CFOP Estadual (Venda Interna)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.cfop_intra || '', width: 16 },
+  { key: 'cfop_inter', label: 'CFOP Interestadual Venda (cfop_inter)', displayName: 'CFOP Interestadual (Interestadual)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.cfop_inter || '', width: 16 },
+  { key: 'cfop_intra_st', label: 'CFOP ST Estadual (cfop_intra_st)', displayName: 'CFOP ST Estadual', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.cfop_intra_st || '', width: 16 },
+  { key: 'cfop_inter_st', label: 'CFOP ST Interestadual (cfop_inter_st)', displayName: 'CFOP ST Interestadual', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.cfop_inter_st || '', width: 16 },
+  { key: 'pis_cst', label: 'PIS CST 2 dígitos (pis_cst)', displayName: 'PIS CST (2 dígitos)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.pis_cst || '', width: 12 },
+  { key: 'cofins_cst', label: 'COFINS CST 2 dígitos (cofins_cst)', displayName: 'COFINS CST (2 dígitos)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.cofins_cst || '', width: 12 },
+  { key: 'unit', label: 'Unidade Comercial (unit)', displayName: 'Unidade Comercial (Ex: UN)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.unit || 'UN', width: 12 },
+  { key: 'tax_unit', label: 'Unidade Tributável (tax_unit)', displayName: 'Unidade Tributável (Ex: UN)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.tax_unit || '', width: 12 },
+  { key: 'tax_conversion_factor', label: 'Fator Conversão Tributária (tax_conversion_factor)', displayName: 'Fator Conversão Tributária', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.tax_conversion_factor ?? 1, width: 22 },
+  { key: 'gtin', label: 'GTIN / EAN Código de Barras (gtin)', displayName: 'GTIN / EAN Código de Barras', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.gtin || '', width: 18 },
+  { key: 'tax_gtin', label: 'GTIN Tributável (tax_gtin)', displayName: 'GTIN Tributável', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.tax_gtin || '', width: 18 },
+  { key: 'cbenef', label: 'Código Benefício Fiscal (cbenef)', displayName: 'Código Benefício Fiscal (cBenef)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.cbenef || '', width: 16 },
+  { key: 'fiscal_validated', label: 'Validação Fiscal Realizada (fiscal_validated)', displayName: 'Validação Fiscal Realizada (SIM/NAO)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.fiscal_validated || 'NAO', width: 20 },
+  { key: 'fiscal_validated_at', label: 'Data Validação Fiscal (fiscal_validated_at)', displayName: 'Data/Hora da Validação Fiscal', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => formatExportDate(p.fiscal_validated_at), width: 22 },
+  { key: 'fiscal_validated_by', label: 'Admin Validação (fiscal_validated_by)', displayName: 'Admin Responsável pela Validação', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.fiscal_validated_by || '', width: 24 },
+  { key: 'fiscal_notes', label: 'Observações Fiscais Internas (fiscal_notes)', displayName: 'Observações Fiscais Internas', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.fiscal_notes || '', width: 36 },
+  { key: 'nfe_enabled', label: 'Habilitado Emissão NF-e (nfe_enabled)', displayName: 'Habilitado Emissão NF-e (SIM/NAO)', category: '🏛️ Dados Fiscais (NF-e 55)', defaultSelected: true, getValue: p => p.nfe_enabled || 'NAO', width: 18 },
 
   // --- Category: Preços & Comercial ---
-  { key: 'purchase_price', label: 'purchase_price', displayName: 'Preço de Custo (R$)', category: '💰 Preços & Comercial', defaultSelected: true, getValue: p => p.purchase_price != null ? Number(p.purchase_price) : '', width: 18 },
-  { key: 'price', label: 'price', displayName: 'Preço de Venda (R$)', category: '💰 Preços & Comercial', defaultSelected: true, getValue: p => p.price != null ? Number(p.price) : '', width: 16 },
-  { key: 'promo_price', label: 'promo_price', displayName: 'Preço Promocional (R$)', category: '💰 Preços & Comercial', defaultSelected: true, getValue: p => p.promo_price != null ? Number(p.promo_price) : '', width: 16 },
-  { key: 'markup', label: 'markup', displayName: 'Margem Markup %', category: '💰 Preços & Comercial', defaultSelected: true, getValue: p => p.markup != null ? Number(p.markup) : '', width: 14 },
-  { key: 'free_shipping', label: 'free_shipping', displayName: 'Frete Grátis (Sim/Não)', category: '💰 Preços & Comercial', defaultSelected: true, getValue: p => p.free_shipping ? 'Sim' : 'Não', width: 14 },
+  { key: 'purchase_price', label: 'Preço de Custo R$ (purchase_price)', displayName: 'Preço de Custo (R$)', category: '💰 Preços & Comercial', defaultSelected: true, getValue: p => p.purchase_price != null ? Number(p.purchase_price) : '', width: 18 },
+  { key: 'price', label: 'Preço de Venda R$ (price)', displayName: 'Preço de Venda (R$)', category: '💰 Preços & Comercial', defaultSelected: true, getValue: p => p.price != null ? Number(p.price) : '', width: 16 },
+  { key: 'promo_price', label: 'Preço Promocional R$ (promo_price)', displayName: 'Preço Promocional (R$)', category: '💰 Preços & Comercial', defaultSelected: true, getValue: p => p.promo_price != null ? Number(p.promo_price) : '', width: 16 },
+  { key: 'markup', label: 'Markup % (markup)', displayName: 'Margem Markup %', category: '💰 Preços & Comercial', defaultSelected: true, getValue: p => p.markup != null ? Number(p.markup) : '', width: 14 },
+  { key: 'free_shipping', label: 'Frete Grátis (free_shipping)', displayName: 'Frete Grátis (Sim/Não)', category: '💰 Preços & Comercial', defaultSelected: true, getValue: p => p.free_shipping ? 'Sim' : 'Não', width: 14 },
 
   // --- Category: Ficha Técnica & Apresentação ---
-  { key: 'description', label: 'description', displayName: 'Descrição Completa', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.description || '', width: 48 },
-  { key: 'image', label: 'image', displayName: 'Link da Imagem Principal', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.image ? productsService.getImageUrl(p.image) : '', width: 60 },
-  { key: 'compositions', label: 'compositions', displayName: 'Formulação / Composição', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.compositions || '', width: 48 },
-  { key: 'indication', label: 'indication', displayName: 'Indicação de Uso', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.indication || '', width: 42 },
-  { key: 'contraindication', label: 'contraindication', displayName: 'Contraindicações', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.contraindication || '', width: 42 },
-  { key: 'benefits', label: 'benefits', displayName: 'Benefícios e Atributos', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.benefits || '', width: 48 },
-  { key: 'intended_form', label: 'intended_form', displayName: 'Forma Farmacêutica (Cápsula, Gota...)', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.intended_form || '', width: 28 },
-  { key: 'intended_presentation', label: 'intended_presentation', displayName: 'Apresentação (Frasco 60 caps...)', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.intended_presentation || '', width: 28 },
-  { key: 'intended_units_per_dose', label: 'intended_units_per_dose', displayName: 'Unidades por Dose', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.intended_units_per_dose || '', width: 28 },
+  { key: 'description', label: 'Descrição do Produto (description)', displayName: 'Descrição Completa', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.description || '', width: 48 },
+  { key: 'image', label: 'Link da Imagem Principal (image)', displayName: 'Link da Imagem Principal', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.image ? productsService.getImageUrl(p.image) : '', width: 60 },
+  { key: 'compositions', label: 'Formulação / Composição (compositions)', displayName: 'Formulação / Composição', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.compositions || '', width: 48 },
+  { key: 'indication', label: 'Indicação de Uso (indication)', displayName: 'Indicação de Uso', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.indication || '', width: 42 },
+  { key: 'contraindication', label: 'Contraindicações (contraindication)', displayName: 'Contraindicações', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.contraindication || '', width: 42 },
+  { key: 'benefits', label: 'Benefícios e Atributos (benefits)', displayName: 'Benefícios e Atributos', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.benefits || '', width: 48 },
+  { key: 'intended_form', label: 'Forma Farmacêutica (intended_form)', displayName: 'Forma Farmacêutica (Cápsula, Gota...)', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.intended_form || '', width: 28 },
+  { key: 'intended_presentation', label: 'Apresentação (intended_presentation)', displayName: 'Apresentação (Frasco 60 caps...)', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.intended_presentation || '', width: 28 },
+  { key: 'intended_units_per_dose', label: 'Unidades por Dose (intended_units_per_dose)', displayName: 'Unidades por Dose', category: '🔬 Ficha Técnica & Apresentação', defaultSelected: true, getValue: p => p.intended_units_per_dose || '', width: 28 },
 
   // --- Category: Metadados & Sistema ---
-  { key: 'created_at', label: 'created_at', displayName: 'Data de Cadastro', category: '📅 Metadados & Sistema', defaultSelected: true, getValue: p => formatExportDate(p.created_at), width: 22 },
-  { key: 'updated_at', label: 'updated_at', displayName: 'Data de Atualização', category: '📅 Metadados & Sistema', defaultSelected: true, getValue: p => formatExportDate(p.updated_at), width: 22 },
+  { key: 'created_at', label: 'Data de Cadastro (created_at)', displayName: 'Data de Cadastro', category: '📅 Metadados & Sistema', defaultSelected: true, getValue: p => formatExportDate(p.created_at), width: 22 },
+  { key: 'updated_at', label: 'Data de Atualização (updated_at)', displayName: 'Data de Atualização', category: '📅 Metadados & Sistema', defaultSelected: true, getValue: p => formatExportDate(p.updated_at), width: 22 },
 ]
 
 const DEFAULT_PRESETS: ExportPreset[] = [
@@ -400,7 +400,7 @@ export default function ProductExcelExportModal({ isOpen, onClose, activeTab = '
         if (!p.archived && !p.active && !includeInactive) return false
 
         // Marketplace filter
-        const tags = (p.marketplace_tags || 'site,mercado_livre,shopee').split(',').map((t: string) => t.trim().toLowerCase())
+        const tags = (p.marketplace_tags ?? 'site,mercado_livre,shopee').split(',').map((t: string) => t.trim().toLowerCase())
         const matchesMarketplace =
           (includeSite && tags.includes('site')) ||
           (includeML && tags.includes('mercado_livre')) ||

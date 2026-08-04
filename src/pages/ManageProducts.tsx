@@ -1700,7 +1700,15 @@ export default function ManageProducts() {
   }
 
   const renderMarketplaceBadges = (tagsStr?: string | null) => {
-    const tags = (tagsStr || 'site,mercado_livre,shopee').split(',').map(t => t.trim().toLowerCase())
+    const raw = tagsStr ?? 'site,mercado_livre,shopee'
+    const tags = raw.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
+    if (tags.length === 0) {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-medium rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+          Nenhum
+        </span>
+      )
+    }
     return (
       <div className="flex flex-wrap gap-1 items-center">
         {tags.includes('site') && (
@@ -1756,7 +1764,7 @@ export default function ManageProducts() {
     const matchesCategory = !selectedCategoryFilter ||
       (p.category || 'Outros').toLowerCase().includes(selectedCategoryFilter.toLowerCase())
 
-    const prodTags = (p.marketplace_tags || 'site,mercado_livre,shopee').split(',').map(t => t.trim())
+    const prodTags = (p.marketplace_tags ?? 'site,mercado_livre,shopee').split(',').map(t => t.trim())
     const matchesMarketplace = selectedMarketplaceFilter === 'all' || prodTags.includes(selectedMarketplaceFilter)
 
     return matchesSearch && matchesCategory && matchesMarketplace
@@ -1786,7 +1794,7 @@ export default function ManageProducts() {
       case 'category':
         return p.category || ''
       case 'marketplaces':
-        return p.marketplace_tags || 'site,mercado_livre,shopee'
+        return p.marketplace_tags ?? 'site,mercado_livre,shopee'
       case 'purchase_price':
         return p.purchase_price != null ? Number(p.purchase_price) : null
       case 'margin':
@@ -2104,6 +2112,8 @@ export default function ManageProducts() {
                       <option value="">Alterar Marketplaces...</option>
                       <option value="site,mercado_livre,shopee">Todos (Site + Mercado Livre + Shopee)</option>
                       <option value="site">Apenas Site Próprio</option>
+                      <option value="mercado_livre">Apenas Mercado Livre</option>
+                      <option value="shopee">Apenas Shopee</option>
                       <option value="site,mercado_livre">Site + Mercado Livre</option>
                       <option value="site,shopee">Site + Shopee</option>
                       <option value="mercado_livre,shopee">Mercado Livre + Shopee</option>

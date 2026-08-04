@@ -37,32 +37,91 @@ export interface ColumnMappingItem {
   enabled: boolean
 }
 
-export const ALL_IMPORT_FIELDS = [
-  { key: 'codigo_produto', label: 'Código do Produto / SKU (codigo_produto)', required: true },
-  { key: 'nome_produto', label: 'Nome do Produto (nome_produto)', required: false },
-  { key: 'marketplaces', label: 'Canais / Marketplaces (marketplaces)', required: false },
-  { key: 'fiscal_description', label: 'Descrição Fiscal (fiscal_description)', required: false },
-  { key: 'ncm', label: 'NCM - 8 dígitos (ncm)', required: false },
-  { key: 'cest', label: 'CEST - 7 dígitos (cest)', required: false },
-  { key: 'origin', label: 'Origem da Mercadoria 0-8 (origin)', required: false },
-  { key: 'csosn', label: 'CSOSN Simples Nacional (csosn)', required: false },
-  { key: 'csosn_st', label: 'CSOSN ST (csosn_st)', required: false },
-  { key: 'cfop_intra', label: 'CFOP Estadual Venda (cfop_intra)', required: false },
-  { key: 'cfop_inter', label: 'CFOP Interestadual Venda (cfop_inter)', required: false },
-  { key: 'cfop_intra_st', label: 'CFOP ST Estadual (cfop_intra_st)', required: false },
-  { key: 'cfop_inter_st', label: 'CFOP ST Interestadual (cfop_inter_st)', required: false },
-  { key: 'pis_cst', label: 'PIS CST 2 dígitos (pis_cst)', required: false },
-  { key: 'cofins_cst', label: 'COFINS CST 2 dígitos (cofins_cst)', required: false },
-  { key: 'unit', label: 'Unidade Comercial (unit)', required: false },
-  { key: 'tax_unit', label: 'Unidade Tributável (tax_unit)', required: false },
-  { key: 'tax_conversion_factor', label: 'Fator Conversão Tributária', required: false },
-  { key: 'gtin', label: 'GTIN / EAN Código de Barras (gtin)', required: false },
-  { key: 'tax_gtin', label: 'GTIN Tributável', required: false },
-  { key: 'cbenef', label: 'Código Benefício Fiscal (cbenef)', required: false },
-  { key: 'fiscal_validated', label: 'Validação Fiscal (fiscal_validated)', required: false },
-  { key: 'fiscal_notes', label: 'Observações Fiscais Internas (fiscal_notes)', required: false },
-  { key: 'nfe_enabled', label: 'Habilitado Emissão NF-e (nfe_enabled)', required: false },
-] as const
+export interface ImportFieldDefinition {
+  key: string
+  label: string
+  category: string
+  required?: boolean
+}
+
+export interface ImportCategory {
+  name: string
+  fields: ImportFieldDefinition[]
+}
+
+export const IMPORT_CATEGORIES: ImportCategory[] = [
+  {
+    name: '📌 Identificação & Canais',
+    fields: [
+      { key: 'codigo_produto', label: 'Código do Produto / SKU / ID (codigo_produto)', category: '📌 Identificação & Canais', required: true },
+      { key: 'nome_produto', label: 'Nome do Produto (nome_produto)', category: '📌 Identificação & Canais', required: false },
+      { key: 'marketplaces', label: 'Canais / Marketplaces (marketplaces)', category: '📌 Identificação & Canais', required: false },
+      { key: 'category', label: 'Categoria na Loja (category)', category: '📌 Identificação & Canais', required: false },
+      { key: 'status', label: 'Status: Ativo / Inativo / Arquivado (status)', category: '📌 Identificação & Canais', required: false },
+    ],
+  },
+  {
+    name: '💰 Preços, Custos & Margens',
+    fields: [
+      { key: 'price', label: 'Preço de Venda R$ (price)', category: '💰 Preços, Custos & Margens', required: false },
+      { key: 'promo_price', label: 'Preço Promocional R$ (promo_price)', category: '💰 Preços, Custos & Margens', required: false },
+      { key: 'purchase_price', label: 'Preço de Custo / Compra R$ (purchase_price)', category: '💰 Preços, Custos & Margens', required: false },
+      { key: 'markup', label: 'Markup % (markup)', category: '💰 Preços, Custos & Margens', required: false },
+      { key: 'free_shipping', label: 'Frete Grátis SIM/NÃO (free_shipping)', category: '💰 Preços, Custos & Margens', required: false },
+    ],
+  },
+  {
+    name: '📦 Estoque & Embalagem',
+    fields: [
+      { key: 'quantity', label: 'Estoque / Quantidade (quantity)', category: '📦 Estoque & Embalagem', required: false },
+      { key: 'intended_form', label: 'Forma Farmacêutica (intended_form)', category: '📦 Estoque & Embalagem', required: false },
+      { key: 'intended_presentation', label: 'Apresentação / Embalagem (intended_presentation)', category: '📦 Estoque & Embalagem', required: false },
+      { key: 'intended_units_per_dose', label: 'Unidades por Dose (intended_units_per_dose)', category: '📦 Estoque & Embalagem', required: false },
+    ],
+  },
+  {
+    name: '📝 Conteúdo & Apresentação',
+    fields: [
+      { key: 'description', label: 'Descrição do Produto (description)', category: '📝 Conteúdo & Apresentação', required: false },
+      { key: 'compositions', label: 'Composição / Fórmulas (compositions)', category: '📝 Conteúdo & Apresentação', required: false },
+      { key: 'indication', label: 'Indicação (indication)', category: '📝 Conteúdo & Apresentação', required: false },
+      { key: 'contraindication', label: 'Contraindicação (contraindication)', category: '📝 Conteúdo & Apresentação', required: false },
+      { key: 'benefits', label: 'Benefícios do Produto (benefits)', category: '📝 Conteúdo & Apresentação', required: false },
+      { key: 'target_audience', label: 'Público-Alvo (target_audience)', category: '📝 Conteúdo & Apresentação', required: false },
+      { key: 'tags', label: 'Tags do Produto (tags)', category: '📝 Conteúdo & Apresentação', required: false },
+      { key: 'meta_title', label: 'Meta Título SEO (meta_title)', category: '📝 Conteúdo & Apresentação', required: false },
+      { key: 'meta_description', label: 'Meta Descrição SEO (meta_description)', category: '📝 Conteúdo & Apresentação', required: false },
+    ],
+  },
+  {
+    name: '📜 Dados Fiscais NF-e 55',
+    fields: [
+      { key: 'fiscal_description', label: 'Descrição Fiscal (fiscal_description)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'ncm', label: 'NCM - 8 dígitos (ncm)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'cest', label: 'CEST - 7 dígitos (cest)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'origin', label: 'Origem da Mercadoria 0-8 (origin)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'csosn', label: 'CSOSN Simples Nacional (csosn)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'csosn_st', label: 'CSOSN ST (csosn_st)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'cfop_intra', label: 'CFOP Estadual Venda (cfop_intra)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'cfop_inter', label: 'CFOP Interestadual Venda (cfop_inter)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'cfop_intra_st', label: 'CFOP ST Estadual (cfop_intra_st)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'cfop_inter_st', label: 'CFOP ST Interestadual (cfop_inter_st)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'pis_cst', label: 'PIS CST 2 dígitos (pis_cst)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'cofins_cst', label: 'COFINS CST 2 dígitos (cofins_cst)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'unit', label: 'Unidade Comercial (unit)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'tax_unit', label: 'Unidade Tributável (tax_unit)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'tax_conversion_factor', label: 'Fator Conversão Tributária (tax_conversion_factor)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'gtin', label: 'GTIN / EAN Código de Barras (gtin)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'tax_gtin', label: 'GTIN Tributável (tax_gtin)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'cbenef', label: 'Código Benefício Fiscal (cbenef)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'fiscal_validated', label: 'Validação Fiscal (fiscal_validated)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'fiscal_notes', label: 'Observações Fiscais Internas (fiscal_notes)', category: '📜 Dados Fiscais NF-e 55', required: false },
+      { key: 'nfe_enabled', label: 'Habilitado Emissão NF-e (nfe_enabled)', category: '📜 Dados Fiscais NF-e 55', required: false },
+    ],
+  },
+]
+
+export const ALL_IMPORT_FIELDS: ImportFieldDefinition[] = IMPORT_CATEGORIES.flatMap(cat => cat.fields)
 
 function detectSystemField(headerName: string, assignedFields: Set<string>): string {
   const low = headerName.trim().toLowerCase().replace(/_/g, ' ')
@@ -99,8 +158,55 @@ function detectSystemField(headerName: string, assignedFields: Set<string>): str
     if (res) return res
   }
 
+  // Preço Promocional (before general price)
+  if (low.includes('promo') || low.includes('promocional')) {
+    const res = tryAssign('promo_price')
+    if (res) return res
+  }
+
+  // Preço de Custo / Compra
+  if (low.includes('custo') || low.includes('compra') || low.includes('cost') || low.includes('purchase')) {
+    const res = tryAssign('purchase_price')
+    if (res) return res
+  }
+
+  // Preço de Venda
+  if (low.includes('preço') || low.includes('preco') || low.includes('venda') || low === 'price' || low.includes('sale price')) {
+    const res = tryAssign('price')
+    if (res) return res
+  }
+
+  // Markup
+  if (low.includes('markup') || low.includes('margem')) {
+    const res = tryAssign('markup')
+    if (res) return res
+  }
+
+  // Categoria
+  if (low.includes('categoria') || low.includes('category')) {
+    const res = tryAssign('category')
+    if (res) return res
+  }
+
+  // Status
+  if (low === 'status' || low.includes('ativo') || low.includes('situacao') || low.includes('situação')) {
+    const res = tryAssign('status')
+    if (res) return res
+  }
+
+  // Frete Grátis
+  if (low.includes('frete') || low.includes('shipping')) {
+    const res = tryAssign('free_shipping')
+    if (res) return res
+  }
+
+  // Quantidade / Estoque
+  if (low.includes('estoque') || low.includes('quantidade') || low.includes('qtd') || low === 'quantity' || low === 'stock') {
+    const res = tryAssign('quantity')
+    if (res) return res
+  }
+
   // Fiscal Notes — must appear before fiscal_description and fiscal_validated
-  // to catch "fiscal_notes", "notas fiscais", "observações fiscais" etc.
   if (
     low === 'fiscal notes' || low === 'fiscal_notes' ||
     low === 'notas' || low === 'notas fiscais' ||
@@ -112,13 +218,85 @@ function detectSystemField(headerName: string, assignedFields: Set<string>): str
     if (res) return res
   }
 
-  if (low.includes('descri') || low.includes('description')) {
+  // Fiscal Description
+  if (low.includes('fiscal description') || low.includes('descrição fiscal') || low.includes('descricao fiscal')) {
     const res = tryAssign('fiscal_description')
     if (res) return res
   }
 
-  // fiscal_validated — only match if it is really about SIM/NAO validated flag
-  // Avoid matching "validação" in notes/description headers
+  // Product Description
+  if (low.includes('descri') || low.includes('description') || low.includes('apresentacao do produto')) {
+    const res = tryAssign('description')
+    if (res) return res
+  }
+
+  // Composição
+  if (low.includes('composic') || low.includes('composição') || low.includes('formula') || low.includes('fórmula') || low.includes('composition')) {
+    const res = tryAssign('compositions')
+    if (res) return res
+  }
+
+  // Indicação
+  if (low.includes('indicac') || low.includes('indicação') || low.includes('indication')) {
+    const res = tryAssign('indication')
+    if (res) return res
+  }
+
+  // Contraindicação
+  if (low.includes('contraindicac') || low.includes('contraindicação') || low.includes('contraindication')) {
+    const res = tryAssign('contraindication')
+    if (res) return res
+  }
+
+  // Benefícios
+  if (low.includes('benefic') || low.includes('benefício') || low.includes('benefit')) {
+    const res = tryAssign('benefits')
+    if (res) return res
+  }
+
+  // Público-Alvo
+  if (low.includes('publico') || low.includes('público') || low.includes('target')) {
+    const res = tryAssign('target_audience')
+    if (res) return res
+  }
+
+  // Forma Farmacêutica
+  if (low.includes('forma') || low.includes('intended_form')) {
+    const res = tryAssign('intended_form')
+    if (res) return res
+  }
+
+  // Apresentação / Embalagem
+  if (low.includes('apresenta') || low.includes('embalagem') || low.includes('intended_presentation')) {
+    const res = tryAssign('intended_presentation')
+    if (res) return res
+  }
+
+  // Unidades por dose
+  if (low.includes('dose') || low.includes('intended_units_per_dose')) {
+    const res = tryAssign('intended_units_per_dose')
+    if (res) return res
+  }
+
+  // Tags
+  if (low === 'tags' || low.includes('etiqueta')) {
+    const res = tryAssign('tags')
+    if (res) return res
+  }
+
+  // Meta Title
+  if (low.includes('meta title') || low.includes('meta titulo') || low.includes('meta título')) {
+    const res = tryAssign('meta_title')
+    if (res) return res
+  }
+
+  // Meta Description
+  if (low.includes('meta description') || low.includes('meta descricao') || low.includes('meta descrição')) {
+    const res = tryAssign('meta_description')
+    if (res) return res
+  }
+
+  // fiscal_validated
   if (
     low === 'fiscal validated' || low === 'fiscal_validated' ||
     low === 'validado' || low === 'validação fiscal' ||
@@ -132,7 +310,6 @@ function detectSystemField(headerName: string, assignedFields: Set<string>): str
     const res = tryAssign('nfe_enabled')
     if (res) return res
   }
-
 
   if (low.includes('ncm')) {
     const res = tryAssign('ncm')
@@ -422,7 +599,7 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
     <AdminModal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Importar Planilha de Produtos (Fiscal NF-e 55 & Marketplaces)"
+      title="Importar Planilha de Produtos"
     >
       <div className="space-y-5 text-sm text-gray-700 dark:text-gray-200">
 
@@ -504,15 +681,14 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
                 return (
                   <div
                     key={mapItem.id}
-                    className={`flex flex-col sm:flex-row sm:items-center gap-2 p-2.5 rounded-xl border transition-all ${
-                      !mapItem.enabled
+                    className={`flex flex-col sm:flex-row sm:items-center gap-2 p-2.5 rounded-xl border transition-all ${!mapItem.enabled
                         ? 'bg-gray-100/60 border-gray-200 opacity-60 dark:bg-gray-900/30 dark:border-gray-800'
                         : mapItem.systemField === 'codigo_produto'
-                        ? 'bg-green-50/60 border-green-300 dark:bg-green-950/20 dark:border-green-800'
-                        : mapItem.systemField
-                        ? 'bg-white border-gray-200 dark:bg-gray-800/80 dark:border-gray-700'
-                        : 'bg-amber-50/50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800'
-                    }`}
+                          ? 'bg-green-50/60 border-green-300 dark:bg-green-950/20 dark:border-green-800'
+                          : mapItem.systemField
+                            ? 'bg-white border-gray-200 dark:bg-gray-800/80 dark:border-gray-700'
+                            : 'bg-amber-50/50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800'
+                      }`}
                   >
                     {/* Enable Checkbox */}
                     <div className="flex items-center gap-2 shrink-0">
@@ -553,23 +729,26 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
                         disabled={!mapItem.enabled}
                         value={mapItem.systemField}
                         onChange={e => handleUpdateMapping(mapItem.id, { systemField: e.target.value })}
-                        className={`w-full text-xs rounded-lg border px-2.5 py-1.5 font-medium ${
-                          mapItem.systemField === 'codigo_produto'
+                        className={`w-full text-xs rounded-lg border px-2.5 py-1.5 font-medium ${mapItem.systemField === 'codigo_produto'
                             ? 'border-green-500 text-green-900 bg-green-50 dark:bg-green-950 dark:text-green-200 font-bold'
                             : mapItem.systemField
-                            ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200'
-                            : 'border-amber-300 text-amber-900 bg-amber-50 dark:bg-amber-950 dark:text-amber-200'
-                        }`}
+                              ? 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200'
+                              : 'border-amber-300 text-amber-900 bg-amber-50 dark:bg-amber-950 dark:text-amber-200'
+                          }`}
                       >
                         <option value="">— Vincular a Campo do Sistema —</option>
-                        {ALL_IMPORT_FIELDS.map(f => {
-                          const isAssignedElsewhere = currentlyAssignedSystemFields.has(f.key) && mapItem.systemField !== f.key
-                          return (
-                            <option key={f.key} value={f.key}>
-                              {f.label} {f.required ? ' *' : ''} {isAssignedElsewhere ? ' (já mapeado)' : ''}
-                            </option>
-                          )
-                        })}
+                        {IMPORT_CATEGORIES.map(cat => (
+                          <optgroup key={cat.name} label={cat.name}>
+                            {cat.fields.map(f => {
+                              const isAssignedElsewhere = currentlyAssignedSystemFields.has(f.key) && mapItem.systemField !== f.key
+                              return (
+                                <option key={f.key} value={f.key}>
+                                  {f.label} {f.required ? ' *' : ''} {isAssignedElsewhere ? ' (já mapeado)' : ''}
+                                </option>
+                              )
+                            })}
+                          </optgroup>
+                        ))}
                       </select>
                     </div>
 
