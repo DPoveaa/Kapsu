@@ -99,8 +99,15 @@ function detectSystemField(headerName: string, assignedFields: Set<string>): str
     if (res) return res
   }
 
-  // Fiscal Notes vs Description vs Validated
-  if (low.includes('note') || low.includes('nota') || low.includes('obs') || low.includes('observa')) {
+  // Fiscal Notes — must appear before fiscal_description and fiscal_validated
+  // to catch "fiscal_notes", "notas fiscais", "observações fiscais" etc.
+  if (
+    low === 'fiscal notes' || low === 'fiscal_notes' ||
+    low === 'notas' || low === 'notas fiscais' ||
+    low.includes('fiscal note') ||
+    (low.includes('obs') && !low.includes('csosn')) ||
+    low.includes('observa')
+  ) {
     const res = tryAssign('fiscal_notes')
     if (res) return res
   }
@@ -110,15 +117,22 @@ function detectSystemField(headerName: string, assignedFields: Set<string>): str
     if (res) return res
   }
 
-  if (low.includes('valida') || low.includes('valid')) {
+  // fiscal_validated — only match if it is really about SIM/NAO validated flag
+  // Avoid matching "validação" in notes/description headers
+  if (
+    low === 'fiscal validated' || low === 'fiscal_validated' ||
+    low === 'validado' || low === 'validação fiscal' ||
+    low === 'fiscal validado' || low === 'validated'
+  ) {
     const res = tryAssign('fiscal_validated')
     if (res) return res
   }
 
-  if (low.includes('nfe') || low.includes('emissao')) {
+  if (low.includes('nfe') || low === 'emissao nfe' || low === 'habilitar nfe' || low.includes('emissão')) {
     const res = tryAssign('nfe_enabled')
     if (res) return res
   }
+
 
   if (low.includes('ncm')) {
     const res = tryAssign('ncm')

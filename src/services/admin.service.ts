@@ -1716,7 +1716,7 @@ class AdminService {
    */
   async getNotaasInvoiceByOrder(orderId: string): Promise<any> {
     const token = localStorage.getItem('kapsu_token')
-    const response = await fetch(`${this.baseUrl}/admin/fiscal/notaas/order/${orderId}`, {
+    const response = await fetch(`${this.baseUrl}/fiscal/notaas/order/${orderId}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     })
     if (!response.ok) return null
@@ -1729,7 +1729,7 @@ class AdminService {
    */
   async issueNotaasInvoice(orderId: string): Promise<any> {
     const token = localStorage.getItem('kapsu_token')
-    const response = await fetch(`${this.baseUrl}/admin/fiscal/notaas/order/${orderId}/issue`, {
+    const response = await fetch(`${this.baseUrl}/fiscal/notaas/order/${orderId}/issue`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -1743,7 +1743,7 @@ class AdminService {
    */
   async reconcileNotaasInvoice(orderId: string): Promise<any> {
     const token = localStorage.getItem('kapsu_token')
-    const response = await fetch(`${this.baseUrl}/admin/fiscal/notaas/order/${orderId}/reconcile`, {
+    const response = await fetch(`${this.baseUrl}/fiscal/notaas/order/${orderId}/reconcile`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` }
     })
@@ -1754,12 +1754,12 @@ class AdminService {
 
   /** Retorna a URL autenticada do proxy DANFE */
   getNotaasDanfeUrl(invoiceId: string): string {
-    return `${this.baseUrl}/admin/fiscal/notaas/${invoiceId}/danfe`
+    return `${this.baseUrl}/fiscal/notaas/${invoiceId}/danfe`
   }
 
   /** Retorna a URL autenticada do proxy XML */
   getNotaasXmlUrl(invoiceId: string): string {
-    return `${this.baseUrl}/admin/fiscal/notaas/${invoiceId}/xml`
+    return `${this.baseUrl}/fiscal/notaas/${invoiceId}/xml`
   }
 
   /**
