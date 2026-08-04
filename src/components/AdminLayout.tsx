@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { 
   Settings, MessageSquare, Users, Package, ShoppingCart, BarChart3, 
   Truck, Gift, Tag, Image, Star, Layout, Menu, ChevronLeft, ChevronRight, Menu as MenuIcon, X,
-  ShieldCheck, Bot, CreditCard, Globe
+  ShieldCheck, Bot, CreditCard, Globe, FileText
 } from 'lucide-react'
 import { ADMIN_AI_CENTER_PATH } from '../constants/adminRoutes'
 import { recordAdminAccess } from '../utils/recentAdminAccess'
@@ -26,6 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       title: "Vendas",
       items: [
         { title: "Pedidos", icon: ShoppingCart, link: "/admin/orders" },
+        { title: "Notas Fiscais", icon: FileText, link: "/admin/notas-fiscais" },
         { title: "Frete", icon: Truck, link: "/admin/shipping" },
         { title: "Promoções", icon: Gift, link: "/admin/promotions" },
         { title: "Cupons", icon: Tag, link: "/admin/promo-codes" },

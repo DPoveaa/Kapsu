@@ -280,4 +280,16 @@ export const fiscalInvoicesService = {
     })
     if (!res.ok) throw new Error((await res.json()).message || 'Erro ao reconciliar nota')
   },
+
+  /** Reenvia o e-mail oficial da NF-e para o cliente */
+  async resendEmail(orderId: string): Promise<void> {
+    const res = await fetch(`${BASE}/order/${orderId}/resend-email`, {
+      method: 'POST',
+      headers: authHeaders(),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      throw new Error(data.message || 'Erro ao reenviar e-mail de Nota Fiscal')
+    }
+  },
 }

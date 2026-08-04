@@ -5,7 +5,7 @@ import {
   Clock, AlertTriangle, Filter, ChevronDown, ChevronUp, Search,
   Package, Settings, BarChart3, Archive, Bell, X, Eye,
   ChevronLeft, ChevronRight, RotateCcw, Loader2,
-  ArrowLeft,
+  ArrowLeft, Mail,
 } from 'lucide-react'
 import { fiscalInvoicesService, FiscalInvoice, InvoiceSummary, AccountingExport, CutoffConfig, OverlapEntry } from '../services/fiscal-invoices.service'
 import { toast } from '../utils/toast'
@@ -546,6 +546,15 @@ export default function FiscalInvoices() {
     }
   }
 
+  const handleResendEmail = async (inv: FiscalInvoice) => {
+    try {
+      await fiscalInvoicesService.resendEmail(inv.local_order_id)
+      toast.success('E-mail de Nota Fiscal reenviado ao cliente!')
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao reenviar e-mail de NF-e')
+    }
+  }
+
   const totalPages = Math.ceil(total / limit)
 
   return (
@@ -639,25 +648,25 @@ export default function FiscalInvoices() {
                   <div>
                     <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Data Início</label>
                     <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 [color-scheme:light] dark:[color-scheme:dark]" />
                   </div>
                   <div>
                     <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Data Fim</label>
                     <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 [color-scheme:light] dark:[color-scheme:dark]" />
                   </div>
 
                   {/* Status */}
                   <div>
                     <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Status</label>
                     <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-                      <option value="">Todos</option>
-                      <option value="ISSUED">Autorizada</option>
-                      <option value="CANCELLED">Cancelada</option>
-                      <option value="ERROR">Erro</option>
-                      <option value="QUEUED">Na fila</option>
-                      <option value="PROCESSING">Processando</option>
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                      <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value="">Todos</option>
+                      <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value="ISSUED">Autorizada</option>
+                      <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value="CANCELLED">Cancelada</option>
+                      <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value="ERROR">Erro</option>
+                      <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value="QUEUED">Na fila</option>
+                      <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value="PROCESSING">Processando</option>
                     </select>
                   </div>
 
@@ -665,10 +674,10 @@ export default function FiscalInvoices() {
                   <div>
                     <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Exportação</label>
                     <select value={exportedFilter} onChange={(e) => setExportedFilter(e.target.value as 'all' | 'yes' | 'no')}
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
-                      <option value="all">Todas</option>
-                      <option value="no">Não exportadas</option>
-                      <option value="yes">Já exportadas</option>
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                      <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value="all">Todas</option>
+                      <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value="no">Não exportadas</option>
+                      <option className="bg-white dark:bg-gray-700 text-gray-900 dark:text-white" value="yes">Já exportadas</option>
                     </select>
                   </div>
 
@@ -679,7 +688,7 @@ export default function FiscalInvoices() {
                       <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                       <input type="text" value={customerFilter} onChange={(e) => setCustomerFilter(e.target.value)}
                         placeholder="Nome, e-mail ou CPF"
-                        className="w-full pl-8 pr-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        className="w-full pl-8 pr-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500" />
                     </div>
                   </div>
 
@@ -688,7 +697,7 @@ export default function FiscalInvoices() {
                     <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Nº Pedido</label>
                     <input type="text" value={orderIdFilter} onChange={(e) => { setOrderIdFilter(e.target.value); setSearchParams(e.target.value ? { order: e.target.value } : {}) }}
                       placeholder="ID do pedido"
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
 
                   {/* Invoice number */}
@@ -696,7 +705,7 @@ export default function FiscalInvoices() {
                     <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block mb-1">Nº Nota Fiscal</label>
                     <input type="text" value={invoiceNumberFilter} onChange={(e) => setInvoiceNumberFilter(e.target.value)}
                       placeholder="Número da NF-e"
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
                 </div>
 
@@ -826,6 +835,11 @@ export default function FiscalInvoices() {
                             <button onClick={() => handleReconcile(inv)} className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/30 dark:hover:bg-amber-950/50 text-amber-600 dark:text-amber-400 transition-colors" title="Reconciliar status">
                               <RefreshCw size={13} />
                             </button>
+                            {inv.status === 'ISSUED' && (
+                              <button onClick={() => handleResendEmail(inv)} className="p-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 dark:bg-teal-950/30 dark:hover:bg-teal-950/50 text-teal-600 dark:text-teal-400 transition-colors" title="Reenviar e-mail NF-e">
+                                <Mail size={13} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

@@ -343,18 +343,22 @@ export default function Profile() {
 
   const handleDownloadCustomerDanfe = async (orderId: string) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || sessionStorage.getItem('kapsu_token') || ''
       const apiHost = import.meta.env.VITE_API_URL || 'http://localhost:3000'
       const res = await fetch(`${apiHost.replace(/\/$/, '')}/api/orders/${orderId}/fiscal/danfe`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      if (!res.ok) throw new Error('Não foi possível carregar o DANFE PDF.')
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Não foi possível carregar o DANFE PDF.')
+      }
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = `danfe-${orderId.substring(0, 8)}.pdf`
       a.click()
+      window.URL.revokeObjectURL(url)
     } catch (err: any) {
       toast.error(err.message || 'Erro ao baixar DANFE PDF')
     }
@@ -362,18 +366,22 @@ export default function Profile() {
 
   const handleDownloadCustomerXml = async (orderId: string) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || sessionStorage.getItem('kapsu_token') || ''
       const apiHost = import.meta.env.VITE_API_URL || 'http://localhost:3000'
       const res = await fetch(`${apiHost.replace(/\/$/, '')}/api/orders/${orderId}/fiscal/xml`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      if (!res.ok) throw new Error('Não foi possível carregar o XML da NF-e.')
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}))
+        throw new Error(errJson.message || 'Não foi possível carregar o XML da NF-e.')
+      }
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = `nfe-${orderId.substring(0, 8)}.xml`
       a.click()
+      window.URL.revokeObjectURL(url)
     } catch (err: any) {
       toast.error(err.message || 'Erro ao baixar XML')
     }
@@ -1509,13 +1517,13 @@ export default function Profile() {
                                     <div className="flex justify-between items-center">
                                       <span className="text-gray-500 dark:text-gray-400">Método:</span>
                                       <span className="font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
-                                         {isMercadoLivreOrder(order)
-                                           ? (<><img src={logoMercadoLivre} alt="Mercado Livre" className="w-4 h-4 object-contain rounded-full" /> Via Mercado Livre</>)
-                                           : order.payment_method === 'credit_card' ? 'Cartão de Crédito'
-                                           : order.payment_method === 'pix' ? 'PIX'
-                                           : order.payment_method === 'boleto' ? 'Boleto'
-                                           : 'Não informado'}
-                                       </span>
+                                        {isMercadoLivreOrder(order)
+                                          ? (<><img src={logoMercadoLivre} alt="Mercado Livre" className="w-4 h-4 object-contain rounded-full" /> Via Mercado Livre</>)
+                                          : order.payment_method === 'credit_card' ? 'Cartão de Crédito'
+                                            : order.payment_method === 'pix' ? 'PIX'
+                                              : order.payment_method === 'boleto' ? 'Boleto'
+                                                : 'Não informado'}
+                                      </span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                       <span className="text-gray-500 dark:text-gray-400">Status Financeiro:</span>
@@ -1627,50 +1635,83 @@ export default function Profile() {
                                       </div>
                                     )}
                                     {(() => {
-                                       const inv = (order as any).fiscal_invoice || (order as any).notaas_invoice;
-                                       if (!inv && !order.invoice_url) return null;
-                                       const status = String(inv?.status || '').toUpperCase();
-                                       return (
-                                         <div className="flex flex-col gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                                           <div className="flex justify-between items-center text-xs">
-                                             <span className="text-gray-500 dark:text-gray-400">Nota Fiscal (NF-e):</span>
-                                             {inv ? (
-                                               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
-                                                 status === 'ISSUED' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' :
-                                                 status === 'ERROR' ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' :
-                                                 status === 'CANCELLED' ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' :
-                                                 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 animate-pulse'
-                                               }`}>
-                                                 {status === 'ISSUED' ? `Emitida (Nº ${inv.invoice_number || ''})` : status === 'ERROR' ? 'Erro na emissão' : status === 'CANCELLED' ? 'Cancelada' : 'Aguardando autorização SEFAZ...'}
-                                               </span>
-                                             ) : (
-                                               <span className="text-xs text-gray-500 font-semibold">Disponível</span>
-                                             )}
-                                           </div>
+                                      const inv = (order as any).fiscal_invoice || (order as any).notaas_invoice || invoices[order.id];
+                                      const isLoading = loadingInvoices[order.id] && !inv;
+                                      const hasManualPdf = Boolean(order.invoice_url);
 
-                                           <div className="flex items-center gap-2 justify-end mt-1">
-                                             {(inv?.danfe_available || order.invoice_url) && (
-                                               <button
-                                                 type="button"
-                                                 onClick={() => handleDownloadCustomerDanfe(order.id)}
-                                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 rounded-lg font-bold text-xs cursor-pointer transition-colors"
-                                               >
-                                                 <Download className="w-3.5 h-3.5" /> Baixar DANFE (PDF)
-                                               </button>
-                                             )}
-                                             {inv?.xml_available && (
-                                               <button
-                                                 type="button"
-                                                 onClick={() => handleDownloadCustomerXml(order.id)}
-                                                 className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 rounded-lg font-bold text-xs cursor-pointer transition-colors"
-                                               >
-                                                 <FileText className="w-3.5 h-3.5" /> Baixar XML
-                                               </button>
-                                             )}
-                                           </div>
-                                         </div>
-                                       );
-                                     })()}
+                                      if (!inv && !hasManualPdf && !isLoading && !isInvoiceEligibleStatus(order.status)) {
+                                        return null;
+                                      }
+
+                                      if (isLoading) {
+                                        return (
+                                          <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
+                                            <span className="text-gray-500 dark:text-gray-400">Nota Fiscal:</span>
+                                            <span className="text-gray-400 dark:text-gray-500 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Buscando...</span>
+                                          </div>
+                                        );
+                                      }
+
+                                      if (!inv && !hasManualPdf) {
+                                        return (
+                                          <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
+                                            <span className="text-gray-500 dark:text-gray-400">Nota Fiscal:</span>
+                                            <span className="text-yellow-600 dark:text-yellow-400 text-xs bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider">Aguardando emissão</span>
+                                          </div>
+                                        );
+                                      }
+
+                                      const status = String(inv?.status || '').toUpperCase();
+                                      const isIssued = status === 'ISSUED' || status === 'AUTHORIZED';
+                                      const isError = status === 'ERROR';
+                                      const isCancelled = status === 'CANCELLED';
+
+                                      return (
+                                        <div className="flex flex-col gap-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                                          <div className="flex justify-between items-center text-xs">
+                                            <span className="text-gray-500 dark:text-gray-400">Nota Fiscal (NF-e):</span>
+                                            {inv ? (
+                                              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${isIssued ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' :
+                                                  isError ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300' :
+                                                    isCancelled ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' :
+                                                      'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 animate-pulse'
+                                                }`}>
+                                                {isIssued ? `Emitida` : isError ? 'Erro na emissão' : isCancelled ? 'Cancelada' : 'Aguardando autorização SEFAZ...'}
+                                              </span>
+                                            ) : (
+                                              <span className="text-xs text-gray-500 font-semibold">Disponível</span>
+                                            )}
+                                          </div>
+
+                                          <div className="flex items-center gap-2 justify-end mt-1">
+                                            {(inv?.danfe_available || hasManualPdf || isIssued) && (
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  if (hasManualPdf && !inv?.danfe_available) {
+                                                    window.open(order.invoice_url!, '_blank');
+                                                  } else {
+                                                    handleDownloadCustomerDanfe(order.id);
+                                                  }
+                                                }}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 rounded-lg font-bold text-xs cursor-pointer transition-colors"
+                                              >
+                                                <Download className="w-3.5 h-3.5" /> Baixar DANFE (PDF)
+                                              </button>
+                                            )}
+                                            {inv?.xml_available && (
+                                              <button
+                                                type="button"
+                                                onClick={() => handleDownloadCustomerXml(order.id)}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 rounded-lg font-bold text-xs cursor-pointer transition-colors"
+                                              >
+                                                <FileText className="w-3.5 h-3.5" /> Baixar XML
+                                              </button>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })()}
                                     {order.payment_url && (
                                       <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
                                         <span className="text-gray-500 dark:text-gray-400">
@@ -1681,713 +1722,679 @@ export default function Profile() {
                                         </a>
                                       </div>
                                     )}
-                                    {order.invoice_url && (
-                                        <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
-                                          <span className="text-gray-500 dark:text-gray-400">
-                                            Nota Fiscal:
-                                          </span>
-                                          <a
-                                            href={order.invoice_url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="flex items-center gap-1 px-2.5 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded-lg font-bold transition-colors text-xs"
-                                          >
-                                            <Download className="w-3.5 h-3.5" /> Baixar PDF
-                                          </a>
-                                        </div>
-                                      )
-                                    }
-                                    {isInvoiceEligibleStatus(order.status) && loadingInvoices[order.id] && (
-                                      <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
-                                        <span className="text-gray-500 dark:text-gray-400">Nota Fiscal:</span>
-                                        <span className="text-gray-400 dark:text-gray-500 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Buscando...</span>
-                                      </div>
-                                    )}
-                                    {isInvoiceEligibleStatus(order.status) && !loadingInvoices[order.id] && invoices[order.id] && (
-                                      <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-gray-700">
-                                        <span className="text-gray-500 dark:text-gray-400">Nota Fiscal:</span>
-                                        {invoices[order.id].status === 'AUTHORIZED' && invoices[order.id].pdfUrl ? (
-                                          <a href={invoices[order.id].pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 px-2.5 py-1 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 border border-primary-200 dark:border-primary-800 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded-lg font-bold transition-colors">
-                                            <Download className="w-3.5 h-3.5" /> Baixar PDF
-                                          </a>
-                                        ) : invoices[order.id].status === 'ERROR' ? (
-                                          <span className="text-red-500 text-xs font-semibold">Erro ao emitir</span>
-                                        ) : (
-                                          <span className="text-yellow-600 dark:text-yellow-400 text-xs bg-yellow-50 dark:bg-yellow-900/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider">Aguardando emissão</span>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
                                 </div>
                               </div>
+                            </div>
 
                               {order.items && order.items.length > 0 && (
-                                <div className="mt-5">
-                                  <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-1.5">
-                                    <ShoppingBag className="w-4 h-4 text-primary-500" />
-                                    Itens do Pedido ({order.items.length})
-                                  </h4>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    {order.items.map((item, idx) => (
-                                      <div key={idx} className="flex items-center gap-3.5 p-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-xl">
-                                        {item.image_url ? (
-                                          <img src={productsService.getImageUrl(item.image_url)} alt="Produto" className="w-12 h-12 object-contain bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex-shrink-0 p-0.5" />
-                                        ) : (
-                                          <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
-                                            <Package className="w-6 h-6 text-gray-400 dark:text-gray-600" />
-                                          </div>
-                                        )}
-                                        <div className="flex-1 min-w-0 text-xs">
-                                          <p className="font-bold text-gray-900 dark:text-white truncate">{item.product_name || item.name || 'Produto'}</p>
-                                          <p className="text-gray-500 dark:text-gray-400 mt-0.5">Qtd: {item.quantity}</p>
-                                        </div>
-                                        <div className="text-right text-xs">
-                                          <p className="font-bold text-gray-900 dark:text-white">{formatCurrency(item.price || 0)}</p>
-                                        </div>
+                            <div className="mt-5">
+                              <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-1.5">
+                                <ShoppingBag className="w-4 h-4 text-primary-500" />
+                                Itens do Pedido ({order.items.length})
+                              </h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {order.items.map((item, idx) => (
+                                  <div key={idx} className="flex items-center gap-3.5 p-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 rounded-xl">
+                                    {item.image_url ? (
+                                      <img src={productsService.getImageUrl(item.image_url)} alt="Produto" className="w-12 h-12 object-contain bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex-shrink-0 p-0.5" />
+                                    ) : (
+                                      <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <Package className="w-6 h-6 text-gray-400 dark:text-gray-600" />
                                       </div>
-                                    ))}
+                                    )}
+                                    <div className="flex-1 min-w-0 text-xs">
+                                      <p className="font-bold text-gray-900 dark:text-white truncate">{item.product_name || item.name || 'Produto'}</p>
+                                      <p className="text-gray-500 dark:text-gray-400 mt-0.5">Qtd: {item.quantity}</p>
+                                    </div>
+                                    <div className="text-right text-xs">
+                                      <p className="font-bold text-gray-900 dark:text-white">{formatCurrency(item.price || 0)}</p>
+                                    </div>
                                   </div>
-                                </div>
-                              )}
+                                ))}
+                              </div>
                             </div>
                           )}
-                        </div>
-                      ))}
-
-                      {Math.ceil(orders.length / ordersPerPage) > 1 && (
-                        <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-4 mt-6">
-                          <button
-                            disabled={ordersPage === 1}
-                            onClick={() => {
-                              setOrdersPage(prev => Math.max(prev - 1, 1));
-                              window.scrollTo({ top: 300, behavior: 'smooth' });
-                            }}
-                            className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-305 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all font-semibold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                          >
-                            Anterior
-                          </button>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                            Página {ordersPage} de {Math.ceil(orders.length / ordersPerPage)}
-                          </span>
-                          <button
-                            disabled={ordersPage === Math.ceil(orders.length / ordersPerPage)}
-                            onClick={() => {
-                              setOrdersPage(prev => Math.min(prev + 1, Math.ceil(orders.length / ordersPerPage)));
-                              window.scrollTo({ top: 300, behavior: 'smooth' });
-                            }}
-                            className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-350 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all font-semibold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-                          >
-                            Próxima
-                          </button>
                         </div>
                       )}
                     </div>
+                  ))}
+
+                  {Math.ceil(orders.length / ordersPerPage) > 1 && (
+                    <div className="flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-4 mt-6">
+                      <button
+                        disabled={ordersPage === 1}
+                        onClick={() => {
+                          setOrdersPage(prev => Math.max(prev - 1, 1));
+                          window.scrollTo({ top: 300, behavior: 'smooth' });
+                        }}
+                        className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-305 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all font-semibold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      >
+                        Anterior
+                      </button>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                        Página {ordersPage} de {Math.ceil(orders.length / ordersPerPage)}
+                      </span>
+                      <button
+                        disabled={ordersPage === Math.ceil(orders.length / ordersPerPage)}
+                        onClick={() => {
+                          setOrdersPage(prev => Math.min(prev + 1, Math.ceil(orders.length / ordersPerPage)));
+                          window.scrollTo({ top: 300, behavior: 'smooth' });
+                        }}
+                        className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-350 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all font-semibold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      >
+                        Próxima
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
+            </div>
+              )}
 
-              {/* ─────────────────────────────────────────────────────── */}
-              {/* FAVORITOS                                               */}
-              {/* ─────────────────────────────────────────────────────── */}
-              {activeSection === 'favorites' && (
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                      <Heart className="text-primary-500 fill-primary-100 dark:fill-primary-900/30" />
-                      Meus Favoritos
-                    </h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Produtos que você salvou para comprar depois.</p>
+            {/* ─────────────────────────────────────────────────────── */}
+            {/* FAVORITOS                                               */}
+            {/* ─────────────────────────────────────────────────────── */}
+            {activeSection === 'favorites' && (
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Heart className="text-primary-500 fill-primary-100 dark:fill-primary-900/30" />
+                    Meus Favoritos
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Produtos que você salvou para comprar depois.</p>
+                </div>
+
+                {loadingFavorites ? (
+                  <div className="py-20 flex flex-col items-center justify-center text-primary-500">
+                    <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Buscando seus favoritos...</p>
                   </div>
-
-                  {loadingFavorites ? (
-                    <div className="py-20 flex flex-col items-center justify-center text-primary-500">
-                      <Loader2 className="w-8 h-8 animate-spin mb-3" />
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Buscando seus favoritos...</p>
-                    </div>
-                  ) : favoriteProducts.length === 0 ? (
-                    <div className="py-16 text-center bg-gray-50 dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
-                      <Heart className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-                      <p className="text-base font-bold text-gray-700 dark:text-white">Você não tem favoritos ainda</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs mx-auto mb-5">Navegue pelos produtos e clique no coração para salvar seus favoritos.</p>
-                      <button onClick={() => navigate('/produtos')} className="inline-block px-5 py-2 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl transition-all text-xs cursor-pointer">Ver Produtos</button>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                      {favoriteProducts.map((product) => {
-                        const originalPrice = product.promo_price ? product.price : null;
-                        const currentPrice = product.promo_price || product.price;
-                        return (
-                          <div key={product.id} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col justify-between hover:border-primary-300 dark:hover:border-primary-700 transition-all duration-300 relative group">
-                            <button
-                              className="absolute top-3 right-3 p-1.5 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-full hover:bg-rose-100 dark:hover:bg-rose-900/30 z-10 cursor-pointer"
-                            >
-                              <Heart className="w-3.5 h-3.5 fill-rose-500" />
-                            </button>
-                            <div className="text-center pt-2">
-                              <div className="w-20 h-20 mx-auto mb-3 flex items-center justify-center group-hover:scale-105 transition-transform">
-                                <img src={product.image || ''} alt={product.name} className="w-full h-full object-contain drop-shadow-lg" />
-                              </div>
-                              <h4 className="font-bold text-gray-900 dark:text-white text-sm line-clamp-2" title={product.name}>{product.name}</h4>
+                ) : favoriteProducts.length === 0 ? (
+                  <div className="py-16 text-center bg-gray-50 dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+                    <Heart className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                    <p className="text-base font-bold text-gray-700 dark:text-white">Você não tem favoritos ainda</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs mx-auto mb-5">Navegue pelos produtos e clique no coração para salvar seus favoritos.</p>
+                    <button onClick={() => navigate('/produtos')} className="inline-block px-5 py-2 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl transition-all text-xs cursor-pointer">Ver Produtos</button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {favoriteProducts.map((product) => {
+                      const originalPrice = product.promo_price ? product.price : null;
+                      const currentPrice = product.promo_price || product.price;
+                      return (
+                        <div key={product.id} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col justify-between hover:border-primary-300 dark:hover:border-primary-700 transition-all duration-300 relative group">
+                          <button
+                            className="absolute top-3 right-3 p-1.5 bg-rose-50 dark:bg-rose-900/20 text-rose-500 rounded-full hover:bg-rose-100 dark:hover:bg-rose-900/30 z-10 cursor-pointer"
+                          >
+                            <Heart className="w-3.5 h-3.5 fill-rose-500" />
+                          </button>
+                          <div className="text-center pt-2">
+                            <div className="w-20 h-20 mx-auto mb-3 flex items-center justify-center group-hover:scale-105 transition-transform">
+                              <img src={product.image || ''} alt={product.name} className="w-full h-full object-contain drop-shadow-lg" />
                             </div>
-                            <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                              <div>
-                                {originalPrice && (
-                                  <span className="block text-[10px] text-gray-400 dark:text-gray-500 line-through">
-                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
-                                  </span>
-                                )}
-                                <span className="font-extrabold text-gray-900 dark:text-white text-sm">
-                                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(currentPrice)}
+                            <h4 className="font-bold text-gray-900 dark:text-white text-sm line-clamp-2" title={product.name}>{product.name}</h4>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                              {originalPrice && (
+                                <span className="block text-[10px] text-gray-400 dark:text-gray-500 line-through">
+                                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(originalPrice)}
                                 </span>
-                              </div>
-                              <button onClick={() => navigate(`/produto/${product.id}`)} className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-[10px] font-bold transition-all uppercase tracking-wider text-center cursor-pointer">
-                                Ver
-                              </button>
+                              )}
+                              <span className="font-extrabold text-gray-900 dark:text-white text-sm">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(currentPrice)}
+                              </span>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ─────────────────────────────────────────────────────── */}
-              {/* AVALIAÇÕES                                              */}
-              {/* ─────────────────────────────────────────────────────── */}
-              {activeSection === 'reviews' && (
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                      <Star className="text-primary-500 fill-primary-100 dark:fill-primary-900/30" />
-                      Minhas Avaliações
-                    </h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Seu histórico de opiniões enviadas sobre produtos.</p>
-                  </div>
-
-                  {loadingReviews ? (
-                    <div className="py-20 flex flex-col items-center justify-center text-primary-500">
-                      <Loader2 className="w-8 h-8 animate-spin mb-3" />
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Buscando suas avaliações...</p>
-                    </div>
-                  ) : myReviews.length === 0 ? (
-                    <div className="py-16 text-center bg-gray-50 dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
-                      <Star className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
-                      <p className="text-base font-bold text-gray-700 dark:text-white">Você não avaliou nenhum produto</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs mx-auto mb-5">Quando você avaliar um produto, a avaliação aparecerá aqui.</p>
-                      <button onClick={() => navigate('/produtos')} className="inline-block px-5 py-2 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl transition-all text-xs cursor-pointer">Ver Produtos</button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {myReviews.map((review) => (
-                        <div key={review.id} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/20 rounded-full flex items-center justify-center text-primary-500 border border-primary-200 dark:border-primary-800">
-                                <Star className="w-4 h-4 text-primary-500 fill-primary-500" />
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-gray-900 dark:text-white text-sm">{review.product || 'Produto'}</h4>
-                                <div className="flex items-center gap-0.5 mt-0.5">
-                                  {[...Array(5)].map((_, i) => (
-                                    <Star key={i} className={`w-3 h-3 ${i < review.rating ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700 text-gray-200 dark:text-gray-700'}`} />
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-semibold">{review.date || formatDate(review.created_at)}</span>
-                          </div>
-                          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed mt-3 bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
-                            "{review.comment}"
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ─────────────────────────────────────────────────────── */}
-              {/* NOTIFICAÇÕES                                            */}
-              {/* ─────────────────────────────────────────────────────── */}
-              {activeSection === 'notifications' && (
-                <div id="profile-notifications-section" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
-                  <div className="w-full max-w-4xl mx-auto">
-                    <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
-                      <div className="space-y-8">
-
-
-
-                        {/* Section B: What do you want to be notified about? */}
-                        <div>
-                          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-primary-500"></span>
-                            O que você deseja receber? (Conteúdo)
-                          </h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                            Escolha quais canais receber para cada tipo de assunto.
-                          </p>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Order Updates Card */}
-                            <div className="flex flex-col justify-between p-5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl transition-all duration-300 hover:shadow-sm">
-                              <div>
-                                <div className="flex items-start justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <div className="p-2.5 bg-primary-50 dark:bg-primary-900/20 text-primary-500 rounded-xl flex-shrink-0">
-                                      <Truck className="w-5 h-5" />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Atualizações de Pedido</h4>
-                                        {(saveSuccess['whatsapp_order_confirmation_enabled'] || saveSuccess['email_order_status_notifications_enabled']) && (
-                                          <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold animate-fade-in flex items-center gap-0.5">
-                                            <Check className="w-3 h-3" /> Salvo
-                                          </span>
-                                        )}
-                                      </div>
-                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                                        Atualizações de pagamento, preparação, envio e entrega.
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="mt-5 pt-4 border-t border-gray-200/60 dark:border-gray-700/60">
-                                <div className="flex flex-wrap gap-2 items-center">
-                                  {/* WhatsApp Chip */}
-                                  <button
-                                    type="button"
-                                    onClick={() => updatePreference('whatsapp_order_confirmation_enabled', !preferences.whatsapp_order_confirmation_enabled)}
-                                    disabled={savingPrefs['whatsapp_order_confirmation_enabled']}
-                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${preferences.whatsapp_order_confirmation_enabled
-                                      ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 hover:bg-green-100/70'
-                                      : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
-                                      }`}
-                                  >
-                                    <WhatsAppIcon className={`w-3.5 h-3.5 ${preferences.whatsapp_order_confirmation_enabled
-                                      ? 'text-green-600 dark:text-green-400'
-                                      : 'text-gray-400 dark:text-gray-500'
-                                      }`} />
-                                    WhatsApp
-                                  </button>
-
-                                  {/* Email Chip */}
-                                  <button
-                                    type="button"
-                                    onClick={() => updatePreference('email_order_status_notifications_enabled', !preferences.email_order_status_notifications_enabled)}
-                                    disabled={savingPrefs['email_order_status_notifications_enabled']}
-                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${preferences.email_order_status_notifications_enabled
-                                      ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 hover:bg-blue-100/70'
-                                      : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
-                                      }`}
-                                  >
-                                    <Mail className={`w-3.5 h-3.5 ${preferences.email_order_status_notifications_enabled
-                                      ? 'text-blue-500 dark:text-blue-400'
-                                      : 'text-gray-400 dark:text-gray-500'
-                                      }`} />
-                                    E-mail
-                                  </button>
-                                </div>
-
-                                {/* Inline Warning Hint */}
-                                {!preferences.whatsapp_order_confirmation_enabled &&
-                                  !preferences.email_order_status_notifications_enabled && (
-                                    <p className="mt-3 text-[11px] text-red-500 dark:text-red-400 font-medium flex items-center gap-1 bg-red-50 dark:bg-red-950/20 p-2 rounded-lg border border-red-100 dark:border-red-900/30">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                                      Ative pelo menos um canal para receber esta notificação.
-                                    </p>
-                                  )}
-                              </div>
-                            </div>
-
-                            {/* Promotions and Favorites Card */}
-                            <div className="flex flex-col justify-between p-5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl transition-all duration-300 hover:shadow-sm">
-                              <div>
-                                <div className="flex items-start justify-between">
-                                  <div className="flex items-center gap-3">
-                                    <div className="p-2.5 bg-rose-50 dark:bg-rose-900/20 text-rose-500 dark:text-rose-400 rounded-xl flex-shrink-0">
-                                      <Tag className="w-5 h-5" />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <div className="flex items-center gap-2">
-                                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">Promoções e Favoritos</h4>
-                                        {(saveSuccess['whatsapp_promotions_notifications_enabled'] || saveSuccess['email_promotions_notifications_enabled']) && (
-                                          <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold animate-fade-in flex items-center gap-0.5">
-                                            <Check className="w-3 h-3" /> Salvo
-                                          </span>
-                                        )}
-                                      </div>
-                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                                        Ofertas, produtos favoritos e alertas de estoque.
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="mt-5 pt-4 border-t border-gray-200/60 dark:border-gray-700/60">
-                                <div className="flex flex-wrap gap-2 items-center">
-                                  {/* WhatsApp Chip */}
-                                  <button
-                                    type="button"
-                                    onClick={() => updatePreference('whatsapp_promotions_notifications_enabled', !preferences.whatsapp_promotions_notifications_enabled)}
-                                    disabled={savingPrefs['whatsapp_promotions_notifications_enabled']}
-                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${preferences.whatsapp_promotions_notifications_enabled
-                                      ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 hover:bg-green-100/70'
-                                      : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
-                                      }`}
-                                  >
-                                    <WhatsAppIcon className={`w-3.5 h-3.5 ${preferences.whatsapp_promotions_notifications_enabled
-                                      ? 'text-green-600 dark:text-green-400'
-                                      : 'text-gray-400 dark:text-gray-500'
-                                      }`} />
-                                    WhatsApp
-                                  </button>
-
-                                  {/* Email Chip */}
-                                  <button
-                                    type="button"
-                                    onClick={() => updatePreference('email_promotions_notifications_enabled', !preferences.email_promotions_notifications_enabled)}
-                                    disabled={savingPrefs['email_promotions_notifications_enabled']}
-                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${preferences.email_promotions_notifications_enabled
-                                      ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 hover:bg-blue-100/70'
-                                      : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
-                                      }`}
-                                  >
-                                    <Mail className={`w-3.5 h-3.5 ${preferences.email_promotions_notifications_enabled
-                                      ? 'text-blue-500 dark:text-blue-400'
-                                      : 'text-gray-400 dark:text-gray-500'
-                                      }`} />
-                                    E-mail
-                                  </button>
-                                </div>
-
-                                {/* Inline Warning Hint */}
-                                {!preferences.whatsapp_promotions_notifications_enabled &&
-                                  !preferences.email_promotions_notifications_enabled && (
-                                    <p className="mt-3 text-[11px] text-red-500 dark:text-red-400 font-medium flex items-center gap-1 bg-red-50 dark:bg-red-950/20 p-2 rounded-lg border border-red-100 dark:border-red-900/30">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
-                                      Ative pelo menos um canal para receber esta notificação.
-                                    </p>
-                                  )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ─────────────────────────────────────────────────────── */}
-              {/* AJUDA                                                   */}
-              {/* ─────────────────────────────────────────────────────── */}
-              {activeSection === 'help' && (
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                      <HelpCircle className="text-primary-500" />
-                      Ajuda & FAQ
-                    </h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Dúvidas frequentes e suporte direto.</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">Dúvidas Frequentes</h3>
-
-                    <div className="space-y-3">
-                      {[
-                        {
-                          q: 'Como funciona a assinatura de cápsulas?',
-                          a: 'A assinatura mensal permite que você escolha suas fórmulas e as receba automaticamente no conforto de sua caixa a cada 30 dias. Assinantes possuem 10% de desconto recorrente e frete grátis em todas as caixas.'
-                        },
-                        {
-                          q: 'Qual o prazo de entrega dos pedidos?',
-                          a: 'O prazo médio é de 2 a 5 dias úteis para capitais da região Sudeste e Sul, e de 5 a 10 dias úteis para as demais regiões do Brasil. Você receberá um código de rastreamento no WhatsApp e no e-mail cadastrado.'
-                        },
-                        {
-                          q: 'Como posso trocar ou cancelar meu pedido?',
-                          a: 'Conforme o Código de Defesa do Consumidor, você tem o direito de solicitar a devolução ou troca de produtos não lacrados em até 7 dias corridos após o recebimento. Para cancelar ou iniciar a devolução, fale com nossa central de suporte.'
-                        },
-                      ].map((faq, i) => (
-                        <details key={i} className="group bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 transition-all duration-300 [&_summary::-webkit-details-marker]:hidden">
-                          <summary className="flex items-center justify-between font-bold text-gray-900 dark:text-white text-xs cursor-pointer">
-                            <span>{faq.q}</span>
-                            <span className="transition-transform duration-300 group-open:rotate-90 text-primary-500 flex-shrink-0 ml-3">
-                              <ChevronRight className="w-4 h-4" />
-                            </span>
-                          </summary>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 leading-relaxed">
-                            {faq.a}
-                          </p>
-                        </details>
-                      ))}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                      {/* WhatsApp Channel */}
-                      <div className="bg-green-50/50 dark:bg-green-950/10 border border-green-200 dark:border-green-900/30 rounded-2xl p-5 flex flex-col items-center text-center justify-between">
-                        <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 mb-3">
-                          <Phone size={24} />
-                        </div>
-                        <h4 className="font-bold text-gray-900 dark:text-white text-sm">Suporte via WhatsApp</h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">Atendimento rápido e personalizado diretamente no celular.</p>
-                        <a
-                          href={env.supportWhatsAppUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-all shadow-md hover:scale-[1.02] active:scale-[0.98]"
-                        >
-                          Chamar no WhatsApp
-                        </a>
-                      </div>
-
-                      {/* Email Channel */}
-                      <div className="bg-blue-50/50 dark:bg-blue-950/10 border border-blue-200 dark:border-blue-900/30 rounded-2xl p-5 flex flex-col items-center text-center justify-between">
-                        <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 mb-3">
-                          <Mail size={24} />
-                        </div>
-                        <h4 className="font-bold text-gray-900 dark:text-white text-sm">Suporte via E-mail</h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">Envie suas dúvidas, sugestões ou solicitações para nosso e-mail.</p>
-                        <button
-                          type="button"
-                          onClick={handleSendEmail}
-                          className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
-                        >
-                          Enviar E-mail
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center text-xs text-gray-500 dark:text-gray-400 mt-4 leading-relaxed">
-                      Respondemos em até 1 dia útil.
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ─────────────────────────────────────────────────────── */}
-              {/* CONTAS CONECTADAS                                       */}
-              {/* ─────────────────────────────────────────────────────── */}
-              {activeSection === 'connected-accounts' && (
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                      <ShieldCheck className="text-primary-500" />
-                      Contas Conectadas
-                    </h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Gerencie as contas de provedores externos vinculadas à sua conta Kapsu.
-                    </p>
-                  </div>
-
-                  {loadingProviders ? (
-                    <div className="flex items-center justify-center py-12">
-                      <Loader2 className="animate-spin w-6 h-6 text-primary-500" />
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {/* Google Connection Card */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl gap-4">
-                        <div className="flex items-center gap-3.5">
-                          {/* Google Icon SVG */}
-                          <div className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
-                            <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05" />
-                              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0">
-                            <span className="block text-sm font-bold text-gray-900 dark:text-white">Google</span>
-                            <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                              {connectedProviders.includes('google')
-                                ? 'Conta vinculada e ativa para login social.'
-                                : 'Conecte sua conta Google para fazer login com um clique.'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {connectedProviders.includes('google') ? (
-                            <button
-                              type="button"
-                              onClick={() => handleUnlinkProvider('google')}
-                              disabled={loadingSocialAction}
-                              className="px-3.5 py-2 border border-red-250 hover:border-red-300 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer animate-in fade-in"
-                            >
-                              {loadingSocialAction ? 'Aguarde...' : 'Desvincular'}
+                            <button onClick={() => navigate(`/produto/${product.id}`)} className="px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-[10px] font-bold transition-all uppercase tracking-wider text-center cursor-pointer">
+                              Ver
                             </button>
-                          ) : (
-                            <div id="google-link-btn-container" className="min-h-[38px] flex items-center"></div>
-                          )}
+                          </div>
                         </div>
-                      </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
-                      {/* Microsoft Connection Card (Placeholder) */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/50 rounded-2xl gap-4 opacity-75">
-                        <div className="flex items-center gap-3.5">
-                          <div className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
-                            <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg">
-                              <path fill="#F25022" d="M1 1h10v10H1z" />
-                              <path fill="#7FBA00" d="M12 1h10v10H12z" />
-                              <path fill="#00A4EF" d="M1 12h10v10H1z" />
-                              <path fill="#FFB900" d="M12 12h10v10H12z" />
-                            </svg>
-                          </div>
-                          <div className="min-w-0">
-                            <span className="block text-sm font-bold text-gray-900 dark:text-white">Microsoft</span>
-                            <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                              Entrar com conta pessoal ou corporativa Microsoft. (Em breve)
-                            </span>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          disabled
-                          className="px-3.5 py-2 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-xl text-xs font-bold cursor-not-allowed"
-                        >
-                          Conectar
-                        </button>
-                      </div>
+            {/* ─────────────────────────────────────────────────────── */}
+            {/* AVALIAÇÕES                                              */}
+            {/* ─────────────────────────────────────────────────────── */}
+            {activeSection === 'reviews' && (
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Star className="text-primary-500 fill-primary-100 dark:fill-primary-900/30" />
+                    Minhas Avaliações
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Seu histórico de opiniões enviadas sobre produtos.</p>
+                </div>
 
-                      {/* Apple Connection Card (Placeholder) */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/50 rounded-2xl gap-4 opacity-75">
-                        <div className="flex items-center gap-3.5">
-                          <div className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
-                            <svg className="w-5 h-5 flex-shrink-0 fill-current text-gray-900 dark:text-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.62.71-1.16 1.85-1.02 2.96 1.1.09 2.23-.55 2.97-1.4z" />
-                            </svg>
+                {loadingReviews ? (
+                  <div className="py-20 flex flex-col items-center justify-center text-primary-500">
+                    <Loader2 className="w-8 h-8 animate-spin mb-3" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Buscando suas avaliações...</p>
+                  </div>
+                ) : myReviews.length === 0 ? (
+                  <div className="py-16 text-center bg-gray-50 dark:bg-gray-800 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
+                    <Star className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
+                    <p className="text-base font-bold text-gray-700 dark:text-white">Você não avaliou nenhum produto</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-xs mx-auto mb-5">Quando você avaliar um produto, a avaliação aparecerá aqui.</p>
+                    <button onClick={() => navigate('/produtos')} className="inline-block px-5 py-2 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl transition-all text-xs cursor-pointer">Ver Produtos</button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {myReviews.map((review) => (
+                      <div key={review.id} className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/20 rounded-full flex items-center justify-center text-primary-500 border border-primary-200 dark:border-primary-800">
+                              <Star className="w-4 h-4 text-primary-500 fill-primary-500" />
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-gray-900 dark:text-white text-sm">{review.product || 'Produto'}</h4>
+                              <div className="flex items-center gap-0.5 mt-0.5">
+                                {[...Array(5)].map((_, i) => (
+                                  <Star key={i} className={`w-3 h-3 ${i < review.rating ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700 text-gray-200 dark:text-gray-700'}`} />
+                                ))}
+                              </div>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <span className="block text-sm font-bold text-gray-900 dark:text-white">Apple</span>
-                            <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                              Entrar com o ID Apple de forma segura. (Em breve)
-                            </span>
-                          </div>
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500 font-semibold">{review.date || formatDate(review.created_at)}</span>
                         </div>
-                        <button
-                          type="button"
-                          disabled
-                          className="px-3.5 py-2 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-xl text-xs font-bold cursor-not-allowed"
-                        >
-                          Conectar
-                        </button>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed mt-3 bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
+                          "{review.comment}"
+                        </p>
                       </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
-                      {/* GitHub Connection Card (Placeholder) */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/50 rounded-2xl gap-4 opacity-75">
-                        <div className="flex items-center gap-3.5">
-                          <div className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
-                            <svg className="w-5 h-5 flex-shrink-0 fill-current text-gray-900 dark:text-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 7.65 6.84 8.97.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.64-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.1.39-1.99 1.03-2.69-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.69 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85 0 1.34-.01 2.42-.01 2.75 0 .27.18.58.69.48C19.14 19.65 22 15.92 22 12c0-5.523-4.477-10-10-10z" />
-                            </svg>
+            {/* ─────────────────────────────────────────────────────── */}
+            {/* NOTIFICAÇÕES                                            */}
+            {/* ─────────────────────────────────────────────────────── */}
+            {activeSection === 'notifications' && (
+              <div id="profile-notifications-section" className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
+                <div className="w-full max-w-4xl mx-auto">
+                  <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
+                    <div className="space-y-8">
+
+
+
+                      {/* Section B: What do you want to be notified about? */}
+                      <div>
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-primary-500"></span>
+                          O que você deseja receber? (Conteúdo)
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                          Escolha quais canais receber para cada tipo de assunto.
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Order Updates Card */}
+                          <div className="flex flex-col justify-between p-5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl transition-all duration-300 hover:shadow-sm">
+                            <div>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2.5 bg-primary-50 dark:bg-primary-900/20 text-primary-500 rounded-xl flex-shrink-0">
+                                    <Truck className="w-5 h-5" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="text-sm font-bold text-gray-900 dark:text-white">Atualizações de Pedido</h4>
+                                      {(saveSuccess['whatsapp_order_confirmation_enabled'] || saveSuccess['email_order_status_notifications_enabled']) && (
+                                        <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold animate-fade-in flex items-center gap-0.5">
+                                          <Check className="w-3 h-3" /> Salvo
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                                      Atualizações de pagamento, preparação, envio e entrega.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="mt-5 pt-4 border-t border-gray-200/60 dark:border-gray-700/60">
+                              <div className="flex flex-wrap gap-2 items-center">
+                                {/* WhatsApp Chip */}
+                                <button
+                                  type="button"
+                                  onClick={() => updatePreference('whatsapp_order_confirmation_enabled', !preferences.whatsapp_order_confirmation_enabled)}
+                                  disabled={savingPrefs['whatsapp_order_confirmation_enabled']}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${preferences.whatsapp_order_confirmation_enabled
+                                    ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 hover:bg-green-100/70'
+                                    : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                                    }`}
+                                >
+                                  <WhatsAppIcon className={`w-3.5 h-3.5 ${preferences.whatsapp_order_confirmation_enabled
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : 'text-gray-400 dark:text-gray-500'
+                                    }`} />
+                                  WhatsApp
+                                </button>
+
+                                {/* Email Chip */}
+                                <button
+                                  type="button"
+                                  onClick={() => updatePreference('email_order_status_notifications_enabled', !preferences.email_order_status_notifications_enabled)}
+                                  disabled={savingPrefs['email_order_status_notifications_enabled']}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${preferences.email_order_status_notifications_enabled
+                                    ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 hover:bg-blue-100/70'
+                                    : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                                    }`}
+                                >
+                                  <Mail className={`w-3.5 h-3.5 ${preferences.email_order_status_notifications_enabled
+                                    ? 'text-blue-500 dark:text-blue-400'
+                                    : 'text-gray-400 dark:text-gray-500'
+                                    }`} />
+                                  E-mail
+                                </button>
+                              </div>
+
+                              {/* Inline Warning Hint */}
+                              {!preferences.whatsapp_order_confirmation_enabled &&
+                                !preferences.email_order_status_notifications_enabled && (
+                                  <p className="mt-3 text-[11px] text-red-500 dark:text-red-400 font-medium flex items-center gap-1 bg-red-50 dark:bg-red-950/20 p-2 rounded-lg border border-red-100 dark:border-red-900/30">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                    Ative pelo menos um canal para receber esta notificação.
+                                  </p>
+                                )}
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <span className="block text-sm font-bold text-gray-900 dark:text-white">GitHub</span>
-                            <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                              Vincule sua conta de desenvolvedor do GitHub. (Em breve)
-                            </span>
+
+                          {/* Promotions and Favorites Card */}
+                          <div className="flex flex-col justify-between p-5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl transition-all duration-300 hover:shadow-sm">
+                            <div>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2.5 bg-rose-50 dark:bg-rose-900/20 text-rose-500 dark:text-rose-400 rounded-xl flex-shrink-0">
+                                    <Tag className="w-5 h-5" />
+                                  </div>
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <h4 className="text-sm font-bold text-gray-900 dark:text-white">Promoções e Favoritos</h4>
+                                      {(saveSuccess['whatsapp_promotions_notifications_enabled'] || saveSuccess['email_promotions_notifications_enabled']) && (
+                                        <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold animate-fade-in flex items-center gap-0.5">
+                                          <Check className="w-3 h-3" /> Salvo
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                                      Ofertas, produtos favoritos e alertas de estoque.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="mt-5 pt-4 border-t border-gray-200/60 dark:border-gray-700/60">
+                              <div className="flex flex-wrap gap-2 items-center">
+                                {/* WhatsApp Chip */}
+                                <button
+                                  type="button"
+                                  onClick={() => updatePreference('whatsapp_promotions_notifications_enabled', !preferences.whatsapp_promotions_notifications_enabled)}
+                                  disabled={savingPrefs['whatsapp_promotions_notifications_enabled']}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${preferences.whatsapp_promotions_notifications_enabled
+                                    ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 hover:bg-green-100/70'
+                                    : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                                    }`}
+                                >
+                                  <WhatsAppIcon className={`w-3.5 h-3.5 ${preferences.whatsapp_promotions_notifications_enabled
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : 'text-gray-400 dark:text-gray-500'
+                                    }`} />
+                                  WhatsApp
+                                </button>
+
+                                {/* Email Chip */}
+                                <button
+                                  type="button"
+                                  onClick={() => updatePreference('email_promotions_notifications_enabled', !preferences.email_promotions_notifications_enabled)}
+                                  disabled={savingPrefs['email_promotions_notifications_enabled']}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-1 dark:focus:ring-offset-gray-800 ${preferences.email_promotions_notifications_enabled
+                                    ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 hover:bg-blue-100/70'
+                                    : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                                    }`}
+                                >
+                                  <Mail className={`w-3.5 h-3.5 ${preferences.email_promotions_notifications_enabled
+                                    ? 'text-blue-500 dark:text-blue-400'
+                                    : 'text-gray-400 dark:text-gray-500'
+                                    }`} />
+                                  E-mail
+                                </button>
+                              </div>
+
+                              {/* Inline Warning Hint */}
+                              {!preferences.whatsapp_promotions_notifications_enabled &&
+                                !preferences.email_promotions_notifications_enabled && (
+                                  <p className="mt-3 text-[11px] text-red-500 dark:text-red-400 font-medium flex items-center gap-1 bg-red-50 dark:bg-red-950/20 p-2 rounded-lg border border-red-100 dark:border-red-900/30">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                    Ative pelo menos um canal para receber esta notificação.
+                                  </p>
+                                )}
+                            </div>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          disabled
-                          className="px-3.5 py-2 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-xl text-xs font-bold cursor-not-allowed"
-                        >
-                          Conectar
-                        </button>
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
 
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ─────────────────────────────────────────────────────── */}
+            {/* AJUDA                                                   */}
+            {/* ─────────────────────────────────────────────────────── */}
+            {activeSection === 'help' && (
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <HelpCircle className="text-primary-500" />
+                    Ajuda & FAQ
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Dúvidas frequentes e suporte direto.</p>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">Dúvidas Frequentes</h3>
+
+                  <div className="space-y-3">
+                    {[
+                      {
+                        q: 'Como funciona a assinatura de cápsulas?',
+                        a: 'A assinatura mensal permite que você escolha suas fórmulas e as receba automaticamente no conforto de sua caixa a cada 30 dias. Assinantes possuem 10% de desconto recorrente e frete grátis em todas as caixas.'
+                      },
+                      {
+                        q: 'Qual o prazo de entrega dos pedidos?',
+                        a: 'O prazo médio é de 2 a 5 dias úteis para capitais da região Sudeste e Sul, e de 5 a 10 dias úteis para as demais regiões do Brasil. Você receberá um código de rastreamento no WhatsApp e no e-mail cadastrado.'
+                      },
+                      {
+                        q: 'Como posso trocar ou cancelar meu pedido?',
+                        a: 'Conforme o Código de Defesa do Consumidor, você tem o direito de solicitar a devolução ou troca de produtos não lacrados em até 7 dias corridos após o recebimento. Para cancelar ou iniciar a devolução, fale com nossa central de suporte.'
+                      },
+                    ].map((faq, i) => (
+                      <details key={i} className="group bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 transition-all duration-300 [&_summary::-webkit-details-marker]:hidden">
+                        <summary className="flex items-center justify-between font-bold text-gray-900 dark:text-white text-xs cursor-pointer">
+                          <span>{faq.q}</span>
+                          <span className="transition-transform duration-300 group-open:rotate-90 text-primary-500 flex-shrink-0 ml-3">
+                            <ChevronRight className="w-4 h-4" />
+                          </span>
+                        </summary>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 leading-relaxed">
+                          {faq.a}
+                        </p>
+                      </details>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                    {/* WhatsApp Channel */}
+                    <div className="bg-green-50/50 dark:bg-green-950/10 border border-green-200 dark:border-green-900/30 rounded-2xl p-5 flex flex-col items-center text-center justify-between">
+                      <div className="p-3 rounded-full bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 mb-3">
+                        <Phone size={24} />
+                      </div>
+                      <h4 className="font-bold text-gray-900 dark:text-white text-sm">Suporte via WhatsApp</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">Atendimento rápido e personalizado diretamente no celular.</p>
+                      <a
+                        href={env.supportWhatsAppUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-all shadow-md hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        Chamar no WhatsApp
+                      </a>
+                    </div>
+
+                    {/* Email Channel */}
+                    <div className="bg-blue-50/50 dark:bg-blue-950/10 border border-blue-200 dark:border-blue-900/30 rounded-2xl p-5 flex flex-col items-center text-center justify-between">
+                      <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 mb-3">
+                        <Mail size={24} />
+                      </div>
+                      <h4 className="font-bold text-gray-900 dark:text-white text-sm">Suporte via E-mail</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4 leading-relaxed">Envie suas dúvidas, sugestões ou solicitações para nosso e-mail.</p>
+                      <button
+                        type="button"
+                        onClick={handleSendEmail}
+                        className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                      >
+                        Enviar E-mail
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center text-xs text-gray-500 dark:text-gray-400 mt-4 leading-relaxed">
+                    Respondemos em até 1 dia útil.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ─────────────────────────────────────────────────────── */}
+            {/* CONTAS CONECTADAS                                       */}
+            {/* ─────────────────────────────────────────────────────── */}
+            {activeSection === 'connected-accounts' && (
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6 bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm dark:shadow-xl">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <ShieldCheck className="text-primary-500" />
+                    Contas Conectadas
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Gerencie as contas de provedores externos vinculadas à sua conta Kapsu.
+                  </p>
+                </div>
+
+                {loadingProviders ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="animate-spin w-6 h-6 text-primary-500" />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Google Connection Card */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl gap-4">
+                      <div className="flex items-center gap-3.5">
+                        {/* Google Icon SVG */}
+                        <div className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05" />
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335" />
+                          </svg>
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block text-sm font-bold text-gray-900 dark:text-white">Google</span>
+                          <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                            {connectedProviders.includes('google')
+                              ? 'Conta vinculada e ativa para login social.'
+                              : 'Conecte sua conta Google para fazer login com um clique.'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {connectedProviders.includes('google') ? (
+                          <button
+                            type="button"
+                            onClick={() => handleUnlinkProvider('google')}
+                            disabled={loadingSocialAction}
+                            className="px-3.5 py-2 border border-red-250 hover:border-red-300 dark:border-red-900/50 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer animate-in fade-in"
+                          >
+                            {loadingSocialAction ? 'Aguarde...' : 'Desvincular'}
+                          </button>
+                        ) : (
+                          <div id="google-link-btn-container" className="min-h-[38px] flex items-center"></div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Microsoft Connection Card (Placeholder) */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/50 rounded-2xl gap-4 opacity-75">
+                      <div className="flex items-center gap-3.5">
+                        <div className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg">
+                            <path fill="#F25022" d="M1 1h10v10H1z" />
+                            <path fill="#7FBA00" d="M12 1h10v10H12z" />
+                            <path fill="#00A4EF" d="M1 12h10v10H1z" />
+                            <path fill="#FFB900" d="M12 12h10v10H12z" />
+                          </svg>
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block text-sm font-bold text-gray-900 dark:text-white">Microsoft</span>
+                          <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                            Entrar com conta pessoal ou corporativa Microsoft. (Em breve)
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled
+                        className="px-3.5 py-2 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-xl text-xs font-bold cursor-not-allowed"
+                      >
+                        Conectar
+                      </button>
+                    </div>
+
+                    {/* Apple Connection Card (Placeholder) */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/50 rounded-2xl gap-4 opacity-75">
+                      <div className="flex items-center gap-3.5">
+                        <div className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 flex-shrink-0 fill-current text-gray-900 dark:text-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.22.67-2.94 1.5-.62.71-1.16 1.85-1.02 2.96 1.1.09 2.23-.55 2.97-1.4z" />
+                          </svg>
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block text-sm font-bold text-gray-900 dark:text-white">Apple</span>
+                          <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                            Entrar com o ID Apple de forma segura. (Em breve)
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled
+                        className="px-3.5 py-2 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-xl text-xs font-bold cursor-not-allowed"
+                      >
+                        Conectar
+                      </button>
+                    </div>
+
+                    {/* GitHub Connection Card (Placeholder) */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50/50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700/50 rounded-2xl gap-4 opacity-75">
+                      <div className="flex items-center gap-3.5">
+                        <div className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm flex items-center justify-center flex-shrink-0">
+                          <svg className="w-5 h-5 flex-shrink-0 fill-current text-gray-900 dark:text-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.87 7.65 6.84 8.97.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.64-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.1.39-1.99 1.03-2.69-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.69 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85 0 1.34-.01 2.42-.01 2.75 0 .27.18.58.69.48C19.14 19.65 22 15.92 22 12c0-5.523-4.477-10-10-10z" />
+                          </svg>
+                        </div>
+                        <div className="min-w-0">
+                          <span className="block text-sm font-bold text-gray-900 dark:text-white">GitHub</span>
+                          <span className="block text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                            Vincule sua conta de desenvolvedor do GitHub. (Em breve)
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled
+                        className="px-3.5 py-2 bg-gray-100 dark:bg-gray-800 text-gray-400 rounded-xl text-xs font-bold cursor-not-allowed"
+                      >
+                        Conectar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+      {/* ── Modal Editar Dados ───────────────────────────────────── */ }
+  {
+    isEditModalOpen && (
+      <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+            <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Edit className="w-4 h-4 text-primary-500" />
+              Editar Dados Pessoais
+            </h3>
+            <button
+              onClick={() => setIsEditModalOpen(false)}
+              className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white bg-gray-100 dark:bg-gray-800 rounded-full transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="p-5 space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Nome Completo</label>
+              <input
+                type="text"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className={inputClass}
+                placeholder="Seu nome completo"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1">
+                <Phone className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /> Telefone / WhatsApp
+              </label>
+              <input
+                type="text"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                className={inputClass}
+                placeholder="(00) 00000-0000"
+              />
             </div>
           </div>
 
+          <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(false)}
+              className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl transition-colors font-bold text-xs cursor-pointer"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveInfoModal}
+              disabled={loading || !editName.trim()}
+              className="flex items-center justify-center gap-1.5 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-xl transition-all font-bold text-xs shadow-md disabled:opacity-50 cursor-pointer"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-3.5 h-3.5" />
+                  Salvar Alterações
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
-
-      {/* ── Modal Editar Dados ───────────────────────────────────── */}
-      {isEditModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
-              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Edit className="w-4 h-4 text-primary-500" />
-                Editar Dados Pessoais
-              </h3>
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white bg-gray-100 dark:bg-gray-800 rounded-full transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5">Nome Completo</label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className={inputClass}
-                  placeholder="Seu nome completo"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1">
-                  <Phone className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" /> Telefone / WhatsApp
-                </label>
-                <input
-                  type="text"
-                  value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value)}
-                  className={inputClass}
-                  placeholder="(00) 00000-0000"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 p-5 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-              <button
-                type="button"
-                onClick={() => setIsEditModalOpen(false)}
-                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl transition-colors font-bold text-xs cursor-pointer"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveInfoModal}
-                disabled={loading || !editName.trim()}
-                className="flex items-center justify-center gap-1.5 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-xl transition-all font-bold text-xs shadow-md disabled:opacity-50 cursor-pointer"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-3.5 h-3.5" />
-                    Salvar Alterações
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+    )
+  }
 
 
-    </div>
+    </div >
   )
 }

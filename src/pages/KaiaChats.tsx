@@ -1436,7 +1436,8 @@ export default function KaiaChats() {
   const searchAliasProducts = async (id: string, query: string) => {
     updateAliasState(id, { productSearchQuery: query, productSearchLoading: true });
     try {
-      const headers = { 'Authorization': `Bearer ${localStorage.getItem('token')}` };
+      const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || '';
+      const headers = { 'Authorization': `Bearer ${token}` };
       const res = await fetch(`${API_URL}/admin/kaia/v2/products/search?q=${encodeURIComponent(query)}`, { headers });
       const json = await res.json();
       updateAliasState(id, {

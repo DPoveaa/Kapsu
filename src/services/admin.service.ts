@@ -1754,12 +1754,14 @@ class AdminService {
 
   /** Retorna a URL autenticada do proxy DANFE */
   getNotaasDanfeUrl(invoiceId: string): string {
-    return `${this.baseUrl}/fiscal/notaas/${invoiceId}/danfe`
+    const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || sessionStorage.getItem('kapsu_token') || ''
+    return `${this.baseUrl}/fiscal/notaas/${invoiceId}/danfe?token=${encodeURIComponent(token)}`
   }
 
   /** Retorna a URL autenticada do proxy XML */
   getNotaasXmlUrl(invoiceId: string): string {
-    return `${this.baseUrl}/fiscal/notaas/${invoiceId}/xml`
+    const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token') || sessionStorage.getItem('kapsu_token') || ''
+    return `${this.baseUrl}/fiscal/notaas/${invoiceId}/xml?token=${encodeURIComponent(token)}`
   }
 
   /**
