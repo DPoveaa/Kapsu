@@ -109,6 +109,7 @@ interface ProductPdfExportModalProps {
   isExporting: boolean
   onClose: () => void
   onExport: (options: ProductPdfReportOptions) => Promise<void>
+  selectedIds?: string[]
 }
 
 export default function ProductPdfExportModal({
@@ -116,10 +117,20 @@ export default function ProductPdfExportModal({
   isExporting,
   onClose,
   onExport,
+  selectedIds = [],
 }: ProductPdfExportModalProps) {
   const [options, setOptions] = useState<ProductPdfReportOptions>(loadStoredOptions)
+  const [onlySelected, setOnlySelected] = useState(false)
   const selectedFields = useMemo(() => new Set(options.fields), [options.fields])
   const limitReached = options.fields.length >= MAX_FIELDS
+
+  useEffect(() => {
+    if (isOpen && selectedIds && selectedIds.length > 0) {
+      setOnlySelected(true)
+    } else if (isOpen) {
+      setOnlySelected(false)
+    }
+  }, [isOpen, selectedIds])
 
   useEffect(() => {
     if (!isOpen) return
@@ -156,6 +167,13 @@ export default function ProductPdfExportModal({
     if (!isExporting) onClose()
   }
 
+  const handleExportClick = () => {
+    onExport({
+      ...options,
+      productIds: (onlySelected && selectedIds.length > 0) ? selectedIds : undefined,
+    })
+  }
+
   return (
     <AdminModal
       isOpen={isOpen}
@@ -178,7 +196,7 @@ export default function ProductPdfExportModal({
             </button>
             <button
               type="button"
-              onClick={() => onExport(options)}
+              onClick={handleExportClick}
               disabled={isExporting}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -190,15 +208,19 @@ export default function ProductPdfExportModal({
       )}
     >
       <div className="space-y-6">
-        <div className="rounded-xl border border-primary-100 bg-primary-50/70 p-4 dark:border-primary-900/50 dark:bg-primary-950/20">
-          <p className="text-sm font-semibold text-primary-900 dark:text-primary-200">
-            Monte o relatório conforme a necessidade
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-primary-700 dark:text-primary-300">
-            O nome do produto é obrigatório. Selecione até {MAX_FIELDS} campos para manter as colunas legíveis no PDF.
-            Sua última configuração será lembrada neste navegador.
-          </p>
-        </div>
+        {selectedIds.length > 0 && (
+          <div className="rounded-xl border border-blue-200 bg-blue-50/80 p-3.5 dark:border-blue-800 dark:bg-blue-950/30">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-900 dark:text-gray-100">
+              <input
+                type="checkbox"
+                checked={onlySelected}
+                onChange={e => setOnlySelected(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span>Exportar somente os {selectedIds.length} produto(s) selecionado(s) na tabela</span>
+            </label>
+          </div>
+        )}
 
         <section>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Quais produtos devem aparecer?</h3>

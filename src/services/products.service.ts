@@ -19,6 +19,7 @@ export interface BackendProduct {
   promo_price: number | null
   purchase_price: number | null
   image: string | null
+  images?: string[] | string | null
   category: string | null
   active: boolean
   archived: boolean
@@ -137,6 +138,24 @@ class ProductsService {
    * Converte produto do backend para o formato do frontend
    */
   private mapProduct(product: BackendProduct): Product {
+    let imagesList: string[] = []
+    if (product.images) {
+      if (Array.isArray(product.images)) {
+        imagesList = product.images
+      } else if (typeof product.images === 'string') {
+        try {
+          const parsed = JSON.parse(product.images)
+          if (Array.isArray(parsed)) imagesList = parsed
+        } catch {
+          imagesList = product.images.split(',').map(s => s.trim()).filter(Boolean)
+        }
+      }
+    }
+    if (imagesList.length === 0 && product.image) {
+      imagesList = [product.image]
+    }
+    const mappedImages = imagesList.map(img => this.getImageUrl(img))
+
     return {
       id: product.id,
       supplier_id: product.supplier_id || null,
@@ -149,6 +168,7 @@ class ProductsService {
       promo_price: product.promo_price ? Number(product.promo_price) : null,
       purchase_price: product.purchase_price != null ? Number(product.purchase_price) : null,
       image: this.getImageUrl(product.image),
+      images: mappedImages,
       category: (product.category as Product['category']) || 'outros',
       active: product.active,
       archived: product.archived ?? false,
@@ -449,6 +469,9 @@ class ProductsService {
       if (options) {
         searchParams.set('fields', options.fields.join(','))
         searchParams.set('scope', options.scope)
+        if (options.productIds && options.productIds.length > 0) {
+          searchParams.set('product_ids', options.productIds.join(','))
+        }
       }
       const query = searchParams.toString()
       const response = await fetch(`${this.baseUrl}/admin/pdf-report${query ? `?${query}` : ''}`, {

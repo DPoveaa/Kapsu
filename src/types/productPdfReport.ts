@@ -23,4 +23,5 @@ export type ProductPdfReportScope = 'active' | 'non_archived' | 'all'
 export interface ProductPdfReportOptions {
   fields: ProductPdfFieldKey[]
   scope: ProductPdfReportScope
+  productIds?: string[]
 }

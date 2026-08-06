@@ -12,6 +12,7 @@ export interface Product {
   promo_price?: number | null;
   purchase_price?: number | null;
   image: string;
+  images?: string[];
   category: string;
   active: boolean;
   archived?: boolean;
@@ -36,6 +37,7 @@ export interface Product {
   intended_presentation?: string | null;
   intended_units_per_dose?: string | null;
   marketplace_tags?: string | null;
+  nfe_enabled?: 'SIM' | 'NAO' | string | null;
 }
 
 export type PriceHistoryType = 'purchase' | 'sale' | 'promo';

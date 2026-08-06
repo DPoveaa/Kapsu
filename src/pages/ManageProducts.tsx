@@ -4,7 +4,8 @@ import {
   ArrowLeft, Plus, Edit, Trash2, Loader2, Search, Upload,
   Archive, ArchiveRestore, TrendingUp, TrendingDown, Minus,
   ChevronDown, ChevronRight, X, BarChart2, ShoppingCart, Tag,
-  Sparkles, Check, AlertCircle, Save, Download, FileText, FileSpreadsheet
+  Sparkles, Check, AlertCircle, Save, Download, FileText, FileSpreadsheet,
+  Filter, SlidersHorizontal, Image as ImageIcon
 } from 'lucide-react'
 import { productsService } from '../services/products.service'
 import { uploadService } from '../services/upload.service'
@@ -24,13 +25,19 @@ import {
   roundCurrency,
 } from '../utils/pricing'
 import AdminModal from '../components/AdminModal'
-import ImageUpload from '../components/ImageUpload'
+import MultiImageUpload from '../components/MultiImageUpload'
 import { normalizeImagePath } from '../utils/imageUrl'
 import { generateProductUrl } from '../utils/productUrl'
 import ProductPdfExportModal from '../components/ProductPdfExportModal'
 import { ProductPdfReportOptions } from '../types/productPdfReport'
 import ProductExcelExportModal from '../components/ProductExcelExportModal'
 import ProductImportModal from '../components/ProductImportModal'
+import ProductBulkEditModal from '../components/ProductBulkEditModal'
+import ProductFilterModal, {
+  ProductFiltersState,
+  INITIAL_FILTERS_STATE,
+  countActiveFilters,
+} from '../components/ProductFilterModal'
 
 type Tab = 'active' | 'inactive' | 'archived'
 type ProductsSortKey = 'name' | 'sku' | 'category' | 'marketplaces' | 'purchase_price' | 'margin' | 'price' | 'status'
@@ -215,9 +222,9 @@ export default function ManageProducts() {
   const [isExportingPdf, setIsExportingPdf] = useState(false)
   const [isPdfExportModalOpen, setIsPdfExportModalOpen] = useState(false)
   const [isExcelExportModalOpen, setIsExcelExportModalOpen] = useState(false)
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('')
-  const [selectedMarketplaceFilter, setSelectedMarketplaceFilter] = useState('all')
-  const [bulkMarketplaceTags, setBulkMarketplaceTags] = useState('')
+  const [advancedFilters, setAdvancedFilters] = useState<ProductFiltersState>(INITIAL_FILTERS_STATE)
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [productsSort, setProductsSort] = useState<{ key: ProductsSortKey; direction: SortDirection }>({
     key: 'name',
@@ -226,10 +233,6 @@ export default function ManageProducts() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [bulkSupplierId, setBulkSupplierId] = useState('')
-  const [bulkCategory, setBulkCategory] = useState('')
-  const [assigningSupplier, setAssigningSupplier] = useState(false)
-  const [isExecutingBulk, setIsExecutingBulk] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('active')
@@ -305,6 +308,7 @@ export default function ManageProducts() {
     purchase_price: '',
     markup: '',
     image: '',
+    images: [] as string[],
     category: 'Outros',
     active: true,
     compositions: '',
@@ -342,7 +346,7 @@ export default function ManageProducts() {
     nfe_enabled: 'NAO',
   }
   const [productFormData, setProductFormData] = useState(initialProductFormState)
-  const [activeModalTab, setActiveModalTab] = useState<'basic' | 'pricing' | 'details' | 'technical' | 'fiscal'>('basic')
+  const [activeModalTab, setActiveModalTab] = useState<'basic' | 'images' | 'pricing' | 'details' | 'technical' | 'fiscal'>('basic')
   const priceEditSourceRef = useRef<'price' | 'markup' | 'purchase_price'>('price')
   const [newCatInput, setNewCatInput] = useState('')
   const [localAddedCategories, setLocalAddedCategories] = useState<string[]>([])
@@ -469,6 +473,10 @@ export default function ManageProducts() {
         ? findMarkupForTargetPrice(cost, salePrice)
         : storedMarkup
 
+      const productImages = product.images && product.images.length > 0
+        ? product.images.map(img => normalizeImagePath(img))
+        : (productRaw.image ? [normalizeImagePath(productRaw.image)] : [])
+
       setProductFormData({
         name: product.name,
         description: product.description || '',
@@ -476,7 +484,8 @@ export default function ManageProducts() {
         promo_price: productRaw.promo_price ? formatPriceInput(Number(productRaw.promo_price)) : '',
         purchase_price: cost ? formatPriceInput(cost) : '',
         markup: compatibleMarkup != null ? formatMarkupInput(compatibleMarkup) : '',
-        image: productRaw.image || '',
+        image: productImages[0] || (productRaw.image || ''),
+        images: productImages,
         category: product.category || 'Outros',
         active: productRaw.active ?? true,
         compositions: productRaw.compositions || '',
@@ -550,15 +559,6 @@ export default function ManageProducts() {
     const filename = getUploadFilename(value)
     if (!filename) return
     try { await uploadService.deleteProductImage(filename) } catch { /* arquivo em uso ou já removido */ }
-  }
-
-  const handleProductImageChange = (url: string) => {
-    const normalized = url ? normalizeImagePath(url) : ''
-    const current = productFormData.image
-    if (current && current !== originalProductImageRef.current && current !== normalized) {
-      void deletePendingProductImage(current)
-    }
-    setProductFormData(prev => ({ ...prev, image: normalized }))
   }
 
   const closeProductModal = () => {
@@ -653,7 +653,8 @@ export default function ManageProducts() {
         promo_price: productFormData.promo_price ? roundCurrency(Number(productFormData.promo_price)) : null,
         purchase_price: cost,
         markup: finalMarkup,
-        image: productFormData.image.trim() ? normalizeImagePath(productFormData.image) : null,
+        image: (productFormData.images && productFormData.images[0]) ? normalizeImagePath(productFormData.images[0]) : (productFormData.image.trim() ? normalizeImagePath(productFormData.image) : null),
+        images: productFormData.images.map(img => normalizeImagePath(img)),
         category: productFormData.category || undefined,
         active: productFormData.active,
         compositions: productFormData.compositions.trim() || undefined,
@@ -1464,34 +1465,6 @@ export default function ManageProducts() {
     })
   }
 
-  const handleBulkDelete = () => {
-    if (!selectedIds.length) return
-    confirm.show(
-      `Excluir ${selectedIds.length} produto(s) selecionado(s)?\nProdutos sem pedidos serão excluídos permanentemente. Produtos com pedidos serão arquivados.`,
-      async () => {
-        try {
-          setLoading(true)
-          const result = await productsService.deleteBulk(selectedIds)
-          setSelectedIds([])
-          await loadProducts()
-          const d = result as any
-          if (d?.softDeleted > 0) {
-            toast.success(`${d.hardDeleted ?? 0} excluído(s) permanentemente, ${d.softDeleted} arquivado(s).`)
-          } else {
-            toast.success(`${d.hardDeleted ?? selectedIds.length} produto(s) excluído(s) com sucesso.`)
-          }
-        } catch (e: any) {
-          toast.error(e.message || 'Erro ao excluir produtos')
-        } finally {
-          setLoading(false)
-        }
-      },
-      undefined,
-      'Excluir',
-      'Cancelar'
-    )
-  }
-
   const getPriceRoundingThreshold = () => {
     const threshold = Number(priceRoundingThresholdInput.trim().replace(',', '.'))
     if (!Number.isFinite(threshold) || threshold < 0 || threshold >= 100) {
@@ -1545,36 +1518,18 @@ export default function ManageProducts() {
     )
   }
 
-  const handleBulkAssignSupplier = async () => {
-    if (!selectedIds.length || !bulkSupplierId) return
-    try {
-      setAssigningSupplier(true)
-      const supplierId = bulkSupplierId === '__none__' ? null : bulkSupplierId
-      const result = await productsService.assignSupplierBulk(selectedIds, supplierId)
-      toast.success(result.message)
-      setSelectedIds([])
-      setBulkSupplierId('')
-      await loadProducts()
-    } catch (e: any) {
-      toast.error(e.message || 'Erro ao vincular fornecedor aos produtos')
-    } finally {
-      setAssigningSupplier(false)
-    }
-  }
+
 
   const handleBulkActivate = async () => {
     if (!selectedIds.length) return
     confirm.show(`Ativar ${selectedIds.length} produto(s) selecionado(s)?`, async () => {
       try {
-        setIsExecutingBulk(true)
         const result = await productsService.bulkUpdateStatus(selectedIds, { active: true, archived: false })
         toast.success(result.message)
         setSelectedIds([])
         await loadProducts()
       } catch (e: any) {
         toast.error(e.message || 'Erro ao ativar produtos em massa')
-      } finally {
-        setIsExecutingBulk(false)
       }
     })
   }
@@ -1583,15 +1538,12 @@ export default function ManageProducts() {
     if (!selectedIds.length) return
     confirm.show(`Desativar ${selectedIds.length} produto(s) selecionado(s)?`, async () => {
       try {
-        setIsExecutingBulk(true)
         const result = await productsService.bulkUpdateStatus(selectedIds, { active: false, archived: false })
         toast.success(result.message)
         setSelectedIds([])
         await loadProducts()
       } catch (e: any) {
         toast.error(e.message || 'Erro ao desativar produtos em massa')
-      } finally {
-        setIsExecutingBulk(false)
       }
     })
   }
@@ -1602,15 +1554,12 @@ export default function ManageProducts() {
       `Arquivar ${selectedIds.length} produto(s) selecionado(s)?\nEles serão movidos para a aba Arquivados.`,
       async () => {
         try {
-          setIsExecutingBulk(true)
           const result = await productsService.bulkUpdateStatus(selectedIds, { active: false, archived: true })
           toast.success(result.message)
           setSelectedIds([])
           await loadProducts()
         } catch (e: any) {
           toast.error(e.message || 'Erro ao arquivar produtos em massa')
-        } finally {
-          setIsExecutingBulk(false)
         }
       }
     )
@@ -1623,7 +1572,6 @@ export default function ManageProducts() {
       : `Desarquivar ${selectedIds.length} produto(s) selecionado(s)? (Voltará(ão) como Inativo(s))`
     confirm.show(msg, async () => {
       try {
-        setIsExecutingBulk(true)
         const result = await productsService.bulkUpdateStatus(selectedIds, {
           archived: false,
           active: activateImmediately,
@@ -1633,27 +1581,11 @@ export default function ManageProducts() {
         await loadProducts()
       } catch (e: any) {
         toast.error(e.message || 'Erro ao desarquivar produtos em massa')
-      } finally {
-        setIsExecutingBulk(false)
       }
     })
   }
 
-  const handleBulkAssignCategory = async () => {
-    if (!selectedIds.length || !bulkCategory.trim()) return
-    try {
-      setIsExecutingBulk(true)
-      const result = await productsService.bulkUpdateStatus(selectedIds, { category: bulkCategory.trim() })
-      toast.success(result.message)
-      setSelectedIds([])
-      setBulkCategory('')
-      await loadProducts()
-    } catch (e: any) {
-      toast.error(e.message || 'Erro ao alterar categoria dos produtos em massa')
-    } finally {
-      setIsExecutingBulk(false)
-    }
-  }
+
 
   const handleToggleActive = async (product: Product) => {
     if (product.archived) return
@@ -1679,25 +1611,7 @@ export default function ManageProducts() {
     })
   }
 
-  const handleBulkAssignMarketplaceTags = async () => {
-    if (!bulkMarketplaceTags || selectedIds.length === 0) return
-    try {
-      setIsExecutingBulk(true)
-      let count = 0
-      for (const id of selectedIds) {
-        await productsService.update(id, { marketplace_tags: bulkMarketplaceTags })
-        count++
-      }
-      toast.success(`Marketplaces atualizados em ${count} produto(s).`)
-      setSelectedIds([])
-      setBulkMarketplaceTags('')
-      await loadProducts()
-    } catch (e: any) {
-      toast.error(e.message || 'Erro ao atualizar marketplaces em massa.')
-    } finally {
-      setIsExecutingBulk(false)
-    }
-  }
+
 
   const renderMarketplaceBadges = (tagsStr?: string | null) => {
     const raw = tagsStr ?? 'site,mercado_livre,shopee'
@@ -1749,27 +1663,6 @@ export default function ManageProducts() {
     }))
   }
 
-  // ── Derived lists ─────────────────────────────────────────────────────────
-  const activeProducts = products.filter(p => p.active && !p.archived)
-  const inactiveProducts = products.filter(p => !p.active && !p.archived)
-  const archivedProducts = products.filter(p => p.archived)
-  const tabProducts: Record<Tab, Product[]> = { active: activeProducts, inactive: inactiveProducts, archived: archivedProducts }
-  
-  const filteredProducts = tabProducts[activeTab].filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.sku || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (p.category || '').toLowerCase().includes(searchTerm.toLowerCase())
-
-    const matchesCategory = !selectedCategoryFilter ||
-      (p.category || 'Outros').toLowerCase().includes(selectedCategoryFilter.toLowerCase())
-
-    const prodTags = (p.marketplace_tags ?? 'site,mercado_livre,shopee').split(',').map(t => t.trim())
-    const matchesMarketplace = selectedMarketplaceFilter === 'all' || prodTags.includes(selectedMarketplaceFilter)
-
-    return matchesSearch && matchesCategory && matchesMarketplace
-  })
-
   const getProductMarginValue = (p: Product): number | null => {
     const cost = p.purchase_price != null ? Number(p.purchase_price) : null
     const sale = Number(p.price)
@@ -1807,6 +1700,73 @@ export default function ManageProducts() {
         return ''
     }
   }
+
+  // ── Derived lists ─────────────────────────────────────────────────────────
+  const activeProducts = products.filter(p => p.active && !p.archived)
+  const inactiveProducts = products.filter(p => !p.active && !p.archived)
+  const archivedProducts = products.filter(p => p.archived)
+  const tabProducts: Record<Tab, Product[]> = { active: activeProducts, inactive: inactiveProducts, archived: archivedProducts }
+
+  const filteredProducts = tabProducts[activeTab].filter(p => {
+    // 1. Termo de busca
+    const matchesSearch = !searchTerm.trim() ||
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.sku || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (p.category || '').toLowerCase().includes(searchTerm.toLowerCase())
+
+    if (!matchesSearch) return false
+
+    // 2. Margem (%)
+    const marginVal = getProductMarginValue(p)
+    if (advancedFilters.minMargin.trim() !== '' && !isNaN(Number(advancedFilters.minMargin))) {
+      if (marginVal == null || marginVal < Number(advancedFilters.minMargin)) return false
+    }
+    if (advancedFilters.maxMargin.trim() !== '' && !isNaN(Number(advancedFilters.maxMargin))) {
+      if (marginVal == null || marginVal > Number(advancedFilters.maxMargin)) return false
+    }
+
+    // 3. Custo (R$)
+    const costVal = p.purchase_price != null ? Number(p.purchase_price) : null
+    if (advancedFilters.minCost.trim() !== '' && !isNaN(Number(advancedFilters.minCost))) {
+      if (costVal == null || costVal < Number(advancedFilters.minCost)) return false
+    }
+    if (advancedFilters.maxCost.trim() !== '' && !isNaN(Number(advancedFilters.maxCost))) {
+      if (costVal == null || costVal > Number(advancedFilters.maxCost)) return false
+    }
+
+    // 4. Categoria
+    if (advancedFilters.category) {
+      if (!(p.category || 'Outros').toLowerCase().includes(advancedFilters.category.toLowerCase())) return false
+    }
+
+    // 5. Marketplaces
+    const prodTags = (p.marketplace_tags ?? 'site,mercado_livre,shopee').split(',').map(t => t.trim().toLowerCase())
+    const matchesMarketplace =
+      (advancedFilters.marketplaces.site && prodTags.includes('site')) ||
+      (advancedFilters.marketplaces.mercado_livre && prodTags.includes('mercado_livre')) ||
+      (advancedFilters.marketplaces.shopee && prodTags.includes('shopee'))
+    if (!matchesMarketplace) return false
+
+    // 6. Habilitado para NF-e
+    if (advancedFilters.nfeEnabled === 'sim' && p.nfe_enabled !== 'SIM') return false
+    if (advancedFilters.nfeEnabled === 'nao' && p.nfe_enabled === 'SIM') return false
+
+    // 7. Rótulo Cadastrado
+    if (advancedFilters.hasLabel === 'sim' && !p.label_url) return false
+    if (advancedFilters.hasLabel === 'nao' && p.label_url) return false
+
+    // 8. Imagens Vinculadas
+    const imgCount = (p.images && p.images.length > 0)
+      ? p.images.length
+      : (p.image && p.image !== PRODUCT_IMAGE_FALLBACK ? 1 : 0)
+
+    if (advancedFilters.imagesFilter === 'none' && imgCount > 0) return false
+    if (advancedFilters.imagesFilter === 'single' && imgCount !== 1) return false
+    if (advancedFilters.imagesFilter === 'multiple' && imgCount < 2) return false
+
+    return true
+  })
   const sortedProducts = useMemo(() => {
     const directionFactor = productsSort.direction === 'asc' ? 1 : -1
 
@@ -2001,28 +1961,33 @@ export default function ManageProducts() {
             />
           </div>
 
-          <div className="flex gap-2">
-            <select
-              value={selectedCategoryFilter}
-              onChange={e => setSelectedCategoryFilter(e.target.value)}
-              className="px-3 py-2 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500"
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsFilterModalOpen(true)}
+              className={`px-3.5 py-2 text-xs font-semibold rounded-lg border transition-all flex items-center gap-2 cursor-pointer ${countActiveFilters(advancedFilters) > 0
+                  ? 'bg-primary-50 border-primary-300 text-primary-700 dark:bg-primary-950/40 dark:border-primary-800 dark:text-primary-300 ring-2 ring-primary-500/20'
+                  : 'bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50'
+                }`}
             >
-              <option value="">Todas as Categorias</option>
-              {categoriesToDisplay.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+              <Filter size={15} />
+              <span>Filtros</span>
+              {countActiveFilters(advancedFilters) > 0 && (
+                <span className="bg-primary-600 text-white px-1.5 py-0.5 rounded-full text-[10px] font-bold">
+                  {countActiveFilters(advancedFilters)}
+                </span>
+              )}
+            </button>
 
-            <select
-              value={selectedMarketplaceFilter}
-              onChange={e => setSelectedMarketplaceFilter(e.target.value)}
-              className="px-3 py-2 text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="all">Todos os Marketplaces</option>
-              <option value="site">🌐 Apenas Site</option>
-              <option value="mercado_livre">💛 Mercado Livre</option>
-              <option value="shopee">🟠 Shopee</option>
-            </select>
+            {countActiveFilters(advancedFilters) > 0 && (
+              <button
+                type="button"
+                onClick={() => setAdvancedFilters(INITIAL_FILTERS_STATE)}
+                className="text-xs text-red-600 dark:text-red-400 hover:underline px-2 font-medium cursor-pointer"
+              >
+                Limpar Filtros
+              </button>
+            )}
           </div>
         </div>
 
@@ -2040,176 +2005,28 @@ export default function ManageProducts() {
           <>
             {/* Bulk actions */}
             {selectedIds.length > 0 && (
-              <div className="mb-4 p-4 bg-blue-50/80 dark:bg-gray-800/90 border border-blue-200 dark:border-gray-700 rounded-xl shadow-sm space-y-3">
-                <div className="flex items-center justify-between gap-3 flex-wrap border-b border-blue-100 dark:border-gray-700/60 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200">
-                      {selectedIds.length} produto(s) selecionado(s)
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedIds([])}
-                      className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline"
-                    >
-                      Limpar seleção
-                    </button>
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                    Aba atual: <strong className="capitalize">{TABS.find(t => t.key === activeTab)?.label}</strong>
-                  </div>
+              <div className="mb-4 p-3 bg-blue-50/80 dark:bg-gray-800/90 border border-blue-200 dark:border-gray-700 rounded-xl shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200">
+                    {selectedIds.length} produto(s) selecionado(s)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedIds([])}
+                    className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 underline cursor-pointer ml-1"
+                  >
+                    Limpar seleção
+                  </button>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  {/* 1. Vincular Fornecedor */}
-                  <div className="flex items-center gap-1.5 flex-1 min-w-[200px]">
-                    <select
-                      value={bulkSupplierId}
-                      onChange={e => setBulkSupplierId(e.target.value)}
-                      className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs text-gray-800 dark:text-gray-200 w-full focus:ring-2 focus:ring-primary-500"
-                    >
-                      <option value="">Vincular Fornecedor...</option>
-                      {suppliers.map(s => (
-                        <option key={s.id} value={s.id}>{s.trade_name || s.name}</option>
-                      ))}
-                      <option value="__none__">Sem fornecedor</option>
-                    </select>
-                    <button
-                      type="button"
-                      onClick={handleBulkAssignSupplier}
-                      disabled={!bulkSupplierId || assigningSupplier || isExecutingBulk}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors"
-                    >
-                      {assigningSupplier ? 'Vinculando...' : 'Aplicar'}
-                    </button>
-                  </div>
-
-                  {/* 2. Alterar Categoria */}
-                  <div className="flex items-center gap-1.5 flex-1 min-w-[180px]">
-                    <input
-                      type="text"
-                      placeholder="Alterar Categoria..."
-                      value={bulkCategory}
-                      onChange={e => setBulkCategory(e.target.value)}
-                      className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs text-gray-800 dark:text-gray-200 w-full focus:ring-2 focus:ring-primary-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleBulkAssignCategory}
-                      disabled={!bulkCategory.trim() || isExecutingBulk}
-                      className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors"
-                    >
-                      Aplicar
-                    </button>
-                  </div>
-
-                  {/* 3. Alterar Marketplaces */}
-                  <div className="flex items-center gap-1.5 flex-1 min-w-[200px]">
-                    <select
-                      value={bulkMarketplaceTags}
-                      onChange={e => setBulkMarketplaceTags(e.target.value)}
-                      className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-xs text-gray-800 dark:text-gray-200 w-full focus:ring-2 focus:ring-primary-500"
-                    >
-                      <option value="">Alterar Marketplaces...</option>
-                      <option value="site,mercado_livre,shopee">Todos (Site + Mercado Livre + Shopee)</option>
-                      <option value="site">Apenas Site Próprio</option>
-                      <option value="mercado_livre">Apenas Mercado Livre</option>
-                      <option value="shopee">Apenas Shopee</option>
-                      <option value="site,mercado_livre">Site + Mercado Livre</option>
-                      <option value="site,shopee">Site + Shopee</option>
-                      <option value="mercado_livre,shopee">Mercado Livre + Shopee</option>
-                    </select>
-                    <button
-                      type="button"
-                      onClick={handleBulkAssignMarketplaceTags}
-                      disabled={!bulkMarketplaceTags || isExecutingBulk}
-                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg text-xs font-medium whitespace-nowrap transition-colors"
-                    >
-                      Aplicar
-                    </button>
-                  </div>
-
-                  {/* 3. Ações Adaptadas por Aba */}
-                  <div className="flex items-center gap-2 flex-wrap ml-auto">
-                    {activeTab === 'active' && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={handleBulkDeactivate}
-                          disabled={isExecutingBulk}
-                          className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 shadow-sm"
-                          title="Desativar produtos selecionados"
-                        >
-                          <Minus size={14} /> Desativar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleBulkArchive}
-                          disabled={isExecutingBulk}
-                          className="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 shadow-sm"
-                          title="Arquivar produtos selecionados"
-                        >
-                          <Archive size={14} /> Arquivar
-                        </button>
-                      </>
-                    )}
-
-                    {activeTab === 'inactive' && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={handleBulkActivate}
-                          disabled={isExecutingBulk}
-                          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 shadow-sm"
-                          title="Ativar produtos selecionados"
-                        >
-                          <Check size={14} /> Ativar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleBulkArchive}
-                          disabled={isExecutingBulk}
-                          className="px-3 py-1.5 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 shadow-sm"
-                          title="Arquivar produtos selecionados"
-                        >
-                          <Archive size={14} /> Arquivar
-                        </button>
-                      </>
-                    )}
-
-                    {activeTab === 'archived' && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => handleBulkUnarchive(false)}
-                          disabled={isExecutingBulk}
-                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 shadow-sm"
-                          title="Desarquivar para Inativos"
-                        >
-                          <ArchiveRestore size={14} /> Desarquivar (Inativo)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleBulkUnarchive(true)}
-                          disabled={isExecutingBulk}
-                          className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 shadow-sm"
-                          title="Desarquivar e Ativar"
-                        >
-                          <Check size={14} /> Desarquivar e Ativar
-                        </button>
-                      </>
-                    )}
-
-                    {/* 4. Excluir */}
-                    <button
-                      type="button"
-                      onClick={handleBulkDelete}
-                      disabled={isExecutingBulk}
-                      className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center gap-1 disabled:opacity-50 shadow-sm"
-                      title="Excluir produtos selecionados"
-                    >
-                      <Trash2 size={14} /> Excluir
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setIsBulkEditModalOpen(true)}
+                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  >
+                    <SlidersHorizontal size={14} /> Editar em Massa
+                  </button>
                 </div>
               </div>
             )}
@@ -2432,15 +2249,14 @@ export default function ManageProducts() {
                       return (
                         <div
                           key={field.key}
-                          className={`p-2.5 rounded-xl border transition-colors flex flex-col justify-between gap-1.5 ${
-                            isSkipped
+                          className={`p-2.5 rounded-xl border transition-colors flex flex-col justify-between gap-1.5 ${isSkipped
                               ? 'border-orange-200 dark:border-orange-800/60 bg-orange-50/30 dark:bg-orange-900/10 opacity-60'
                               : field.required && !hasValue
-                              ? 'border-red-200 dark:border-red-800/80 bg-red-50/40 dark:bg-red-900/10'
-                              : hasValue
-                              ? 'border-green-200 dark:border-green-800/80 bg-green-50/20 dark:bg-green-900/10'
-                              : 'border-gray-200 dark:border-gray-700/80 bg-gray-50/40 dark:bg-gray-800/30'
-                          }`}
+                                ? 'border-red-200 dark:border-red-800/80 bg-red-50/40 dark:bg-red-900/10'
+                                : hasValue
+                                  ? 'border-green-200 dark:border-green-800/80 bg-green-50/20 dark:bg-green-900/10'
+                                  : 'border-gray-200 dark:border-gray-700/80 bg-gray-50/40 dark:bg-gray-800/30'
+                            }`}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 min-w-0">
@@ -2457,13 +2273,12 @@ export default function ManageProducts() {
                                   })
                                 }}
                                 title={field.required ? 'Campo obrigatório' : isSkipped ? `Clique para importar ${field.label}` : `Clique para não importar ${field.label}`}
-                                className={`text-xs font-semibold truncate text-left transition-colors ${
-                                  field.required
+                                className={`text-xs font-semibold truncate text-left transition-colors ${field.required
                                     ? 'text-gray-800 dark:text-gray-200 cursor-default'
                                     : isSkipped
-                                    ? 'line-through text-gray-400 dark:text-gray-500 hover:text-orange-600 dark:hover:text-orange-400'
-                                    : 'text-gray-800 dark:text-gray-200 cursor-pointer hover:text-orange-600 dark:hover:text-orange-400'
-                                }`}
+                                      ? 'line-through text-gray-400 dark:text-gray-500 hover:text-orange-600 dark:hover:text-orange-400'
+                                      : 'text-gray-800 dark:text-gray-200 cursor-pointer hover:text-orange-600 dark:hover:text-orange-400'
+                                  }`}
                               >
                                 {field.label}
                               </button>
@@ -2494,13 +2309,12 @@ export default function ManageProducts() {
                               disabled={isSkipped}
                               value={columnMapping[field.key]}
                               onChange={e => setColumnMapping(prev => ({ ...prev, [field.key]: e.target.value }))}
-                              className={`w-full text-xs rounded-lg border px-2.5 py-1.5 pr-7 appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors ${
-                                isSkipped
+                              className={`w-full text-xs rounded-lg border px-2.5 py-1.5 pr-7 appearance-none focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors ${isSkipped
                                   ? 'border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-600 cursor-not-allowed'
                                   : hasValue
-                                  ? 'border-green-400 dark:border-green-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-medium'
-                                  : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500'
-                              }`}
+                                    ? 'border-green-400 dark:border-green-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-medium'
+                                    : 'border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+                                }`}
                             >
                               <option value="">— Não vincular —</option>
                               {importHeaders.map(h => (
@@ -3250,12 +3064,61 @@ export default function ManageProducts() {
         isExporting={isExportingPdf}
         onClose={() => setIsPdfExportModalOpen(false)}
         onExport={handleDownloadPDF}
+        selectedIds={selectedIds}
       />
 
       <ProductExcelExportModal
         isOpen={isExcelExportModalOpen}
         onClose={() => setIsExcelExportModalOpen(false)}
         activeTab={activeTab}
+        selectedIds={selectedIds}
+      />
+
+      <ProductFilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        filters={advancedFilters}
+        onChange={setAdvancedFilters}
+        onReset={() => setAdvancedFilters(INITIAL_FILTERS_STATE)}
+        categoriesToDisplay={categoriesToDisplay}
+      />
+
+      <ProductBulkEditModal
+        isOpen={isBulkEditModalOpen}
+        onClose={() => setIsBulkEditModalOpen(false)}
+        selectedCount={selectedIds.length}
+        suppliers={suppliers}
+        activeTab={activeTab}
+        onApplySupplier={async (supplierId) => {
+          const target = supplierId === '__none__' ? null : supplierId
+          const res = await productsService.assignSupplierBulk(selectedIds, target)
+          toast.success(res.message || 'Fornecedor atualizado!')
+          setSelectedIds([])
+          await loadProducts()
+        }}
+        onApplyCategory={async (cat) => {
+          const res = await productsService.bulkUpdateStatus(selectedIds, { category: cat })
+          toast.success(res.message || 'Categoria atualizada!')
+          setSelectedIds([])
+          await loadProducts()
+        }}
+        onApplyMarketplaces={async (tags) => {
+          let count = 0
+          for (const id of selectedIds) {
+            await productsService.update(id, { marketplace_tags: tags })
+            count++
+          }
+          toast.success(`Marketplaces atualizados em ${count} produto(s).`)
+          setSelectedIds([])
+          await loadProducts()
+        }}
+        onApplyStatus={async (action) => {
+          if (action === 'activate') await handleBulkActivate()
+          else if (action === 'deactivate') await handleBulkDeactivate()
+          else if (action === 'archive') await handleBulkArchive()
+          else if (action === 'unarchive_active') await handleBulkUnarchive(true)
+          else if (action === 'unarchive_inactive') await handleBulkUnarchive(false)
+        }}
       />
 
       <AdminModal
@@ -3325,20 +3188,20 @@ export default function ManageProducts() {
             <div className="flex flex-wrap border-b border-gray-100 dark:border-gray-800 pb-3 gap-2">
               {[
                 { id: 'basic', label: '1. Informações Gerais', icon: <Sparkles size={14} /> },
-                { id: 'pricing', label: '2. Preços & Regras', icon: <Tag size={14} /> },
-                { id: 'details', label: '3. Apresentação Visual', icon: <FileText size={14} /> },
-                { id: 'technical', label: '4. Ficha Técnica (PDF)', icon: <AlertCircle size={14} /> },
-                { id: 'fiscal', label: '5. Dados Fiscais (NF-e 55)', icon: <FileSpreadsheet size={14} /> },
+                { id: 'images', label: `2. Galeria de Fotos (${productFormData.images.length})`, icon: <ImageIcon size={14} /> },
+                { id: 'pricing', label: '3. Preços & Regras', icon: <Tag size={14} /> },
+                { id: 'details', label: '4. Apresentação Visual', icon: <FileText size={14} /> },
+                { id: 'technical', label: '5. Ficha Técnica (PDF)', icon: <AlertCircle size={14} /> },
+                { id: 'fiscal', label: '6. Dados Fiscais (NF-e 55)', icon: <FileSpreadsheet size={14} /> },
               ].map(tab => (
                 <button
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveModalTab(tab.id as any)}
-                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all ${
-                    activeModalTab === tab.id
+                  className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${activeModalTab === tab.id
                       ? 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 border border-green-200/30 dark:border-green-800/30 shadow-sm'
                       : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
-                  }`}
+                    }`}
                 >
                   {tab.icon}
                   {tab.label}
@@ -3361,11 +3224,11 @@ export default function ManageProducts() {
             )}
 
             <form id="product-form" onSubmit={handleProductFormSubmit} className="space-y-6">
-              
+
               {/* TAB 1: BASIC INFORMATION */}
               {activeModalTab === 'basic' && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  
+
                   {/* Left Column: Input text fields */}
                   <div className="md:col-span-2 space-y-5">
                     <div>
@@ -3425,11 +3288,10 @@ export default function ManageProducts() {
                         {categoriesToDisplay.map(cat => {
                           const isChecked = productFormData.category.split(',').map(s => s.trim().toLowerCase()).includes(cat.toLowerCase())
                           return (
-                            <label key={cat} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition-all ${
-                              isChecked
+                            <label key={cat} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition-all ${isChecked
                                 ? 'bg-green-50/40 dark:bg-green-950/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 font-medium'
                                 : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
-                            }`}>
+                              }`}>
                               <input
                                 type="checkbox"
                                 checked={isChecked}
@@ -3512,34 +3374,58 @@ export default function ManageProducts() {
                     </div>
                   </div>
 
-                  {/* Right Column: Image display and Status options */}
+                  {/* Right Column: Cover preview card & Status options */}
                   <div className="space-y-5">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-                        Imagem do Produto
+                      <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5 flex items-center justify-between">
+                        <span>Capa do Produto</span>
+                        <span className="text-[11px] font-bold text-green-600 dark:text-green-400">
+                          {productFormData.images.length} {productFormData.images.length === 1 ? 'foto' : 'fotos'}
+                        </span>
                       </label>
-                      <div className="p-3 bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200/80 dark:border-gray-800 rounded-xl">
-                        <ImageUpload
-                          value={productFormData.image}
-                          onChange={handleProductImageChange}
-                          onError={(err) => setProductImageError(err || null)}
-                          disabled={productFormLoading}
-                        />
+                      <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200/80 dark:border-gray-800 rounded-2xl flex flex-col items-center text-center space-y-3">
+                        {productFormData.images.length > 0 || productFormData.image ? (
+                          <div className="w-28 h-28 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm relative group">
+                            <img
+                              src={productsService.getImageUrl(productFormData.images[0] || productFormData.image)}
+                              alt="Capa do produto"
+                              className="w-full h-full object-cover"
+                              onError={handleImageError}
+                            />
+                            <span className="absolute top-1.5 left-1.5 bg-green-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-xs">
+                              CAPA
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="w-28 h-28 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 flex flex-col items-center justify-center text-gray-400 bg-white dark:bg-gray-800/40">
+                            <ImageIcon size={24} className="mb-1" />
+                            <span className="text-[10px] font-semibold">Sem Capa</span>
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => setActiveModalTab('images')}
+                          className="w-full px-3.5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                        >
+                          <ImageIcon size={14} />
+                          <span>Gerenciar Fotos ({productFormData.images.length})</span>
+                        </button>
                       </div>
                     </div>
 
-                    <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200/80 dark:border-gray-800 rounded-xl space-y-3.5">
+                    <div className="p-4 bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200/80 dark:border-gray-800 rounded-2xl space-y-3.5">
                       <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status & Visibilidade</h4>
-                      
+
                       {/* Active Toggle Switch */}
-                      <label className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-gray-800/40 border border-gray-150/50 dark:border-gray-700 cursor-pointer select-none">
-                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Produto Ativo</span>
+                      <label className="flex items-center justify-between p-2.5 rounded-xl bg-white dark:bg-gray-800/40 border border-gray-150/50 dark:border-gray-700 cursor-pointer select-none">
+                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Produto Ativo no Catálogo</span>
                         <input
                           type="checkbox"
                           name="active"
                           checked={productFormData.active}
                           onChange={handleProductFormChange}
-                          className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                          className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500 cursor-pointer"
                         />
                       </label>
                     </div>
@@ -3547,11 +3433,27 @@ export default function ManageProducts() {
                 </div>
               )}
 
+              {/* TAB 2: IMAGES & GALLERY */}
+              {activeModalTab === 'images' && (
+                <div className="space-y-4">
+                  <MultiImageUpload
+                    values={productFormData.images}
+                    onChange={(urls) => setProductFormData(prev => ({
+                      ...prev,
+                      images: urls,
+                      image: urls[0] || ''
+                    }))}
+                    onError={(err) => setProductImageError(err || null)}
+                    disabled={productFormLoading}
+                  />
+                </div>
+              )}
+
               {/* TAB 2: PRICING & REGULATION */}
               {activeModalTab === 'pricing' && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    
+
                     {/* Purchase Price */}
                     <div className="p-3 bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200/60 dark:border-gray-800 rounded-xl">
                       <label htmlFor="product-purchase_price" className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
@@ -3634,11 +3536,10 @@ export default function ManageProducts() {
 
                   {/* Profit Margin Widget Card */}
                   {productMarginInfo && (
-                    <div className={`p-4 rounded-xl border flex items-center justify-between ${
-                      productMarginInfo.isPositive
+                    <div className={`p-4 rounded-xl border flex items-center justify-between ${productMarginInfo.isPositive
                         ? 'bg-green-50/30 dark:bg-green-950/10 border-green-150 dark:border-green-900/30 text-green-800 dark:text-green-400'
                         : 'bg-red-50/30 dark:bg-red-950/10 border-red-150 dark:border-red-900/30 text-red-800 dark:text-red-400'
-                    }`}>
+                      }`}>
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg ${productMarginInfo.isPositive ? 'bg-green-100 dark:bg-green-900/40 text-green-600' : 'bg-red-100 dark:bg-red-900/40 text-red-600'}`}>
                           {productMarginInfo.isPositive ? <TrendingUp size={18} /> : <TrendingDown size={18} />}

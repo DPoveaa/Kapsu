@@ -12,6 +12,7 @@ export interface ProductExcelExportModalProps {
   isOpen: boolean
   onClose: () => void
   activeTab?: 'active' | 'inactive' | 'archived'
+  selectedIds?: string[]
 }
 
 interface ExportColumnDef {
@@ -161,7 +162,8 @@ function formatExportDate(value: unknown) {
   return date.toLocaleString('pt-BR')
 }
 
-export default function ProductExcelExportModal({ isOpen, onClose, activeTab = 'active' }: ProductExcelExportModalProps) {
+export default function ProductExcelExportModal({ isOpen, onClose, activeTab = 'active', selectedIds = [] }: ProductExcelExportModalProps) {
+  const [exportSelectionMode, setExportSelectionMode] = useState<'selected' | 'all'>('all')
   const [includeActive, setIncludeActive] = useState(true)
   const [includeInactive, setIncludeInactive] = useState(false)
   const [includeArchived, setIncludeArchived] = useState(false)
@@ -190,6 +192,7 @@ export default function ProductExcelExportModal({ isOpen, onClose, activeTab = '
   // Load saved presets and default setting on modal open
   useEffect(() => {
     if (isOpen) {
+      setExportSelectionMode(selectedIds && selectedIds.length > 0 ? 'selected' : 'all')
       setIncludeActive(activeTab === 'active')
       setIncludeInactive(activeTab === 'inactive')
       setIncludeArchived(activeTab === 'archived')
@@ -229,7 +232,7 @@ export default function ProductExcelExportModal({ isOpen, onClose, activeTab = '
       setIsCreatingNew(false)
       setNewPresetName('')
     }
-  }, [isOpen, activeTab])
+  }, [isOpen, activeTab, selectedIds])
 
   const handleSelectPreset = (presetId: string) => {
     const target = presets.find(p => p.id === presetId)
@@ -373,12 +376,14 @@ export default function ProductExcelExportModal({ isOpen, onClose, activeTab = '
   }
 
   const handleExport = async () => {
-    if (!includeActive && !includeInactive && !includeArchived) {
+    const isSelectingSpecific = exportSelectionMode === 'selected' && selectedIds.length > 0
+
+    if (!isSelectingSpecific && !includeActive && !includeInactive && !includeArchived) {
       toast.error('Selecione pelo menos um status para exportar.')
       return
     }
 
-    if (!includeSite && !includeML && !includeShopee) {
+    if (!isSelectingSpecific && !includeSite && !includeML && !includeShopee) {
       toast.error('Selecione pelo menos um marketplace para exportar.')
       return
     }
@@ -391,9 +396,14 @@ export default function ProductExcelExportModal({ isOpen, onClose, activeTab = '
     try {
       setIsExporting(true)
       const allProductsRaw = await productsService.getAllForAdminRaw()
+      const selectedSet = new Set(selectedIds)
 
-      // Filtragem por status e marketplaces
+      // Filtragem por status e marketplaces (ou por seleção direta)
       const filtered = allProductsRaw.filter(p => {
+        if (isSelectingSpecific) {
+          return selectedSet.has(p.id)
+        }
+
         // Status filter
         if (p.archived && !includeArchived) return false
         if (!p.archived && p.active && !includeActive) return false
@@ -470,6 +480,42 @@ export default function ProductExcelExportModal({ isOpen, onClose, activeTab = '
       title="Exportar Planilha de Produtos (Excel)"
     >
       <div className="space-y-6 text-sm text-gray-700 dark:text-gray-200">
+
+        {/* 0. Selection Scope Filter (if products selected in table) */}
+        {selectedIds.length > 0 && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 p-4 rounded-xl border border-blue-200 dark:border-blue-800 space-y-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300 flex items-center gap-1.5">
+              <Sparkles size={14} className="text-blue-600 dark:text-blue-400" />
+              Escopo de Exportação ({selectedIds.length} produto(s) selecionado(s))
+            </label>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="exportSelectionMode"
+                  checked={exportSelectionMode === 'selected'}
+                  onChange={() => setExportSelectionMode('selected')}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  Somente os {selectedIds.length} produto(s) selecionado(s) na tabela
+                </span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="exportSelectionMode"
+                  checked={exportSelectionMode === 'all'}
+                  onChange={() => setExportSelectionMode('all')}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  Todos os produtos (aplicar filtros abaixo)
+                </span>
+              </label>
+            </div>
+          </div>
+        )}
 
         {/* 1. Status Filter */}
         <div className="bg-gray-50 dark:bg-gray-800/60 p-4 rounded-xl border border-gray-200 dark:border-gray-700">

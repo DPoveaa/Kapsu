@@ -1,4 +1,4 @@
-﻿import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import {
   ShoppingCart, Loader2, Truck, CheckCircle, AlertCircle,
   Info, Star, ChevronLeft, ChevronRight, X, ShieldCheck,
@@ -78,6 +78,7 @@ export default function ProductDetail() {
   const [error, setError] = useState<string | null>(null)
   const [selectedImage, setSelectedImage] = useState(0)
   const addToCartBtnRef = useRef<HTMLButtonElement>(null)
+  const thumbnailContainerRef = useRef<HTMLDivElement>(null)
 
   // Reviews State
   const [reviews, setReviews] = useState<any[]>([])
@@ -377,8 +378,12 @@ export default function ProductDetail() {
   }
 
   // Gallery images setup
-  const productImages = product?.image && product.image.trim() !== '' && product.image !== PRODUCT_IMAGE_FALLBACK
-    ? [product.image]
+  const rawImages = (product as any)?.images && Array.isArray((product as any).images) && (product as any).images.length > 0
+    ? (product as any).images
+    : (product?.image && product.image.trim() !== '' && product.image !== PRODUCT_IMAGE_FALLBACK ? [product.image] : [])
+
+  const productImages = rawImages.length > 0
+    ? rawImages.map((img: string) => productsService.getImageUrl(img))
     : [PRODUCT_IMAGE_FALLBACK]
 
   const handleNextImage = () => {
@@ -392,6 +397,23 @@ export default function ProductDetail() {
       setSelectedImage((prev) => (prev - 1 + productImages.length) % productImages.length)
     }
   }
+
+  // Auto-scroll active thumbnail into view smoothly without scrollbars
+  useEffect(() => {
+    if (thumbnailContainerRef.current) {
+      const container = thumbnailContainerRef.current
+      const activeElement = container.children[selectedImage] as HTMLElement
+      if (activeElement) {
+        activeElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'center',
+        })
+      }
+    }
+  }, [selectedImage])
+
+
 
   // Keyboard controls for Lightbox
   useEffect(() => {
@@ -513,6 +535,7 @@ export default function ProductDetail() {
 
           {/* Gallery card */}
           <div className="lg:col-span-5 bg-white dark:bg-[#131926]/90 backdrop-blur-md rounded-[24px] border border-gray-200 dark:border-white/5 p-6 shadow-xl shadow-gray-200/50 dark:shadow-black/20 h-full flex flex-col justify-between">
+            {/* Main Photo Display */}
             <div
               className="relative overflow-hidden cursor-zoom-in bg-gray-50 dark:bg-gradient-to-br dark:from-[#0B1F17] dark:via-[#0A0F0D] dark:to-[#0E131F] rounded-2xl border border-gray-200 dark:border-white/5 aspect-square flex items-center justify-center select-none"
               onMouseMove={handleMouseMove}
@@ -532,46 +555,53 @@ export default function ProductDetail() {
               />
             </div>
 
-            {/* Thumbnails list with buttons */}
-            <div className="flex items-center justify-between gap-2 mt-4">
-              {productImages.length > 1 && (
+            {/* Thumbnails carousel without scrollbars (Arrow driven) */}
+            {productImages.length > 1 && (
+              <div className="flex items-center gap-2 mt-4">
                 <button
+                  type="button"
                   onClick={handlePrevImage}
-                  className="p-1.5 bg-white dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer border border-gray-200 dark:border-white/5"
+                  className="p-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl text-gray-600 dark:text-gray-300 transition-colors cursor-pointer border border-gray-200 dark:border-white/5 shrink-0"
                   title="Imagem anterior"
                 >
-                  <ChevronLeft size={16} />
+                  <ChevronLeft size={18} />
                 </button>
-              )}
-              <div className="flex-1 flex gap-3 overflow-x-auto py-1 justify-center scrollbar-none">
-                {productImages.map((img, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`w-16 h-16 rounded-xl border-2 overflow-hidden bg-gray-50 dark:bg-[#0A0F0D]/60 flex-shrink-0 transition-all ${selectedImage === index
-                      ? 'border-[#00C878] scale-105 shadow-sm'
-                      : 'border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10'
+
+                <div
+                  ref={thumbnailContainerRef}
+                  className="flex-1 flex gap-2.5 overflow-x-auto py-1 items-center scroll-smooth scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                >
+                  {productImages.map((img: string, index: number) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => setSelectedImage(index)}
+                      className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl border-2 overflow-hidden bg-gray-50 dark:bg-[#0A0F0D]/60 shrink-0 transition-all cursor-pointer ${
+                        selectedImage === index
+                          ? 'border-[#00C878] ring-2 ring-[#00C878]/30 scale-105 shadow-sm'
+                          : 'border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10 opacity-70 hover:opacity-100'
                       }`}
-                  >
-                    <img
-                      src={img}
-                      alt={`${product?.name || ''} thumbnail ${index + 1}`}
-                      className="w-full h-full object-contain p-1"
-                      onError={handleProductImageError}
-                    />
-                  </button>
-                ))}
-              </div>
-              {productImages.length > 1 && (
+                    >
+                      <img
+                        src={img}
+                        alt={`${product?.name || ''} thumbnail ${index + 1}`}
+                        className="w-full h-full object-contain p-1"
+                        onError={handleProductImageError}
+                      />
+                    </button>
+                  ))}
+                </div>
+
                 <button
+                  type="button"
                   onClick={handleNextImage}
-                  className="p-1.5 bg-white dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer border border-gray-200 dark:border-white/5"
+                  className="p-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl text-gray-600 dark:text-gray-300 transition-colors cursor-pointer border border-gray-200 dark:border-white/5 shrink-0"
                   title="Próxima imagem"
                 >
-                  <ChevronRight size={16} />
+                  <ChevronRight size={18} />
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Buy box */}
@@ -1253,7 +1283,7 @@ export default function ProductDetail() {
           {/* Thumbnails indicator at the bottom */}
           {productImages.length > 1 && (
             <div className="flex gap-2 justify-center pb-4" onClick={(e) => e.stopPropagation()}>
-              {productImages.map((_, idx) => (
+              {productImages.map((_: string, idx: number) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImage(idx)}
