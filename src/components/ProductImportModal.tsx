@@ -124,7 +124,8 @@ export const IMPORT_CATEGORIES: ImportCategory[] = [
 export const ALL_IMPORT_FIELDS: ImportFieldDefinition[] = IMPORT_CATEGORIES.flatMap(cat => cat.fields)
 
 function detectSystemField(headerName: string, assignedFields: Set<string>): string {
-  const low = headerName.trim().toLowerCase().replace(/_/g, ' ')
+  const cleanHeader = headerName.trim()
+  const low = cleanHeader.toLowerCase().replace(/_/g, ' ')
 
   const tryAssign = (fieldKey: string): string => {
     if (!assignedFields.has(fieldKey)) {
@@ -133,38 +134,93 @@ function detectSystemField(headerName: string, assignedFields: Set<string>): str
     return ''
   }
 
-  // 1. Exact match with system field keys
+  const VALID_KEYS = new Set(ALL_IMPORT_FIELDS.map(f => f.key))
+
+  // 1. Extract parenthesized field keys, e.g. "Código do Produto / SKU (codigo_produto)" -> "codigo_produto"
+  const parenthesizedMatches = cleanHeader.match(/\(([^)]+)\)/g)
+  if (parenthesizedMatches) {
+    for (const pMatch of parenthesizedMatches) {
+      const inside = pMatch.replace(/[()]/g, '').trim().toLowerCase()
+      if (inside === 'sku' || inside === 'id') {
+        const res = tryAssign('codigo_produto')
+        if (res) return res
+      }
+      if (VALID_KEYS.has(inside)) {
+        const res = tryAssign(inside)
+        if (res) return res
+      }
+    }
+  }
+
+  // 2. Exact match with system field keys
   for (const field of ALL_IMPORT_FIELDS) {
-    const fKeyClean = field.key.toLowerCase().replace(/_/g, ' ')
-    if (low === fKeyClean) {
+    const fKeyClean = field.key.toLowerCase()
+    const fKeySpaced = field.key.toLowerCase().replace(/_/g, ' ')
+    if (low === fKeyClean || low === fKeySpaced) {
       const res = tryAssign(field.key)
       if (res) return res
     }
   }
 
-  // 2. Heuristic keyword matches
-  if (low.includes('codigo') || low.includes('código') || low === 'sku' || low === 'id' || low.includes('code')) {
+  // 3. Exact match with labels from ALL_IMPORT_FIELDS
+  for (const field of ALL_IMPORT_FIELDS) {
+    const labelLow = field.label.toLowerCase()
+    if (low === labelLow || cleanHeader.toLowerCase() === labelLow) {
+      const res = tryAssign(field.key)
+      if (res) return res
+    }
+  }
+
+  // 4. Specific technical fiscal/system fields (checked BEFORE general word heuristics)
+  if (low.includes('csosn st') || low.includes('csosn_st')) return tryAssign('csosn_st')
+  if (low.includes('csosn')) return tryAssign('csosn')
+  if (low.includes('cfop intra st') || low.includes('cfop_intra_st')) return tryAssign('cfop_intra_st')
+  if (low.includes('cfop inter st') || low.includes('cfop_inter_st')) return tryAssign('cfop_inter_st')
+  if (low.includes('cfop intra') || low.includes('cfop_intra') || low.includes('cfop estadual')) return tryAssign('cfop_intra')
+  if (low.includes('cfop inter') || low.includes('cfop_inter') || low.includes('cfop interestadual')) return tryAssign('cfop_inter')
+  if (low.includes('pis cst') || low.includes('pis_cst') || low === 'pis') return tryAssign('pis_cst')
+  if (low.includes('cofins cst') || low.includes('cofins_cst') || low === 'cofins') return tryAssign('cofins_cst')
+  if (low.includes('tax unit') || low.includes('unidade tributavel') || low.includes('unid tributavel')) return tryAssign('tax_unit')
+  if (low.includes('tax gtin') || low.includes('gtin tributavel')) return tryAssign('tax_gtin')
+  if (low.includes('gtin') || low.includes('ean') || low.includes('barras')) return tryAssign('gtin')
+  if (low.includes('ncm')) return tryAssign('ncm')
+  if (low.includes('cest')) return tryAssign('cest')
+  if (low.includes('cbenef') || low.includes('beneficio fiscal') || low.includes('benefício fiscal')) return tryAssign('cbenef')
+  if (low.includes('origin') || low.includes('origem')) return tryAssign('origin')
+  if (low.includes('fiscal notes') || low.includes('fiscal_notes') || low.includes('observações fiscais') || low.includes('observacoes fiscais')) return tryAssign('fiscal_notes')
+  if (low.includes('fiscal description') || low.includes('descrição fiscal') || low.includes('descricao fiscal')) return tryAssign('fiscal_description')
+  if (low.includes('fiscal validated') || low.includes('fiscal_validated') || low.includes('validação fiscal') || low.includes('validacao fiscal')) return tryAssign('fiscal_validated')
+  if (low.includes('nfe_enabled') || low.includes('emissão nfe') || low.includes('emissao nfe') || low.includes('habilitado nfe') || low.includes('nfe')) return tryAssign('nfe_enabled')
+
+  // 5. Broad Heuristic Keyword Matches
+  // Product Code / SKU / ID (strict: ensure it's not ncm/cest/cbenef)
+  if (
+    !low.includes('ncm') && !low.includes('cest') && !low.includes('cbenef') &&
+    (low === 'sku' || low === 'id' || low.includes('codigo produto') || low.includes('código produto') || low.includes('codigo do produto') || low.includes('código do produto') || low.includes('product code') || low === 'codigo' || low === 'código')
+  ) {
     const res = tryAssign('codigo_produto')
     if (res) return res
   }
 
-  if (low.includes('nome') || low.includes('name') || low === 'produto' || low === 'titulo' || low === 'item') {
+  // Name
+  if (low.includes('nome') || low.includes('name') || low === 'produto' || low === 'titulo' || low === 'título' || low === 'item') {
     const res = tryAssign('nome_produto')
     if (res) return res
   }
 
+  // Marketplaces
   if (low.includes('marketplace') || low.includes('canal') || low.includes('shopee') || low.includes('mercado livre')) {
     const res = tryAssign('marketplaces')
     if (res) return res
   }
 
-  // Preço Promocional (before general price)
+  // Preço Promocional
   if (low.includes('promo') || low.includes('promocional')) {
     const res = tryAssign('promo_price')
     if (res) return res
   }
 
-  // Preço de Custo / Compra
+  // Preço de Custo
   if (low.includes('custo') || low.includes('compra') || low.includes('cost') || low.includes('purchase')) {
     const res = tryAssign('purchase_price')
     if (res) return res
@@ -182,7 +238,7 @@ function detectSystemField(headerName: string, assignedFields: Set<string>): str
     if (res) return res
   }
 
-  // Categoria
+  // Category
   if (low.includes('categoria') || low.includes('category')) {
     const res = tryAssign('category')
     if (res) return res
@@ -194,87 +250,81 @@ function detectSystemField(headerName: string, assignedFields: Set<string>): str
     if (res) return res
   }
 
-  // Frete Grátis
+  // Free shipping
   if (low.includes('frete') || low.includes('shipping')) {
     const res = tryAssign('free_shipping')
     if (res) return res
   }
 
-  // Quantidade / Estoque
+  // Quantity / Stock
   if (low.includes('estoque') || low.includes('quantidade') || low.includes('qtd') || low === 'quantity' || low === 'stock') {
     const res = tryAssign('quantity')
     if (res) return res
   }
 
-  // Fiscal Notes — must appear before fiscal_description and fiscal_validated
-  if (
-    low === 'fiscal notes' || low === 'fiscal_notes' ||
-    low === 'notas' || low === 'notas fiscais' ||
-    low.includes('fiscal note') ||
-    (low.includes('obs') && !low.includes('csosn')) ||
-    low.includes('observa')
-  ) {
-    const res = tryAssign('fiscal_notes')
-    if (res) return res
-  }
-
-  // Fiscal Description
-  if (low.includes('fiscal description') || low.includes('descrição fiscal') || low.includes('descricao fiscal')) {
-    const res = tryAssign('fiscal_description')
-    if (res) return res
-  }
-
-  // Product Description
+  // Description
   if (low.includes('descri') || low.includes('description') || low.includes('apresentacao do produto')) {
     const res = tryAssign('description')
     if (res) return res
   }
 
-  // Composição
+  // Compositions
   if (low.includes('composic') || low.includes('composição') || low.includes('formula') || low.includes('fórmula') || low.includes('composition')) {
     const res = tryAssign('compositions')
     if (res) return res
   }
 
-  // Indicação
+  // Indication
   if (low.includes('indicac') || low.includes('indicação') || low.includes('indication')) {
     const res = tryAssign('indication')
     if (res) return res
   }
 
-  // Contraindicação
+  // Contraindication
   if (low.includes('contraindicac') || low.includes('contraindicação') || low.includes('contraindication')) {
     const res = tryAssign('contraindication')
     if (res) return res
   }
 
-  // Benefícios
+  // Benefits
   if (low.includes('benefic') || low.includes('benefício') || low.includes('benefit')) {
     const res = tryAssign('benefits')
     if (res) return res
   }
 
-  // Público-Alvo
+  // Target audience
   if (low.includes('publico') || low.includes('público') || low.includes('target')) {
     const res = tryAssign('target_audience')
     if (res) return res
   }
 
-  // Forma Farmacêutica
-  if (low.includes('forma') || low.includes('intended_form')) {
+  // Intended form
+  if (low.includes('forma') || low.includes('intended form') || low.includes('intended_form')) {
     const res = tryAssign('intended_form')
     if (res) return res
   }
 
-  // Apresentação / Embalagem
-  if (low.includes('apresenta') || low.includes('embalagem') || low.includes('intended_presentation')) {
+  // Intended presentation
+  if (low.includes('apresenta') || low.includes('embalagem') || low.includes('intended presentation') || low.includes('intended_presentation')) {
     const res = tryAssign('intended_presentation')
     if (res) return res
   }
 
-  // Unidades por dose
-  if (low.includes('dose') || low.includes('intended_units_per_dose')) {
+  // Intended units per dose
+  if (low.includes('dose') || low.includes('intended units per dose') || low.includes('intended_units_per_dose')) {
     const res = tryAssign('intended_units_per_dose')
+    if (res) return res
+  }
+
+  // Unit
+  if (low === 'unit' || low === 'unidade' || low.includes('unid comercial')) {
+    const res = tryAssign('unit')
+    if (res) return res
+  }
+
+  // Conversion factor
+  if (low.includes('convers') || low.includes('fator')) {
+    const res = tryAssign('tax_conversion_factor')
     if (res) return res
   }
 
@@ -284,115 +334,15 @@ function detectSystemField(headerName: string, assignedFields: Set<string>): str
     if (res) return res
   }
 
-  // Meta Title
+  // Meta title
   if (low.includes('meta title') || low.includes('meta titulo') || low.includes('meta título')) {
     const res = tryAssign('meta_title')
     if (res) return res
   }
 
-  // Meta Description
+  // Meta description
   if (low.includes('meta description') || low.includes('meta descricao') || low.includes('meta descrição')) {
     const res = tryAssign('meta_description')
-    if (res) return res
-  }
-
-  // fiscal_validated
-  if (
-    low === 'fiscal validated' || low === 'fiscal_validated' ||
-    low === 'validado' || low === 'validação fiscal' ||
-    low === 'fiscal validado' || low === 'validated'
-  ) {
-    const res = tryAssign('fiscal_validated')
-    if (res) return res
-  }
-
-  if (low.includes('nfe') || low === 'emissao nfe' || low === 'habilitar nfe' || low.includes('emissão')) {
-    const res = tryAssign('nfe_enabled')
-    if (res) return res
-  }
-
-  if (low.includes('ncm')) {
-    const res = tryAssign('ncm')
-    if (res) return res
-  }
-
-  if (low.includes('cest')) {
-    const res = tryAssign('cest')
-    if (res) return res
-  }
-
-  if (low.includes('origem') || low.includes('origin')) {
-    const res = tryAssign('origin')
-    if (res) return res
-  }
-
-  if (low.includes('csosn st') || low.includes('csosn_st')) {
-    const res = tryAssign('csosn_st')
-    if (res) return res
-  }
-
-  if (low.includes('csosn')) {
-    const res = tryAssign('csosn')
-    if (res) return res
-  }
-
-  if (low.includes('cfop intra st') || low.includes('cfop_intra_st')) {
-    const res = tryAssign('cfop_intra_st')
-    if (res) return res
-  }
-
-  if (low.includes('cfop inter st') || low.includes('cfop_inter_st')) {
-    const res = tryAssign('cfop_inter_st')
-    if (res) return res
-  }
-
-  if (low.includes('cfop intra') || low.includes('cfop_intra') || low.includes('cfop estadual')) {
-    const res = tryAssign('cfop_intra')
-    if (res) return res
-  }
-
-  if (low.includes('cfop inter') || low.includes('cfop_inter') || low.includes('cfop interestadual')) {
-    const res = tryAssign('cfop_inter')
-    if (res) return res
-  }
-
-  if (low.includes('pis')) {
-    const res = tryAssign('pis_cst')
-    if (res) return res
-  }
-
-  if (low.includes('cofins')) {
-    const res = tryAssign('cofins_cst')
-    if (res) return res
-  }
-
-  if (low.includes('tax unit') || low.includes('unid tributavel')) {
-    const res = tryAssign('tax_unit')
-    if (res) return res
-  }
-
-  if (low === 'unit' || low === 'unidade' || low.includes('unid comercial')) {
-    const res = tryAssign('unit')
-    if (res) return res
-  }
-
-  if (low.includes('convers') || low.includes('fator')) {
-    const res = tryAssign('tax_conversion_factor')
-    if (res) return res
-  }
-
-  if (low.includes('tax gtin') || low.includes('gtin tributavel')) {
-    const res = tryAssign('tax_gtin')
-    if (res) return res
-  }
-
-  if (low.includes('gtin') || low.includes('ean') || low.includes('barras')) {
-    const res = tryAssign('gtin')
-    if (res) return res
-  }
-
-  if (low.includes('cbenef') || low.includes('beneficio')) {
-    const res = tryAssign('cbenef')
     if (res) return res
   }
 
@@ -562,7 +512,16 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
         fileName: file?.name || 'import.xlsx',
       })
 
-      toast.success(`Importação realizada com sucesso! ${result.updatedCount} produto(s) atualizados.`)
+      const created = result.createdCount || 0
+      const updated = result.updatedCount || 0
+
+      if (created > 0 && updated > 0) {
+        toast.success(`Importação realizada com sucesso! ${created} produto(s) criado(s) e ${updated} produto(s) atualizado(s).`)
+      } else if (created > 0) {
+        toast.success(`Importação realizada com sucesso! ${created} novo(s) produto(s) criado(s).`)
+      } else {
+        toast.success(`Importação realizada com sucesso! ${updated} produto(s) atualizado(s).`)
+      }
       onSuccess()
       handleClose()
     } catch (err: any) {

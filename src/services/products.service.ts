@@ -955,7 +955,7 @@ class ProductsService {
   async applyImport(
     rows: any[],
     options: { allowClearEmpty?: boolean; partialImport?: boolean; fileName?: string }
-  ): Promise<{ updatedCount: number; errors: any[] }> {
+  ): Promise<{ updatedCount: number; createdCount?: number; errors: any[] }> {
     const response = await fetch(`${this.baseUrl}/admin/import/apply`, {
       method: 'POST',
       headers: this.getAuthHeaders(),

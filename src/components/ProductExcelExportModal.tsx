@@ -510,92 +510,97 @@ export default function ProductExcelExportModal({ isOpen, onClose, activeTab = '
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500"
                 />
                 <span className="font-medium text-gray-700 dark:text-gray-300">
-                  Todos os produtos (aplicar filtros abaixo)
+                  Todos os produtos
                 </span>
               </label>
             </div>
           </div>
         )}
 
-        {/* 1. Status Filter */}
-        <div className="bg-gray-50 dark:bg-gray-800/60 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
-            <Filter size={14} className="text-green-600 dark:text-green-400" />
-            Status dos Produtos
-          </label>
-          <div className="flex flex-wrap gap-4 sm:gap-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeActive}
-                onChange={e => setIncludeActive(e.target.checked)}
-                className="h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
-              />
-              <span className="font-medium text-gray-800 dark:text-gray-200">Ativos</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeInactive}
-                onChange={e => setIncludeInactive(e.target.checked)}
-                className="h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
-              />
-              <span className="font-medium text-gray-800 dark:text-gray-200">Inativos</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeArchived}
-                onChange={e => setIncludeArchived(e.target.checked)}
-                className="h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
-              />
-              <span className="font-medium text-gray-800 dark:text-gray-200">Arquivados</span>
-            </label>
-          </div>
-        </div>
+        {/* 1. Status Filter & 2. Marketplace Filter (shown only when no items selected or when exportSelectionMode === 'all') */}
+        {(selectedIds.length === 0 || exportSelectionMode === 'all') && (
+          <>
+            {/* 1. Status Filter */}
+            <div className="bg-gray-50 dark:bg-gray-800/60 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
+                <Filter size={14} className="text-green-600 dark:text-green-400" />
+                Status dos Produtos
+              </label>
+              <div className="flex flex-wrap gap-4 sm:gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeActive}
+                    onChange={e => setIncludeActive(e.target.checked)}
+                    className="h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
+                  />
+                  <span className="font-medium text-gray-800 dark:text-gray-200">Ativos</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeInactive}
+                    onChange={e => setIncludeInactive(e.target.checked)}
+                    className="h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
+                  />
+                  <span className="font-medium text-gray-800 dark:text-gray-200">Inativos</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeArchived}
+                    onChange={e => setIncludeArchived(e.target.checked)}
+                    className="h-4 w-4 text-green-600 rounded border-gray-300 focus:ring-green-500"
+                  />
+                  <span className="font-medium text-gray-800 dark:text-gray-200">Arquivados</span>
+                </label>
+              </div>
+            </div>
 
-        {/* 2. Marketplace Filter */}
-        <div className="bg-gray-50 dark:bg-gray-800/60 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-          <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
-            <Store size={14} className="text-amber-600 dark:text-amber-400" />
-            Filtrar por Marketplace / Canais
-          </label>
-          <div className="flex flex-wrap gap-4 sm:gap-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeSite}
-                onChange={e => setIncludeSite(e.target.checked)}
-                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-              />
-              <span className="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1">
-                🌐 Site Próprio
-              </span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeML}
-                onChange={e => setIncludeML(e.target.checked)}
-                className="h-4 w-4 text-yellow-600 rounded border-gray-300 focus:ring-yellow-500"
-              />
-              <span className="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1">
-                💛 Mercado Livre
-              </span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeShopee}
-                onChange={e => setIncludeShopee(e.target.checked)}
-                className="h-4 w-4 text-orange-600 rounded border-gray-300 focus:ring-orange-500"
-              />
-              <span className="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1">
-                🟠 Shopee
-              </span>
-            </label>
-          </div>
-        </div>
+            {/* 2. Marketplace Filter */}
+            <div className="bg-gray-50 dark:bg-gray-800/60 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
+                <Store size={14} className="text-amber-600 dark:text-amber-400" />
+                Filtrar por Marketplace / Canais
+              </label>
+              <div className="flex flex-wrap gap-4 sm:gap-6">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeSite}
+                    onChange={e => setIncludeSite(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  />
+                  <span className="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1">
+                    🌐 Site Próprio
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeML}
+                    onChange={e => setIncludeML(e.target.checked)}
+                    className="h-4 w-4 text-yellow-600 rounded border-gray-300 focus:ring-yellow-500"
+                  />
+                  <span className="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1">
+                    💛 Mercado Livre
+                  </span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeShopee}
+                    onChange={e => setIncludeShopee(e.target.checked)}
+                    className="h-4 w-4 text-orange-600 rounded border-gray-300 focus:ring-orange-500"
+                  />
+                  <span className="font-medium text-gray-800 dark:text-gray-200 flex items-center gap-1">
+                    🟠 Shopee
+                  </span>
+                </label>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* 3. Export Presets Bar */}
         <div className="bg-gradient-to-r from-blue-50/70 to-indigo-50/70 dark:from-gray-800/80 dark:to-slate-800/80 p-4 rounded-xl border border-blue-200/60 dark:border-gray-700 space-y-3 shadow-xs">
