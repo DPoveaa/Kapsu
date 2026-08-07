@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import {
-  Upload, FileSpreadsheet, Download, AlertTriangle, CheckCircle,
-  RefreshCw, Plus, Trash2, Sparkles
+  Upload, FileSpreadsheet, Download,
+  Plus, Trash2, Sparkles, CheckSquare, Square, Columns, Package
 } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import AdminModal from './AdminModal'
@@ -12,22 +12,6 @@ export interface ProductImportModalProps {
   isOpen: boolean
   onClose: () => void
   onSuccess: () => void
-}
-
-interface ValidationErrorItem {
-  rowNumber: number
-  productCode: string
-  field: string
-  invalidValue: any
-  reason: string
-}
-
-interface ValidationReport {
-  totalRows: number
-  validCount: number
-  invalidCount: number
-  errors: ValidationErrorItem[]
-  duplicateCodes: string[]
 }
 
 export interface ColumnMappingItem {
@@ -193,7 +177,6 @@ function detectSystemField(headerName: string, assignedFields: Set<string>): str
   if (low.includes('nfe_enabled') || low.includes('emissão nfe') || low.includes('emissao nfe') || low.includes('habilitado nfe') || low.includes('nfe')) return tryAssign('nfe_enabled')
 
   // 5. Broad Heuristic Keyword Matches
-  // Product Code / SKU / ID (strict: ensure it's not ncm/cest/cbenef)
   if (
     !low.includes('ncm') && !low.includes('cest') && !low.includes('cbenef') &&
     (low === 'sku' || low === 'id' || low.includes('codigo produto') || low.includes('código produto') || low.includes('codigo do produto') || low.includes('código do produto') || low.includes('product code') || low === 'codigo' || low === 'código')
@@ -202,145 +185,121 @@ function detectSystemField(headerName: string, assignedFields: Set<string>): str
     if (res) return res
   }
 
-  // Name
   if (low.includes('nome') || low.includes('name') || low === 'produto' || low === 'titulo' || low === 'título' || low === 'item') {
     const res = tryAssign('nome_produto')
     if (res) return res
   }
 
-  // Marketplaces
   if (low.includes('marketplace') || low.includes('canal') || low.includes('shopee') || low.includes('mercado livre')) {
     const res = tryAssign('marketplaces')
     if (res) return res
   }
 
-  // Preço Promocional
   if (low.includes('promo') || low.includes('promocional')) {
     const res = tryAssign('promo_price')
     if (res) return res
   }
 
-  // Preço de Custo
   if (low.includes('custo') || low.includes('compra') || low.includes('cost') || low.includes('purchase')) {
     const res = tryAssign('purchase_price')
     if (res) return res
   }
 
-  // Preço de Venda
   if (low.includes('preço') || low.includes('preco') || low.includes('venda') || low === 'price' || low.includes('sale price')) {
     const res = tryAssign('price')
     if (res) return res
   }
 
-  // Markup
   if (low.includes('markup') || low.includes('margem')) {
     const res = tryAssign('markup')
     if (res) return res
   }
 
-  // Category
   if (low.includes('categoria') || low.includes('category')) {
     const res = tryAssign('category')
     if (res) return res
   }
 
-  // Status
   if (low === 'status' || low.includes('ativo') || low.includes('situacao') || low.includes('situação')) {
     const res = tryAssign('status')
     if (res) return res
   }
 
-  // Free shipping
   if (low.includes('frete') || low.includes('shipping')) {
     const res = tryAssign('free_shipping')
     if (res) return res
   }
 
-  // Quantity / Stock
   if (low.includes('estoque') || low.includes('quantidade') || low.includes('qtd') || low === 'quantity' || low === 'stock') {
     const res = tryAssign('quantity')
     if (res) return res
   }
 
-  // Description
   if (low.includes('descri') || low.includes('description') || low.includes('apresentacao do produto')) {
     const res = tryAssign('description')
     if (res) return res
   }
 
-  // Compositions
   if (low.includes('composic') || low.includes('composição') || low.includes('formula') || low.includes('fórmula') || low.includes('composition')) {
     const res = tryAssign('compositions')
     if (res) return res
   }
 
-  // Indication
   if (low.includes('indicac') || low.includes('indicação') || low.includes('indication')) {
     const res = tryAssign('indication')
     if (res) return res
   }
 
-  // Contraindication
   if (low.includes('contraindicac') || low.includes('contraindicação') || low.includes('contraindication')) {
     const res = tryAssign('contraindication')
     if (res) return res
   }
 
-  // Benefits
   if (low.includes('benefic') || low.includes('benefício') || low.includes('benefit')) {
     const res = tryAssign('benefits')
     if (res) return res
   }
 
-  // Target audience
   if (low.includes('publico') || low.includes('público') || low.includes('target')) {
     const res = tryAssign('target_audience')
     if (res) return res
   }
 
-  // Intended form
   if (low.includes('forma') || low.includes('intended form') || low.includes('intended_form')) {
     const res = tryAssign('intended_form')
     if (res) return res
   }
 
-  // Intended presentation
   if (low.includes('apresenta') || low.includes('embalagem') || low.includes('intended presentation') || low.includes('intended_presentation')) {
     const res = tryAssign('intended_presentation')
     if (res) return res
   }
 
-  // Intended units per dose
   if (low.includes('dose') || low.includes('intended units per dose') || low.includes('intended_units_per_dose')) {
     const res = tryAssign('intended_units_per_dose')
     if (res) return res
   }
 
-  // Unit
   if (low === 'unit' || low === 'unidade' || low.includes('unid comercial')) {
     const res = tryAssign('unit')
     if (res) return res
   }
 
-  // Conversion factor
   if (low.includes('convers') || low.includes('fator')) {
     const res = tryAssign('tax_conversion_factor')
     if (res) return res
   }
 
-  // Tags
   if (low === 'tags' || low.includes('etiqueta')) {
     const res = tryAssign('tags')
     if (res) return res
   }
 
-  // Meta title
   if (low.includes('meta title') || low.includes('meta titulo') || low.includes('meta título')) {
     const res = tryAssign('meta_title')
     if (res) return res
   }
 
-  // Meta description
   if (low.includes('meta description') || low.includes('meta descricao') || low.includes('meta descrição')) {
     const res = tryAssign('meta_description')
     if (res) return res
@@ -357,17 +316,19 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
   // Dynamic Mapping items
   const [mappings, setMappings] = useState<ColumnMappingItem[]>([])
 
-  // Loading & Report State
-  const [isValidating, setIsValidating] = useState(false)
+  // Selection & Tab State
+  const [selectedRowIndices, setSelectedRowIndices] = useState<Set<number>>(new Set())
+  const [activeTab, setActiveTab] = useState<'preview' | 'mappings'>('preview')
   const [isApplying, setIsApplying] = useState(false)
-  const [report, setReport] = useState<ValidationReport | null>(null)
 
   const resetState = () => {
     setFile(null)
     setImportHeaders([])
     setRawRows([])
     setMappings([])
-    setReport(null)
+    setSelectedRowIndices(new Set())
+    setActiveTab('preview')
+    setIsApplying(false)
   }
 
   const handleClose = () => {
@@ -380,7 +341,6 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
     if (!selectedFile) return
 
     setFile(selectedFile)
-    setReport(null)
 
     try {
       const data = await selectedFile.arrayBuffer()
@@ -388,7 +348,6 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
       const firstSheetName = workbook.SheetNames[0]
       const worksheet = workbook.Sheets[firstSheetName]
 
-      // Extract headers
       const headerRows = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1 })
       const extractedHeaders = (headerRows[0] || []).map(h => String(h || '').trim()).filter(Boolean)
       const parsedRows = XLSX.utils.sheet_to_json<any>(worksheet, { defval: '' })
@@ -401,8 +360,9 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
 
       setImportHeaders(extractedHeaders)
       setRawRows(parsedRows)
+      setSelectedRowIndices(new Set(parsedRows.map((_, i) => i)))
 
-      // Create unique initial mappings: each system field is assigned AT MOST ONCE
+      // Create unique initial mappings
       const initialMappings: ColumnMappingItem[] = []
       const assignedFields = new Set<string>()
 
@@ -415,12 +375,13 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
           id: `header_${idx}_${Date.now()}`,
           excelHeader: header,
           systemField: detectedField,
-          enabled: true
+          enabled: true,
         })
       })
 
       setMappings(initialMappings)
-      toast.success(`${parsedRows.length} linha(s) e ${extractedHeaders.length} coluna(s) carregada(s).`)
+      setActiveTab('preview')
+      toast.success(`${parsedRows.length} produto(s) e ${extractedHeaders.length} coluna(s) carregados.`)
     } catch (err: any) {
       console.error(err)
       toast.error('Erro ao ler arquivo CSV/XLSX. Verifique se o formato é válido.')
@@ -433,83 +394,110 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
       id: `custom_${Date.now()}`,
       excelHeader: importHeaders[0] || '',
       systemField: '',
-      enabled: true
+      enabled: true,
     }
     setMappings(prev => [...prev, newRow])
   }
 
   const handleRemoveMappingRow = (id: string) => {
     setMappings(prev => prev.filter(m => m.id !== id))
-    setReport(null)
   }
 
   const handleUpdateMapping = (id: string, updates: Partial<ColumnMappingItem>) => {
     setMappings(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m))
-    setReport(null)
   }
 
-  const getMappedRows = () => {
-    return rawRows.map(row => {
-      const obj: Record<string, any> = {}
-      for (const mapItem of mappings) {
-        if (!mapItem.enabled || !mapItem.systemField || !mapItem.excelHeader) continue
-        if (row[mapItem.excelHeader] !== undefined) {
-          obj[mapItem.systemField] = row[mapItem.excelHeader]
-        }
+  const toggleRowSelection = (index: number) => {
+    setSelectedRowIndices(prev => {
+      const next = new Set(prev)
+      if (next.has(index)) {
+        next.delete(index)
+      } else {
+        next.add(index)
       }
-      return obj
+      return next
     })
   }
 
-  const handleValidate = async () => {
-    const hasCodigo = mappings.some(m => m.enabled && m.systemField === 'codigo_produto' && m.excelHeader)
-    if (!hasCodigo) {
-      toast.error('É necessário vincular uma coluna da planilha ao campo "Código do Produto / SKU (codigo_produto)".')
-      return
-    }
-
-    const mappedRows = getMappedRows()
-    if (mappedRows.length === 0) {
-      toast.error('Nenhum campo mapeado para validação.')
-      return
-    }
-
-    try {
-      setIsValidating(true)
-      const resReport = await productsService.validateImport(mappedRows)
-      setReport(resReport)
-
-      if (resReport.errors.length === 0) {
-        toast.success(`Validação concluída! Todas as ${resReport.totalRows} linhas são válidas.`)
-      } else {
-        toast.warning(`Atenção: ${resReport.errors.length} erro(s) de validação encontrado(s).`)
-      }
-    } catch (err: any) {
-      console.error(err)
-      toast.error(err.message || 'Erro ao validar planilha de produtos.')
-    } finally {
-      setIsValidating(false)
+  const toggleSelectAllRows = () => {
+    if (selectedRowIndices.size === rawRows.length) {
+      setSelectedRowIndices(new Set())
+    } else {
+      setSelectedRowIndices(new Set(rawRows.map((_, i) => i)))
     }
   }
 
+  const getMappedRowInfo = (row: any) => {
+    const obj: Record<string, any> = {}
+    let filledCount = 0
+    let activeMappingsCount = 0
+
+    for (const mapItem of mappings) {
+      if (!mapItem.enabled || !mapItem.systemField || !mapItem.excelHeader) continue
+      activeMappingsCount++
+      const val = row[mapItem.excelHeader]
+      if (val !== undefined && val !== null && String(val).trim() !== '') {
+        obj[mapItem.systemField] = val
+        filledCount++
+      }
+    }
+    return { obj, filledCount, activeMappingsCount }
+  }
+
+  const activeMappedColumnsCount = mappings.filter(m => m.enabled && m.systemField && m.excelHeader).length
+
   const handleApplyImport = async () => {
-    const mappedRows = getMappedRows()
-    if (mappedRows.length === 0) {
-      toast.error('Nenhuma linha para importar.')
+    if (!file || rawRows.length === 0) {
+      toast.error('Nenhum arquivo ou produto para importar.')
       return
     }
 
-    if (!report) {
-      toast.error('Gere o relatório de validação antes de aplicar a importação.')
+    if (selectedRowIndices.size === 0) {
+      toast.error('Selecione pelo menos um produto na lista para importar.')
+      return
+    }
+
+    const hasCodigoOrNome = mappings.some(
+      m => m.enabled && (m.systemField === 'codigo_produto' || m.systemField === 'nome_produto') && m.excelHeader
+    )
+    if (!hasCodigoOrNome) {
+      toast.error('Mapeie pelo menos a coluna "Código do Produto / SKU" ou "Nome do Produto".')
+      setActiveTab('mappings')
+      return
+    }
+
+    const selectedRowsToImport: any[] = []
+    const validationErrors: string[] = []
+
+    const sortedIndices = Array.from(selectedRowIndices).sort((a, b) => a - b)
+    for (const idx of sortedIndices) {
+      const rawRow = rawRows[idx]
+      const { obj } = getMappedRowInfo(rawRow)
+
+      const code = String(obj.codigo_produto || obj.SKU || obj.id || obj.ID || '').trim()
+      const productName = String(obj.nome_produto || '').trim()
+
+      if (!code && !productName) {
+        validationErrors.push(`Linha ${idx + 2}: Produto sem Código (SKU) e sem Nome.`)
+      } else {
+        selectedRowsToImport.push(obj)
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      toast.error(
+        validationErrors[0] +
+        (validationErrors.length > 1 ? ` (Mais ${validationErrors.length - 1} erro(s) em outras linhas)` : '')
+      )
       return
     }
 
     try {
       setIsApplying(true)
-      const result = await productsService.applyImport(mappedRows, {
+      const result = await productsService.applyImport(selectedRowsToImport, {
         allowClearEmpty: false,
         partialImport: true,
-        fileName: file?.name || 'import.xlsx',
+        fileName: file.name,
       })
 
       const created = result.createdCount || 0
@@ -526,7 +514,7 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
       handleClose()
     } catch (err: any) {
       console.error(err)
-      toast.error(err.message || 'Erro ao aplicar importação.')
+      toast.error(err.message || 'Erro ao aplicar importação de produtos.')
     } finally {
       setIsApplying(false)
     }
@@ -549,7 +537,6 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
     }
   }
 
-  // Set of system fields currently assigned in active mappings
   const currentlyAssignedSystemFields = new Set(
     mappings.filter(m => m.enabled && m.systemField).map(m => m.systemField)
   )
@@ -560,7 +547,7 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
       onClose={handleClose}
       title="Importar Planilha de Produtos"
     >
-      <div className="space-y-5 text-sm text-gray-700 dark:text-gray-200">
+      <div className="space-y-4 text-sm text-gray-700 dark:text-gray-200">
 
         {/* 1. Header & Template Download (Shown ONLY when NO file is uploaded) */}
         {!file && (
@@ -568,7 +555,7 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
             <div>
               <h4 className="font-semibold text-blue-900 dark:text-blue-200 text-xs">Modelo Oficial XLSX</h4>
               <p className="text-[11px] text-blue-700 dark:text-blue-300">
-                Baixe o modelo com todos os cabeçalhos fiscais para Notaas NF-e 55.
+                Baixe o modelo com todos os cabeçalhos fiscais para NF-e 55.
               </p>
             </div>
             <button
@@ -603,12 +590,14 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
             </label>
           </div>
         ) : (
-          <div className="flex items-center justify-between bg-green-50/70 dark:bg-green-950/30 p-3 rounded-xl border border-green-200 dark:border-green-800">
-            <div className="flex items-center gap-2 min-w-0">
-              <FileSpreadsheet size={20} className="text-green-600 shrink-0" />
+          <div className="flex items-center justify-between bg-indigo-50/70 dark:bg-indigo-950/30 p-3 rounded-xl border border-indigo-200 dark:border-indigo-800">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <FileSpreadsheet size={22} className="text-indigo-600 shrink-0" />
               <div className="min-w-0">
-                <p className="font-semibold text-green-900 dark:text-green-200 text-xs truncate">{file.name}</p>
-                <p className="text-[11px] text-green-700 dark:text-green-400">{rawRows.length} linha(s) • {importHeaders.length} coluna(s) no arquivo</p>
+                <p className="font-bold text-indigo-900 dark:text-indigo-200 text-xs truncate">{file.name}</p>
+                <p className="text-[11px] text-indigo-700 dark:text-indigo-300">
+                  <b>{rawRows.length}</b> produto(s) no arquivo • <b>{activeMappedColumnsCount}</b> coluna(s) identificada(s)
+                </p>
               </div>
             </div>
             <label
@@ -627,13 +616,145 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
           </div>
         )}
 
-        {/* 3. Dynamic Column Mappings Section */}
+        {/* 3. Section Tabs (Preview Products vs Column Mappings) */}
         {file && (
+          <div className="flex border-b border-gray-200 dark:border-gray-700 gap-4 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setActiveTab('preview')}
+              className={`pb-2 flex items-center gap-1.5 border-b-2 transition-colors ${activeTab === 'preview'
+                  ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 font-bold'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+            >
+              <Package size={15} />
+              Produtos a Importar ({selectedRowIndices.size}/{rawRows.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('mappings')}
+              className={`pb-2 flex items-center gap-1.5 border-b-2 transition-colors ${activeTab === 'mappings'
+                  ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400 font-bold'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+            >
+              <Columns size={15} />
+              Mapeamento de Colunas ({activeMappedColumnsCount})
+            </button>
+          </div>
+        )}
+
+        {/* 4. Tab 1: Products Preview Table */}
+        {file && activeTab === 'preview' && (
+          <div className="space-y-2.5">
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleSelectAllRows}
+                  className="flex items-center gap-1.5 font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  {selectedRowIndices.size === rawRows.length ? (
+                    <CheckSquare size={16} className="text-indigo-600 dark:text-indigo-400" />
+                  ) : (
+                    <Square size={16} className="text-gray-400" />
+                  )}
+                  {selectedRowIndices.size === rawRows.length ? 'Desmarcar Todos' : 'Selecionar Todos'} ({rawRows.length})
+                </button>
+              </div>
+
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                Selecione os produtos que deseja enviar para o banco de dados
+              </span>
+            </div>
+
+            <div className="max-h-[44vh] overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl scrollbar-thin">
+              <table className="w-full text-left text-xs divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-100 dark:bg-gray-800/80 sticky top-0 font-bold text-gray-700 dark:text-gray-300 z-10">
+                  <tr>
+                    <th className="px-3 py-2.5 w-10 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedRowIndices.size === rawRows.length && rawRows.length > 0}
+                        onChange={toggleSelectAllRows}
+                        className="h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                      />
+                    </th>
+                    <th className="px-3 py-2.5 w-14 text-gray-500">Linha</th>
+                    <th className="px-3 py-2.5 font-bold">Código / SKU</th>
+                    <th className="px-3 py-2.5 font-bold">Nome do Produto</th>
+                    <th className="px-3 py-2.5 font-bold">Preço</th>
+                    <th className="px-3 py-2.5 font-bold text-center">Colunas Identificadas</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-800 bg-white dark:bg-gray-900">
+                  {rawRows.map((row, idx) => {
+                    const isSelected = selectedRowIndices.has(idx)
+                    const { obj, filledCount, activeMappingsCount } = getMappedRowInfo(row)
+                    const codeDisplay = obj.codigo_produto || obj.sku || obj.SKU || obj.id || obj.ID || ''
+                    const nameDisplay = obj.nome_produto || obj.name || ''
+                    const priceDisplay = obj.price != null ? `R$ ${obj.price}` : '-'
+
+                    return (
+                      <tr
+                        key={idx}
+                        onClick={() => toggleRowSelection(idx)}
+                        className={`cursor-pointer transition-colors ${isSelected
+                            ? 'bg-indigo-50/40 dark:bg-indigo-950/20 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/40'
+                            : 'opacity-60 hover:opacity-100 bg-gray-50/30 dark:bg-gray-900/30'
+                          }`}
+                      >
+                        <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleRowSelection(idx)}
+                            className="h-4 w-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                          />
+                        </td>
+                        <td className="px-3 py-2 font-mono text-gray-400 text-[11px]">#{idx + 2}</td>
+                        <td className="px-3 py-2 font-mono font-semibold text-indigo-600 dark:text-indigo-400">
+                          {codeDisplay || <span className="text-amber-500 italic text-[11px]">Auto-gerar SKU</span>}
+                        </td>
+                        <td className="px-3 py-2 font-medium text-gray-900 dark:text-gray-100 max-w-[200px] truncate">
+                          {nameDisplay || <span className="text-red-500 italic text-[11px]">Sem nome</span>}
+                        </td>
+                        <td className="px-3 py-2 font-medium text-gray-700 dark:text-gray-300">
+                          {priceDisplay}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                            <Sparkles size={11} />
+                            {filledCount} de {activeMappingsCount} identificadas
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* 5. Tab 2: Column Mappings Section */}
+        {file && activeTab === 'mappings' && (
           <div className="space-y-3">
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
-              <Sparkles size={14} className="text-indigo-600 dark:text-indigo-400" />
-              Mapeamento das Colunas da Planilha ({mappings.length})
-            </label>
+            <div className="flex items-center justify-between text-xs">
+              <label className="font-bold uppercase tracking-wider text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+                <Sparkles size={14} className="text-indigo-600 dark:text-indigo-400" />
+                Mapeamento das Colunas da Planilha ({mappings.length})
+              </label>
+
+              <button
+                type="button"
+                onClick={handleAddMappingRow}
+                className="flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+              >
+                <Plus size={13} />
+                Adicionar Novo Mapeamento
+              </button>
+            </div>
 
             <div className="space-y-2.5 max-h-[42vh] overflow-y-auto pr-1 p-1 scrollbar-thin">
               {mappings.map(mapItem => {
@@ -723,86 +844,16 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
                   </div>
                 )
               })}
-
-              {/* Add New Mapping Button at the Bottom of the List */}
-              <div className="pt-1 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleAddMappingRow}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800 rounded-lg transition-all"
-                >
-                  <Plus size={13} />
-                  Adicionar Novo Mapeamento
-                </button>
-              </div>
             </div>
           </div>
         )}
 
-        {/* 4. Validation Report Table */}
-        {report && (
-          <div className="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between">
-              <h4 className="font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2 text-xs">
-                Relatório de Validação Pré-Importação
-                {report.errors.length === 0 ? (
-                  <span className="flex items-center gap-1 text-[11px] font-medium text-green-700 bg-green-50 dark:bg-green-950/40 px-2 py-0.5 rounded-md border border-green-300 dark:border-green-800">
-                    <CheckCircle size={13} /> Planilha 100% Válida
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1 text-[11px] font-medium text-amber-700 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-300 dark:border-amber-800">
-                    <AlertTriangle size={13} /> {report.errors.length} Erro(s)
-                  </span>
-                )}
-              </h4>
-              <div className="text-[11px] text-gray-500 dark:text-gray-400">
-                Total: <b>{report.totalRows}</b> | Válidos: <b>{report.validCount}</b> | Erros: <b>{report.invalidCount}</b>
-              </div>
-            </div>
-
-            {report.duplicateCodes.length > 0 && (
-              <div className="p-2.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-800 dark:text-red-200">
-                <b>Atenção:</b> Códigos de produto duplicados detectados no mesmo arquivo: {report.duplicateCodes.join(', ')}
-              </div>
-            )}
-
-            {report.errors.length > 0 && (
-              <div className="space-y-2">
-                <div className="max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 text-xs">
-                    <thead className="bg-gray-100 dark:bg-gray-800 sticky top-0">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Linha</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Código Produto</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Campo</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Valor Inválido</th>
-                        <th className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300">Motivo do Erro</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-800 bg-white dark:bg-gray-900">
-                      {report.errors.map((errItem, idx) => (
-                        <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                          <td className="px-3 py-2 font-bold text-gray-900 dark:text-gray-100">{errItem.rowNumber}</td>
-                          <td className="px-3 py-2 font-mono text-primary-600 dark:text-primary-400">{errItem.productCode}</td>
-                          <td className="px-3 py-2 font-semibold text-gray-800 dark:text-gray-200">{errItem.field}</td>
-                          <td className="px-3 py-2 font-mono text-red-600 dark:text-red-400">{String(errItem.invalidValue ?? '')}</td>
-                          <td className="px-3 py-2 text-gray-600 dark:text-gray-300">{errItem.reason}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 5. Footer Actions */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        {/* 6. Footer Actions */}
+        <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-200 dark:border-gray-700">
           <button
             type="button"
             onClick={handleClose}
-            disabled={isValidating || isApplying}
+            disabled={isApplying}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
           >
             Cancelar
@@ -811,24 +862,12 @@ export default function ProductImportModal({ isOpen, onClose, onSuccess }: Produ
           {file && (
             <button
               type="button"
-              onClick={handleValidate}
-              disabled={isValidating || isApplying}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-800 dark:text-gray-100 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 rounded-lg transition-colors"
-            >
-              <RefreshCw size={15} className={isValidating ? 'animate-spin' : ''} />
-              {isValidating ? 'Validando Planilha...' : 'Validar Planilha'}
-            </button>
-          )}
-
-          {file && (
-            <button
-              type="button"
               onClick={handleApplyImport}
-              disabled={!report || isApplying || isValidating}
-              className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-lg shadow-sm transition-colors"
+              disabled={isApplying || selectedRowIndices.size === 0}
+              className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-lg shadow-sm transition-colors cursor-pointer"
             >
               <Upload size={16} />
-              {isApplying ? 'Importando Produtos...' : 'Aplicar Importação'}
+              {isApplying ? 'Importando Produtos...' : `Importar ${selectedRowIndices.size} Produto(s)`}
             </button>
           )}
         </div>
