@@ -11,6 +11,7 @@ import { getImageUrl, getResponsiveImageSrcSet } from '../utils/imageUrl'
 import { HorizontalScrollContainer } from '../components/HorizontalScrollContainer'
 import { generateProductUrl } from '../utils/productUrl'
 import DeferredProductImage from '../components/DeferredProductImage'
+import SEO from '../components/SEO'
 
 interface DecodedBannerImageProps {
   src: string
@@ -488,8 +489,32 @@ export default function Home() {
     }, 1000) // Retoma auto-rotate após 1 segundo
   }
 
+  const homeJsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      '@id': 'https://kapsu.com.br/#organization',
+      'name': 'Kapsu',
+      'url': 'https://kapsu.com.br',
+      'logo': 'https://kapsu.com.br/logo.png',
+      'description': 'Suplementos alimentares, vitaminas, skincare, cosméticos e cuidados pessoais.',
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      '@id': 'https://kapsu.com.br/#website',
+      'url': 'https://kapsu.com.br',
+      'name': 'Kapsu',
+      'description': 'Conheça a Kapsu: suplementos alimentares, vitaminas, skincare, cosméticos e cuidados pessoais. Compre online em kapsu.com.br.',
+      'publisher': {
+        '@id': 'https://kapsu.com.br/#organization',
+      },
+    },
+  ]
+
   return (
     <div className="min-h-screen bg-palette-light dark:bg-gray-950 transition-colors duration-300">
+      <SEO jsonLd={homeJsonLd} />
       {banners === null ? (
         <section className="relative overflow-hidden w-full aspect-[4/3] sm:aspect-[12/5] bg-gray-100 dark:bg-gray-800 animate-pulse" />
       ) : banners.length > 0 ? (
@@ -625,7 +650,7 @@ export default function Home() {
                 Cuidados que combinam com você
               </h1>
               <p className="mt-2 sm:mt-3 text-sm sm:text-base text-gray-700 dark:text-gray-200">
-                Produtos manipulados e prontos, com qualidade e praticidade.
+                Suplementos, vitaminas, skincare e cuidados pessoais.
               </p>
               <div className="mt-4 sm:mt-6 flex items-center justify-center gap-3">
                 <Link
@@ -703,7 +728,7 @@ export default function Home() {
                           {/* Fixed-height Description */}
                           <div className="h-[30px] sm:h-[34px] overflow-hidden mb-2">
                             <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
-                              {product.description || 'Fórmula manipulada com alto padrão de qualidade e eficácia.'}
+                              {product.description || 'Produto de alta qualidade para o seu bem-estar.'}
                             </p>
                           </div>
 

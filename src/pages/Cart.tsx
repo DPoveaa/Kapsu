@@ -23,6 +23,7 @@ import CartItemCard from '../components/Checkout/CartItemCard'
 import CheckoutConfirmation from '../components/Checkout/CheckoutConfirmation'
 import { CheckoutStep, PaymentMethod, getStepIndex, parseCheckoutStep } from '../types/checkout'
 import { CreditCardFormData, validateCreditCardForm } from '../utils/cardValidation'
+import SEO from '../components/SEO'
 import { toast } from '../utils/toast'
 import {
   clearPendingCheckoutOrderId,
@@ -3688,6 +3689,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-12">
+      <SEO title="Carrinho | Kapsu" noindex={true} />
       <style>{`
         @keyframes truckBounce {
           0%, 100% { transform: translateY(-1.5px); }

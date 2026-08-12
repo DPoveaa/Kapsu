@@ -320,7 +320,7 @@ export default function ManageReviews() {
                 value={formData.comment}
                 onChange={(e) => setFormData(prev => ({ ...prev, comment: e.target.value }))}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                placeholder="Ex: Excelente qualidade! Os medicamentos manipulados são perfeitos..."
+                placeholder="Ex: Excelente qualidade! Os suplementos e produtos são perfeitos..."
                 rows={4}
               />
             </div>

@@ -16,6 +16,7 @@ import { env } from '../config/env'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import { animateAddToCart } from '../utils/cartFlyAnimation'
 import { generateProductUrl, parseProductId } from '../utils/productUrl'
+import SEO from '../components/SEO'
 
 interface ProductDetails {
   id: string
@@ -496,8 +497,76 @@ export default function ProductDetail() {
     ? Number((reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews).toFixed(1))
     : 0
 
+  // Build dynamic SEO information using real product data
+  const productPrice = product.promo_price ? Number(product.promo_price) : Number(product.price)
+  const productTitle = `${product.name} | Kapsu`
+  const rawDescription = product.description || product.indication || product.compositions || ''
+  const cleanDescriptionExcerpt = rawDescription
+    ? rawDescription.replace(/<[^>]*>?/gm, '').slice(0, 140).trim()
+    : 'Veja composição, modo de uso e compre online'
+  const productDescription = `Conheça ${product.name} na Kapsu. ${cleanDescriptionExcerpt}. Compre online no site oficial da Kapsu.`
+  const productCanonical = generateProductUrl(product)
+  const firstCategory = product.category ? product.category.split(',')[0].trim() : 'Produtos'
+
+  const productJsonLd: any = {
+    '@context': 'https://schema.org/',
+    '@type': 'Product',
+    name: product.name,
+    description: product.description || product.indication || `Conheça ${product.name} na Kapsu.`,
+    image: productImages.filter((img: string) => img && img !== PRODUCT_IMAGE_FALLBACK),
+    brand: {
+      '@type': 'Brand',
+      name: 'Kapsu',
+    },
+    url: `https://kapsu.com.br${productCanonical}`,
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'BRL',
+      price: productPrice.toFixed(2),
+      availability: product.active ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      url: `https://kapsu.com.br${productCanonical}`,
+    },
+  }
+
+  if (product.sku) {
+    productJsonLd.sku = product.sku
+  }
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Início',
+        item: 'https://kapsu.com.br/',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: firstCategory,
+        item: `https://kapsu.com.br/produtos?category=${encodeURIComponent(firstCategory)}`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: product.name,
+        item: `https://kapsu.com.br${productCanonical}`,
+      },
+    ],
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gradient-to-br dark:from-[#0A0F0D] dark:via-[#0E131F] dark:to-[#0A0F0D] pb-16 text-gray-700 dark:text-gray-300">
+      <SEO
+        title={productTitle}
+        description={productDescription}
+        canonical={productCanonical}
+        ogType="product"
+        ogImage={productImages[0] || undefined}
+        jsonLd={[productJsonLd, breadcrumbJsonLd]}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
         {/* Voltar button & Breadcrumbs */}

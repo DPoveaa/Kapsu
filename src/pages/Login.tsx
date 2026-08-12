@@ -12,6 +12,7 @@ import { env } from '../config/env'
 import { ensureGoogleIdentityScript } from '../utils/googleIdentity'
 import LegalAcceptanceCheckbox from '../components/legal/LegalAcceptanceCheckbox'
 import { getLegalAcceptancePayload } from '../content/legal'
+import SEO from '../components/SEO'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -555,6 +556,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen lg:h-screen flex relative lg:overflow-hidden bg-white dark:bg-gray-900">
+      <SEO title={isLogin ? 'Login | Kapsu' : 'Cadastro | Kapsu'} noindex={true} />
       
       {/* Lado Esquerdo - Formulário de Login / Cadastro */}
       <div className="w-full lg:w-[42%] xl:w-[38%] lg:h-screen lg:overflow-y-auto flex items-center justify-center p-6 sm:p-10 lg:p-12 xl:p-16 relative z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md scrollbar-hide">

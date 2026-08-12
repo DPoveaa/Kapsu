@@ -1,6 +1,6 @@
-# Kapsu - Marketplace de Medicamentos Manipulados
+# Kapsu - E-commerce de Suplementos, Skincare e Cuidados Pessoais
 
-Marketplace focado em medicamentos manipulados, permitindo tanto a venda de produtos pré-prontos quanto a personalização de medicamentos sob demanda.
+Plataforma e-commerce para comercialização de suplementos alimentares, vitaminas, skincare, cosméticos e produtos de cuidados pessoais.
 
 ## 🚀 Tecnologias
 

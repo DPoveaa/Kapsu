@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { ADMIN_AI_CENTER_PATH } from '../constants/adminRoutes'
 import { recordAdminAccess } from '../utils/recentAdminAccess'
+import SEO from './SEO'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -142,6 +143,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="flex h-full min-h-0 w-full bg-gray-50 dark:bg-gray-900 overflow-hidden relative">
+      <SEO title="Painel Admin | Kapsu" noindex={true} />
       {/* Mobile Menu Button - só aparece em telas pequenas se não estiver aberto */}
       {!mobileMenuOpen && (
         <div className="md:hidden absolute top-4 left-4 z-20">

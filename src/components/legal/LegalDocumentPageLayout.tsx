@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, BookOpen, Clock } from 'lucide-react'
 import type { LegalDocument } from '../../content/legal/types'
 import LegalDocumentContent from './LegalDocumentContent'
+import SEO from '../SEO'
 
 interface LegalDocumentPageLayoutProps {
   document: LegalDocument
@@ -171,8 +172,15 @@ export default function LegalDocumentPageLayout({
     window.history.pushState(null, '', `#${sectionId}`)
   }
 
+  const docSlug = doc.id === 'privacy-policy' ? 'politica-de-privacidade' : doc.id === 'terms-of-service' ? 'termos-de-servico' : 'informacoes-farmaceuticas'
+
   return (
     <div className="bg-gray-50 dark:bg-gray-950 min-h-screen">
+      <SEO
+        title={`${doc.title} | Kapsu`}
+        description={`Leia os ${doc.title.toLowerCase()} da Kapsu. Informações e conformidade.`}
+        canonical={`https://kapsu.com.br/${docSlug}`}
+      />
       {/* Progress bar de leitura */}
       <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-gray-200 dark:bg-gray-800">
         <div

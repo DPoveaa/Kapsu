@@ -1,4 +1,4 @@
-﻿import { KAPSU_COMPANY } from './company-info'
+import { KAPSU_COMPANY } from './company-info'
 import type { LegalDocument } from './types'
 import {
   CURRENT_PRIVACY_POLICY_VERSION,
@@ -18,7 +18,7 @@ export const privacyPolicyDocument: LegalDocument = {
       id: 'introducao',
       title: '1. Introdução',
       paragraphs: [
-        `Esta Política de Privacidade descreve como a ${KAPSU_COMPANY.brandName} (CNPJ ${KAPSU_COMPANY.cnpj}), operadora da plataforma digital de medicamentos manipulados, coleta, utiliza, armazena, compartilha e protege os dados pessoais de visitantes, clientes, fornecedores parceiros e usuários administrativos.`,
+        `Esta Política de Privacidade descreve como a ${KAPSU_COMPANY.brandName} (CNPJ ${KAPSU_COMPANY.cnpj}), operadora da plataforma e-commerce de suplementos alimentares, vitaminas, skincare, cosméticos e cuidados pessoais, coleta, utiliza, armazena, compartilha e protege os dados pessoais de visitantes, clientes, fornecedores parceiros e usuários administrativos.`,
         'Esta política foi elaborada em conformidade com a Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018 — LGPD) e com boas práticas internacionais de privacidade e transparência.',
         'Ao utilizar nosso site, aplicativo web, assistente virtual (Kaia), criar uma conta, realizar compras ou interagir com nossos canais, você declara ter ciência desta Política. O cadastro exige aceite expresso desta Política e dos Termos de Serviço.',
       ],

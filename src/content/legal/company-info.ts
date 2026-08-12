@@ -11,7 +11,7 @@ export const KAPSU_COMPANY = {
   website: 'https://kapsu.com.br', // REVISAR: confirmar domínio oficial de produção
   address: 'São Paulo, SP, Brasil', // REVISAR: inserir endereço completo da sede
   businessDescription:
-    'plataforma de comércio eletrônico especializada na comercialização de medicamentos manipulados e produtos correlatos',
+    'plataforma de comércio eletrônico especializada na comercialização de suplementos alimentares, vitaminas, skincare, cosméticos e cuidados pessoais',
   paymentProcessor: 'Asaas Gestão Financeira Instituição de Pagamento S.A.',
   emailProvider: 'Resend',
 } as const

@@ -33,10 +33,10 @@ export const termsOfServiceDocument: LegalDocument = {
         'Plataforma: site e aplicação web da Kapsu, incluindo loja, carrinho, checkout, área de perfil, assistente Kaia e integrações acessíveis ao usuário.',
         'Usuário/Cliente: pessoa física cadastrada que utiliza a plataforma para comprar produtos.',
         'Conta: registro individual associado a e-mail, podendo incluir login tradicional (senha) e/ou login social (Google).',
-        'Produtos: medicamentos manipulados e itens correlatos disponibilizados no catálogo.',
+        'Produtos: suplementos alimentares, vitaminas, skincare, cosméticos e cuidados pessoais disponibilizados no catálogo.',
         'Pedido: solicitação de compra formalizada após confirmação de pagamento ou criação administrativa.',
-        'Área Administrativa: painel restrito a usuários autorizados (administradores e farmacêuticos) para gestão de catálogo, pedidos, promoções, integrações e relatórios.',
-        'Fornecedor Parceiro: terceiro integrado via Google Sheets ou link seguro de pedidos para produção/manipulação.',
+        'Área Administrativa: painel restrito a usuários autorizados (administradores e gestores) para gestão de catálogo, pedidos, promoções, integrações e relatórios.',
+        'Fornecedor Parceiro: terceiro integrado via Google Sheets ou link seguro de pedidos para produção/fornecimento.',
       ],
     },
     {
@@ -62,7 +62,7 @@ export const termsOfServiceDocument: LegalDocument = {
       id: 'produtos',
       title: '5. Produtos e Informações',
       paragraphs: [
-        'Os produtos comercializados são medicamentos manipulados e correlatos, sujeitos à legislação sanitária brasileira. As informações de composição, indicação, contraindicação e preço são exibidas nas páginas de produto.',
+        'Os produtos comercializados são suplementos alimentares, vitaminas, skincare, cosméticos e produtos de cuidados pessoais. As informações de composição, indicação, contraindicação e preço são exibidas nas páginas de produto.',
         'Imagens e descrições têm caráter informativo. Em caso de divergência, prevalece a especificação do produto no momento da compra e a orientação profissional de saúde quando aplicável.',
         'A disponibilidade de produtos pode variar conforme estoque, sincronização com fornecedores (Google Sheets) e atualizações de catálogo. A Kapsu reserva-se o direito de limitar quantidades, recusar pedidos ou descontinuar produtos.',
         'Produtos exibidos no Google Merchant Center e em canais de busca seguem as mesmas condições da loja, sujeitas à disponibilidade no momento da compra.',
@@ -101,7 +101,7 @@ export const termsOfServiceDocument: LegalDocument = {
       title: '9. Assistente Virtual Kaia',
       paragraphs: [
         'A Kapsu disponibiliza o assistente virtual Kaia para orientação sobre produtos, navegação na loja e dúvidas comerciais. As respostas são geradas com auxílio de inteligência artificial e têm caráter informativo.',
-        'O Kaia não substitui consulta médica, farmacêutica ou diagnóstico profissional. Decisões sobre uso de medicamentos devem ser tomadas com orientação de profissional de saúde habilitado.',
+        'O Kaia não substitui consulta médica ou orientação profissional. Decisões sobre o uso de suplementos e cuidados de saúde devem ser tomadas de forma consciente e com acompanhamento profissional quando apropriado.',
         'Conversas podem ser registradas para melhoria do serviço, suporte e segurança, conforme a Política de Privacidade.',
       ],
     },
@@ -142,8 +142,8 @@ export const termsOfServiceDocument: LegalDocument = {
       id: 'cancelamentos-bloqueios',
       title: '13. Cancelamentos, Reembolsos e Bloqueios',
       paragraphs: [
-        'Pedidos podem ser cancelados antes do início da manipulação/produção, conforme política comercial e legislação aplicável ao comércio eletrônico e produtos personalizados/manipulados.',
-        'Medicamentos manipulados sob prescrição ou personalização podem ter restrições adicionais de cancelamento e devolução, nos termos da legislação sanitária e do Código de Defesa do Consumidor.',
+        'Pedidos podem ser cancelados antes do envio, conforme política comercial e legislação aplicável ao comércio eletrônico.',
+        'Produtos personalizados ou em produção sob demanda podem ter condições específicas de cancelamento e devolução, nos termos do Código de Defesa do Consumidor.',
         'A Kapsu pode cancelar pedidos em caso de indisponibilidade de insumos, suspeita de fraude, erro manifesto de preço ou impossibilidade de entrega.',
         'Contas podem ser bloqueadas ou encerradas por violação destes Termos, inadimplência recorrente ou determinação legal, sem prejuízo de medidas cabíveis.',
       ],

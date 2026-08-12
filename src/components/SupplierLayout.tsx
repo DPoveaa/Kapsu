@@ -20,6 +20,7 @@ import { supplierService, SupplierProfileResponse } from '../services/supplier.s
 import AnimatedLogo from './AnimatedLogo';
 import KapsuThemeControl from './theme-toggle/KapsuThemeControl';
 import { useAuth } from '../context/AuthContext';
+import SEO from './SEO';
 
 // ---- Toast helpers ----
 type ToastType = 'success' | 'error' | 'info';
@@ -323,6 +324,7 @@ export default function SupplierLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
+      <SEO title="Portal do Fornecedor | Kapsu" noindex={true} />
 
       {/* ── Sidebar Desktop ─────────────────────────────────────────────────── */}
       <aside

@@ -8,6 +8,7 @@ import ProductCard from '../components/ProductCard'
 import { Product } from '../types'
 import { productsService } from '../services/products.service'
 import { searchProducts } from '../utils/productSearch'
+import SEO from '../components/SEO'
 
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
@@ -413,9 +414,57 @@ export default function Products() {
     </div>
   )
 
+  // Dynamic SEO metadata calculation for category and product catalog routes
+  const primaryCategory = selectedCategories.length === 1 ? selectedCategories[0] : null
+  const seoTitle = primaryCategory
+    ? `${primaryCategory} | Kapsu`
+    : isPromoOnly
+    ? 'Produtos em Promoção | Kapsu'
+    : searchTerm
+    ? `Busca por "${searchTerm}" | Kapsu`
+    : 'Produtos | Kapsu'
+
+  const seoDescription = primaryCategory
+    ? `Confira a linha de ${primaryCategory} na Kapsu. Encontre suplementos, vitaminas e produtos de alta qualidade para o seu dia a dia com entrega para todo o Brasil.`
+    : 'Confira a linha completa de suplementos alimentares, vitaminas, skincare, cosméticos e cuidados pessoais da Kapsu. Compre online.'
+
+  const pageHeadingTitle = primaryCategory || (isPromoOnly ? 'Produtos em Promoção' : searchTerm ? `Resultados para "${searchTerm}"` : 'Todos os Produtos')
+
+  const categoryCanonical = primaryCategory
+    ? `https://kapsu.com.br/produtos?category=${encodeURIComponent(primaryCategory)}`
+    : 'https://kapsu.com.br/produtos'
+
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Início',
+        item: 'https://kapsu.com.br/',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: primaryCategory ? primaryCategory : 'Produtos',
+        item: categoryCanonical,
+      },
+    ],
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <SEO
+        title={seoTitle}
+        description={seoDescription}
+        canonical={categoryCanonical}
+        jsonLd={breadcrumbJsonLd}
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">
+          {pageHeadingTitle}
+        </h1>
         
         {/* Header section with sorting/filter buttons */}
         <div className="mb-4 flex flex-row items-center justify-between sm:justify-end gap-3">
@@ -457,7 +506,7 @@ export default function Products() {
           <div className="flex-1 min-w-0">
             {isPromoOnly && (
               <div className="mb-4 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/40 rounded-xl flex items-center justify-between">
-                <h1 className="text-sm font-bold text-green-800 dark:text-green-300">Produtos em promoção</h1>
+                <span className="text-sm font-bold text-green-800 dark:text-green-300">Produtos em promoção</span>
                 <button onClick={handleClearFilters} className="text-xs text-green-700 dark:text-green-400 hover:underline font-semibold cursor-pointer">Limpar filtro</button>
               </div>
             )}
@@ -619,7 +668,7 @@ export default function Products() {
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">Nenhum produto correspondente</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 max-w-sm mx-auto">
-                  Não encontramos nenhum item manipulado ou fórmula correspondente aos filtros selecionados. Tente expandir sua busca.
+                  Não encontramos nenhum produto correspondente aos filtros selecionados. Tente expandir sua busca.
                 </p>
                 <button
                   onClick={handleClearFilters}

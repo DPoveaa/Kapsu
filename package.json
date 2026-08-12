@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "start": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run sitemap && tsc && vite build",
+    "sitemap": "node scripts/generate-sitemap.mjs",
     "preview": "vite preview",
     "update": "git pull && npm install && npm run build",
     "test:kaia-contract": "node scripts/kaia-message-payload-contract-check.mjs",

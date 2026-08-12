@@ -18,6 +18,7 @@ import { confirm, toast } from '../utils/toast'
 import { getOrderStatusLabel, getOrderStatusBadgeClass, isInvoiceEligibleStatus } from '../utils/orderStatus'
 import logoMercadoLivre from '../images/ml_logo.webp'
 import { realtimeEventsClient } from '../services/realtime-events.client'
+import SEO from '../components/SEO'
 
 type ProfileSection = 'info' | 'password' | 'image' | 'addresses' | 'orders' | 'favorites' | 'reviews' | 'notifications' | 'help' | 'connected-accounts' | null
 
@@ -1044,6 +1045,7 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-6 sm:py-10 px-4 sm:px-6 lg:px-8 transition-colors duration-300">
+      <SEO title="Minha Conta | Kapsu" noindex={true} />
       <div className="max-w-6xl mx-auto">
 
         {/* ── Cabeçalho / Profile Banner ─────────────────────────── */}

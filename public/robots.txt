@@ -1,0 +1,26 @@
+User-agent: *
+Allow: /
+Allow: /produtos
+Allow: /produtos/*
+Allow: /politica-de-privacidade
+Allow: /termos-de-servico
+Allow: /informacoes-farmaceuticas
+
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /supplier
+Disallow: /supplier/*
+Disallow: /carrinho
+Disallow: /carrinho/*
+Disallow: /checkout
+Disallow: /checkout/*
+Disallow: /login
+Disallow: /cadastro
+Disallow: /recuperar-senha
+Disallow: /perfil
+Disallow: /perfil/*
+Disallow: /payment-success
+Disallow: /payment-failure
+Disallow: /fornecedor/*
+
+Sitemap: https://kapsu.com.br/sitemap.xml

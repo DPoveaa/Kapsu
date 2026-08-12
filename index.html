@@ -1,59 +1,79 @@
 <!doctype html>
 <html lang="pt-BR">
-  <head>
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18234729882"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
 
-      gtag('config', 'AW-18234729882');
-    </script>
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18234729882"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
 
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="google-site-verification" content="Rzw_QPLYEBN0zrzDEtieO42mtsonRN10iXc39HWefnk" />
-    <title>Kapsu - Medicamentos Manipulados</title>
-    <meta name="description" content="Kapsu - Medicamentos manipulados com qualidade. Compre online com segurança e praticidade." />
+    gtag('config', 'AW-18234729882');
+  </script>
 
-    <!-- Favicons: Google Search exige ícone múltiplo de 48px (ex.: 96x96) -->
-    <link rel="icon" href="/favicon.ico" sizes="48x48" />
-    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-    <link rel="manifest" href="/site.webmanifest" />
-    <meta name="theme-color" content="#ffffff" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="google-site-verification" content="Rzw_QPLYEBN0zrzDEtieO42mtsonRN10iXc39HWefnk" />
+  <title>Kapsu | Suplementos, Skincare e Cuidados Pessoais</title>
+  <meta name="description"
+    content="Conheça a Kapsu: suplementos alimentares, vitaminas, skincare, cosméticos e cuidados pessoais. Compre online em kapsu.com.br." />
+  <link rel="canonical" href="https://kapsu.com.br/" />
+  
+  <!-- Open Graph / Social Media Fallback -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Kapsu | Suplementos, Skincare e Cuidados Pessoais" />
+  <meta property="og:description" content="Conheça a Kapsu: suplementos alimentares, vitaminas, skincare, cosméticos e cuidados pessoais. Compre online em kapsu.com.br." />
+  <meta property="og:url" content="https://kapsu.com.br/" />
+  <meta property="og:image" content="https://kapsu.com.br/logo.png" />
+  <meta property="og:site_name" content="Kapsu" />
 
-    <link rel="preconnect" href="%VITE_API_URL%" crossorigin />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Bellota+Text:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Istok+Web:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
-    <script>
-      // Aplica o tema antes do React carregar para evitar flash
-      (function() {
-        const savedTheme = localStorage.getItem('theme');
-        let theme = 'light';
-        
-        if (savedTheme === 'dark' || savedTheme === 'light') {
-          theme = savedTheme;
-        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-          theme = 'dark';
-        }
-        
-        const root = document.documentElement;
-        if (theme === 'dark') {
-          root.classList.add('dark');
-        } else {
-          root.classList.remove('dark');
-        }
-        root.style.colorScheme = theme;
-      })();
-    </script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+  <!-- Twitter Card Fallback -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Kapsu | Suplementos, Skincare e Cuidados Pessoais" />
+  <meta name="twitter:description" content="Conheça a Kapsu: suplementos alimentares, vitaminas, skincare, cosméticos e cuidados pessoais. Compre online em kapsu.com.br." />
+  <meta name="twitter:image" content="https://kapsu.com.br/logo.png" />
+  <!-- Favicons: Google Search exige ícone múltiplo de 48px (ex.: 96x96) -->
+  <link rel="icon" href="/favicon.ico" sizes="48x48" />
+  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <meta name="theme-color" content="#ffffff" />
+
+  <link rel="preconnect" href="%VITE_API_URL%" crossorigin />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bellota+Text:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Istok+Web:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+    rel="stylesheet">
+  <script>
+    // Aplica o tema antes do React carregar para evitar flash
+    (function () {
+      const savedTheme = localStorage.getItem('theme');
+      let theme = 'light';
+
+      if (savedTheme === 'dark' || savedTheme === 'light') {
+        theme = savedTheme;
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        theme = 'dark';
+      }
+
+      const root = document.documentElement;
+      if (theme === 'dark') {
+        root.classList.add('dark');
+      } else {
+        root.classList.remove('dark');
+      }
+      root.style.colorScheme = theme;
+    })();
+  </script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>
