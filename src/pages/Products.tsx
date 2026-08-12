@@ -453,12 +453,18 @@ export default function Products() {
     ],
   }
 
+  // Sensible noindex decision: search queries and arbitrary filter combinations are set to noindex, follow
+  const hasSearchQuery = searchTerm.trim() !== '' || !!params.get('q')
+  const hasComplexFilters = selectedCategories.length > 1 || appliedMinPrice !== null || appliedMaxPrice !== null || isFreeShipping
+  const shouldNoindex = hasSearchQuery || hasComplexFilters
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <SEO
         title={seoTitle}
         description={seoDescription}
         canonical={categoryCanonical}
+        noindex={shouldNoindex}
         jsonLd={breadcrumbJsonLd}
       />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

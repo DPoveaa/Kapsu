@@ -127,7 +127,7 @@ export default function ProductDetail() {
         const data = await productsService.getById(id)
         setProduct(data)
 
-        // Redirect 301: if slug is missing or wrong in URL, navigate to canonical URL
+        // Client-side canonical URL normalization: if slug in URL is outdated or missing, update location with replace state.
         const expectedUrl = generateProductUrl(data)
         if (location.pathname !== expectedUrl) {
           navigate(expectedUrl, { replace: true })
@@ -497,23 +497,43 @@ export default function ProductDetail() {
     ? Number((reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews).toFixed(1))
     : 0
 
-  // Build dynamic SEO information using real product data
+  // Build dynamic SEO information using real production product data
   const productPrice = product.promo_price ? Number(product.promo_price) : Number(product.price)
-  const productTitle = `${product.name} | Kapsu`
-  const rawDescription = product.description || product.indication || product.compositions || ''
-  const cleanDescriptionExcerpt = rawDescription
-    ? rawDescription.replace(/<[^>]*>?/gm, '').slice(0, 140).trim()
-    : 'Veja composição, modo de uso e compre online'
-  const productDescription = `Conheça ${product.name} na Kapsu. ${cleanDescriptionExcerpt}. Compre online no site oficial da Kapsu.`
+  const productTitle = product.meta_title && product.meta_title.trim() !== ''
+    ? (product.meta_title.includes('Kapsu') ? product.meta_title.trim() : `${product.meta_title.trim()} | Kapsu`)
+    : `${product.name} | Kapsu`
+
+  let productDescription = ''
+  if (product.meta_description && product.meta_description.trim() !== '') {
+    productDescription = product.meta_description.trim()
+  } else {
+    const rawDescription = product.description || product.indication || product.compositions || ''
+    const cleanExcerpt = rawDescription
+      ? rawDescription.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim()
+      : ''
+    const baseText = cleanExcerpt ? cleanExcerpt.slice(0, 130).replace(/[\s.,;:]+$/, '') : `Veja composição e informações sobre ${product.name}`
+    productDescription = `Conheça ${product.name} na Kapsu. ${baseText}. Compre online no site oficial da Kapsu.`
+  }
+
   const productCanonical = generateProductUrl(product)
   const firstCategory = product.category ? product.category.split(',')[0].trim() : 'Produtos'
+
+  const validJsonLdImages = productImages
+    .map((img: string) => {
+      if (!img || img === PRODUCT_IMAGE_FALLBACK || img.startsWith('data:')) return null
+      if (img.startsWith('http://') || img.startsWith('https://')) return img
+      return `https://kapsu.com.br${img.startsWith('/') ? img : `/${img}`}`
+    })
+    .filter((img: string | null): img is string => img !== null)
+
+  const isAvailable = product.active !== false && !product.archived
 
   const productJsonLd: any = {
     '@context': 'https://schema.org/',
     '@type': 'Product',
     name: product.name,
     description: product.description || product.indication || `Conheça ${product.name} na Kapsu.`,
-    image: productImages.filter((img: string) => img && img !== PRODUCT_IMAGE_FALLBACK),
+    image: validJsonLdImages.length > 0 ? validJsonLdImages : undefined,
     brand: {
       '@type': 'Brand',
       name: 'Kapsu',
@@ -523,7 +543,7 @@ export default function ProductDetail() {
       '@type': 'Offer',
       priceCurrency: 'BRL',
       price: productPrice.toFixed(2),
-      availability: product.active ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      availability: isAvailable ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       url: `https://kapsu.com.br${productCanonical}`,
     },
   }

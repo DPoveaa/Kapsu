@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-const SITE_URL = 'https://kapsu.com.br'
+const SITE_DOMAIN = 'https://kapsu.com.br'
 
 // Static indexable public routes
 const staticRoutes = [
@@ -16,101 +16,114 @@ const staticRoutes = [
   '/informacoes-farmaceuticas',
 ]
 
-// Real product fallback data extracted from active database snapshot
-const fallbackProducts = [
-  { id: 'mrmi1oug-7f02edc36fdfe0fe', slug: 'serum-vitamina-c' },
-  { id: 'mrmi1owq-61c250f9da73d875', slug: 'serum-biomimetico-ghk-cu' },
-  { id: 'mqaflx1v-818037fa0f750a3e', slug: 'rotina-ativa' },
-  { id: 'mqaflx7u-cc083b2d350cd7d4', slug: 'adeus-medidas' },
-  { id: 'mqaflwso-da6c1bb48e7f4e20', slug: 'tonico-fortalecedor' },
-  { id: 'mqaflxbf-2df781a0444928c2', slug: 'drenamax' },
-  { id: 'mqaflxc1-e811ffdec1921a16', slug: 'rapunzel' },
-  { id: 'mqaflxdb-ece38134f3cf61b6', slug: 'pele-de-ouro' },
-  { id: 'mqaflwtv-9fd08ab15b71b128', slug: 'redutor-de-medidas' },
-  { id: 'mqaflwwu-79b9b4155ed91294', slug: 'anti-inchaco' },
-  { id: 'mpp0b9f2-f8549edee8487a5c', slug: 'mulher-40' },
-  { id: 'mqaflxdy-e2441fe05ddf9d4a', slug: 'glisodin' },
-]
-
-function generateSlug(text) {
-  if (!text) return ''
-  return text
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+/**
+ * Generates exact canonical product path matching frontend generateProductUrl()
+ */
+function generateProductPath(product) {
+  const id = product.id
+  const slug = product.slug && typeof product.slug === 'string' ? product.slug.trim() : ''
+  if (slug) {
+    return `/produtos/${id}-${slug}`
+  }
+  return `/produtos/${id}`
 }
 
-async function fetchProducts() {
-  const apiUrl = process.env.VITE_API_URL || 'https://kapsu-api.com.br/api'
-  try {
-    const res = await fetch(`${apiUrl}/products`)
-    if (res.ok) {
-      const data = await res.json()
-      if (data.success && Array.isArray(data.data)) {
-        return data.data
-          .filter(p => p.active !== false && !p.archived)
-          .map(p => ({
-            id: p.id,
-            slug: p.slug || generateSlug(p.name),
-            updated_at: p.updated_at,
-          }))
-      }
-    }
-  } catch (err) {
-    // API not reachable during build/script execution, fallback to local dataset
+/**
+ * Resolves the API endpoint for fetching products during node sitemap build
+ */
+function resolveApiUrl() {
+  // 1. Explicit sitemap build API override
+  if (process.env.SITEMAP_API_URL && process.env.SITEMAP_API_URL.trim() !== '') {
+    return process.env.SITEMAP_API_URL.trim().replace(/\/+$/, '')
   }
 
-  // Try reading from evidence file if available in sibling repo folder
-  try {
-    const evidencePath = path.resolve(__dirname, '../../Kapsu-api/artifacts/evidence_utf8.json')
-    if (fs.existsSync(evidencePath)) {
-      const raw = fs.readFileSync(evidencePath, 'utf-8')
-      const match = raw.match(/=== 1\. ALL ACTIVE CATALOG PRODUCTS ===\s*(\[\s*\{[\s\S]*?\n\])/)
-      if (match && match[1]) {
-        const parsed = JSON.parse(match[1])
-        return parsed
-          .filter(p => p.active !== false && !p.archived)
-          .map(p => ({
-            id: p.id,
-            slug: p.slug || generateSlug(p.name),
-            updated_at: p.updated_at,
-          }))
-      }
-    }
-  } catch (err) {
-    // ignore
+  // 2. Absolute VITE_API_URL from environment
+  if (process.env.VITE_API_URL && (process.env.VITE_API_URL.startsWith('http://') || process.env.VITE_API_URL.startsWith('https://'))) {
+    return process.env.VITE_API_URL.trim().replace(/\/+$/, '')
   }
 
-  return fallbackProducts
+  // 3. Default to live production API endpoint
+  return `${SITE_DOMAIN}/api`
+}
+
+async function fetchProductionProducts(apiUrl) {
+  const endpoint = `${apiUrl}/products`
+  console.log(`[Sitemap] Fetching production active catalog from: ${endpoint}`)
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 15000)
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'Kapsu-Sitemap-Generator/1.0',
+      },
+      signal: controller.signal,
+    })
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      throw new Error(`HTTP Error ${response.status} ${response.statusText}`)
+    }
+
+    const text = await response.text()
+    if (!text || text.trim() === '') {
+      throw new Error('Received empty response body from API')
+    }
+
+    const json = JSON.parse(text)
+    if (!json.success || !Array.isArray(json.data)) {
+      throw new Error(json.message || 'Invalid API payload format (data array expected)')
+    }
+
+    // Filter only active and non-archived products from the production catalog
+    const activeProducts = json.data.filter(p => p && p.id && p.active !== false && !p.archived)
+    console.log(`[Sitemap] Successfully fetched ${activeProducts.length} active production products.`)
+    return activeProducts
+  } catch (error) {
+    clearTimeout(timeoutId)
+    throw new Error(`Failed to fetch active products from production API (${endpoint}): ${error.message}`)
+  }
 }
 
 async function main() {
-  console.log('Gerando sitemap.xml para Kapsu...')
-  const products = await fetchProducts()
+  const apiUrl = resolveApiUrl()
+  let products = []
+
+  try {
+    products = await fetchProductionProducts(apiUrl)
+  } catch (error) {
+    console.error(`\n❌ [Sitemap Fatal Error] ${error.message}`)
+    console.error(`[Sitemap] A production sitemap cannot be generated without a verified live product catalog.`)
+    console.error(`[Sitemap] Execution halted safely to prevent publishing corrupted or stale product URLs.\n`)
+    process.exit(1)
+  }
 
   const urls = []
 
-  // Static routes
+  // 1. Static public indexable routes
   for (const route of staticRoutes) {
-    urls.push(`  <url>
-    <loc>${SITE_URL}${route}</loc>
-    <changefreq>weekly</changefreq>
-    <priority>${route === '/' ? '1.0' : '0.8'}</priority>
-  </url>`)
+    urls.push(`  <url>\n    <loc>${SITE_DOMAIN}${route}</loc>\n  </url>`)
   }
 
-  // Product routes
+  // 2. Real production product URLs
   for (const p of products) {
-    const productSlug = p.slug ? `${p.id}-${p.slug}` : p.id
-    const loc = `${SITE_URL}/produtos/${productSlug}`
-    const lastmodTag = p.updated_at ? `\n    <lastmod>${new Date(p.updated_at).toISOString().split('T')[0]}</lastmod>` : ''
-    urls.push(`  <url>
-    <loc>${loc}</loc>${lastmodTag}
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>`)
+    const path = generateProductPath(p)
+    const loc = `${SITE_DOMAIN}${path}`
+    let lastmodTag = ''
+    if (p.updated_at) {
+      try {
+        const iso = new Date(p.updated_at).toISOString().split('T')[0]
+        if (iso && !isNaN(new Date(p.updated_at).getTime())) {
+          lastmodTag = `\n    <lastmod>${iso}</lastmod>`
+        }
+      } catch {
+        // ignore invalid date strings
+      }
+    }
+    urls.push(`  <url>\n    <loc>${loc}</loc>${lastmodTag}\n  </url>`)
   }
 
   const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
@@ -121,7 +134,7 @@ ${urls.join('\n')}
 
   const targetPath = path.resolve(__dirname, '../public/sitemap.xml')
   fs.writeFileSync(targetPath, xmlContent, 'utf-8')
-  console.log(`Sitemap gerado com sucesso em: ${targetPath} (${urls.length} URLs)`)
+  console.log(`✅ [Sitemap] Successfully updated ${targetPath} (${urls.length} URLs generated).`)
 }
 
 main()
