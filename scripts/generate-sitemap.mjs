@@ -37,12 +37,7 @@ function resolveApiUrl() {
     return process.env.SITEMAP_API_URL.trim().replace(/\/+$/, '')
   }
 
-  // 2. Absolute VITE_API_URL from environment
-  if (process.env.VITE_API_URL && (process.env.VITE_API_URL.startsWith('http://') || process.env.VITE_API_URL.startsWith('https://'))) {
-    return process.env.VITE_API_URL.trim().replace(/\/+$/, '')
-  }
-
-  // 3. Default to live production API endpoint
+  // 2. Default strictly to live production API endpoint
   return `${SITE_DOMAIN}/api`
 }
 

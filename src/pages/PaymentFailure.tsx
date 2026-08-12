@@ -1,11 +1,13 @@
 import { useNavigate } from 'react-router-dom'
 import { XCircle, ArrowLeft, RotateCcw } from 'lucide-react'
+import SEO from '../components/SEO'
 
 export default function PaymentFailure() {
   const navigate = useNavigate()
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center py-8">
+      <SEO title="Pagamento Não Aprovado | Kapsu" noindex={true} />
       <div className="max-w-lg w-full mx-auto px-4 sm:px-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg dark:shadow-xl border border-gray-100 dark:border-gray-700 p-6 text-center">
           <XCircle className="mx-auto text-red-600 dark:text-red-400 mb-4" size={48} />
