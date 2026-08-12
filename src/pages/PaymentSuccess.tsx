@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle, Package, Home, Loader2 } from 'lucide-react'
 import { clearPendingCheckoutOrderId } from '../utils/checkout'
 import { useCart } from '../context/CartContext'
+import { trackConversion } from '../utils/gtag'
+
 
 export default function PaymentSuccess() {
   const navigate = useNavigate()
@@ -14,15 +16,15 @@ export default function PaymentSuccess() {
   useEffect(() => {
     clearPendingCheckoutOrderId()
     void refreshCart()
-    // Extrai informações da URL - pode vir do Asaas ou do teste sem pagamento
     const externalReference = searchParams.get('external_reference')
     const orderIdParam = searchParams.get('order_id')
+    const currentOrderId = orderIdParam || externalReference
 
-    if (orderIdParam) {
-      setOrderId(orderIdParam)
-    } else if (externalReference) {
-      setOrderId(externalReference)
+    if (currentOrderId) {
+      setOrderId(currentOrderId)
+      trackConversion(undefined, undefined, 'BRL', currentOrderId)
     }
+
 
     // Simula um pequeno delay para melhor UX
     setTimeout(() => {

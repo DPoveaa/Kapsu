@@ -11,6 +11,7 @@ import ToastContainer from './components/ToastContainer'
 import { siteSettingsService, SiteSettings as SiteSettingsType } from './services/site-settings.service'
 import { ADMIN_AI_CENTER_LEGACY_ROUTES, ADMIN_AI_CENTER_PATH } from './constants/adminRoutes'
 import { lazyWithRetry } from './utils/lazyWithRetry'
+import { trackPageView } from './utils/gtag'
 
 // Keep the storefront shell and Home in the initial bundle. Every other route is
 // downloaded only when visited, so admin/reporting libraries never delay Home.
@@ -82,6 +83,10 @@ function AppContent() {
   const isAdminRoute = location.pathname.startsWith('/admin')
   const isSupplierRoute = location.pathname.startsWith('/supplier')
   const hideChat = ['/login', '/cadastro', '/recuperar-senha'].includes(location.pathname) || isAdminRoute || isSupplierRoute
+
+  useEffect(() => {
+    trackPageView(location.pathname + location.search)
+  }, [location])
 
   useEffect(() => {
     let isMounted = true
