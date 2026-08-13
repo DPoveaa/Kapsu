@@ -6,7 +6,6 @@ import type { CheckoutStep } from '../../types/checkout'
 import {
   clearConfirmedCheckoutPayment,
   clearStoredCheckoutState,
-  isPaidOrderStatus,
   type CheckoutConfirmationType,
 } from '../../utils/checkout'
 import { trackConversion } from '../../utils/gtag'
@@ -87,14 +86,18 @@ export default function CheckoutConfirmation({
 
     const verifyAndTrackConversion = async () => {
       try {
-        const order = await orderService.getOrder(orderId)
-        if (cancelled || !order) return
+        const [order, paymentStatusResult] = await Promise.all([
+          orderService.getOrder(orderId),
+          orderService.getOrderPaymentStatus(orderId),
+        ])
 
-        const isPaidInBackend = isPaidOrderStatus(order.status)
+        if (cancelled || !order || !paymentStatusResult) return
+
+        const isPaymentConfirmed = paymentStatusResult.paymentStatus === 'confirmed'
         const orderTotal = Number(order.total)
 
         if (
-          isPaidInBackend &&
+          isPaymentConfirmed &&
           Number.isFinite(orderTotal) &&
           orderTotal > 0
         ) {
@@ -106,7 +109,7 @@ export default function CheckoutConfirmation({
           )
         }
       } catch (err) {
-        console.error('Erro ao verificar status do pedido no backend para conversão:', err)
+        console.error('Erro ao verificar status de pagamento no backend para conversão:', err)
       }
     }
 
