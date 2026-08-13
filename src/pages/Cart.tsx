@@ -352,7 +352,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
           showOrderConfirmation(
             pendingOrderId,
             normalizePaymentMethod(order.payment_method),
-            { status: order.status }
+            { status: order.status, total: Number(order.total) }
           )
           return
         }
@@ -1462,6 +1462,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
             normalizePaymentMethod(order.payment_method) === 'boleto' ? 'awaiting_boleto' : 'paid',
           status: order.status,
           cartId,
+          total: Number(order.total),
         }
         setConfirmedCheckoutPayment(result)
         setPaymentResult(result)
@@ -1854,7 +1855,7 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
 
       await clearCart()
 
-      showOrderConfirmation(order.id, 'pix', { status: 'CONFIRMED' })
+      showOrderConfirmation(order.id, 'pix', { status: 'CONFIRMED', total: Number(order.total) })
     } catch (error: any) {
       console.error('Erro ao criar pedido sem pagamento:', error)
       toast.error(error.message || 'Erro ao criar pedido. Tente novamente.')

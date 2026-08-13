@@ -1,4 +1,4 @@
-﻿export const PENDING_CHECKOUT_ORDER_KEY = 'kapsu_pending_checkout_order_id'
+export const PENDING_CHECKOUT_ORDER_KEY = 'kapsu_pending_checkout_order_id'
 export const PENDING_CHECKOUT_PAYMENT_KEY = 'cart_pending_payment'
 export const CONFIRMED_CHECKOUT_PAYMENT_KEY = 'cart_payment_result'
 export const CHECKOUT_STATE_KEY = 'cart_checkout_state'
@@ -33,6 +33,7 @@ export interface ConfirmedCheckoutPayment {
   paymentId?: string
   paymentAttemptId?: string
   cartId?: string | null
+  total?: number
 }
 
 export interface StoredCheckoutState {

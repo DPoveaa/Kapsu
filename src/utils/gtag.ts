@@ -32,6 +32,32 @@ export const trackEvent = (action: string, params: Record<string, any> = {}) => 
   }
 }
 
+const TRACKED_CONVERSIONS_KEY = 'kapsu_tracked_gads_conversions'
+
+function isConversionAlreadyTracked(conversionKey: string): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    const raw = localStorage.getItem(TRACKED_CONVERSIONS_KEY)
+    if (!raw) return false
+    const list: string[] = JSON.parse(raw)
+    return Array.isArray(list) && list.includes(conversionKey)
+  } catch {
+    return false
+  }
+}
+
+function markConversionAsTracked(conversionKey: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    const raw = localStorage.getItem(TRACKED_CONVERSIONS_KEY)
+    const list: string[] = raw ? JSON.parse(raw) : []
+    if (Array.isArray(list) && !list.includes(conversionKey)) {
+      list.push(conversionKey)
+      localStorage.setItem(TRACKED_CONVERSIONS_KEY, JSON.stringify(list))
+    }
+  } catch { }
+}
+
 /**
  * Tracks Google Ads conversion
  * @param sendTo Optional specific conversion label, e.g. 'AW-18234729882/abcdef123'
@@ -46,8 +72,18 @@ export const trackConversion = (
   transactionId?: string
 ) => {
   if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+    const destination = sendTo || GOOGLE_ADS_ID
+
+    if (transactionId) {
+      const conversionKey = `${destination}:${transactionId}`
+      if (isConversionAlreadyTracked(conversionKey)) {
+        return
+      }
+      markConversionAsTracked(conversionKey)
+    }
+
     const params: Record<string, any> = {
-      send_to: sendTo || GOOGLE_ADS_ID,
+      send_to: destination,
     }
     if (value !== undefined) params.value = value
     if (currency) params.currency = currency

@@ -8,6 +8,8 @@ import {
   clearStoredCheckoutState,
   type CheckoutConfirmationType,
 } from '../../utils/checkout'
+import { trackConversion } from '../../utils/gtag'
+import { orderService } from '../../services/order.service'
 
 interface CheckoutConfirmationProps {
   paymentResult: {
@@ -15,6 +17,7 @@ interface CheckoutConfirmationProps {
     paymentMethod?: string
     isPaid?: boolean
     confirmationType?: CheckoutConfirmationType
+    total?: number
   }
   maxReachableStep: CheckoutStep
   onStepClick?: (step: CheckoutStep) => void
@@ -74,6 +77,42 @@ export default function CheckoutConfirmation({
       clearStoredCheckoutState()
     }
   }, [])
+
+  useEffect(() => {
+    if (!isPaid || !paymentResult.orderId) return
+
+    const orderId = paymentResult.orderId
+    let cancelled = false
+
+    const firePurchaseConversion = async () => {
+      let actualOrderTotal = paymentResult.total
+      if (actualOrderTotal === undefined || actualOrderTotal === null || isNaN(actualOrderTotal)) {
+        try {
+          const order = await orderService.getOrder(orderId)
+          if (!cancelled && order && order.total !== undefined && order.total !== null) {
+            actualOrderTotal = Number(order.total)
+          }
+        } catch (err) {
+          console.error('Erro ao buscar dados do pedido para conversão:', err)
+        }
+      }
+
+      if (!cancelled && actualOrderTotal !== undefined && actualOrderTotal !== null && !isNaN(actualOrderTotal) && actualOrderTotal > 0) {
+        trackConversion(
+          'AW-18234729882/_36kCJjV7OAcEJrL__ZD',
+          actualOrderTotal,
+          'BRL',
+          orderId
+        )
+      }
+    }
+
+    void firePurchaseConversion()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isPaid, paymentResult.orderId, paymentResult.total])
 
   const leaveConfirmation = (target: string) => {
     clearConfirmedCheckoutPayment()

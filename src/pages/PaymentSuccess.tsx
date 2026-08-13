@@ -4,6 +4,7 @@ import { CheckCircle, Package, Home, Loader2 } from 'lucide-react'
 import { clearPendingCheckoutOrderId } from '../utils/checkout'
 import { useCart } from '../context/CartContext'
 import { trackConversion } from '../utils/gtag'
+import { orderService } from '../services/order.service'
 
 
 export default function PaymentSuccess() {
@@ -20,16 +21,34 @@ export default function PaymentSuccess() {
     const orderIdParam = searchParams.get('order_id')
     const currentOrderId = orderIdParam || externalReference
 
+    let cancelled = false
+
     if (currentOrderId) {
       setOrderId(currentOrderId)
-      trackConversion(undefined, undefined, 'BRL', currentOrderId)
+      orderService.getOrder(currentOrderId).then((order) => {
+        if (!cancelled && order && order.total !== undefined) {
+          trackConversion(
+            'AW-18234729882/_36kCJjV7OAcEJrL__ZD',
+            Number(order.total),
+            'BRL',
+            currentOrderId
+          )
+        }
+      }).catch((err) => {
+        console.error('Erro ao buscar pedido em PaymentSuccess:', err)
+      })
     }
 
 
     // Simula um pequeno delay para melhor UX
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setLoading(false)
     }, 1000)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
   }, [searchParams, refreshCart])
 
   if (loading) {
