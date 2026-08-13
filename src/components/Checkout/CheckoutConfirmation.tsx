@@ -6,6 +6,7 @@ import type { CheckoutStep } from '../../types/checkout'
 import {
   clearConfirmedCheckoutPayment,
   clearStoredCheckoutState,
+  isPaidOrderStatus,
   type CheckoutConfirmationType,
 } from '../../utils/checkout'
 import { trackConversion } from '../../utils/gtag'
@@ -79,40 +80,42 @@ export default function CheckoutConfirmation({
   }, [])
 
   useEffect(() => {
-    if (!isPaid || !paymentResult.orderId) return
+    if (!paymentResult.orderId) return
 
     const orderId = paymentResult.orderId
     let cancelled = false
 
-    const firePurchaseConversion = async () => {
-      let actualOrderTotal = paymentResult.total
-      if (actualOrderTotal === undefined || actualOrderTotal === null || isNaN(actualOrderTotal)) {
-        try {
-          const order = await orderService.getOrder(orderId)
-          if (!cancelled && order && order.total !== undefined && order.total !== null) {
-            actualOrderTotal = Number(order.total)
-          }
-        } catch (err) {
-          console.error('Erro ao buscar dados do pedido para conversão:', err)
-        }
-      }
+    const verifyAndTrackConversion = async () => {
+      try {
+        const order = await orderService.getOrder(orderId)
+        if (cancelled || !order) return
 
-      if (!cancelled && actualOrderTotal !== undefined && actualOrderTotal !== null && !isNaN(actualOrderTotal) && actualOrderTotal > 0) {
-        trackConversion(
-          'AW-18234729882/_36kCJjV7OAcEJrL__ZD',
-          actualOrderTotal,
-          'BRL',
-          orderId
-        )
+        const isPaidInBackend = isPaidOrderStatus(order.status)
+        const orderTotal = Number(order.total)
+
+        if (
+          isPaidInBackend &&
+          Number.isFinite(orderTotal) &&
+          orderTotal > 0
+        ) {
+          trackConversion(
+            'AW-18234729882/_36kCJjV7OAcEJrL__ZD',
+            orderTotal,
+            'BRL',
+            orderId
+          )
+        }
+      } catch (err) {
+        console.error('Erro ao verificar status do pedido no backend para conversão:', err)
       }
     }
 
-    void firePurchaseConversion()
+    void verifyAndTrackConversion()
 
     return () => {
       cancelled = true
     }
-  }, [isPaid, paymentResult.orderId, paymentResult.total])
+  }, [paymentResult.orderId])
 
   const leaveConfirmation = (target: string) => {
     clearConfirmedCheckoutPayment()
