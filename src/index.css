@@ -17,19 +17,17 @@
     margin: 0;
     padding: 0;
     background-color: #FFFFFF;
-    font-family: "Bellota Text", sans-serif;
-    font-weight: 700;
+    font-family: 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-weight: 400;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    text-shadow: 0.5px 0.5px 0.5px rgba(0, 0, 0, 0.2);
     transition: background-color 0.3s ease, color 0.3s ease;
   }
   
   html.dark body {
     background-color: #0A0F0D !important;
     color: #FFFFFF !important;
-    text-shadow: 0.5px 0.5px 0.5px rgba(255, 255, 255, 0.1);
   }
   
   /* Garante que todos os textos sejam brancos no modo escuro */
@@ -155,67 +153,7 @@
   }
 }
 
-/* Classes da fonte Bellota Text */
-.bellota-text-light {
-  font-family: "Bellota Text", sans-serif;
-  font-weight: 300;
-  font-style: normal;
-}
 
-.bellota-text-regular {
-  font-family: "Bellota Text", sans-serif;
-  font-weight: 400;
-  font-style: normal;
-}
-
-.bellota-text-bold {
-  font-family: "Bellota Text", sans-serif;
-  font-weight: 700;
-  font-style: normal;
-}
-
-.bellota-text-light-italic {
-  font-family: "Bellota Text", sans-serif;
-  font-weight: 300;
-  font-style: italic;
-}
-
-.bellota-text-regular-italic {
-  font-family: "Bellota Text", sans-serif;
-  font-weight: 400;
-  font-style: italic;
-}
-
-.bellota-text-bold-italic {
-  font-family: "Bellota Text", sans-serif;
-  font-weight: 700;
-  font-style: italic;
-}
-
-/* Classes da fonte Istok Web */
-.istok-web-regular {
-  font-family: "Istok Web", sans-serif;
-  font-weight: 400;
-  font-style: normal;
-}
-
-.istok-web-bold {
-  font-family: "Istok Web", sans-serif;
-  font-weight: 700;
-  font-style: normal;
-}
-
-.istok-web-regular-italic {
-  font-family: "Istok Web", sans-serif;
-  font-weight: 400;
-  font-style: italic;
-}
-
-.istok-web-bold-italic {
-  font-family: "Istok Web", sans-serif;
-  font-weight: 700;
-  font-style: italic;
-}
 
 @layer components {
   .btn-primary {
