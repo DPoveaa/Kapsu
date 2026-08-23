@@ -38,6 +38,8 @@ export interface Product {
   intended_units_per_dose?: string | null;
   marketplace_tags?: string | null;
   nfe_enabled?: 'SIM' | 'NAO' | string | null;
+  rating?: number;
+  reviews_count?: number;
 }
 
 export type PriceHistoryType = 'purchase' | 'sale' | 'promo';

@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { Plus, Check } from 'lucide-react'
+import { Plus, Check, Star } from 'lucide-react'
 import { Product } from '../types'
 import { useCart } from '../context/CartContext'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
@@ -193,21 +193,37 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
 
           {/* ── Content ── */}
-          <div className="flex flex-col flex-1 p-3">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug mb-1 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
-              {product.name}
-            </h3>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed mb-2 flex-1">
-              {product.description || 'Fórmula manipulada com alto padrão de qualidade e eficácia.'}
-            </p>
-            {product.free_shipping && (
-              <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold mb-2">
-                🚚 Frete grátis
-              </span>
-            )}
+          <div className="flex flex-col flex-1 p-3 sm:p-3.5 justify-between">
+            <div className="space-y-1 mb-2">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                {product.name}
+              </h3>
+
+              {/* ── Rating & Frete ── */}
+              <div className="flex items-center gap-1.5 pt-0.5">
+                <div className="flex items-center text-amber-400">
+                  <Star size={12} className="fill-amber-400 text-amber-400" />
+                </div>
+                <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                  {Number(product.rating || 5.0).toFixed(1)}
+                </span>
+                <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
+                  ({product.reviews_count || 4})
+                </span>
+                {product.free_shipping && (
+                  <span className="ml-auto text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate">
+                    🚚 Frete grátis
+                  </span>
+                )}
+              </div>
+
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed pt-0.5">
+                {product.description || 'Fórmula manipulada com alto padrão de qualidade e eficácia.'}
+              </p>
+            </div>
 
             {/* ── Price + button ── */}
-            <div className="flex items-center justify-between gap-2 mt-auto">
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/60 mt-auto">
               <div className="flex flex-col min-w-0">
                 {product.promo_price ? (
                   <>

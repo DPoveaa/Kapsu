@@ -98,6 +98,7 @@ export default function ProductDetail() {
   const [hasReviewed, setHasReviewed] = useState(false)
   const [isAnonymous, setIsAnonymous] = useState(false)
   const [isEditingReview, setIsEditingReview] = useState(false)
+  const [selectedRatingFilter, setSelectedRatingFilter] = useState<'all' | number>('all')
 
   // Zoom State
   const [zoomPos, setZoomPos] = useState({ x: 0, y: 0 })
@@ -496,6 +497,10 @@ export default function ProductDetail() {
   const averageRating = totalReviews > 0
     ? Number((reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews).toFixed(1))
     : 0
+
+  const filteredReviews = selectedRatingFilter === 'all'
+    ? reviews
+    : reviews.filter((r: any) => r.rating === selectedRatingFilter)
 
   // Build dynamic SEO information using real production product data
   const productPrice = product.promo_price ? Number(product.promo_price) : Number(product.price)
@@ -979,16 +984,20 @@ export default function ProductDetail() {
         {/* Real Reviews Section */}
         <div id="reviews-section" className="mt-12 bg-white dark:bg-[#131926]/90 backdrop-blur-md rounded-[24px] border border-gray-200 dark:border-white/5 p-6 sm:p-8 shadow-xl shadow-gray-200/50 dark:shadow-black/20">
           <div className="flex flex-col gap-6">
-            <div className="border-b border-gray-200 dark:border-white/5 pb-4">
+            <div className="border-b border-gray-200 dark:border-white/5 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
                 Avaliações dos Clientes
               </h2>
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                {totalReviews} {totalReviews === 1 ? 'opinião verificada' : 'opiniões verificadas'}
+              </span>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in">
+            {/* Top Grid: Rating Summary (left) + Review Form (right) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
 
-              {/* Ratings Summary (lg:col-span-4) */}
-              <div className="lg:col-span-4 flex flex-col gap-4">
+              {/* Ratings Summary (lg:col-span-5) */}
+              <div className="lg:col-span-5 flex flex-col gap-4 bg-gray-50/70 dark:bg-[#0A0F0D]/40 p-5 rounded-2xl border border-gray-200/80 dark:border-white/5">
                 <div className="flex items-baseline gap-2">
                   <span className="text-5xl font-extrabold text-gray-900 dark:text-white">
                     {totalReviews > 0 ? averageRating.toFixed(1) : '0.0'}
@@ -999,323 +1008,387 @@ export default function ProductDetail() {
                 <div className="flex flex-col gap-1">
                   {renderStars(Math.round(averageRating), 18)}
                   <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">
-                    Baseado em {totalReviews} {totalReviews === 1 ? 'avaliação' : 'avaliações'}
+                    Média baseada em {totalReviews} {totalReviews === 1 ? 'avaliação' : 'avaliações'}
                   </span>
                 </div>
 
-                {/* Stars distribution progress bars */}
-                <div className="flex flex-col gap-2.5 mt-2">
+                {/* Stars distribution progress bars - clickable to filter! */}
+                <div className="flex flex-col gap-1.5 pt-2 border-t border-gray-200/60 dark:border-white/5">
+                  <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
+                    Filtrar por estrelas
+                  </span>
                   {[5, 4, 3, 2, 1].map((star) => {
                     const count = reviews.filter((r) => r.rating === star).length
                     const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0
-
                     const displayPct = Math.round(percentage)
+                    const isSelected = selectedRatingFilter === star
 
                     return (
-                      <div key={star} className="flex items-center gap-3 text-xs">
-                        <span className="w-3 font-semibold text-gray-605 dark:text-gray-300">{star}</span>
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setSelectedRatingFilter(isSelected ? 'all' : star)}
+                        className={`flex items-center gap-2.5 text-xs w-full p-1.5 rounded-lg transition-all text-left cursor-pointer ${
+                          isSelected
+                            ? 'bg-[#00C878]/15 ring-1 ring-[#00C878] font-bold'
+                            : 'hover:bg-gray-200/60 dark:hover:bg-white/5'
+                        }`}
+                        title={`Filtrar por ${star} estrelas (${count})`}
+                      >
+                        <span className="w-3 font-semibold text-gray-700 dark:text-gray-300">{star}</span>
                         <Star size={12} className="text-[#00C878] fill-[#00C878] flex-shrink-0" />
-                        <div className="flex-1 h-2 bg-gray-100 dark:bg-[#0A0F0D]/60 rounded-full overflow-hidden border border-gray-200 dark:border-white/5">
+                        <div className="flex-1 h-2 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-[#00C878] rounded-full transition-all duration-500"
                             style={{ width: `${displayPct}%` }}
                           />
                         </div>
-                        <span className="w-8 text-right text-gray-400 dark:text-gray-500 font-medium">
-                          {displayPct}%
+                        <span className="w-14 text-right text-gray-500 dark:text-gray-400 text-[11px]">
+                          {count} ({displayPct}%)
                         </span>
-                      </div>
+                      </button>
                     )
                   })}
                 </div>
               </div>
 
-              {/* REVIEWS LIST ON THE RIGHT (lg:col-span-8) */}
-              <div className="lg:col-span-8 flex flex-col gap-6 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-white/5 pt-6 lg:pt-0 lg:pl-8 overflow-hidden">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
-                    Todas as Opiniões ({reviews.length})
-                  </h3>
-                  {reviews.length > 2 && (
-                    <div className="flex gap-2 hidden md:flex">
+              {/* Review Submission Box (lg:col-span-7) */}
+              <div className="lg:col-span-7">
+                {isEligible ? (
+                  !isEditingReview && hasReviewed ? (
+                    <div className="bg-gray-50/70 dark:bg-[#0A0F0D]/40 border border-[#00C878]/30 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
+                      <div className="flex items-start gap-4">
+                        <div className="p-3 bg-emerald-500/10 text-[#00C878] rounded-xl border border-emerald-500/20 mt-1">
+                          <CheckCircle size={24} />
+                        </div>
+                        <div>
+                          <h4 className="text-base font-bold text-gray-900 dark:text-white">Você já avaliou este produto</h4>
+                          <p className="text-sm text-gray-500 mt-1.5 leading-relaxed">
+                            Obrigado pelo seu feedback! Ele ajuda outros clientes a tomarem a melhor decisão.
+                          </p>
+                        </div>
+                      </div>
                       <button
-                        onClick={() => {
-                          const container = document.getElementById('reviews-scroll-container')
-                          if (container) container.scrollBy({ left: -300, behavior: 'smooth' })
-                        }}
-                        className="p-1.5 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                        onClick={() => setIsEditingReview(true)}
+                        className="w-full sm:w-auto px-6 py-3 bg-transparent border-2 border-[#00C878] hover:bg-[#00C878] text-[#00C878] hover:text-white text-sm font-bold rounded-xl transition-all cursor-pointer text-center whitespace-nowrap"
                       >
-                        <ChevronLeft size={16} />
-                      </button>
-                      <button
-                        onClick={() => {
-                          const container = document.getElementById('reviews-scroll-container')
-                          if (container) container.scrollBy({ left: 300, behavior: 'smooth' })
-                        }}
-                        className="p-1.5 rounded-lg border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
-                      >
-                        <ChevronRight size={16} />
+                        Editar avaliação
                       </button>
                     </div>
-                  )}
-                </div>
+                  ) : (
+                    <form onSubmit={handleSubmitReview} className="space-y-4 bg-gray-50/70 dark:bg-[#0A0F0D]/40 p-6 sm:p-7 rounded-2xl border border-gray-200/80 dark:border-white/5 shadow-sm">
+                      <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center justify-between pb-3 border-b border-gray-200/60 dark:border-white/5">
+                        <span>{isEditingReview ? 'Editar sua Avaliação' : 'Deixe sua Avaliação'}</span>
+                        {isEditingReview && (
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingReview(false)}
+                            className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer"
+                          >
+                            Cancelar
+                          </button>
+                        )}
+                      </h3>
 
-                {loadingReviews ? (
-                  <div className="flex flex-col items-center justify-center py-10">
-                    <Loader2 className="animate-spin text-[#00C878] mb-2" size={24} />
-                    <p className="text-xs text-gray-500">Carregando avaliações...</p>
-                  </div>
-                ) : reviews.length === 0 ? (
-                  <div className="text-center py-10 border border-dashed border-gray-200 dark:border-white/10 rounded-2xl bg-gray-50 dark:bg-[#0A0F0D]/20 animate-fade-in">
-                    <Star size={32} className="mx-auto text-gray-400 dark:text-gray-600 mb-3" />
-                    <p className="text-xs text-gray-500 dark:text-gray-450 font-semibold">
-                      Nenhuma avaliação para este produto ainda.
-                    </p>
-                  </div>
-                ) : (
-                  <div id="reviews-scroll-container" className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin snap-x snap-mandatory">
-                    {reviews.map((rev) => (
-                      <div
-                        key={rev.id}
-                        className="w-[280px] sm:w-[320px] flex-shrink-0 snap-start bg-gray-50 dark:bg-[#0A0F0D]/60 border border-gray-200 dark:border-white/5 rounded-2xl p-5 flex flex-col justify-between gap-3 shadow-md"
-                      >
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-start justify-between gap-2.5">
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-xs font-bold text-gray-900 dark:text-white">
-                                {rev.is_anonymous ? 'Anônimo' : rev.name}
-                              </span>
-                              <span className="text-[10px] text-gray-500 dark:text-gray-450">
-                                {new Date(rev.created_at).toLocaleDateString('pt-BR')}
-                                {new Date(rev.updated_at).getTime() > new Date(rev.created_at).getTime() + 1000 && (
-                                  <span className="ml-1 italic opacity-75">(Editada em {new Date(rev.updated_at).toLocaleDateString('pt-BR')})</span>
-                                )}
-                              </span>
+                      {/* Star selector */}
+                      <div className="flex items-center gap-3">
+                        <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                          Sua Nota:
+                        </label>
+                        <div className="flex gap-1.5">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setNewRating(star)}
+                              className="text-amber-400 hover:scale-115 active:scale-95 transition-transform cursor-pointer"
+                            >
+                              <Star
+                                size={24}
+                                fill={star <= newRating ? "currentColor" : "none"}
+                                className={star <= newRating ? "text-amber-400" : "text-gray-400 dark:text-gray-600"}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Comments textarea */}
+                      <div className="flex flex-col gap-1.5">
+                        <label htmlFor="comment" className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                          Seu Comentário
+                        </label>
+                        <textarea
+                          id="comment"
+                          rows={3}
+                          value={newComment}
+                          onChange={(e) => setNewComment(e.target.value)}
+                          placeholder="O que você achou deste produto? Conte-nos sua experiência..."
+                          className="w-full text-sm p-3.5 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-[#0A0F0D]/60 text-gray-900 dark:text-white focus:ring-1 focus:ring-[#00C878] focus:border-transparent outline-none transition-all resize-none"
+                        />
+                      </div>
+
+                      {/* Image uploader & Anonymous toggle */}
+                      <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
+                        <div className="flex items-center gap-3">
+                          <label className="flex items-center gap-2 px-3.5 py-2 border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-xl cursor-pointer text-xs font-semibold text-gray-700 dark:text-white transition-colors">
+                            <Camera size={15} />
+                            <span>Adicionar Foto</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                              className="hidden"
+                            />
+                          </label>
+
+                          {newImageUrl && (
+                            <div className="relative flex items-center gap-2 p-1 border border-gray-200 dark:border-white/10 rounded-xl bg-white dark:bg-[#0A0F0D]/60">
+                              <img
+                                src={newImageUrl}
+                                alt="Pré-visualização"
+                                className="w-8 h-8 object-cover rounded-lg"
+                              />
+                              <button
+                                type="button"
+                                onClick={handleRemoveImage}
+                                className="p-1 hover:bg-red-500/10 text-red-400 rounded-lg transition-colors cursor-pointer"
+                                title="Remover imagem"
+                              >
+                                <Trash2 size={14} />
+                              </button>
                             </div>
-
-                            <div className="flex flex-col items-end gap-1.5">
-                              {renderStars(rev.rating, 12)}
-                            </div>
-                          </div>
-
-                          {rev.comment ? (
-                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed italic line-clamp-4">
-                              "{rev.comment}"
-                            </p>
-                          ) : (
-                            <p className="text-[11px] text-gray-400 dark:text-gray-500 italic">
-                              Avaliação sem comentário adicional
-                            </p>
                           )}
                         </div>
 
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={isAnonymous}
+                            onChange={(e) => setIsAnonymous(e.target.checked)}
+                          />
+                          <div className="w-9 h-5 bg-gray-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#00C878]"></div>
+                          <span className="ml-2.5 text-xs font-medium text-gray-700 dark:text-gray-300 select-none">
+                            Avaliar anonimamente
+                          </span>
+                        </label>
+                      </div>
+
+                      {/* Error & Success Messages */}
+                      {submitError && (
+                        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-950/20 border border-red-900/35 text-xs text-red-400">
+                          <AlertCircle size={16} className="flex-shrink-0" />
+                          <span>{submitError}</span>
+                        </div>
+                      )}
+
+                      {submitSuccess && (
+                        <div className="flex items-center gap-2 p-3 rounded-xl bg-green-950/20 border border-green-900/35 text-xs text-[#00C878]">
+                          <CheckCircle size={16} className="flex-shrink-0" />
+                          <span>{isEditingReview ? 'Avaliação atualizada com sucesso!' : 'Avaliação enviada com sucesso! Obrigado pelo feedback.'}</span>
+                        </div>
+                      )}
+
+                      {/* Submit Button */}
+                      <div className="pt-1">
+                        <button
+                          type="submit"
+                          disabled={submittingReview}
+                          className="w-full sm:w-auto px-6 py-2.5 bg-[#00C878] hover:bg-emerald-600 text-white font-bold rounded-xl transition-all shadow-md active:scale-98 flex items-center justify-center gap-2 text-xs uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                          {submittingReview ? (
+                            <>
+                              <Loader2 className="animate-spin" size={16} />
+                              <span>Enviando...</span>
+                            </>
+                          ) : (
+                            <span>{isEditingReview ? 'Salvar Alterações' : 'Enviar Avaliação'}</span>
+                          )}
+                        </button>
+                      </div>
+                    </form>
+                  )
+                ) : (
+                  <div className="bg-gray-50/70 dark:bg-[#0A0F0D]/40 border border-gray-200/80 dark:border-white/5 rounded-2xl p-6 flex flex-col items-center text-center gap-3">
+                    <div className="p-3 bg-emerald-500/10 text-[#00C878] rounded-xl border border-emerald-500/20">
+                      <MessageSquare size={24} />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-bold text-gray-900 dark:text-white">Quer avaliar este produto?</h4>
+                      <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto leading-relaxed">
+                        {eligibilityMessage || 'Sua opinião é muito importante para nós e para outros clientes.'}
+                      </p>
+                    </div>
+                    {!isLoggedIn && (
+                      <button
+                        onClick={() => navigate('/login')}
+                        className="mt-1 px-6 py-2 bg-transparent border border-gray-300 dark:border-white/10 hover:border-gray-400 dark:hover:border-white/20 hover:bg-gray-100 dark:hover:bg-white/5 text-xs font-bold text-gray-700 dark:text-white rounded-xl transition-all cursor-pointer"
+                      >
+                        Faça login para avaliar
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            {/* Bottom Section: Customer Reviews List in Cascade with Vertical Scroll */}
+            <div className="border-t border-gray-200 dark:border-white/5 pt-6 mt-2 flex flex-col gap-4">
+              
+              {/* Header with Title & Filter Pills */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+                    Opiniões dos Clientes
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300">
+                    {filteredReviews.length}
+                  </span>
+                </div>
+
+                {/* Filter Pills */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedRatingFilter('all')}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                      selectedRatingFilter === 'all'
+                        ? 'bg-[#00C878] text-white shadow-sm'
+                        : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                    }`}
+                  >
+                    Todas ({reviews.length})
+                  </button>
+
+                  {[5, 4, 3, 2, 1].map((star) => {
+                    const count = reviews.filter((r) => r.rating === star).length
+                    if (count === 0 && selectedRatingFilter !== star) return null
+                    return (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setSelectedRatingFilter(selectedRatingFilter === star ? 'all' : star)}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                          selectedRatingFilter === star
+                            ? 'bg-[#00C878] text-white shadow-sm'
+                            : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
+                        }`}
+                      >
+                        <span>{star}</span>
+                        <Star size={11} className={selectedRatingFilter === star ? "fill-white text-white" : "fill-amber-400 text-amber-400"} />
+                        <span>({count})</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Reviews Vertical Cascading List */}
+              {loadingReviews ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="animate-spin text-[#00C878] mb-2" size={28} />
+                  <p className="text-xs text-gray-500">Carregando avaliações...</p>
+                </div>
+              ) : filteredReviews.length === 0 ? (
+                <div className="text-center py-10 border border-dashed border-gray-200 dark:border-white/10 rounded-2xl bg-gray-50/50 dark:bg-[#0A0F0D]/20 animate-fade-in flex flex-col items-center gap-2">
+                  <Star size={32} className="text-gray-400 dark:text-gray-600 mb-1" />
+                  <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+                    {selectedRatingFilter === 'all'
+                      ? 'Nenhuma avaliação para este produto ainda.'
+                      : `Nenhuma avaliação com ${selectedRatingFilter} estrelas.`}
+                  </p>
+                  {selectedRatingFilter !== 'all' && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedRatingFilter('all')}
+                      className="text-xs text-[#00C878] font-bold hover:underline cursor-pointer mt-1"
+                    >
+                      Ver todas as avaliações
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="max-h-[500px] overflow-y-auto pr-2 sm:pr-3 flex flex-col gap-3.5 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-white/10 scrollbar-track-transparent">
+                  {filteredReviews.map((rev: any) => {
+                    const initials = rev.is_anonymous || !rev.name
+                      ? 'CA'
+                      : rev.name
+                          .split(' ')
+                          .filter(Boolean)
+                          .map((n: string) => n[0])
+                          .slice(0, 2)
+                          .join('')
+                          .toUpperCase()
+
+                    return (
+                      <div
+                        key={rev.id}
+                        className="bg-gray-50/80 dark:bg-[#0A0F0D]/60 border border-gray-200/80 dark:border-white/5 rounded-2xl p-4 sm:p-5 flex flex-col gap-2.5 transition-all hover:border-[#00C878]/30 shadow-sm"
+                      >
+                        {/* Header: Avatar, Name, Date, Stars */}
+                        <div className="flex flex-wrap items-center justify-between gap-2.5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-emerald-500/15 text-[#00C878] font-bold text-xs flex items-center justify-center border border-emerald-500/20 flex-shrink-0">
+                              {initials}
+                            </div>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+                                  {rev.is_anonymous ? 'Cliente Anônimo' : rev.name}
+                                </span>
+                                <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
+                                  ✓ Compra verificada
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                                {new Date(rev.created_at).toLocaleDateString('pt-BR')}
+                                {new Date(rev.updated_at).getTime() > new Date(rev.created_at).getTime() + 1000 && (
+                                  <span className="ml-1 italic opacity-75">(Editada)</span>
+                                )}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-1 bg-white/60 dark:bg-white/5 px-2.5 py-1 rounded-lg border border-gray-200/60 dark:border-white/5">
+                            {renderStars(rev.rating, 13)}
+                          </div>
+                        </div>
+
+                        {/* Comment text */}
+                        {rev.comment ? (
+                          <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed pt-1">
+                            {rev.comment}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 italic pt-0.5">
+                            Avaliação sem comentário em texto
+                          </p>
+                        )}
+
+                        {/* Attached Image (if any) */}
                         {rev.image && (
-                          <div className="mt-1">
+                          <div className="mt-1 pt-1 border-t border-gray-100 dark:border-white/5">
                             <img
                               src={getReviewImageUrl(rev.image) || PRODUCT_IMAGE_FALLBACK}
                               alt="Foto da avaliação"
-                              className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-xl border border-white/5 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
+                              className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-xl border border-gray-200 dark:border-white/10 hover:scale-105 active:scale-95 transition-all cursor-pointer shadow-sm"
                               onClick={() => setActiveReviewImage(getReviewImageUrl(rev.image))}
                               onError={handleProductImageError}
                             />
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
+                    )
+                  })}
+                </div>
+              )}
             </div>
+
           </div>
-
-          {/* Form to submit review AT THE BOTTOM */}
-          <div id="review-form-anchor" className="mt-8 border-t border-gray-200 dark:border-white/5 pt-8 max-w-3xl mx-auto">
-            {isEligible ? (
-              !isEditingReview && hasReviewed ? (
-                <div className="bg-gray-50 dark:bg-[#0A0F0D]/40 border border-[#00C878]/30 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-emerald-500/10 text-[#00C878] rounded-xl border border-emerald-500/20 mt-1">
-                      <CheckCircle size={24} />
-                    </div>
-                    <div>
-                      <h4 className="text-base font-bold text-gray-900 dark:text-white">Você já avaliou este produto</h4>
-                      <p className="text-sm text-gray-500 mt-1.5 leading-relaxed">
-                        Obrigado pelo seu feedback! Ele ajuda outros clientes a tomarem a melhor decisão.
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setIsEditingReview(true)}
-                    className="w-full sm:w-auto px-6 py-3 bg-transparent border-2 border-[#00C878] hover:bg-[#00C878] text-[#00C878] hover:text-white text-sm font-bold rounded-xl transition-all cursor-pointer text-center whitespace-nowrap"
-                  >
-                    Editar avaliação
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmitReview} className="space-y-5 bg-white dark:bg-[#131926]/40 p-6 sm:p-8 rounded-3xl border border-gray-200 dark:border-white/5 shadow-sm">
-                  <h3 className="text-base font-bold text-gray-900 dark:text-white uppercase tracking-wider flex items-center justify-between pb-4 border-b border-gray-100 dark:border-white/5">
-                    <span>{isEditingReview ? 'Editar sua Avaliação' : 'Deixe sua Avaliação'}</span>
-                    {isEditingReview && (
-                      <button
-                        type="button"
-                        onClick={() => setIsEditingReview(false)}
-                        className="text-xs text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer"
-                      >
-                        Cancelar
-                      </button>
-                    )}
-                  </h3>
-
-                  {/* Star selector */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                      Sua Nota
-                    </label>
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setNewRating(star)}
-                          className="text-amber-400 hover:scale-110 active:scale-95 transition-transform cursor-pointer"
-                        >
-                          <Star
-                            size={32}
-                            fill={star <= newRating ? "currentColor" : "none"}
-                            className={star <= newRating ? "text-amber-400" : "text-gray-600"}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Comments textarea */}
-                  <div className="flex flex-col gap-2">
-                    <label htmlFor="comment" className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                      Seu Comentário
-                    </label>
-                    <textarea
-                      id="comment"
-                      rows={4}
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="O que você achou deste produto? Conte-nos sua experiência..."
-                      className="w-full text-sm p-4 rounded-xl border border-gray-200 dark:border-white/5 bg-gray-50 dark:bg-[#0A0F0D]/60 text-gray-900 dark:text-white focus:ring-1 focus:ring-[#00C878] focus:border-transparent outline-none transition-all resize-none"
-                    />
-                  </div>
-
-                  {/* Image uploader */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                      Adicionar Foto (opcional)
-                    </label>
-                    <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-2 px-5 py-2.5 border border-gray-200 dark:border-white/5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl cursor-pointer text-sm font-semibold text-gray-700 dark:text-white transition-colors">
-                        <Camera size={16} />
-                        <span>Selecionar Imagem</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="hidden"
-                        />
-                      </label>
-
-                      {newImageUrl && (
-                        <div className="relative flex items-center gap-2 p-1.5 border border-gray-200 dark:border-white/5 rounded-xl bg-gray-50 dark:bg-[#0A0F0D]/60">
-                          <img
-                            src={newImageUrl}
-                            alt="Pré-visualização"
-                            className="w-12 h-12 object-cover rounded-lg"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleRemoveImage}
-                            className="p-1 hover:bg-red-500/10 text-red-400 rounded-lg transition-colors cursor-pointer"
-                            title="Remover imagem"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Anonymous toggle */}
-                  <div className="flex items-center gap-2 pt-2">
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={isAnonymous}
-                        onChange={(e) => setIsAnonymous(e.target.checked)}
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00C878]"></div>
-                      <span className="ml-3 text-sm font-medium text-gray-700 dark:text-gray-300 select-none">
-                        Avaliar anonimamente
-                      </span>
-                    </label>
-                  </div>
-
-                  {/* Error & Success Messages */}
-                  {submitError && (
-                    <div className="flex items-center gap-2 p-4 rounded-xl bg-red-950/20 border border-red-900/35 text-sm text-red-400">
-                      <AlertCircle size={18} className="flex-shrink-0" />
-                      <span>{submitError}</span>
-                    </div>
-                  )}
-
-                  {submitSuccess && (
-                    <div className="flex items-center gap-2 p-4 rounded-xl bg-green-950/20 border border-green-900/35 text-sm text-[#00C878]">
-                      <CheckCircle size={18} className="flex-shrink-0" />
-                      <span>{isEditingReview ? 'Avaliação atualizada com sucesso!' : 'Avaliação enviada com sucesso! Obrigado pelo feedback.'}</span>
-                    </div>
-                  )}
-
-                  {/* Submit Button */}
-                  <div className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={submittingReview}
-                      className="w-full sm:w-auto px-8 py-3.5 bg-[#00C878] hover:bg-emerald-600 text-white font-bold rounded-xl transition-all shadow-md active:scale-98 flex items-center justify-center gap-2 text-sm uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      {submittingReview ? (
-                        <>
-                          <Loader2 className="animate-spin" size={18} />
-                          <span>Enviando...</span>
-                        </>
-                      ) : (
-                        <span>{isEditingReview ? 'Salvar Alterações' : 'Enviar Avaliação'}</span>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              )
-            ) : (
-              <div className="bg-gray-50 dark:bg-[#0A0F0D]/40 border border-gray-200 dark:border-white/5 rounded-3xl p-8 flex flex-col items-center text-center gap-4">
-                <div className="p-4 bg-emerald-500/10 text-[#00C878] rounded-2xl border border-emerald-500/20">
-                  <MessageSquare size={32} />
-                </div>
-                <div>
-                  <h4 className="text-lg font-bold text-gray-900 dark:text-white">Avalie este produto</h4>
-                  <p className="text-sm text-gray-500 mt-2 max-w-md mx-auto leading-relaxed">
-                    {eligibilityMessage || 'Sua opinião é muito importante para nós e para outros clientes.'}
-                  </p>
-                </div>
-                {!isLoggedIn && (
-                  <button
-                    onClick={() => navigate('/login')}
-                    className="mt-2 px-8 py-3 bg-transparent border-2 border-gray-300 dark:border-white/10 hover:border-gray-400 dark:hover:border-white/20 hover:bg-gray-100 dark:hover:bg-white/5 text-sm font-bold text-gray-700 dark:text-white rounded-xl transition-all cursor-pointer"
-                  >
-                    Faça login para avaliar
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
         </div>
+
       </div>
 
       {/* ═══════════════ LIGHTBOX MODAL (Image Fullscreen) ════════════════════ */}
