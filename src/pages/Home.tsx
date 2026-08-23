@@ -717,7 +717,7 @@ export default function Home() {
                             </span>
                           )}
                         </div>
-                        <div className="p-2.5 sm:p-3.5 flex flex-col flex-1 justify-between bg-white dark:bg-gray-700">
+                        <div className="p-2.5 sm:p-3 flex flex-col flex-1 justify-between bg-white dark:bg-gray-700">
                           {/* Fixed-height Title to prevent shifting */}
                           <div className="h-[36px] sm:h-[40px] overflow-hidden mb-1 flex items-start">
                             <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-primary-600 dark:group-hover:text-primary-450 transition-colors">
@@ -725,18 +725,36 @@ export default function Home() {
                             </h3>
                           </div>
 
+                          {/* Rating & Frete inline */}
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <div className="flex items-center text-amber-400">
+                              <Star size={11} className="fill-amber-400 text-amber-400" />
+                            </div>
+                            <span className="text-[11px] font-bold text-gray-800 dark:text-gray-200">
+                              {Number(product.rating ?? 5.0).toFixed(1)}
+                            </span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                              ({product.reviews_count ?? 0})
+                            </span>
+                            {product.free_shipping && (
+                              <span className="ml-auto text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate">
+                                🚚 Frete grátis
+                              </span>
+                            )}
+                          </div>
+
                           {/* Fixed-height Description */}
-                          <div className="h-[30px] sm:h-[34px] overflow-hidden mb-2">
+                          <div className="h-[28px] sm:h-[32px] overflow-hidden mb-2">
                             <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
                               {product.description || 'Produto de alta qualidade para o seu bem-estar.'}
                             </p>
                           </div>
 
                           {/* Price and Promotion container */}
-                          <div className="flex flex-col justify-end mt-auto">
+                          <div className="flex flex-col justify-end mt-auto pt-1.5 border-t border-gray-100 dark:border-gray-600/60">
                             {product.promo_price ? (
                               <div>
-                                <p className="text-[10px] text-gray-400 line-through leading-none mb-1">
+                                <p className="text-[10px] text-gray-400 line-through leading-none mb-0.5">
                                   R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
                                 </p>
                                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -747,23 +765,11 @@ export default function Home() {
                               </div>
                             ) : (
                               <div>
-                                {/* Spacer to keep same height layout */}
-                                <p className="text-[10px] text-transparent leading-none mb-1 select-none">&nbsp;</p>
+                                <p className="text-[10px] text-transparent leading-none mb-0.5 select-none">&nbsp;</p>
                                 <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-none">
                                   R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
                                 </span>
                               </div>
-                            )}
-                          </div>
-
-                          {/* Free shipping banner with fixed height */}
-                          <div className="h-4 mt-1.5 flex items-center">
-                            {product.free_shipping ? (
-                              <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold flex items-center">
-                                🚚 Frete grátis
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-transparent select-none">&nbsp;</span>
                             )}
                           </div>
                         </div>
@@ -836,7 +842,7 @@ export default function Home() {
                             </span>
                           )}
                         </div>
-                        <div className="p-2.5 sm:p-3.5 flex flex-col flex-1 justify-between bg-white dark:bg-gray-700">
+                        <div className="p-2.5 sm:p-3 flex flex-col flex-1 justify-between bg-white dark:bg-gray-700">
                           {/* Fixed-height Title to prevent shifting */}
                           <div className="h-[36px] sm:h-[40px] overflow-hidden mb-1 flex items-start">
                             <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 leading-snug group-hover:text-primary-600 dark:group-hover:text-primary-450 transition-colors">
@@ -844,18 +850,36 @@ export default function Home() {
                             </h3>
                           </div>
 
+                          {/* Rating & Frete inline */}
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <div className="flex items-center text-amber-400">
+                              <Star size={11} className="fill-amber-400 text-amber-400" />
+                            </div>
+                            <span className="text-[11px] font-bold text-gray-800 dark:text-gray-200">
+                              {Number(product.rating ?? 5.0).toFixed(1)}
+                            </span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                              ({product.reviews_count ?? 0})
+                            </span>
+                            {product.free_shipping && (
+                              <span className="ml-auto text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate">
+                                🚚 Frete grátis
+                              </span>
+                            )}
+                          </div>
+
                           {/* Fixed-height Description */}
-                          <div className="h-[30px] sm:h-[34px] overflow-hidden mb-2">
+                          <div className="h-[28px] sm:h-[32px] overflow-hidden mb-2">
                             <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
                               {product.description || 'Fórmula manipulada com alto padrão de qualidade e eficácia.'}
                             </p>
                           </div>
 
                           {/* Price and Promotion container */}
-                          <div className="flex flex-col justify-end mt-auto">
+                          <div className="flex flex-col justify-end mt-auto pt-1.5 border-t border-gray-100 dark:border-gray-600/60">
                             {product.promo_price ? (
                               <div>
-                                <p className="text-[10px] text-gray-400 line-through leading-none mb-1">
+                                <p className="text-[10px] text-gray-400 line-through leading-none mb-0.5">
                                   R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
                                 </p>
                                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -866,23 +890,11 @@ export default function Home() {
                               </div>
                             ) : (
                               <div>
-                                {/* Spacer to keep same height layout */}
-                                <p className="text-[10px] text-transparent leading-none mb-1 select-none">&nbsp;</p>
+                                <p className="text-[10px] text-transparent leading-none mb-0.5 select-none">&nbsp;</p>
                                 <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-none">
                                   R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
                                 </span>
                               </div>
-                            )}
-                          </div>
-
-                          {/* Free shipping banner with fixed height */}
-                          <div className="h-4 mt-1.5 flex items-center">
-                            {product.free_shipping ? (
-                              <span className="text-[10px] text-green-600 dark:text-green-400 font-semibold flex items-center">
-                                🚚 Frete grátis
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-transparent select-none">&nbsp;</span>
                             )}
                           </div>
                         </div>

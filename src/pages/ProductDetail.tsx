@@ -670,11 +670,10 @@ export default function ProductDetail() {
                       key={index}
                       type="button"
                       onClick={() => setSelectedImage(index)}
-                      className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl border-2 overflow-hidden bg-gray-50 dark:bg-[#0A0F0D]/60 shrink-0 transition-all cursor-pointer ${
-                        selectedImage === index
+                      className={`w-16 h-16 sm:w-20 sm:h-20 rounded-xl border-2 overflow-hidden bg-gray-50 dark:bg-[#0A0F0D]/60 shrink-0 transition-all cursor-pointer ${selectedImage === index
                           ? 'border-[#00C878] ring-2 ring-[#00C878]/30 scale-105 shadow-sm'
                           : 'border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10 opacity-70 hover:opacity-100'
-                      }`}
+                        }`}
                     >
                       <img
                         src={img}
@@ -997,26 +996,26 @@ export default function ProductDetail() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
 
               {/* Ratings Summary (lg:col-span-5) */}
-              <div className="lg:col-span-5 flex flex-col gap-4 bg-gray-50/70 dark:bg-[#0A0F0D]/40 p-5 rounded-2xl border border-gray-200/80 dark:border-white/5">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-5xl font-extrabold text-gray-900 dark:text-white">
-                    {totalReviews > 0 ? averageRating.toFixed(1) : '0.0'}
-                  </span>
-                  <span className="text-sm font-bold text-gray-400 dark:text-gray-500">/ 5</span>
-                </div>
+              <div className="lg:col-span-5 flex flex-col gap-3.5 bg-gray-50/70 dark:bg-[#0A0F0D]/40 p-5 rounded-2xl border border-gray-200/80 dark:border-white/5">
+                <div className="flex items-center gap-3.5 flex-wrap">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-4xl font-extrabold text-gray-900 dark:text-white">
+                      {totalReviews > 0 ? averageRating.toFixed(1) : '0.0'}
+                    </span>
+                    <span className="text-sm font-bold text-gray-400 dark:text-gray-500">/ 5</span>
+                  </div>
 
-                <div className="flex flex-col gap-1">
-                  {renderStars(Math.round(averageRating), 18)}
-                  <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">
-                    Média baseada em {totalReviews} {totalReviews === 1 ? 'avaliação' : 'avaliações'}
+                  <div className="flex items-center">
+                    {renderStars(Math.round(averageRating), 18)}
+                  </div>
+
+                  <span className="text-xs font-medium text-gray-400 dark:text-gray-500 ml-auto">
+                    ({totalReviews} {totalReviews === 1 ? 'avaliação' : 'avaliações'})
                   </span>
                 </div>
 
                 {/* Stars distribution progress bars - clickable to filter! */}
                 <div className="flex flex-col gap-1.5 pt-2 border-t border-gray-200/60 dark:border-white/5">
-                  <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">
-                    Filtrar por estrelas
-                  </span>
                   {[5, 4, 3, 2, 1].map((star) => {
                     const count = reviews.filter((r) => r.rating === star).length
                     const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0
@@ -1028,11 +1027,10 @@ export default function ProductDetail() {
                         key={star}
                         type="button"
                         onClick={() => setSelectedRatingFilter(isSelected ? 'all' : star)}
-                        className={`flex items-center gap-2.5 text-xs w-full p-1.5 rounded-lg transition-all text-left cursor-pointer ${
-                          isSelected
+                        className={`flex items-center gap-2.5 text-xs w-full p-1.5 rounded-lg transition-all text-left cursor-pointer ${isSelected
                             ? 'bg-[#00C878]/15 ring-1 ring-[#00C878] font-bold'
                             : 'hover:bg-gray-200/60 dark:hover:bg-white/5'
-                        }`}
+                          }`}
                         title={`Filtrar por ${star} estrelas (${count})`}
                       >
                         <span className="w-3 font-semibold text-gray-700 dark:text-gray-300">{star}</span>
@@ -1236,7 +1234,7 @@ export default function ProductDetail() {
 
             {/* Bottom Section: Customer Reviews List in Cascade with Vertical Scroll */}
             <div className="border-t border-gray-200 dark:border-white/5 pt-6 mt-2 flex flex-col gap-4">
-              
+
               {/* Header with Title & Filter Pills */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
@@ -1253,11 +1251,10 @@ export default function ProductDetail() {
                   <button
                     type="button"
                     onClick={() => setSelectedRatingFilter('all')}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
-                      selectedRatingFilter === 'all'
+                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${selectedRatingFilter === 'all'
                         ? 'bg-[#00C878] text-white shadow-sm'
                         : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
-                    }`}
+                      }`}
                   >
                     Todas ({reviews.length})
                   </button>
@@ -1270,11 +1267,10 @@ export default function ProductDetail() {
                         key={star}
                         type="button"
                         onClick={() => setSelectedRatingFilter(selectedRatingFilter === star ? 'all' : star)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
-                          selectedRatingFilter === star
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${selectedRatingFilter === star
                             ? 'bg-[#00C878] text-white shadow-sm'
                             : 'bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
-                        }`}
+                          }`}
                       >
                         <span>{star}</span>
                         <Star size={11} className={selectedRatingFilter === star ? "fill-white text-white" : "fill-amber-400 text-amber-400"} />
@@ -1315,12 +1311,12 @@ export default function ProductDetail() {
                     const initials = rev.is_anonymous || !rev.name
                       ? 'CA'
                       : rev.name
-                          .split(' ')
-                          .filter(Boolean)
-                          .map((n: string) => n[0])
-                          .slice(0, 2)
-                          .join('')
-                          .toUpperCase()
+                        .split(' ')
+                        .filter(Boolean)
+                        .map((n: string) => n[0])
+                        .slice(0, 2)
+                        .join('')
+                        .toUpperCase()
 
                     return (
                       <div

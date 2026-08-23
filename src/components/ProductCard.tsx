@@ -205,10 +205,10 @@ export default function ProductCard({ product }: ProductCardProps) {
                   <Star size={12} className="fill-amber-400 text-amber-400" />
                 </div>
                 <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
-                  {Number(product.rating || 5.0).toFixed(1)}
+                  {Number(product.rating ?? 5.0).toFixed(1)}
                 </span>
                 <span className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
-                  ({product.reviews_count || 4})
+                  ({product.reviews_count ?? 0})
                 </span>
                 {product.free_shipping && (
                   <span className="ml-auto text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold truncate">
