@@ -366,15 +366,37 @@ export default function ProductDetail() {
 
   const renderStars = (rating: number, size = 14) => {
     return (
-      <div className="flex text-amber-400">
-        {[...Array(5)].map((_, i) => (
-          <Star
-            key={i}
-            size={size}
-            fill={i < rating ? 'currentColor' : 'none'}
-            className={i < rating ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600'}
-          />
-        ))}
+      <div className="flex items-center gap-0.5 text-amber-400">
+        {[0, 1, 2, 3, 4].map((i) => {
+          const fillRatio = Math.max(0, Math.min(1, rating - i))
+          const fillPct = Math.round(fillRatio * 100)
+
+          return (
+            <div
+              key={i}
+              className="relative inline-flex items-center justify-center flex-shrink-0"
+              style={{ width: size, height: size }}
+            >
+              {/* Background empty star */}
+              <Star
+                size={size}
+                className="text-gray-300 dark:text-gray-600 fill-gray-200 dark:fill-white/10 absolute top-0 left-0"
+              />
+              {/* Foreground filled star with percentage clipping */}
+              {fillPct > 0 && (
+                <div
+                  className="absolute top-0 left-0 h-full overflow-hidden"
+                  style={{ width: `${fillPct}%` }}
+                >
+                  <Star
+                    size={size}
+                    className="text-amber-400 fill-amber-400"
+                  />
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     )
   }
@@ -730,7 +752,7 @@ export default function ProductDetail() {
 
             {/* Stars & Reviews */}
             <div className="flex items-center gap-2 text-xs">
-              {renderStars(Math.round(averageRating))}
+              {renderStars(averageRating, 15)}
               {totalReviews > 0 ? (
                 <a
                   href="#reviews-section"
@@ -942,36 +964,46 @@ export default function ProductDetail() {
             {/* Tab panels */}
             <div className="p-6 min-h-[180px] lg:min-h-[200px] overflow-y-auto">
               {activeTab === 'description' && activeDetails.description && (
-                <div className="animate-fade-in space-y-3">
-                  <p className="text-xs sm:text-sm text-gray-650 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                    {activeDetails.description}
-                  </p>
+                <div className="animate-fade-in space-y-3.5">
+                  {activeDetails.description.split('\n\n').map((paragraph: string, idx: number) => (
+                    <p key={idx} className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-normal">
+                      {paragraph.trim()}
+                    </p>
+                  ))}
                 </div>
               )}
 
               {activeTab === 'compositions' && activeDetails.compositions && (
-                <div className="animate-fade-in space-y-3">
-                  <p className="text-xs sm:text-sm text-gray-650 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                    {activeDetails.compositions}
-                  </p>
+                <div className="animate-fade-in space-y-3.5">
+                  {activeDetails.compositions.split('\n\n').map((paragraph: string, idx: number) => (
+                    <p key={idx} className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-normal">
+                      {paragraph.trim()}
+                    </p>
+                  ))}
                 </div>
               )}
 
               {activeTab === 'indication' && activeDetails.indication && (
-                <div className="animate-fade-in space-y-3">
-                  <p className="text-xs sm:text-sm text-gray-650 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                    {activeDetails.indication}
-                  </p>
+                <div className="animate-fade-in space-y-3.5">
+                  {activeDetails.indication.split('\n\n').map((paragraph: string, idx: number) => (
+                    <p key={idx} className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-normal">
+                      {paragraph.trim()}
+                    </p>
+                  ))}
                 </div>
               )}
 
               {activeTab === 'contraindication' && activeDetails.contraindication && (
-                <div className="animate-fade-in space-y-3">
+                <div className="animate-fade-in space-y-3.5">
                   <div className="p-4 rounded-xl bg-orange-500/10 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 flex gap-3">
                     <AlertTriangle className="text-orange-600 dark:text-orange-500 flex-shrink-0" size={18} />
-                    <p className="text-xs sm:text-sm text-orange-850 dark:text-orange-300 leading-relaxed whitespace-pre-line">
-                      {activeDetails.contraindication}
-                    </p>
+                    <div className="space-y-2">
+                      {activeDetails.contraindication.split('\n\n').map((paragraph: string, idx: number) => (
+                        <p key={idx} className="text-xs sm:text-sm text-orange-850 dark:text-orange-300 leading-relaxed">
+                          {paragraph.trim()}
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -999,7 +1031,7 @@ export default function ProductDetail() {
               <div className="lg:col-span-5 flex flex-col gap-3.5 bg-gray-50/70 dark:bg-[#0A0F0D]/40 p-5 rounded-2xl border border-gray-200/80 dark:border-white/5">
                 <div className="flex items-center gap-3.5 flex-wrap">
                   <div className="flex items-center">
-                    {renderStars(Math.round(averageRating), 18)}
+                    {renderStars(averageRating, 18)}
                   </div>
 
                   <div className="flex items-baseline gap-1">
