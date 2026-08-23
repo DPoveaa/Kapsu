@@ -998,15 +998,15 @@ export default function ProductDetail() {
               {/* Ratings Summary (lg:col-span-5) */}
               <div className="lg:col-span-5 flex flex-col gap-3.5 bg-gray-50/70 dark:bg-[#0A0F0D]/40 p-5 rounded-2xl border border-gray-200/80 dark:border-white/5">
                 <div className="flex items-center gap-3.5 flex-wrap">
+                  <div className="flex items-center">
+                    {renderStars(Math.round(averageRating), 18)}
+                  </div>
+
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-gray-900 dark:text-white">
+                    <span className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white">
                       {totalReviews > 0 ? averageRating.toFixed(1) : '0.0'}
                     </span>
                     <span className="text-sm font-bold text-gray-400 dark:text-gray-500">/ 5</span>
-                  </div>
-
-                  <div className="flex items-center">
-                    {renderStars(Math.round(averageRating), 18)}
                   </div>
 
                   <span className="text-xs font-medium text-gray-400 dark:text-gray-500 ml-auto">
