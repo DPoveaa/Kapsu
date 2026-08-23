@@ -966,7 +966,7 @@ export default function ProductDetail() {
               {activeTab === 'description' && activeDetails.description && (
                 <div className="animate-fade-in space-y-3.5">
                   {activeDetails.description.split('\n\n').map((paragraph: string, idx: number) => (
-                    <p key={idx} className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-normal whitespace-pre-line">
+                    <p key={idx} className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-normal whitespace-pre-line tracking-[0.02em]">
                       {paragraph.trim()}
                     </p>
                   ))}
@@ -976,7 +976,7 @@ export default function ProductDetail() {
               {activeTab === 'compositions' && activeDetails.compositions && (
                 <div className="animate-fade-in space-y-3.5">
                   {activeDetails.compositions.split('\n\n').map((paragraph: string, idx: number) => (
-                    <p key={idx} className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-normal whitespace-pre-line">
+                    <p key={idx} className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-normal whitespace-pre-line tracking-[0.02em]">
                       {paragraph.trim()}
                     </p>
                   ))}
@@ -986,7 +986,7 @@ export default function ProductDetail() {
               {activeTab === 'indication' && activeDetails.indication && (
                 <div className="animate-fade-in space-y-3.5">
                   {activeDetails.indication.split('\n\n').map((paragraph: string, idx: number) => (
-                    <p key={idx} className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-normal whitespace-pre-line">
+                    <p key={idx} className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed font-normal whitespace-pre-line tracking-[0.02em]">
                       {paragraph.trim()}
                     </p>
                   ))}
@@ -999,7 +999,7 @@ export default function ProductDetail() {
                     <AlertTriangle className="text-orange-600 dark:text-orange-500 flex-shrink-0" size={18} />
                     <div className="space-y-2">
                       {activeDetails.contraindication.split('\n\n').map((paragraph: string, idx: number) => (
-                        <p key={idx} className="text-xs sm:text-sm text-orange-850 dark:text-orange-300 leading-relaxed whitespace-pre-line">
+                        <p key={idx} className="text-xs sm:text-sm text-orange-850 dark:text-orange-300 leading-relaxed whitespace-pre-line tracking-[0.02em]">
                           {paragraph.trim()}
                         </p>
                       ))}
