@@ -1098,9 +1098,15 @@ export default function ProductDetail() {
                             </div>
                           </div>
 
-                          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed italic line-clamp-4">
-                            "{rev.comment}"
-                          </p>
+                          {rev.comment ? (
+                            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed italic line-clamp-4">
+                              "{rev.comment}"
+                            </p>
+                          ) : (
+                            <p className="text-[11px] text-gray-400 dark:text-gray-500 italic">
+                              Avaliação sem comentário adicional
+                            </p>
+                          )}
                         </div>
 
                         {rev.image && (

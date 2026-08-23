@@ -8,6 +8,7 @@ interface BannerImageUploadProps {
   onChange: (url: string) => void // Callback quando a imagem é alterada (recebe caminho relativo)
   onError?: (error: string | null) => void // Callback para erros
   onUploadingChange?: (uploading: boolean) => void
+  aspectRatio?: 'desktop' | 'mobile'
   className?: string
   disabled?: boolean
 }
@@ -17,6 +18,7 @@ export default function BannerImageUpload({
   onChange,
   onError,
   onUploadingChange,
+  aspectRatio = 'desktop',
   className = '',
   disabled = false
 }: BannerImageUploadProps) {
@@ -68,26 +70,17 @@ export default function BannerImageUpload({
     try {
       setUploading(true)
       onUploadingChange?.(true)
-      // bannersService.uploadImage já retorna o caminho relativo normalizado
       const imagePath = await bannersService.uploadImage(file)
-
-      // Garante que está normalizado (deve começar com /)
       const normalizedPath = normalizeImagePath(imagePath)
-
-      // Salva apenas o caminho relativo (começando com /)
       onChange(normalizedPath)
-      // Mantém o preview base64 local (já definido pelo FileReader acima)
-      // Não substituímos pelo URL do servidor para evitar falha de carregamento imediato
-      onError?.(null) // Limpa erro anterior
+      onError?.(null)
     } catch (error: any) {
       console.error('Erro ao fazer upload:', error)
       onError?.(error.message || 'Erro ao fazer upload da imagem')
-      // Restaura preview anterior em caso de erro
       setPreview(value ? getPreviewUrl(value) : null)
     } finally {
       setUploading(false)
       onUploadingChange?.(false)
-      // Limpa o input para permitir selecionar o mesmo arquivo novamente
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
       }
@@ -108,82 +101,85 @@ export default function BannerImageUpload({
     }
   }
 
+  const isDesktop = aspectRatio === 'desktop'
+  const containerAspectClass = isDesktop ? 'aspect-[12/5] w-full max-w-md' : 'aspect-[4/3] w-44 sm:w-52'
+
   return (
-    <div className={className}>
-      <div className="flex items-center gap-4">
-        {/* Preview da imagem */}
-        {preview && (
-          <div className="relative w-32 h-32 border-2 border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-800">
-            <img
-              src={preview}
-              alt="Preview"
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement
-                target.onerror = null
-                target.style.display = 'none'
-              }}
-            />
-            {!disabled && (
-              <button
-                type="button"
-                onClick={handleRemove}
-                className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                title="Remover imagem"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Área de upload */}
-        <div className="flex-1">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-            onChange={handleFileSelect}
-            className="hidden"
-            disabled={disabled || uploading}
+    <div className={`space-y-3 ${className}`}>
+      {/* Área de preview no formato exato */}
+      {preview ? (
+        <div className={`relative ${containerAspectClass} border-2 border-primary-500/40 dark:border-primary-500/30 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-900 shadow-inner group`}>
+          <img
+            src={preview}
+            alt="Preview do banner"
+            className="w-full h-full object-cover object-center"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement
+              target.onerror = null
+              target.style.display = 'none'
+            }}
           />
-
-          <button
-            type="button"
-            onClick={handleClick}
-            disabled={disabled || uploading}
-            className={`
-              flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed transition-colors
-              ${disabled || uploading
-                ? 'border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                : 'border-primary-300 dark:border-gray-700 bg-primary-50 dark:bg-gray-800 text-primary-700 dark:text-white hover:border-primary-500 dark:hover:border-[#0F828C] hover:bg-primary-100 dark:hover:bg-[#065084] cursor-pointer'
-              }
-            `}
-          >
-            {uploading ? (
-              <>
-                <Loader2 className="animate-spin" size={20} />
-                <span>Enviando...</span>
-              </>
-            ) : preview ? (
-              <>
-                <ImageIcon size={20} />
-                <span>Alterar Imagem</span>
-              </>
-            ) : (
-              <>
-                <Upload size={20} />
-                <span>Selecionar Imagem</span>
-              </>
-            )}
-          </button>
-
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            Formatos aceitos: JPEG, PNG, GIF, WEBP (máx. 10MB)
-          </p>
+          <span className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-xs text-white text-[10px] font-medium px-2 py-0.5 rounded pointer-events-none">
+            {isDesktop ? 'Proporção 12:5 (1920x800)' : 'Proporção 4:3 (800x600)'}
+          </span>
+          {!disabled && (
+            <button
+              type="button"
+              onClick={handleRemove}
+              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 shadow-md transition-colors cursor-pointer"
+              title="Remover imagem"
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
+      ) : null}
+
+      {/* Controles de upload */}
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={disabled || uploading}
+        />
+
+        <button
+          type="button"
+          onClick={handleClick}
+          disabled={disabled || uploading}
+          className={`
+            flex items-center gap-2 px-4 py-2 rounded-lg border-2 border-dashed transition-all text-sm font-medium
+            ${disabled || uploading
+              ? 'border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+              : 'border-primary-300 dark:border-gray-600 bg-primary-50 dark:bg-gray-800/80 text-primary-700 dark:text-gray-200 hover:border-primary-500 dark:hover:border-primary-400 hover:bg-primary-100 dark:hover:bg-gray-700 cursor-pointer'
+            }
+          `}
+        >
+          {uploading ? (
+            <>
+              <Loader2 className="animate-spin text-primary-600" size={18} />
+              <span>Enviando imagem...</span>
+            </>
+          ) : preview ? (
+            <>
+              <ImageIcon size={18} />
+              <span>Substituir imagem</span>
+            </>
+          ) : (
+            <>
+              <Upload size={18} />
+              <span>Selecionar imagem ({isDesktop ? '1920x800' : '800x600'})</span>
+            </>
+          )}
+        </button>
+
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          Formatos: JPEG, PNG, WEBP (máx. 10MB)
+        </span>
       </div>
     </div>
   )
 }
-

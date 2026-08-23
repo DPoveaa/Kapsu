@@ -10,7 +10,8 @@ import AdminModal from '../components/AdminModal'
 
 // Componente para preview de imagem com fallback automático via API
 function BannerImagePreview({ banner, type = 'desktop' }: { banner: Banner, type?: 'desktop' | 'mobile' }) {
-  const imagePath = type === 'mobile' ? banner.mobile_image_url : banner.image_url
+  const isDesktop = type === 'desktop'
+  const imagePath = isDesktop ? banner.image_url : banner.mobile_image_url
   const [imageUrl, setImageUrl] = useState(getImageUrl(imagePath || ''))
   const [triedApiUrl, setTriedApiUrl] = useState(false)
   const [hasError, setHasError] = useState(false)
@@ -22,6 +23,8 @@ function BannerImagePreview({ banner, type = 'desktop' }: { banner: Banner, type
   }, [imagePath])
 
   if (!imagePath) return null
+
+  const sizeClass = isDesktop ? 'w-36 sm:w-44 aspect-[12/5]' : 'w-16 sm:w-20 aspect-[4/3]'
 
   const handleError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const target = e.target as HTMLImageElement
@@ -38,7 +41,6 @@ function BannerImagePreview({ banner, type = 'desktop' }: { banner: Banner, type
       setTriedApiUrl(true)
       setHasError(false)
     } else {
-      // Ambas as tentativas falharam
       console.error('❌ Erro ao carregar imagem do banner:', {
         bannerId: banner.id,
         attemptedUrl: target.src,
@@ -47,31 +49,16 @@ function BannerImagePreview({ banner, type = 'desktop' }: { banner: Banner, type
       setHasError(true)
       target.onerror = null
       target.style.display = 'none'
-      
-      const parent = target.parentElement
-      if (parent) {
-        parent.innerHTML = `
-          <div class="w-32 h-20 bg-gray-200 dark:bg-gray-700 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700">
-            <div class="text-center p-2">
-              <svg class="w-8 h-8 mx-auto text-gray-400 dark:text-gray-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-              </svg>
-              <p class="text-xs text-gray-500 dark:text-gray-400">Erro ao carregar</p>
-            </div>
-          </div>
-        `
-      }
     }
   }
 
   if (hasError) {
     return (
-      <div className="w-32 h-20 bg-gray-200 dark:bg-gray-700 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700">
-        <div className="text-center p-2">
-          <svg className="w-8 h-8 mx-auto text-gray-400 dark:text-gray-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className={`${sizeClass} bg-gray-200 dark:bg-gray-700 flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700`}>
+        <div className="text-center p-1">
+          <svg className="w-5 h-5 mx-auto text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
           </svg>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Erro ao carregar</p>
         </div>
       </div>
     )
@@ -82,7 +69,7 @@ function BannerImagePreview({ banner, type = 'desktop' }: { banner: Banner, type
       <img
         src={imageUrl}
         alt={banner.title || 'Banner'}
-        className="w-32 h-20 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+        className={`${sizeClass} object-cover rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800`}
         onError={handleError}
         onLoad={() => {
           if (triedApiUrl) {
@@ -337,7 +324,7 @@ export default function ManageBanners() {
           isOpen={showCreateForm || !!editingBanner}
           onClose={handleCancel}
           title={editingBanner ? 'Editar Banner' : 'Novo Banner'}
-          widthClass="max-w-xl"
+          widthClass="max-w-2xl"
           footer={
             <div className="flex justify-end gap-3">
               <button
@@ -360,29 +347,56 @@ export default function ManageBanners() {
             </div>
           }
         >
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Imagem Desktop * <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1">(Recomendado: 1920x1080 - 16:9)</span>
-              </label>
+          <div className="space-y-6">
+            {/* Guia de formatos */}
+            <div className="p-3 bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/60 rounded-lg text-xs text-blue-900 dark:text-blue-200 space-y-1">
+              <p className="font-semibold flex items-center gap-1.5 text-blue-800 dark:text-blue-300">
+                <span>📐</span> Formatos de imagem utilizados no site:
+              </p>
+              <p>
+                • <strong>Desktop:</strong> Proporção <strong>12:5</strong> (Panorâmico). Dimensão ideal: <strong>1920x800 px</strong> (ou 2400x1000 px).
+              </p>
+              <p>
+                • <strong>Mobile:</strong> Proporção <strong>4:3</strong>. Dimensão ideal: <strong>800x600 px</strong> (ou 1200x900 px).
+              </p>
+            </div>
+
+            {/* Imagem Desktop */}
+            <div className="p-4 bg-gray-50/70 dark:bg-gray-900/40 rounded-xl border border-gray-200 dark:border-gray-700/80 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200">
+                  Imagem Desktop *
+                </label>
+                <span className="text-xs px-2 py-0.5 rounded bg-primary-100 dark:bg-primary-900/40 text-primary-800 dark:text-primary-300 font-medium">
+                  1920x800 px (12:5)
+                </span>
+              </div>
               <BannerImageUpload
                 value={formData.image_url}
                 onChange={handleImageChange}
                 onError={(err) => { if (err) alert(err) }}
                 onUploadingChange={setUploading}
+                aspectRatio="desktop"
                 disabled={uploading}
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                Imagem Mobile (Opcional) <span className="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1">(Recomendado: 800x600 ou 1:1 - ex: 800x800)</span>
-              </label>
+            {/* Imagem Mobile */}
+            <div className="p-4 bg-gray-50/70 dark:bg-gray-900/40 rounded-xl border border-gray-200 dark:border-gray-700/80 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+                <label className="block text-sm font-semibold text-gray-800 dark:text-gray-200">
+                  Imagem Mobile (Opcional)
+                </label>
+                <span className="text-xs px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 font-medium">
+                  800x600 px (4:3)
+                </span>
+              </div>
               <BannerImageUpload
                 value={formData.mobile_image_url || ''}
                 onChange={(url) => handleBannerImageChange('mobile_image_url', url)}
                 onError={(err) => { if (err) alert(err) }}
                 onUploadingChange={setUploading}
+                aspectRatio="mobile"
                 disabled={uploading}
               />
             </div>
