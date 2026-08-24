@@ -8,6 +8,7 @@ import ProductCard from '../components/ProductCard'
 import { Product } from '../types'
 import { productsService } from '../services/products.service'
 import { searchProducts } from '../utils/productSearch'
+import { getProductPricing } from '../utils/productPricing'
 import SEO from '../components/SEO'
 
 export default function Products() {
@@ -195,12 +196,13 @@ export default function Products() {
         ))
 
       // 3. Price Filter Match
-      const effectivePrice = product.promo_price !== null && product.promo_price !== undefined ? Number(product.promo_price) : Number(product.price)
+      const pricing = getProductPricing(product)
+      const effectivePrice = pricing.effectivePrice
       const matchesMinPrice = appliedMinPrice === null || effectivePrice >= appliedMinPrice
       const matchesMaxPrice = appliedMaxPrice === null || effectivePrice <= appliedMaxPrice
 
       // 4. Promo Match
-      const matchesPromo = !isPromoOnly || (product.promo_price !== null && product.promo_price !== undefined && product.promo_price < product.price)
+      const matchesPromo = !isPromoOnly || pricing.isPromoActive
 
       // 5. Free Shipping Match
       const matchesShipping = !isFreeShipping || product.free_shipping === true
@@ -210,22 +212,17 @@ export default function Products() {
 
     // Sort Result list
     return [...list].sort((a, b) => {
-      const getPrice = (p: Product) => p.promo_price !== null && p.promo_price !== undefined ? Number(p.promo_price) : Number(p.price)
-      const getDiscount = (p: Product) => {
-        if (p.promo_price && p.price > 0) {
-          return ((Number(p.price) - Number(p.promo_price)) / Number(p.price)) * 100
-        }
-        return 0
-      }
+      const pricingA = getProductPricing(a)
+      const pricingB = getProductPricing(b)
 
       if (sortBy === 'price_asc') {
-        return getPrice(a) - getPrice(b)
+        return pricingA.effectivePrice - pricingB.effectivePrice
       }
       if (sortBy === 'price_desc') {
-        return getPrice(b) - getPrice(a)
+        return pricingB.effectivePrice - pricingA.effectivePrice
       }
       if (sortBy === 'discount_desc') {
-        return getDiscount(b) - getDiscount(a)
+        return pricingB.discountPercent - pricingA.discountPercent
       }
       if (term) {
         return (searchScores.get(b.id) || 0) - (searchScores.get(a.id) || 0)

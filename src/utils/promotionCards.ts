@@ -1,9 +1,13 @@
+import { getProductPricing } from './productPricing'
+
 export type PromotionCardProduct = {
   id: string
   name: string
   price: number
   promoPrice?: number | null
   promo_price?: number | null
+  promo_ends_at?: string | null
+  promoEndsAt?: string | null
   category?: string | null
   image?: string | null
 }
@@ -13,32 +17,31 @@ export type NormalizedPromotionCard = PromotionCardProduct & {
   promoPrice: number | null
   discountPercent: number
   categoryLabel: string | null
+  isPromoActive: boolean
 }
 
 export function normalizePromotionProduct(product: PromotionCardProduct): NormalizedPromotionCard {
-  const originalPrice = Number(product.price) || 0
-  const rawPromo = product.promoPrice ?? product.promo_price
-  const parsedPromo = rawPromo === null || rawPromo === undefined ? null : Number(rawPromo)
-  const hasPromo = parsedPromo !== null && Number.isFinite(parsedPromo) && parsedPromo > 0 && parsedPromo < originalPrice
-  const promoPrice = hasPromo ? parsedPromo : null
-  const discountPercent =
-    hasPromo && originalPrice > 0 ? Math.round(((originalPrice - (promoPrice as number)) / originalPrice) * 100) : 0
+  const pricing = getProductPricing(product)
   const categoryLabel = product.category?.split(',')[0]?.trim() || null
 
   return {
     ...product,
-    originalPrice,
-    promoPrice,
-    discountPercent,
-    categoryLabel
+    originalPrice: pricing.originalPrice ?? pricing.price,
+    promoPrice: pricing.isPromoActive ? pricing.effectivePrice : null,
+    discountPercent: pricing.discountPercent,
+    categoryLabel,
+    isPromoActive: pricing.isPromoActive
   }
 }
 
 export function sortPromotionProductsByDiscount(items: PromotionCardProduct[]): NormalizedPromotionCard[] {
-  return items.map(normalizePromotionProduct).sort((a, b) => {
-    if (b.discountPercent !== a.discountPercent) return b.discountPercent - a.discountPercent
-    return a.name.localeCompare(b.name, 'pt-BR')
-  })
+  return items
+    .map(normalizePromotionProduct)
+    .filter(p => p.isPromoActive)
+    .sort((a, b) => {
+      if (b.discountPercent !== a.discountPercent) return b.discountPercent - a.discountPercent
+      return a.name.localeCompare(b.name, 'pt-BR')
+    })
 }
 
 export function selectTopPromotionProducts(items: PromotionCardProduct[], limit = 3) {

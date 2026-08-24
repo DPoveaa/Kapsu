@@ -23,6 +23,7 @@ import CartItemCard from '../components/Checkout/CartItemCard'
 import CheckoutConfirmation from '../components/Checkout/CheckoutConfirmation'
 import { CheckoutStep, PaymentMethod, getStepIndex, parseCheckoutStep } from '../types/checkout'
 import { CreditCardFormData, validateCreditCardForm } from '../utils/cardValidation'
+import { getProductPricing } from '../utils/productPricing'
 import SEO from '../components/SEO'
 import { toast } from '../utils/toast'
 import {
@@ -3302,9 +3303,10 @@ export default function Cart({ initialStep = 'cart' }: CartProps) {
         {/* Lista de itens no checkout */}
         <div className="space-y-2 mb-4 max-h-[200px] overflow-y-auto pr-1">
           {items.map((item) => {
-            const hasDiscount = item.product && item.product.promo_price && item.product.promo_price < item.product.price
-            const originalUnitPrice = item.product?.price ?? 0
-            const currentUnitPrice = item.product?.promo_price ?? item.product?.price ?? 0
+            const pricing = getProductPricing(item.product)
+            const hasDiscount = pricing.isPromoActive
+            const originalUnitPrice = pricing.originalPrice ?? pricing.price
+            const currentUnitPrice = pricing.effectivePrice
 
             return (
               <div key={item.id} className="text-xs pb-2 border-b border-gray-100 dark:border-gray-700 last:border-0">

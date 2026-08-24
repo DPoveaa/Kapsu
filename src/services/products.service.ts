@@ -17,6 +17,7 @@ export interface BackendProduct {
   description: string | null
   price: number
   promo_price: number | null
+  promo_ends_at?: string | null
   purchase_price: number | null
   image: string | null
   images?: string[] | string | null
@@ -166,6 +167,7 @@ class ProductsService {
       description: product.description || '',
       price: Number(product.price),
       promo_price: product.promo_price ? Number(product.promo_price) : null,
+      promo_ends_at: product.promo_ends_at ? String(product.promo_ends_at) : null,
       purchase_price: product.purchase_price != null ? Number(product.purchase_price) : null,
       image: this.getImageUrl(product.image),
       images: mappedImages,
@@ -332,6 +334,7 @@ class ProductsService {
     description?: string
     price: number
     promo_price?: number | null
+    promo_ends_at?: string | null
     purchase_price?: number | null
     image?: string | null
     category?: string
@@ -568,6 +571,7 @@ class ProductsService {
     description?: string
     price?: number
     promo_price?: number | null
+    promo_ends_at?: string | null
     purchase_price?: number | null
     image?: string | null
     category?: string

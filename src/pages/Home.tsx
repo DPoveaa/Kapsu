@@ -10,6 +10,7 @@ import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback
 import { getImageUrl, getResponsiveImageSrcSet } from '../utils/imageUrl'
 import { HorizontalScrollContainer } from '../components/HorizontalScrollContainer'
 import { generateProductUrl } from '../utils/productUrl'
+import { getProductPricing } from '../utils/productPricing'
 import DeferredProductImage from '../components/DeferredProductImage'
 import SEO from '../components/SEO'
 
@@ -711,11 +712,18 @@ export default function Home() {
                             draggable={false}
                             onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
                           />
-                          {product.promo_price && (
-                            <span className="absolute top-2 left-2 bg-primary-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
-                              {Math.round(((Number(product.price) - Number(product.promo_price)) / Number(product.price)) * 100)}% OFF
-                            </span>
-                          )}
+                          {(() => {
+                            const pricing = getProductPricing(product)
+                            return (
+                              <>
+                                {pricing.isPromoActive && (
+                                  <span className="absolute top-2 left-2 bg-primary-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+                                    {pricing.discountPercent}% OFF
+                                  </span>
+                                )}
+                              </>
+                            )
+                          })()}
                         </div>
                         <div className="p-2.5 sm:p-3 flex flex-col flex-1 justify-between bg-white dark:bg-gray-700">
                           {/* Fixed-height Title to prevent shifting */}
@@ -752,25 +760,31 @@ export default function Home() {
 
                           {/* Price and Promotion container */}
                           <div className="flex flex-col justify-end mt-auto pt-1.5 border-t border-gray-100 dark:border-gray-600/60">
-                            {product.promo_price ? (
-                              <div>
-                                <p className="text-[10px] text-gray-400 line-through leading-none mb-0.5">
-                                  R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
-                                </p>
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400 leading-none">
-                                    R$ {Number(product.promo_price || 0).toFixed(2).replace('.', ',')}
+                            {(() => {
+                              const pricing = getProductPricing(product)
+                              if (pricing.isPromoActive) {
+                                return (
+                                  <div>
+                                    <p className="text-[10px] text-gray-400 line-through leading-none mb-0.5">
+                                      R$ {pricing.originalPrice?.toFixed(2).replace('.', ',')}
+                                    </p>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400 leading-none">
+                                        R$ {pricing.effectivePrice.toFixed(2).replace('.', ',')}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )
+                              }
+                              return (
+                                <div>
+                                  <p className="text-[10px] text-transparent leading-none mb-0.5 select-none">&nbsp;</p>
+                                  <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-none">
+                                    R$ {pricing.effectivePrice.toFixed(2).replace('.', ',')}
                                   </span>
                                 </div>
-                              </div>
-                            ) : (
-                              <div>
-                                <p className="text-[10px] text-transparent leading-none mb-0.5 select-none">&nbsp;</p>
-                                <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-none">
-                                  R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
-                                </span>
-                              </div>
-                            )}
+                              )
+                            })()}
                           </div>
                         </div>
                       </Link>
@@ -836,11 +850,18 @@ export default function Home() {
                             draggable={false}
                             onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
                           />
-                          {product.promo_price && (
-                            <span className="absolute top-2 left-2 bg-primary-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
-                              {Math.round(((Number(product.price) - Number(product.promo_price)) / Number(product.price)) * 100)}% OFF
-                            </span>
-                          )}
+                          {(() => {
+                            const pricing = getProductPricing(product)
+                            return (
+                              <>
+                                {pricing.isPromoActive && (
+                                  <span className="absolute top-2 left-2 bg-primary-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+                                    {pricing.discountPercent}% OFF
+                                  </span>
+                                )}
+                              </>
+                            )
+                          })()}
                         </div>
                         <div className="p-2.5 sm:p-3 flex flex-col flex-1 justify-between bg-white dark:bg-gray-700">
                           {/* Fixed-height Title to prevent shifting */}
@@ -877,25 +898,31 @@ export default function Home() {
 
                           {/* Price and Promotion container */}
                           <div className="flex flex-col justify-end mt-auto pt-1.5 border-t border-gray-100 dark:border-gray-600/60">
-                            {product.promo_price ? (
-                              <div>
-                                <p className="text-[10px] text-gray-400 line-through leading-none mb-0.5">
-                                  R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
-                                </p>
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400 leading-none">
-                                    R$ {Number(product.promo_price || 0).toFixed(2).replace('.', ',')}
+                            {(() => {
+                              const pricing = getProductPricing(product)
+                              if (pricing.isPromoActive) {
+                                return (
+                                  <div>
+                                    <p className="text-[10px] text-gray-400 line-through leading-none mb-0.5">
+                                      R$ {pricing.originalPrice?.toFixed(2).replace('.', ',')}
+                                    </p>
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-xs sm:text-sm font-bold text-primary-600 dark:text-primary-400 leading-none">
+                                        R$ {pricing.effectivePrice.toFixed(2).replace('.', ',')}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )
+                              }
+                              return (
+                                <div>
+                                  <p className="text-[10px] text-transparent leading-none mb-0.5 select-none">&nbsp;</p>
+                                  <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-none">
+                                    R$ {pricing.effectivePrice.toFixed(2).replace('.', ',')}
                                   </span>
                                 </div>
-                              </div>
-                            ) : (
-                              <div>
-                                <p className="text-[10px] text-transparent leading-none mb-0.5 select-none">&nbsp;</p>
-                                <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-none">
-                                  R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
-                                </span>
-                              </div>
-                            )}
+                              )
+                            })()}
                           </div>
                         </div>
                       </Link>

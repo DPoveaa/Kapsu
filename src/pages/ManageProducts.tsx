@@ -5,8 +5,9 @@ import {
   Archive, ArchiveRestore, TrendingUp, TrendingDown, Minus,
   ChevronDown, ChevronRight, X, BarChart2, ShoppingCart, Tag,
   Sparkles, Check, AlertCircle, Save, Download, FileText, FileSpreadsheet,
-  Filter, SlidersHorizontal, Image as ImageIcon
+  Filter, SlidersHorizontal, Image as ImageIcon, Clock
 } from 'lucide-react'
+import { getProductPricing } from '../utils/productPricing'
 import { productsService } from '../services/products.service'
 import { uploadService } from '../services/upload.service'
 import { adminService, Supplier } from '../services/admin.service'
@@ -305,6 +306,7 @@ export default function ManageProducts() {
     description: '',
     price: '',
     promo_price: '',
+    promo_ends_at: '',
     purchase_price: '',
     markup: '',
     image: '',
@@ -482,6 +484,7 @@ export default function ManageProducts() {
         description: product.description || '',
         price: formatPriceInput(salePrice),
         promo_price: productRaw.promo_price ? formatPriceInput(Number(productRaw.promo_price)) : '',
+        promo_ends_at: productRaw.promo_ends_at ? new Date(productRaw.promo_ends_at).toISOString().slice(0, 16) : '',
         purchase_price: cost ? formatPriceInput(cost) : '',
         markup: compatibleMarkup != null ? formatMarkupInput(compatibleMarkup) : '',
         image: productImages[0] || (productRaw.image || ''),
@@ -614,11 +617,6 @@ export default function ManageProducts() {
       return
     }
 
-    if (productFormData.promo_price && Number(productFormData.promo_price) >= Number(productFormData.price)) {
-      setProductFormError('O preço promocional deve ser menor que o preço de venda')
-      return
-    }
-
     try {
       setProductFormLoading(true)
 
@@ -651,6 +649,7 @@ export default function ManageProducts() {
         description: productFormData.description.trim() || undefined,
         price: finalPrice,
         promo_price: productFormData.promo_price ? roundCurrency(Number(productFormData.promo_price)) : null,
+        promo_ends_at: productFormData.promo_ends_at ? new Date(productFormData.promo_ends_at).toISOString() : null,
         purchase_price: cost,
         markup: finalMarkup,
         image: (productFormData.images && productFormData.images[0]) ? normalizeImagePath(productFormData.images[0]) : (productFormData.image.trim() ? normalizeImagePath(productFormData.image) : null),
@@ -3516,9 +3515,18 @@ export default function ManageProducts() {
 
                     {/* Promotional Price */}
                     <div className="p-3 bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200/60 dark:border-gray-800 rounded-xl">
-                      <label htmlFor="product-promo_price" className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
-                        Preço Promo (R$)
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label htmlFor="product-promo_price" className="block text-xs font-semibold text-gray-600 dark:text-gray-400">
+                          Preço Promo (R$)
+                        </label>
+                        {productFormData.promo_price && (
+                          <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">
+                            {Number(productFormData.promo_price) > Number(productFormData.price || 0)
+                              ? 'Preço Âncora (De:)'
+                              : 'Preço com Desconto'}
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="number"
                         id="product-promo_price"
@@ -3528,11 +3536,116 @@ export default function ManageProducts() {
                         min="0"
                         step="0.01"
                         className="w-full px-2.5 py-1.5 text-xs font-semibold border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                        placeholder="Ex: 19,90"
+                        placeholder="Ex: 90,00 ou 29,90"
                       />
-                      <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-1">Vazio para desabilitar promo</p>
+                      <p className="text-[9px] text-gray-400 dark:text-gray-500 mt-1">
+                        {Number(productFormData.promo_price) > Number(productFormData.price || 0)
+                          ? 'Será o preço antigo ("De:"). O cliente pagará o preço atual.'
+                          : 'Vazio para desabilitar promoção.'}
+                      </p>
                     </div>
                   </div>
+
+                  {/* Promo Expiration & Duration Controls */}
+                  {productFormData.promo_price && Number(productFormData.promo_price) > 0 && (
+                    <div className="p-3.5 bg-purple-50/40 dark:bg-purple-950/20 border border-purple-200/70 dark:border-purple-900/40 rounded-xl space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-purple-800 dark:text-purple-300">
+                          <Clock size={15} />
+                          <span className="text-xs font-bold">Temporizador da Promoção</span>
+                        </div>
+                        {productFormData.promo_ends_at && (
+                          <button
+                            type="button"
+                            onClick={() => setProductFormData(prev => ({ ...prev, promo_ends_at: '' }))}
+                            className="text-[10px] text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-200 underline"
+                          >
+                            Limpar prazo
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Quick Duration Preset Buttons */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { label: '1 dia', days: 1 },
+                          { label: '3 dias', days: 3 },
+                          { label: '5 dias', days: 5 },
+                          { label: '7 dias', days: 7 },
+                          { label: '15 dias', days: 15 },
+                          { label: '30 dias', days: 30 },
+                        ].map((preset) => {
+                          const targetDate = new Date()
+                          targetDate.setDate(targetDate.getDate() + preset.days)
+                          const pad = (n: number) => String(n).padStart(2, '0')
+                          const isoLocal = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}T23:59`
+                          const isSelected = productFormData.promo_ends_at?.startsWith(isoLocal.slice(0, 10))
+
+                          return (
+                            <button
+                              key={preset.label}
+                              type="button"
+                              onClick={() => setProductFormData(prev => ({ ...prev, promo_ends_at: isoLocal }))}
+                              className={`px-2 py-1 rounded-md text-[10px] font-semibold transition-all ${
+                                isSelected
+                                  ? 'bg-purple-600 text-white shadow-xs'
+                                  : 'bg-white dark:bg-gray-800 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/40'
+                              }`}
+                            >
+                              {preset.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {/* Custom Datetime Input */}
+                      <div className="flex items-center gap-2 pt-1">
+                        <label htmlFor="product-promo_ends_at" className="text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                          Data/Hora de término:
+                        </label>
+                        <input
+                          type="datetime-local"
+                          id="product-promo_ends_at"
+                          name="promo_ends_at"
+                          value={productFormData.promo_ends_at}
+                          onChange={(e) => setProductFormData(prev => ({ ...prev, promo_ends_at: e.target.value }))}
+                          className="px-2 py-1 text-xs border border-purple-200 dark:border-purple-800 dark:bg-gray-800 dark:text-white rounded-md focus:ring-1 focus:ring-purple-500"
+                        />
+                      </div>
+
+                      {/* Dynamic Preview of Promotion */}
+                      {(() => {
+                        const pricing = getProductPricing({
+                          price: productFormData.price,
+                          promo_price: productFormData.promo_price,
+                          promo_ends_at: productFormData.promo_ends_at,
+                        })
+                        if (!pricing.isPromoActive) return null
+
+                        return (
+                          <div className="bg-white/80 dark:bg-gray-800/80 p-2.5 rounded-lg border border-purple-150 dark:border-purple-900/30 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-gray-800 dark:text-gray-200">
+                                Visualização para o cliente:
+                              </span>
+                              <span className="font-extrabold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/40 px-1.5 py-0.5 rounded text-[10px] border border-green-200 dark:border-green-800">
+                                {pricing.discountPercent}% OFF
+                              </span>
+                            </div>
+                            <p className="mt-1 text-gray-600 dark:text-gray-300 text-[11px]">
+                              De <span className="line-through text-gray-400">R$ {pricing.originalPrice?.toFixed(2).replace('.', ',')}</span> por <strong className="text-green-600 dark:text-green-400">R$ {pricing.effectivePrice.toFixed(2).replace('.', ',')}</strong>
+                            </p>
+                            {productFormData.promo_ends_at && (
+                              <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-1 flex items-center gap-1">
+                                <Clock size={11} />
+                                Oferta válida até {new Date(productFormData.promo_ends_at).toLocaleString('pt-BR')} (voltará a R$ {Number(productFormData.price).toFixed(2).replace('.', ',')} após expirar)
+                              </p>
+                            )}
+                          </div>
+                        )
+                      })()}
+                    </div>
+                  )}
 
                   {/* Profit Margin Widget Card */}
                   {productMarginInfo && (

@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext'
 import { PRODUCT_IMAGE_FALLBACK, handleImageError } from '../utils/imageFallback'
 import { animateAddToCart } from '../utils/cartFlyAnimation'
 import { generateProductUrl } from '../utils/productUrl'
+import { getProductPricing } from '../utils/productPricing'
 import DeferredProductImage from './DeferredProductImage'
 
 // ─── Color palettes ────────────────────────────────────────────────────────
@@ -180,11 +181,15 @@ export default function ProductCard({ product }: ProductCardProps) {
               className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
               onError={(e) => handleImageError(e, PRODUCT_IMAGE_FALLBACK)}
             />
-            {product.promo_price && (
-              <span className="absolute top-2 left-2 bg-primary-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
-                {Math.round(((Number(product.price) - Number(product.promo_price)) / Number(product.price)) * 100)}% OFF
-              </span>
-            )}
+            {(() => {
+              const pricing = getProductPricing(product)
+              if (!pricing.isPromoActive) return null
+              return (
+                <span className="absolute top-2 left-2 bg-primary-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-sm">
+                  {pricing.discountPercent}% OFF
+                </span>
+              )
+            })()}
             {!product.active && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                 <span className="text-white font-semibold text-sm bg-black/60 px-3 py-1 rounded-full">Inativo</span>
@@ -225,20 +230,26 @@ export default function ProductCard({ product }: ProductCardProps) {
             {/* ── Price + button ── */}
             <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/60 mt-auto">
               <div className="flex flex-col min-w-0">
-                {product.promo_price ? (
-                  <>
-                    <span className="text-[10px] text-gray-400 line-through leading-none">
-                      R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
+                {(() => {
+                  const pricing = getProductPricing(product)
+                  if (pricing.isPromoActive) {
+                    return (
+                      <>
+                        <span className="text-[10px] text-gray-400 line-through leading-none">
+                          R$ {pricing.originalPrice?.toFixed(2).replace('.', ',')}
+                        </span>
+                        <span className="text-base font-bold text-primary-600 dark:text-primary-400 leading-tight">
+                          R$ {pricing.effectivePrice.toFixed(2).replace('.', ',')}
+                        </span>
+                      </>
+                    )
+                  }
+                  return (
+                    <span className="text-base font-bold text-gray-900 dark:text-white leading-tight">
+                      R$ {pricing.effectivePrice.toFixed(2).replace('.', ',')}
                     </span>
-                    <span className="text-base font-bold text-primary-600 dark:text-primary-400 leading-tight">
-                      R$ {Number(product.promo_price || 0).toFixed(2).replace('.', ',')}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-base font-bold text-gray-900 dark:text-white leading-tight">
-                    R$ {Number(product.price || 0).toFixed(2).replace('.', ',')}
-                  </span>
-                )}
+                  )
+                })()}
               </div>
 
               <button

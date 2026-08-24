@@ -10,6 +10,7 @@ export interface Product {
   description: string;
   price: number;
   promo_price?: number | null;
+  promo_ends_at?: string | null;
   purchase_price?: number | null;
   image: string;
   images?: string[];

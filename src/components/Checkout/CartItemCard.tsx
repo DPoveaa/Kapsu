@@ -11,18 +11,14 @@ interface CartItemCardProps {
   getImageUrl: (image: string | null | undefined) => string
 }
 
+import { getProductPricing } from '../../utils/productPricing'
+
 function getEffectivePrice(item: CartItem): { current: number; original: number; hasPromo: boolean } {
-  const product = item.product
-  if (!product) return { current: 0, original: 0, hasPromo: false }
-
-  const original = product.price
-  const promo = product.promo_price != null && product.promo_price > 0 ? product.promo_price : null
-  const current = promo ?? original
-
+  const pricing = getProductPricing(item.product)
   return {
-    current,
-    original,
-    hasPromo: promo != null && promo < original,
+    current: pricing.effectivePrice,
+    original: pricing.originalPrice ?? pricing.price,
+    hasPromo: pricing.isPromoActive,
   }
 }
 

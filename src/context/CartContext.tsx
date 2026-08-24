@@ -2,6 +2,7 @@ import { createContext, useContext, useState, ReactNode, useEffect, useCallback 
 import { CartItem, Product } from '../types'
 import { cartService } from '../services/cart.service'
 import { productsService } from '../services/products.service'
+import { getEffectiveProductPrice } from '../utils/productPricing'
 import { useAuth } from './AuthContext'
 
 interface CartContextType {
@@ -39,6 +40,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
           description: item.product.description || '',
           price: Number(item.product.price),
           promo_price: item.product.promo_price != null ? Number(item.product.promo_price) : null,
+          promo_ends_at: (item.product as any).promo_ends_at ? String((item.product as any).promo_ends_at) : null,
           image: productsService.getImageUrl(item.product.image),
           category: (item.product.category as any) || 'outros',
           active: ((item.product as any).active ?? true),
@@ -184,7 +186,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const getTotal = () => {
     return items.reduce((total, item) => {
-      const price = item.product?.price || 0
+      const price = getEffectiveProductPrice(item.product)
       return total + (price * item.quantity)
     }, 0)
   }

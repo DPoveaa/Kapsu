@@ -4,8 +4,9 @@ import {
   Info, Star, ChevronLeft, ChevronRight, X, ShieldCheck,
   RefreshCw, Plus, Minus, ArrowLeft, FlaskConical, Activity,
   AlertTriangle, Check, Camera, Trash2, MessageSquare,
-  Share2, Heart
+  Share2, Heart, Clock
 } from 'lucide-react'
+import { getProductPricing } from '../utils/productPricing'
 import { useState, useEffect, useRef } from 'react'
 import { useCart } from '../context/CartContext'
 import { useFavorites } from '../context/FavoritesContext'
@@ -509,9 +510,8 @@ export default function ProductDetail() {
     )
   }
 
-  const discountPct = product.promo_price
-    ? Math.round(((Number(product.price) - Number(product.promo_price)) / Number(product.price)) * 100)
-    : 0
+  const pricing = getProductPricing(product)
+  const discountPct = pricing.discountPercent
 
   const activeDetails = productDetails || product
 
@@ -525,7 +525,7 @@ export default function ProductDetail() {
     : reviews.filter((r: any) => r.rating === selectedRatingFilter)
 
   // Build dynamic SEO information using real production product data
-  const productPrice = product.promo_price ? Number(product.promo_price) : Number(product.price)
+  const productPrice = pricing.effectivePrice
   const productTitle = product.meta_title && product.meta_title.trim() !== ''
     ? (product.meta_title.includes('Kapsu') ? product.meta_title.trim() : `${product.meta_title.trim()} | Kapsu`)
     : `${product.name} | Kapsu`
@@ -769,21 +769,27 @@ export default function ProductDetail() {
 
             {/* Price section */}
             <div className="space-y-1">
-              {product.promo_price ? (
+              {pricing.isPromoActive ? (
                 <div className="space-y-1">
-                  <span className="text-xs text-gray-400 line-through">De R$ {Number(product.price).toFixed(2).replace('.', ',')}</span>
+                  <span className="text-xs text-gray-400 line-through">De R$ {pricing.originalPrice?.toFixed(2).replace('.', ',')}</span>
                   <div className="flex items-center gap-3">
                     <span className="text-3xl sm:text-4xl font-extrabold text-primary-600 dark:text-primary-400">
-                      R$ {Number(product.promo_price).toFixed(2).replace('.', ',')}
+                      R$ {pricing.effectivePrice.toFixed(2).replace('.', ',')}
                     </span>
                     <span className="text-xs bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400 font-bold px-2 py-1 rounded-lg border border-primary-200 dark:border-primary-900/30 animate-pulse">
                       {discountPct}% OFF
                     </span>
                   </div>
+                  {pricing.promoEndsAt && (
+                    <div className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 font-semibold pt-1">
+                      <Clock size={13} />
+                      <span>Oferta especial por tempo limitado</span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <span className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white">
-                  R$ {Number(product.price).toFixed(2).replace('.', ',')}
+                  R$ {pricing.effectivePrice.toFixed(2).replace('.', ',')}
                 </span>
               )}
             </div>
