@@ -1,3 +1,4 @@
+import { CustomChartTooltip, renderChartLegend } from '../components/ChartTheme'
 import { Truck, XCircle, CheckCircle, DollarSign, TrendingUp, AlertCircle, Gift, Tag, Package } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { TooltipValue, formatTooltipNumber } from '../types/recharts'
@@ -210,20 +211,17 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
           <div className="w-full overflow-x-auto">
             <ResponsiveContainer width="100%" height={300} minHeight={250}>
               <BarChart data={shippingStats.freeShippingByReason} margin={{ top: 5, right: 10, left: -20, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                 <XAxis 
                   dataKey="reasonLabel" 
                   angle={-45}
                   textAnchor="end"
                   height={60}
-                  tick={{ fontSize: 10 }}
+                  tick={{ fontSize: 10, fill: '#9ca3af' }}
                 />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip 
-                  formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Fretes Grátis']}
-                  contentStyle={{ fontSize: '12px' }}
-                />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                <Tooltip content={<CustomChartTooltip formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Fretes Grátis']} />} />
+                <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                 <Bar dataKey="count" fill="#10b981" name="Quantidade de Fretes Grátis" />
               </BarChart>
             </ResponsiveContainer>
@@ -240,21 +238,18 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
           <div className="w-full overflow-x-auto">
             <ResponsiveContainer width="100%" height={300} minHeight={250}>
               <LineChart data={shippingStats.evolutionByDay} margin={{ top: 5, right: 10, left: -20, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                 <XAxis 
                   dataKey="date" 
                   tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                   angle={-45}
                   textAnchor="end"
                   height={60}
-                  tick={{ fontSize: 10 }}
+                  tick={{ fontSize: 10, fill: '#9ca3af' }}
                 />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip 
-                  labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  contentStyle={{ fontSize: '12px' }}
-                />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                <Tooltip content={<CustomChartTooltip labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')} />} />
+                <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                 <Line 
                   type="monotone" 
                   dataKey="totalCount" 
@@ -669,8 +664,8 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
                     <Cell fill="#10b981" />
                     <Cell fill="#ef4444" />
                   </Pie>
-                  <Tooltip contentStyle={{ fontSize: '12px' }} />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <Tooltip content={<CustomChartTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
@@ -705,8 +700,8 @@ export default function ShippingStatsTab({ shippingStats, shippingLoading }: Shi
                     <Cell fill="#f59e0b" />
                     <Cell fill="#3b82f6" />
                   </Pie>
-                  <Tooltip contentStyle={{ fontSize: '12px' }} />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <Tooltip content={<CustomChartTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                 </PieChart>
               </ResponsiveContainer>
             </div>

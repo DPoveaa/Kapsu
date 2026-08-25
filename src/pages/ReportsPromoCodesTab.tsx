@@ -1,3 +1,4 @@
+import { CustomChartTooltip, renderChartLegend } from '../components/ChartTheme'
 import { Tag, DollarSign, TrendingDown, CheckCircle, XCircle, ShoppingCart } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Link } from 'react-router-dom'
@@ -131,28 +132,25 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
           <div className="w-full overflow-x-auto">
             <ResponsiveContainer width="100%" height={300} minHeight={250}>
               <LineChart data={promoCodesStats.evolutionByDay} margin={{ top: 5, right: 10, left: -20, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                 <XAxis 
                   dataKey="date" 
                   tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                   angle={-45}
                   textAnchor="end"
                   height={60}
-                  tick={{ fontSize: 10 }}
+                  tick={{ fontSize: 10, fill: '#9ca3af' }}
                 />
-                <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
-                <Tooltip 
-                  labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
+                <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                <Tooltip content={<CustomChartTooltip labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
                   formatter={(value: TooltipValue, name: TooltipName) => {
                     if (name === 'totalDiscount') {
                       return [formatCurrency(value), 'Desconto Total']
                     }
                     return [formatTooltipNumber(value), 'Quantidade de Usos']
-                  }}
-                  contentStyle={{ fontSize: '12px' }}
-                />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  }} />} />
+                <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                 <Line 
                   type="monotone" 
                   dataKey="count" 
@@ -584,14 +582,11 @@ export default function PromoCodesStatsTab({ promoCodesStats, promoCodesLoading 
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    formatter={(value: TooltipValue, _name: TooltipName, props: any) => [
+                  <Tooltip content={<CustomChartTooltip formatter={(value: TooltipValue, _name: TooltipName, props: any) => [
                       `${value} usos (${formatCurrency(props.payload.totalDiscount)})`,
                       props.payload.name
-                    ]}
-                    contentStyle={{ fontSize: '12px' }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    ]} />} />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                 </PieChart>
               </ResponsiveContainer>
             </div>

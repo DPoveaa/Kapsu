@@ -1,3 +1,4 @@
+import { CustomChartTooltip, renderChartLegend } from '../components/ChartTheme'
 import { Gift, DollarSign, TrendingDown, CheckCircle, XCircle, Truck } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Link } from 'react-router-dom'
@@ -12,9 +13,7 @@ interface PromotionsStatsTabProps {
 }
 
 export default function PromotionsStatsTab({ promotionsStats, promotionsLoading }: PromotionsStatsTabProps) {
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReportsPromotionsTab.tsx:12',message:'PromotionsStatsTab render',data:{hasPromotionsStats:!!promotionsStats,promotionsLoading,statsType:typeof promotionsStats,statsKeys:promotionsStats?Object.keys(promotionsStats):'no stats',hasOverview:promotionsStats?.overview!==undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-  // #endregion
+  
   if (promotionsLoading) {
     return (
       <div className="text-center py-8 sm:py-10 lg:py-12">
@@ -25,9 +24,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
   }
 
   if (!promotionsStats) {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReportsPromotionsTab.tsx:22',message:'promotionsStats is null/undefined',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
+    
     return (
       <div className="text-center py-8 sm:py-10 lg:py-12 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
         Nenhum dado de promoções disponível
@@ -35,9 +32,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
     )
   }
 
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReportsPromotionsTab.tsx:29',message:'before accessing overview',data:{hasOverview:promotionsStats?.overview!==undefined,overviewType:typeof promotionsStats?.overview,statsKeys:Object.keys(promotionsStats)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-  // #endregion
+  
 
   const formatCurrency = (value: TooltipValue) => {
     return `R$ ${formatTooltipNumber(value).toFixed(2).replace('.', ',')}`
@@ -79,9 +74,7 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
               <p className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">Total de Usos</p>
               <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1 break-words">
                 {(() => {
-                  // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReportsPromotionsTab.tsx:80',message:'accessing overview.totalUsages',data:{hasOverview:promotionsStats?.overview!==undefined,hasTotalUsages:promotionsStats?.overview?.totalUsages!==undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'post-fix',hypothesisId:'D'})}).catch(()=>{});
-                  // #endregion
+                  
                   return promotionsStats?.overview?.totalUsages?.toLocaleString('pt-BR') || '0';
                 })()}
               </p>
@@ -156,19 +149,18 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
           <div className="w-full overflow-x-auto">
             <ResponsiveContainer width="100%" height={300} minHeight={250}>
               <LineChart data={promotionsStats?.evolutionByDay || []} margin={{ top: 5, right: 10, left: -20, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                 <XAxis 
                   dataKey="date" 
                   tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                   angle={-45}
                   textAnchor="end"
                   height={60}
-                  tick={{ fontSize: 10 }}
+                  tick={{ fontSize: 10, fill: '#9ca3af' }}
                 />
-                <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
-                <Tooltip 
-                  labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
+                <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                <Tooltip content={<CustomChartTooltip labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
                   formatter={(value: TooltipValue, name: TooltipName) => {
                     if (name === 'totalDiscount') {
                       return [formatCurrency(value), 'Desconto Total']
@@ -180,10 +172,8 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
                       return [formatCurrency(value), 'Total Economizado']
                     }
                     return [formatTooltipNumber(value), 'Quantidade de Usos']
-                  }}
-                  contentStyle={{ fontSize: '12px' }}
-                />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  }} />} />
+                <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                 <Line 
                   type="monotone" 
                   dataKey="count" 
@@ -708,14 +698,11 @@ export default function PromotionsStatsTab({ promotionsStats, promotionsLoading 
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip 
-                    formatter={(value: TooltipValue, _name: TooltipName, props: any) => [
+                  <Tooltip content={<CustomChartTooltip formatter={(value: TooltipValue, _name: TooltipName, props: any) => [
                       `${value} usos (${formatCurrency(props.payload.totalValueSaved)})`,
                       props.payload.name
-                    ]}
-                    contentStyle={{ fontSize: '12px' }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    ]} />} />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                 </PieChart>
               </ResponsiveContainer>
             </div>

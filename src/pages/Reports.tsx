@@ -1,3 +1,4 @@
+import { CustomChartTooltip, renderChartLegend } from '../components/ChartTheme'
 import { useEffect, useState } from 'react'
 import { BarChart3, Users, Eye, Calendar, Clock, TrendingDown, MousePointer, ArrowRight } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
@@ -90,14 +91,10 @@ export default function Reports() {
         endDate,
         groupBy,
       })
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.tsx:92',message:'API response data',data:{hasStatistics:!!data.statistics,statisticsKeys:data.statistics?Object.keys(data.statistics):null,totalAccesses:data.statistics?.totalAccesses,uniqueVisitors:data.statistics?.uniqueVisitors,uniqueIPs:data.statistics?.uniqueIPs,uniqueAuthenticatedUsers:data.statistics?.uniqueAuthenticatedUsers},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
+      
       setStats(data.statistics)
       setChartData(data.chartData)
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.tsx:95',message:'Stats state after setStats',data:{stats:data.statistics,totalAccesses:data.statistics?.totalAccesses,isUndefined:data.statistics?.totalAccesses===undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
+      
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar dados')
       console.error('Erro ao carregar estatísticas:', err)
@@ -169,24 +166,16 @@ export default function Reports() {
   const fetchPromotionsData = async () => {
     try {
       setPromotionsLoading(true)
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.tsx:152',message:'fetchPromotionsData called',data:{startDate,endDate},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
+      
       const data = await adminService.getPromotionsStatistics({
         startDate,
         endDate,
       })
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.tsx:159',message:'data received from service',data:{hasData:!!data,hasDataData:!!data.data,dataDataType:typeof data.data,dataDataKeys:data.data?Object.keys(data.data):'no data.data'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
+      
       setPromotionsStats(data.data)
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.tsx:160',message:'promotionsStats set',data:{dataDataKeys:data.data?Object.keys(data.data):'no data.data'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
+      
     } catch (err: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/e988c133-ebfb-40bc-adab-44a1b42085d2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'Reports.tsx:161',message:'fetchPromotionsData error',data:{errorMessage:err.message,error:err.toString()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
+      
       console.error('Erro ao carregar estatísticas de promoções:', err)
     } finally {
       setPromotionsLoading(false)
@@ -587,22 +576,19 @@ export default function Reports() {
                     <div className="w-full overflow-x-auto">
                       <ResponsiveContainer width="100%" height={300} minHeight={250}>
                         <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 60 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                           <XAxis 
                             dataKey="date" 
                             tickFormatter={formatDate}
                             angle={-45}
                             textAnchor="end"
                             height={60}
-                            tick={{ fontSize: 10 }}
+                            tick={{ fontSize: 10, fill: '#9ca3af' }}
                           />
-                          <YAxis tick={{ fontSize: 10 }} />
-                          <Tooltip 
-                            labelFormatter={(value) => formatDate(value)}
-                            formatter={(value: TooltipValue) => formatTooltipNumber(value).toLocaleString('pt-BR')}
-                            contentStyle={{ fontSize: '12px' }}
-                          />
-                          <Legend wrapperStyle={{ fontSize: '12px' }} />
+                          <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                          <Tooltip content={<CustomChartTooltip labelFormatter={(value) => formatDate(value)}
+                            formatter={(value: TooltipValue) => formatTooltipNumber(value).toLocaleString('pt-BR')} />} />
+                          <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                           <Line 
                             type="monotone" 
                             dataKey="total" 
@@ -648,22 +634,19 @@ export default function Reports() {
                     <div className="w-full overflow-x-auto">
                       <ResponsiveContainer width="100%" height={300} minHeight={250}>
                         <BarChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 60 }}>
-                          <CartesianGrid strokeDasharray="3 3" />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                           <XAxis 
                             dataKey="date" 
                             tickFormatter={formatDate}
                             angle={-45}
                             textAnchor="end"
                             height={60}
-                            tick={{ fontSize: 10 }}
+                            tick={{ fontSize: 10, fill: '#9ca3af' }}
                           />
-                          <YAxis tick={{ fontSize: 10 }} />
-                          <Tooltip 
-                            labelFormatter={(value) => formatDate(value)}
-                            formatter={(value: TooltipValue) => formatTooltipNumber(value).toLocaleString('pt-BR')}
-                            contentStyle={{ fontSize: '12px' }}
-                          />
-                          <Legend wrapperStyle={{ fontSize: '12px' }} />
+                          <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                          <Tooltip content={<CustomChartTooltip labelFormatter={(value) => formatDate(value)}
+                            formatter={(value: TooltipValue) => formatTooltipNumber(value).toLocaleString('pt-BR')} />} />
+                          <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                           <Bar dataKey="total" fill="#3b82f6" name="Total de Sessões" />
                           <Bar dataKey="unique" fill="#10b981" name="Visitantes Únicos" />
                           {chartData[0]?.pageViews !== undefined && (
@@ -870,7 +853,7 @@ export default function Reports() {
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                               ))}
                             </Pie>
-                            <Tooltip contentStyle={{ fontSize: '12px' }} />
+                            <Tooltip content={<CustomChartTooltip />} />
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
@@ -947,10 +930,10 @@ export default function Reports() {
                       <div className="w-full overflow-x-auto">
                         <ResponsiveContainer width="100%" height={250} minHeight={200}>
                           <BarChart data={behaviorAnalytics.topEntryPages.slice(0, 5)} layout="vertical" margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis type="number" tick={{ fontSize: 10 }} />
-                            <YAxis dataKey="path" type="category" width={80} tick={{ fontSize: 10 }} />
-                            <Tooltip contentStyle={{ fontSize: '12px' }} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
+                            <XAxis type="number" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                            <YAxis dataKey="path" type="category" width={80} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                            <Tooltip content={<CustomChartTooltip />} />
                             <Bar dataKey="count" fill="#3b82f6" />
                           </BarChart>
                         </ResponsiveContainer>
@@ -970,10 +953,10 @@ export default function Reports() {
                       <div className="w-full overflow-x-auto">
                         <ResponsiveContainer width="100%" height={250} minHeight={200}>
                           <BarChart data={behaviorAnalytics.topExitPages.slice(0, 5)} layout="vertical" margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis type="number" tick={{ fontSize: 10 }} />
-                            <YAxis dataKey="path" type="category" width={80} tick={{ fontSize: 10 }} />
-                            <Tooltip contentStyle={{ fontSize: '12px' }} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
+                            <XAxis type="number" tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                            <YAxis dataKey="path" type="category" width={80} tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                            <Tooltip content={<CustomChartTooltip />} />
                             <Bar dataKey="count" fill="#ef4444" />
                           </BarChart>
                         </ResponsiveContainer>

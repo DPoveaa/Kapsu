@@ -1,3 +1,4 @@
+import { CustomChartTooltip, renderChartLegend } from '../components/ChartTheme'
 import { Package, DollarSign, TrendingUp, XCircle, CheckCircle, AlertCircle, Truck, Calendar } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { TooltipValue, TooltipName, formatTooltipNumber } from '../types/recharts'
@@ -154,14 +155,11 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  formatter={(value: TooltipValue, _name: TooltipName, props: any) => [
+                <Tooltip content={<CustomChartTooltip formatter={(value: TooltipValue, _name: TooltipName, props: any) => [
                     `${value} pedidos (R$ ${props.payload.totalValue.toFixed(2).replace('.', ',')})`,
                     props.payload.name
-                  ]}
-                  contentStyle={{ fontSize: '12px' }}
-                />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  ]} />} />
+                <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -181,22 +179,19 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
           <div className="w-full overflow-x-auto">
             <ResponsiveContainer width="100%" height={300} minHeight={250}>
               <LineChart data={ordersStats.period.byDay} margin={{ top: 5, right: 10, left: -20, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                 <XAxis 
                   dataKey="date" 
                   tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                   angle={-45}
                   textAnchor="end"
                   height={60}
-                  tick={{ fontSize: 10 }}
+                  tick={{ fontSize: 10, fill: '#9ca3af' }}
                 />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip 
-                  labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                  formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Pedidos']}
-                  contentStyle={{ fontSize: '12px' }}
-                />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                <Tooltip content={<CustomChartTooltip labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
+                  formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Pedidos']} />} />
+                <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                 <Line 
                   type="monotone" 
                   dataKey="count" 
@@ -214,7 +209,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                   yAxisId="right"
                   dot={{ r: 3 }}
                 />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10 }} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#9ca3af' }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -234,21 +229,18 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
           <div className="w-full overflow-x-auto">
             <ResponsiveContainer width="100%" height={300} minHeight={250}>
               <BarChart data={ordersStats.valueByStatus} margin={{ top: 5, right: 10, left: -20, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                 <XAxis 
                   dataKey="status" 
                   tickFormatter={(value) => getOrderStatusLabel(value)}
                   angle={-45}
                   textAnchor="end"
                   height={60}
-                  tick={{ fontSize: 10 }}
+                  tick={{ fontSize: 10, fill: '#9ca3af' }}
                 />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip 
-                  formatter={(value: TooltipValue) => `R$ ${formatTooltipNumber(value).toFixed(2).replace('.', ',')}`}
-                  contentStyle={{ fontSize: '12px' }}
-                />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                <Tooltip content={<CustomChartTooltip formatter={(value: TooltipValue) => `R$ ${formatTooltipNumber(value).toFixed(2).replace('.', ',')}`} />} />
+                <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                 <Bar dataKey="totalValue" fill="#3b82f6" name="Valor Total (R$)" />
                 <Bar dataKey="avgValue" fill="#10b981" name="Valor Médio (R$)" />
               </BarChart>
@@ -484,7 +476,7 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
           <div className="w-full overflow-x-auto">
             <ResponsiveContainer width="100%" height={300} minHeight={250}>
               <BarChart data={ordersStats.byMonth} margin={{ top: 5, right: 10, left: -20, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                 <XAxis 
                   dataKey="month" 
                   tickFormatter={(value) => {
@@ -494,14 +486,11 @@ export default function OrdersStatsTab({ ordersStats, ordersLoading }: OrdersSta
                   angle={-45}
                   textAnchor="end"
                   height={60}
-                  tick={{ fontSize: 10 }}
+                  tick={{ fontSize: 10, fill: '#9ca3af' }}
                 />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip 
-                  formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Pedidos']}
-                  contentStyle={{ fontSize: '12px' }}
-                />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                <Tooltip content={<CustomChartTooltip formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Pedidos']} />} />
+                <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                 <Bar dataKey="count" fill="#3b82f6" name="Quantidade de Pedidos" />
                 <Bar dataKey="totalValue" fill="#10b981" name="Valor Total (R$)" />
               </BarChart>

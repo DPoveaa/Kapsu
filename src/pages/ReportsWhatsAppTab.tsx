@@ -1,3 +1,4 @@
+import { CustomChartTooltip, renderChartLegend } from '../components/ChartTheme'
 import { MessageSquare, Send, Inbox, Clock, TrendingUp, AlertCircle, Users } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { TooltipValue, TooltipName, formatTooltipNumber } from '../types/recharts'
@@ -301,27 +302,24 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
           <div className="w-full overflow-x-auto">
             <ResponsiveContainer width="100%" height={300} minHeight={250}>
               <LineChart data={whatsappStats.evolutionByDay} margin={{ top: 5, right: 10, left: -20, bottom: 60 }}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                 <XAxis 
                   dataKey="date" 
                   tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                   angle={-45}
                   textAnchor="end"
                   height={60}
-                  tick={{ fontSize: 10 }}
+                  tick={{ fontSize: 10, fill: '#9ca3af' }}
                 />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip 
-                  labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
+                <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                <Tooltip content={<CustomChartTooltip labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
                   formatter={(value: TooltipValue, name: TooltipName) => {
                     if (name === 'totalCount') return [formatTooltipNumber(value), 'Total']
                     if (name === 'receivedCount') return [formatTooltipNumber(value), 'Recebidas']
                     if (name === 'sentCount') return [formatTooltipNumber(value), 'Enviadas']
                     return [formatTooltipNumber(value), name]
-                  }}
-                  contentStyle={{ fontSize: '12px' }}
-                />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  }} />} />
+                <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                 <Line 
                   type="monotone" 
                   dataKey="totalCount" 
@@ -367,15 +365,15 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
             <div className="w-full overflow-x-auto">
               <ResponsiveContainer width="100%" height={250} minHeight={200}>
                 <BarChart data={whatsappStats.distributionByHour} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                   <XAxis 
                     dataKey="hour" 
                     label={{ value: 'Hora do Dia', position: 'insideBottom', offset: -5 }}
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 10, fill: '#9ca3af' }}
                   />
-                  <YAxis tick={{ fontSize: 10 }} width={80} />
-                  <Tooltip contentStyle={{ fontSize: '12px' }} />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} width={80} />
+                  <Tooltip content={<CustomChartTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                   <Bar dataKey="receivedCount" fill="#10b981" name="Recebidas" />
                   <Bar dataKey="sentCount" fill="#8b5cf6" name="Enviadas" />
                 </BarChart>
@@ -397,17 +395,17 @@ export default function WhatsAppStatsTab({ whatsappStats, whatsappLoading }: Wha
             <div className="w-full overflow-x-auto">
               <ResponsiveContainer width="100%" height={250} minHeight={200}>
                 <BarChart data={whatsappStats.distributionByDayOfWeek} margin={{ top: 5, right: 10, left: 0, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                   <XAxis 
                     dataKey="dayName"
                     angle={-45}
                     textAnchor="end"
                     height={60}
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 10, fill: '#9ca3af' }}
                   />
-                  <YAxis tick={{ fontSize: 10 }} width={80} />
-                  <Tooltip contentStyle={{ fontSize: '12px' }} />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} width={80} />
+                  <Tooltip content={<CustomChartTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                   <Bar dataKey="receivedCount" fill="#10b981" name="Recebidas" />
                   <Bar dataKey="sentCount" fill="#8b5cf6" name="Enviadas" />
                 </BarChart>

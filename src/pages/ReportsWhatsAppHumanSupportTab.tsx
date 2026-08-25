@@ -1,3 +1,4 @@
+import { CustomChartTooltip, renderChartLegend } from '../components/ChartTheme'
 import { Clock, AlertCircle, TrendingUp, CheckCircle, XCircle, Timer, MessageSquare } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { TooltipValue, formatTooltipNumber } from '../types/recharts'
@@ -308,22 +309,19 @@ export default function WhatsAppHumanSupportStatsTab({
             <div className="w-full overflow-x-auto">
               <ResponsiveContainer width="100%" height={300} minHeight={250}>
                 <LineChart data={whatsappHumanSupportStats.needingPharmacistByDay} margin={{ top: 5, right: 10, left: -20, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                   <XAxis 
                     dataKey="date" 
                     tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                     angle={-45}
                     textAnchor="end"
                     height={60}
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 10, fill: '#9ca3af' }}
                   />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip 
-                    labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                    formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Conversas']}
-                    contentStyle={{ fontSize: '12px' }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                  <Tooltip content={<CustomChartTooltip labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
+                    formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Conversas']} />} />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                   <Line 
                     type="monotone" 
                     dataKey="count" 
@@ -351,22 +349,19 @@ export default function WhatsAppHumanSupportStatsTab({
             <div className="w-full overflow-x-auto">
               <ResponsiveContainer width="100%" height={300} minHeight={250}>
                 <LineChart data={whatsappHumanSupportStats.assumedByDay} margin={{ top: 5, right: 10, left: -20, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                   <XAxis 
                     dataKey="date" 
                     tickFormatter={(value) => new Date(value).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                     angle={-45}
                     textAnchor="end"
                     height={60}
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 10, fill: '#9ca3af' }}
                   />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip 
-                    labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
-                    formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Conversas']}
-                    contentStyle={{ fontSize: '12px' }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} />
+                  <Tooltip content={<CustomChartTooltip labelFormatter={(value) => new Date(value).toLocaleDateString('pt-BR')}
+                    formatter={(value: TooltipValue) => [formatTooltipNumber(value), 'Conversas']} />} />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                   <Line 
                     type="monotone" 
                     dataKey="count" 
@@ -397,17 +392,17 @@ export default function WhatsAppHumanSupportStatsTab({
             <div className="w-full overflow-x-auto">
               <ResponsiveContainer width="100%" height={250} minHeight={200}>
                 <BarChart data={whatsappHumanSupportStats.assumedByDistribution} margin={{ top: 5, right: 10, left: 0, bottom: 60 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#88888825" />
                   <XAxis 
                     dataKey="pharmacist"
                     angle={-45}
                     textAnchor="end"
                     height={60}
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 10, fill: '#9ca3af' }}
                   />
-                  <YAxis tick={{ fontSize: 10 }} width={80} />
-                  <Tooltip contentStyle={{ fontSize: '12px' }} />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} width={80} />
+                  <Tooltip content={<CustomChartTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                   <Bar dataKey="count" fill="#3b82f6" name="Conversas Atendidas" />
                 </BarChart>
               </ResponsiveContainer>
@@ -442,8 +437,8 @@ export default function WhatsAppHumanSupportStatsTab({
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={{ fontSize: '12px' }} />
-                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <Tooltip content={<CustomChartTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} formatter={renderChartLegend} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
