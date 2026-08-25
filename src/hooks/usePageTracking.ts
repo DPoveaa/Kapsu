@@ -29,6 +29,29 @@ function setCookie(name: string, value: string, days = 365) {
   } catch {}
 }
 
+export function isAutomatedBot(): boolean {
+  try {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return true
+    // 1. Headless / WebDriver (Puppeteer, Playwright, Selenium, automated cloud crawlers)
+    if (navigator.webdriver) return true
+    
+    // 2. Headless browser environment flags
+    if ((window as any)._phantom || (window as any).__nightmare || (window as any).callPhantom) return true
+    
+    // 3. Missing languages or zero screen dimensions
+    if (!navigator.languages || navigator.languages.length === 0) return true
+    if (window.screen && (window.screen.width === 0 || window.screen.height === 0)) return true
+
+    // 4. User Agent heuristics
+    const ua = navigator.userAgent || ''
+    if (/HeadlessChrome|Lighthouse|PageSpeed|PTST|Google-PageSpeed|bot|spider|crawl|slurp|scanner/i.test(ua)) return true
+
+    return false
+  } catch {
+    return false
+  }
+}
+
 export function getPersistentVisitorId(): string {
   try {
     let visitorId = localStorage.getItem('kapsu_visitor_id') || getCookie('kapsu_visitor_id')
@@ -86,6 +109,11 @@ export function usePageTracking() {
   const lastTrackedTimeRef = useRef<number>(0)
 
   useEffect(() => {
+    // Se for bot automatizado, não rastreia nada
+    if (isAutomatedBot()) {
+      return
+    }
+
     const pagePath = location.pathname
     const now = Date.now()
 
@@ -111,7 +139,7 @@ export function usePageTracking() {
     trackPageView(sessionId, visitorId, pagePath, isAdmin)
 
     const handleScroll = () => {
-      getActiveSessionId() // Renova timestamp de atividade
+      getActiveSessionId()
       const scrollPercentage = Math.round(
         ((window.scrollY + window.innerHeight) / (document.documentElement.scrollHeight || 1)) * 100
       )
@@ -124,7 +152,7 @@ export function usePageTracking() {
     }
 
     const handleClick = (e: MouseEvent) => {
-      getActiveSessionId() // Renova timestamp de atividade
+      getActiveSessionId()
       const target = e.target as HTMLElement
       if (!target) return
 
