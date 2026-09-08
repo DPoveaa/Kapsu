@@ -781,6 +781,13 @@ class AdminService {
       uniqueVisitors: number
       uniqueIPs: number
       uniqueAuthenticatedUsers: number
+      totalSessions?: number
+      totalPageViews?: number
+      avgPageViewsPerSession?: number
+      likelyHumanSessions?: number
+      lowConfidenceSessions?: number
+      avgHumanScore?: number | null
+      likelyHumanPct?: number | null
     }
     chartData: Array<{
       date: string
@@ -844,6 +851,11 @@ class AdminService {
       eventCounts: Record<string, number>
       timeDistribution: Array<{ range: string; count: number }>
       funnelData: Array<{ path: string; views: number }>
+      humanScoreBreakdown?: Array<{ range: string; count: number }>
+      likelyHumans?: number
+      lowConfidence?: number
+      avgHumanScore?: number | null
+      likelyHumanPct?: number | null
     }
   }> {
     try {

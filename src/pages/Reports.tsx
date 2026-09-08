@@ -1,6 +1,6 @@
 import { CustomChartTooltip, renderChartLegend } from '../components/ChartTheme'
 import { useEffect, useState } from 'react'
-import { BarChart3, Users, Eye, Calendar, Clock, TrendingDown, MousePointer, ArrowRight } from 'lucide-react'
+import { BarChart3, Users, Eye, Calendar, Clock, TrendingDown, MousePointer, ArrowRight, ShieldCheck, ShieldAlert, CheckCircle2, Info } from 'lucide-react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { adminService } from '../services/admin.service'
 import OrdersStatsTab from './ReportsOrdersTab'
@@ -22,6 +22,10 @@ interface SiteAccessStats {
   totalSessions?: number
   totalPageViews?: number
   avgPageViewsPerSession?: number
+  likelyHumanSessions?: number
+  lowConfidenceSessions?: number
+  avgHumanScore?: number | null
+  likelyHumanPct?: number | null
 }
 
 interface ChartDataPoint {
@@ -42,6 +46,11 @@ interface BehaviorAnalytics {
   eventCounts: Record<string, number>
   timeDistribution: Array<{ range: string; count: number }>
   funnelData: Array<{ path: string; views: number }>
+  humanScoreBreakdown?: Array<{ range: string; count: number }>
+  likelyHumans?: number
+  lowConfidence?: number
+  avgHumanScore?: number | null
+  likelyHumanPct?: number | null
 }
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
@@ -567,6 +576,75 @@ export default function Reports() {
                   </div>
                 </div>
 
+                {/* Painel de Confiança de Acesso */}
+                {(stats?.avgHumanScore !== undefined && stats?.avgHumanScore !== null) ? (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2 mb-3 sm:mb-4">
+                      <span className="text-lg">🧠</span>
+                      <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Confiança de Acesso — Clientes Reais vs Suspeitos</h2>
+                    </div>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-4">
+                      Cada sessão recebe uma pontuação de 0 a 100 indicando a probabilidade de ser um cliente real (humano), com base em: presença de visitor_id gerado pelo browser, session_id, user-agent de browser moderno, IP de datacenter, e autenticação.
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
+                      <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
+                        <p className="text-[10px] sm:text-xs font-medium text-green-700 dark:text-green-400 mb-1">✅ Prováveis Clientes Reais</p>
+                        <p className="text-xl sm:text-2xl font-bold text-green-700 dark:text-green-400">{(stats?.likelyHumanSessions ?? 0).toLocaleString('pt-BR')}</p>
+                        <p className="text-[10px] text-green-600 dark:text-green-500">score ≥ 50</p>
+                      </div>
+                      <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-200 dark:border-red-800">
+                        <p className="text-[10px] sm:text-xs font-medium text-red-700 dark:text-red-400 mb-1">⚠️ Suspeitos / Incertos</p>
+                        <p className="text-xl sm:text-2xl font-bold text-red-700 dark:text-red-400">{(stats?.lowConfidenceSessions ?? 0).toLocaleString('pt-BR')}</p>
+                        <p className="text-[10px] text-red-600 dark:text-red-500">score &lt; 50</p>
+                      </div>
+                      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
+                        <p className="text-[10px] sm:text-xs font-medium text-blue-700 dark:text-blue-400 mb-1">📊 Score Médio</p>
+                        <p className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-400">{stats?.avgHumanScore ?? '—'}<span className="text-sm font-normal">/100</span></p>
+                        <p className="text-[10px] text-blue-600 dark:text-blue-500">confiança média</p>
+                      </div>
+                      <div className={`rounded-lg p-3 border ${
+                        (stats?.likelyHumanPct ?? 0) >= 70
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : (stats?.likelyHumanPct ?? 0) >= 40
+                          ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                          : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                      }`}>
+                        <p className={`text-[10px] sm:text-xs font-medium mb-1 ${
+                          (stats?.likelyHumanPct ?? 0) >= 70 ? 'text-green-700 dark:text-green-400'
+                          : (stats?.likelyHumanPct ?? 0) >= 40 ? 'text-yellow-700 dark:text-yellow-400'
+                          : 'text-red-700 dark:text-red-400'
+                        }`}>
+                          {(stats?.likelyHumanPct ?? 0) >= 70 ? '🟢' : (stats?.likelyHumanPct ?? 0) >= 40 ? '🟡' : '🔴'} Taxa de Humanos
+                        </p>
+                        <p className={`text-xl sm:text-2xl font-bold ${
+                          (stats?.likelyHumanPct ?? 0) >= 70 ? 'text-green-700 dark:text-green-400'
+                          : (stats?.likelyHumanPct ?? 0) >= 40 ? 'text-yellow-700 dark:text-yellow-400'
+                          : 'text-red-700 dark:text-red-400'
+                        }`}>{stats?.likelyHumanPct ?? '—'}%</p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400">das sessões</p>
+                      </div>
+                    </div>
+                    {/* Barra de confiança */}
+                    {stats?.likelyHumanPct !== null && stats?.likelyHumanPct !== undefined && (
+                      <div>
+                        <div className="flex justify-between text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-1">
+                          <span>Suspeitos/Bots</span>
+                          <span>Clientes Reais</span>
+                        </div>
+                        <div className="w-full bg-red-200 dark:bg-red-900/30 rounded-full h-3 overflow-hidden">
+                          <div
+                            className="h-3 rounded-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-500"
+                            style={{ width: `${stats.likelyHumanPct}%` }}
+                          />
+                        </div>
+                        <p className="mt-2 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                          💡 Sessões com score ≥ 50 têm visitor_id e/ou session_id gerado pelo browser, indicando fortemente que é um cliente real navegando no site. Acessos com score baixo são possivelmente bots, scanners ou monitoramentos automáticos que passaram pelo filtro básico.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
                 {/* Gráfico de Acessos */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
                   <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
@@ -733,6 +811,164 @@ export default function Reports() {
                     </div>
                   </div>
                 </div>
+
+                {/* Painel de Validação de Clientes Reais vs Falsos Positivos (Aba Comportamento) */}
+                {(behaviorAnalytics?.avgHumanScore !== undefined && behaviorAnalytics?.avgHumanScore !== null) || (behaviorAnalytics?.humanScoreBreakdown && behaviorAnalytics.humanScoreBreakdown.length > 0) ? (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-4 sm:p-5 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400">
+                          <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6" />
+                        </div>
+                        <div>
+                          <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">
+                            Auditoria de Tráfego: Clientes Reais vs Falsos Positivos
+                          </h2>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Algoritmo de pontuação de humanidade (0 a 100) baseado em fingerprint de navegador, execução de JS e integridade de sessão
+                          </p>
+                        </div>
+                      </div>
+                      {behaviorAnalytics?.likelyHumanPct !== null && behaviorAnalytics?.likelyHumanPct !== undefined && (
+                        <span className={`self-start sm:self-auto px-3 py-1 rounded-full text-xs font-semibold ${
+                          behaviorAnalytics.likelyHumanPct >= 70
+                            ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
+                            : behaviorAnalytics.likelyHumanPct >= 40
+                            ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
+                            : 'bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-700'
+                        }`}>
+                          {behaviorAnalytics.likelyHumanPct >= 70 ? '🟢 Tráfego Saudável' : behaviorAnalytics.likelyHumanPct >= 40 ? '🟡 Tráfego Misto' : '🔴 Alto Volume de Bots'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Métricas de Confiança */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
+                      <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-lg p-3.5 border border-emerald-200 dark:border-emerald-800/40">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-[11px] sm:text-xs font-semibold text-emerald-800 dark:text-emerald-300">Clientes Reais Confirmados</p>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <p className="text-xl sm:text-2xl font-black text-emerald-700 dark:text-emerald-400">
+                          {(behaviorAnalytics?.likelyHumans ?? 0).toLocaleString('pt-BR')}
+                        </p>
+                        <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400/70 mt-0.5">Score ≥ 50 (Sessão & Visitor ID ativos)</p>
+                      </div>
+
+                      <div className="bg-rose-50 dark:bg-rose-950/20 rounded-lg p-3.5 border border-rose-200 dark:border-rose-800/40">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-[11px] sm:text-xs font-semibold text-rose-800 dark:text-rose-300">Suspeitos / Falsos Positivos</p>
+                          <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                        </div>
+                        <p className="text-xl sm:text-2xl font-black text-rose-700 dark:text-rose-400">
+                          {(behaviorAnalytics?.lowConfidence ?? 0).toLocaleString('pt-BR')}
+                        </p>
+                        <p className="text-[10px] text-rose-600/80 dark:text-rose-400/70 mt-0.5">Score &lt; 50 (Scanners, robôs ou sem JS)</p>
+                      </div>
+
+                      <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3.5 border border-blue-200 dark:border-blue-800/40">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-[11px] sm:text-xs font-semibold text-blue-800 dark:text-blue-300">Score Médio Geral</p>
+                          <span className="text-xs">🎯</span>
+                        </div>
+                        <p className="text-xl sm:text-2xl font-black text-blue-700 dark:text-blue-400">
+                          {behaviorAnalytics?.avgHumanScore ?? '—'}
+                          <span className="text-xs font-normal text-blue-500"> / 100</span>
+                        </p>
+                        <p className="text-[10px] text-blue-600/80 dark:text-blue-400/70 mt-0.5">Média ponderada do período</p>
+                      </div>
+
+                      <div className="bg-indigo-50 dark:bg-indigo-950/20 rounded-lg p-3.5 border border-indigo-200 dark:border-indigo-800/40">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-[11px] sm:text-xs font-semibold text-indigo-800 dark:text-indigo-300">% de Clientes Reais</p>
+                          <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        <p className="text-xl sm:text-2xl font-black text-indigo-700 dark:text-indigo-400">
+                          {behaviorAnalytics?.likelyHumanPct ?? '—'}%
+                        </p>
+                        <p className="text-[10px] text-indigo-600/80 dark:text-indigo-400/70 mt-0.5">Do total de sessões analisadas</p>
+                      </div>
+                    </div>
+
+                    {/* Barra de Proporção Visual */}
+                    {behaviorAnalytics?.likelyHumanPct !== null && behaviorAnalytics?.likelyHumanPct !== undefined && (
+                      <div className="mb-4 bg-gray-50 dark:bg-gray-900/40 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between text-xs text-gray-600 dark:text-gray-300 mb-1.5 font-medium">
+                          <span className="flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
+                            ● Clientes Reais ({behaviorAnalytics.likelyHumanPct}%)
+                          </span>
+                          <span className="flex items-center gap-1 text-rose-600 dark:text-rose-400 font-semibold">
+                            ● Falsos Positivos / Bots ({100 - behaviorAnalytics.likelyHumanPct}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-rose-200 dark:bg-rose-950/60 rounded-full h-3.5 overflow-hidden flex shadow-inner">
+                          <div
+                            className="h-full bg-emerald-500 rounded-l-full transition-all duration-500 shadow"
+                            style={{ width: `${behaviorAnalytics.likelyHumanPct}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tabela de Classificação por Faixa de Pontuação */}
+                    {behaviorAnalytics?.humanScoreBreakdown && behaviorAnalytics.humanScoreBreakdown.length > 0 && (
+                      <div className="mb-4">
+                        <h3 className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                          Detalhamento por Faixa de Confiança:
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                          {behaviorAnalytics.humanScoreBreakdown.map((item, idx) => {
+                            const isHigh = item.range.includes('80-100')
+                            const isMed = item.range.includes('50-79')
+                            const isLow = item.range.includes('20-49')
+                            const isBot = item.range.includes('0-19')
+
+                            const borderClass = isHigh
+                              ? 'border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/10'
+                              : isMed
+                              ? 'border-blue-300 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/10'
+                              : isLow
+                              ? 'border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/10'
+                              : isBot
+                              ? 'border-rose-300 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/10'
+                              : 'border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/20'
+
+                            return (
+                              <div key={idx} className={`p-3 rounded-lg border ${borderClass} flex flex-col justify-between`}>
+                                <div>
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200">{item.range}</span>
+                                    <span className="text-xs font-black text-gray-900 dark:text-white px-2 py-0.5 rounded bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700">
+                                      {item.count.toLocaleString('pt-BR')} sessões
+                                    </span>
+                                  </div>
+                                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                                    {isHigh && 'Humano de alta certeza (navegador completo, visitor_id e/ou login).'}
+                                    {isMed && 'Provável cliente navegando normalmente com browser compatível.'}
+                                    {isLow && 'Requisição atípica, tempo nulo ou sem rastros de navegador.'}
+                                    {isBot && 'Datacenter IP, crawler/scanner ou ausência total de motor JS.'}
+                                    {!isHigh && !isMed && !isLow && !isBot && 'Acessos antigos gravados antes da pontuação ativa.'}
+                                  </p>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Explicação Didática */}
+                    <div className="bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-lg p-3 text-xs text-amber-900 dark:text-amber-200 flex gap-2.5 items-start">
+                      <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                      <div className="leading-relaxed">
+                        <strong className="font-semibold">Como ter certeza absoluta de quem é cliente real?</strong>
+                        <p className="mt-0.5 text-[11px] text-amber-800 dark:text-amber-300">
+                          Robôs automatizados e scanners de vulnerabilidade costumam requisitar páginas diretamente via scripts (Python, cURL, headless crawlers) sem executar o React da Kapsu. Nosso novo algoritmo valida se o acesso executou o JavaScript, gerou o <code>visitor_id</code> local no navegador e gerou navegações reais entre páginas. Foque nos acessos com <strong>Score ≥ 50</strong> para avaliar seus clientes verdadeiros.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
 
                 {/* Páginas Mais Visitadas */}
                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md dark:shadow-lg p-3 sm:p-4 lg:p-6 mb-4 sm:mb-5 lg:mb-6 border border-gray-200 dark:border-gray-700">
