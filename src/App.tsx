@@ -57,6 +57,7 @@ const RecoverPassword = lazy(() => import('./pages/RecoverPassword'))
 const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicyPage'))
 const TermsOfServicePage = lazy(() => import('./pages/TermsOfServicePage'))
 const PharmaceuticalInfoPage = lazy(() => import('./pages/PharmaceuticalInfoPage'))
+const NotFound = lazy(() => import('./pages/NotFound'))
 const FloatingChat = lazy(() => import('./components/FloatingChat'))
 
 function RouteFallback() {
@@ -461,6 +462,9 @@ function AppContent() {
           <Route path="profile" element={<SupplierProfile />} />
           <Route path="audit" element={<SupplierAuditLogs />} />
         </Route>
+
+        {/* Catch-all 404 handler for invalid routes */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
       </Suspense>
     </Layout>

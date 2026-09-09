@@ -491,9 +491,10 @@ export default function ProductDetail() {
   if (error || !product) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+        <SEO title="Produto não encontrado | Kapsu" noindex={true} />
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 max-w-md text-center border border-gray-200 dark:border-gray-700 shadow-lg">
           <AlertCircle className="text-red-500 mx-auto mb-4" size={48} />
-          <p className="text-red-605 dark:text-red-400 text-lg font-bold mb-2">
+          <p className="text-red-600 dark:text-red-400 text-lg font-bold mb-2">
             {error || 'Produto não encontrado'}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
@@ -501,7 +502,7 @@ export default function ProductDetail() {
           </p>
           <button
             onClick={() => navigate('/produtos')}
-            className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all shadow-md active:scale-98"
+            className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all shadow-md active:scale-98 cursor-pointer"
           >
             Voltar para o catálogo
           </button>
