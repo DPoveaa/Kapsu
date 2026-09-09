@@ -77,14 +77,17 @@ function setJsonLd(jsonLdData?: object | object[]) {
 
 /**
  * Cleans dynamic URLs by stripping tracking parameters (utm_*, gclid, fbclid, etc.)
+ * and normalizing trailing slashes, www, http/https to https://kapsu.com.br
  */
 function buildCleanCanonical(rawPathOrUrl?: string): string {
   const base = DEFAULT_DOMAIN
+  let pathWithQuery = ''
+
   if (!rawPathOrUrl) {
     const currentPath = window.location.pathname
     const searchParams = new URLSearchParams(window.location.search)
     
-    // Preserve only non-tracking search parameters (e.g., 'categoria')
+    // Preserve only non-tracking search parameters (e.g., 'category')
     const cleanParams = new URLSearchParams()
     searchParams.forEach((val, key) => {
       if (!key.startsWith('utm_') && key !== 'gclid' && key !== 'fbclid' && key !== 'msclkid' && key !== 'ref') {
@@ -92,14 +95,28 @@ function buildCleanCanonical(rawPathOrUrl?: string): string {
       }
     })
     const query = cleanParams.toString()
-    return `${base}${currentPath}${query ? `?${query}` : ''}`
+    pathWithQuery = `${currentPath}${query ? `?${query}` : ''}`
+  } else if (rawPathOrUrl.startsWith('http://') || rawPathOrUrl.startsWith('https://')) {
+    try {
+      const parsed = new URL(rawPathOrUrl)
+      pathWithQuery = `${parsed.pathname}${parsed.search}`
+    } catch {
+      pathWithQuery = rawPathOrUrl
+    }
+  } else {
+    pathWithQuery = rawPathOrUrl.startsWith('/') ? rawPathOrUrl : `/${rawPathOrUrl}`
   }
 
-  if (rawPathOrUrl.startsWith('http://') || rawPathOrUrl.startsWith('https://')) {
-    return rawPathOrUrl
+  // Separate path and query string
+  const [pathPart, queryPart] = pathWithQuery.split('?')
+  let normalizedPath = pathPart
+
+  // Standardize trailing slashes: homepage is '/', every other route has NO trailing slash
+  if (normalizedPath !== '/' && normalizedPath.endsWith('/')) {
+    normalizedPath = normalizedPath.slice(0, -1)
   }
 
-  return `${base}${rawPathOrUrl.startsWith('/') ? rawPathOrUrl : `/${rawPathOrUrl}`}`
+  return `${base}${normalizedPath}${queryPart ? `?${queryPart}` : ''}`
 }
 
 export default function SEO({
