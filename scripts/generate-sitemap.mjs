@@ -23,10 +23,11 @@ function generateProductPath(product) {
   const id = product.id
   const slug = product.slug && typeof product.slug === 'string' ? product.slug.trim() : ''
   if (slug) {
-    return `/produtos/${id}-${slug}`
+    return `/produtos/${slug}`
   }
   return `/produtos/${id}`
 }
+
 
 /**
  * Resolves the API endpoint for fetching products during node sitemap build

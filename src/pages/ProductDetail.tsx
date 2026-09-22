@@ -132,11 +132,11 @@ export default function ProductDetail() {
         // Client-side canonical URL normalization: if slug in URL is outdated or missing, update location with replace state.
         const expectedUrl = generateProductUrl(data)
         if (location.pathname !== expectedUrl) {
-          navigate(expectedUrl, { replace: true })
+          navigate(expectedUrl + (location.search || ''), { replace: true })
         }
 
         try {
-          const response = await fetch(`${env.apiUrl}/products/${id}`)
+          const response = await fetch(`${env.apiUrl}/products/${data.id || id}`)
           const text = await response.text()
           if (text) {
             const fullData = JSON.parse(text)
@@ -161,16 +161,17 @@ export default function ProductDetail() {
   // Load reviews and eligibility
   useEffect(() => {
     const loadReviewsAndEligibility = async () => {
-      if (!id) return
+      const targetId = product?.id || id
+      if (!targetId) return
       try {
         setLoadingReviews(true)
-        const reviewsData = await productsService.getProductReviews(id)
+        const reviewsData = await productsService.getProductReviews(targetId)
         setReviews(reviewsData)
 
         const token = localStorage.getItem('kapsu_token') || localStorage.getItem('token')
         if (token) {
           setIsLoggedIn(true)
-          const eligRes = await productsService.checkReviewEligibility(id)
+          const eligRes = await productsService.checkReviewEligibility(targetId)
           setIsEligible(eligRes.eligible)
           setEligibilityMessage(eligRes.message || '')
           setHasReviewed(eligRes.hasReviewed || false)
